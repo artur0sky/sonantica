@@ -14,6 +14,7 @@ import { useWaveformStore } from "../../store/waveformStore";
 interface WaveformScrubberProps {
   trackId?: string;
   progress: number;
+  buffered?: number; // Buffer progress (0-100)
   duration: number;
   onSeek: (time: number) => void;
   className?: string;
@@ -22,6 +23,7 @@ interface WaveformScrubberProps {
 export function WaveformScrubber({
   trackId,
   progress,
+  buffered = 0,
   duration,
   onSeek,
   className,
@@ -61,7 +63,7 @@ export function WaveformScrubber({
       bars.push(Math.max(0.1, Math.min(1.0, val + noise)));
     }
     return bars;
-  }, [duration, storedWaveform]);
+  }, [duration, storedWaveform, trackId]); // Added trackId to force regeneration on track change
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!containerRef.current) return;
@@ -99,8 +101,15 @@ export function WaveformScrubber({
       {/* Base Progress Bar (Always visible) */}
       <div className="absolute inset-0 flex items-end">
         <div className="w-full h-1 bg-white/10 relative overflow-hidden group-hover:opacity-0 transition-opacity">
+          {/* Buffer (loaded but not played) */}
           <div
-            className="absolute top-0 left-0 h-full bg-accent shadow-[0_0_10px_rgba(var(--color-accent-rgb),0.5)]"
+            className="absolute top-0 left-0 h-full bg-white/20 z-10 transition-all duration-300"
+            style={{ width: `${buffered}%` }}
+          />
+
+          {/* Progress (played) */}
+          <div
+            className="absolute top-0 left-0 h-full bg-accent shadow-[0_0_8px_rgba(99,102,241,0.4)] z-20 transition-all duration-150"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -128,10 +137,10 @@ export function WaveformScrubber({
                   className={cn(
                     "flex-1 min-w-[1px] rounded-t-[2px] transition-all duration-150",
                     isPlayed
-                      ? "bg-accent"
+                      ? "bg-accent" // Played portion - accent color
                       : isHovering
-                      ? "bg-white/40"
-                      : "bg-white/10"
+                      ? "bg-white/40" // Hover preview
+                      : "bg-white/10" // Base/unplayed
                   )}
                   style={{
                     height: `${Math.max(4, height * 100)}%`,

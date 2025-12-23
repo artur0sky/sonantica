@@ -7,10 +7,11 @@
 
 import { usePlayerStore } from "../../../shared/store/playerStore";
 import { useUIStore } from "../../../shared/store/uiStore";
-import { ShuffleButton } from "../../../shared/components/atoms";
+import { ShuffleButton, RepeatButton } from "../../../shared/components/atoms";
 import { EnhancedVolumeControl } from "../../../shared/components/molecules/EnhancedVolumeControl";
 import { WaveformScrubber } from "../../../shared/components/molecules/WaveformScrubber";
 import { BackgroundSpectrum } from "../../../shared/components/molecules/BackgroundSpectrum";
+import { TrackRating } from "../../../shared/components/molecules/TrackRating";
 import { formatTime, PlaybackState } from "@sonantica/shared";
 import { cn } from "../../../shared/utils";
 import { formatArtists } from "../../../shared/utils/metadata";
@@ -79,73 +80,157 @@ export function MiniPlayer() {
         height={64} // Matches approximate height of player
       />
 
-      {/* Player Controls */}
-      <div className="flex items-center gap-4 px-4 py-3 relative z-10">
-        {/* Track Info - Clickable to expand */}
-        <motion.button
-          onClick={togglePlayerExpanded}
-          whileHover={{
-            scale: 1.01,
-            backgroundColor: "rgba(255,255,255,0.02)",
-          }}
-          whileTap={{ scale: 0.99 }}
-          className="flex items-center gap-3 flex-1 min-w-0 p-1 rounded-md transition-colors text-left"
-        >
-          <motion.div
-            layoutId="player-artwork"
-            className="w-12 h-12 bg-surface rounded-md flex items-center justify-center text-text-muted border border-border overflow-hidden"
+      {/* Player Controls - 5 Equal Sections Layout */}
+      <div className="flex items-center px-4 py-2.5 relative z-10">
+        {/* Section 1: Track Info (Left - 1/5) */}
+        <div className="w-1/5">
+          <motion.button
+            onClick={togglePlayerExpanded}
+            drag="x"
+            dragConstraints={{ left: 0, right: 0 }}
+            dragElastic={0.2}
+            onDragEnd={(_, info) => {
+              // Swipe left = next track, Swipe right = previous track
+              if (info.offset.x > 100) {
+                previous();
+              } else if (info.offset.x < -100) {
+                next();
+              }
+            }}
+            whileHover={{
+              scale: 1.01,
+              backgroundColor: "rgba(255,255,255,0.02)",
+            }}
+            whileTap={{ scale: 0.99 }}
+            className="flex items-center gap-2 min-w-0 py-1 px-2 rounded-lg transition-colors text-left"
           >
-            {currentTrack.metadata?.coverArt ? (
-              <img
-                src={currentTrack.metadata.coverArt}
-                alt="Cover"
-                className="w-full h-full object-cover"
-                onError={() => {
-                  console.error("❌ MiniPlayer: Failed to load cover art");
-                  console.log(
-                    "Cover art length:",
-                    currentTrack.metadata?.coverArt?.length
-                  );
-                  console.log(
-                    "Cover art starts with:",
-                    currentTrack.metadata?.coverArt?.substring(0, 50)
-                  );
-                  console.log(
-                    "Is valid data URL:",
-                    currentTrack.metadata?.coverArt?.startsWith("data:")
-                  );
-                }}
-                onLoad={() => {
-                  console.log("✅ MiniPlayer: Cover art loaded successfully");
-                }}
-              />
-            ) : (
-              <IconMusic size={24} stroke={1.5} />
-            )}
-          </motion.div>
-          <div className="min-w-0 flex-1">
             <motion.div
-              layoutId="player-title"
-              className="font-medium truncate text-sm"
+              layoutId="player-artwork"
+              drag="x"
+              dragConstraints={{ left: 0, right: 0 }}
+              dragElastic={0.2}
+              onDragEnd={(_, info) => {
+                // Swipe on artwork to change tracks
+                if (info.offset.x > 80) {
+                  previous();
+                } else if (info.offset.x < -80) {
+                  next();
+                }
+              }}
+              className="w-12 h-12 flex-shrink-0 bg-surface rounded-md flex items-center justify-center text-text-muted border border-border overflow-hidden cursor-grab active:cursor-grabbing"
             >
-              {currentTrack.metadata?.title || "Unknown Title"}
+              {currentTrack.metadata?.coverArt ? (
+                <img
+                  src={currentTrack.metadata.coverArt}
+                  alt="Cover"
+                  className="w-full h-full object-cover select-none pointer-events-none"
+                  draggable="false"
+                  onError={() => {
+                    console.error("❌ MiniPlayer: Failed to load cover art");
+                  }}
+                  onLoad={() => {
+                    console.log("✅ MiniPlayer: Cover art loaded successfully");
+                  }}
+                />
+              ) : (
+                <IconMusic size={24} stroke={1.5} />
+              )}
             </motion.div>
-            <motion.div
-              layoutId="player-artist"
-              className="text-xs text-text-muted truncate"
-            >
-              {formatArtists(currentTrack.metadata?.artist)}
-            </motion.div>
-          </div>
-        </motion.button>
 
-        {/* Center Controls */}
-        <div className="flex items-center gap-4">
+            {/* Track text + Rating - All within 20% */}
+            <div className="min-w-0 flex-1 flex items-center justify-between gap-2">
+              <div className="min-w-0 flex-1 overflow-hidden">
+                {/* Title with marquee on hover */}
+                <div className="relative overflow-hidden group/title">
+                  <motion.div
+                    layoutId="player-title"
+                    className="font-medium text-sm leading-tight whitespace-nowrap"
+                    animate={{
+                      x: 0,
+                    }}
+                    whileHover={{
+                      x: [0, -100, 0],
+                      transition: {
+                        x: {
+                          repeat: Infinity,
+                          repeatType: "loop",
+                          duration: 8,
+                          ease: "linear",
+                        },
+                      },
+                    }}
+                    style={{
+                      display: "inline-block",
+                      minWidth: "100%",
+                    }}
+                  >
+                    <span className="group-hover/title:inline block truncate">
+                      {currentTrack.metadata?.title || "Unknown Title"}
+                    </span>
+                  </motion.div>
+                </div>
+
+                {/* Artist with marquee on hover */}
+                <div className="relative overflow-hidden group/artist mt-0.5">
+                  <motion.div
+                    layoutId="player-artist"
+                    className="text-xs text-text-muted leading-tight whitespace-nowrap"
+                    animate={{
+                      x: 0,
+                    }}
+                    whileHover={{
+                      x: [0, -100, 0],
+                      transition: {
+                        x: {
+                          repeat: Infinity,
+                          repeatType: "loop",
+                          duration: 8,
+                          ease: "linear",
+                        },
+                      },
+                    }}
+                    style={{
+                      display: "inline-block",
+                      minWidth: "100%",
+                    }}
+                  >
+                    <span className="group-hover/artist:inline block truncate">
+                      {formatArtists(currentTrack.metadata?.artist)}
+                    </span>
+                  </motion.div>
+                </div>
+              </div>
+
+              {/* Rating next to track info - within the 20% */}
+              <div className="hidden lg:flex items-center flex-shrink-0">
+                <TrackRating
+                  trackId={currentTrack.id}
+                  mode="both"
+                  size={12}
+                  compact
+                />
+              </div>
+            </div>
+          </motion.button>
+        </div>
+
+        {/* Section 2: Left-Center (Empty - 1/5) - Reserved for future use */}
+        <div className="w-1/5 flex items-center justify-center">
+          {/* Empty - Reserved for future features */}
+        </div>
+
+        {/* Section 3: Center Playback Controls (1/5) */}
+        <div className="w-1/5 flex items-center justify-center gap-2">
+          {/* Repeat (Left of Previous) */}
+          <div className="hidden md:flex items-center">
+            <RepeatButton size={18} />
+          </div>
+
           <motion.button
             onClick={previous}
             whileHover={{ scale: 1.1, color: "var(--color-text)" }}
             whileTap={{ scale: 0.9 }}
-            className="text-text-muted transition-colors"
+            className="text-text-muted transition-colors p-1.5"
             aria-label="Previous"
           >
             <IconPlayerSkipBack size={20} stroke={1.5} />
@@ -190,22 +275,32 @@ export function MiniPlayer() {
             onClick={next}
             whileHover={{ scale: 1.1, color: "var(--color-text)" }}
             whileTap={{ scale: 0.9 }}
-            className="text-text-muted transition-colors"
+            className="text-text-muted transition-colors p-1.5"
             aria-label="Next"
           >
             <IconPlayerSkipForward size={20} stroke={1.5} />
           </motion.button>
+
+          {/* Shuffle (Right of Next) */}
+          <div className="hidden md:flex items-center">
+            <ShuffleButton size={18} />
+          </div>
         </div>
 
-        {/* Right Controls */}
-        <div className="flex items-center gap-4 flex-1 justify-end">
+        {/* Section 4: Right-Center (Empty - 1/5) - Reserved for future use */}
+        <div className="w-1/5 flex items-center justify-center">
+          {/* Empty - Reserved for future features */}
+        </div>
+
+        {/* Section 5: Right Controls (1/5) */}
+        <div className="w-1/5 flex items-center justify-end gap-3 px-2">
           {/* Time Display */}
-          <div className="text-xs text-text-muted tabular-nums hidden md:block font-mono">
+          <div className="text-xs text-text-muted tabular-nums hidden md:flex items-center font-mono h-10">
             {formatTime(currentTime)} / {formatTime(duration)}
           </div>
 
           {/* Volume Control (Enhanced) */}
-          <div className="hidden lg:block">
+          <div className="hidden lg:flex items-center">
             <EnhancedVolumeControl />
           </div>
 
@@ -220,7 +315,7 @@ export function MiniPlayer() {
             }}
             whileTap={{ scale: 0.9 }}
             className={cn(
-              "transition-colors hidden sm:block",
+              "transition-colors hidden sm:flex items-center justify-center p-1.5",
               isVisualizationEnabled ? "text-accent" : "text-text-muted"
             )}
             aria-label="Toggle visualization"
@@ -229,17 +324,12 @@ export function MiniPlayer() {
             <IconActivityHeartbeat size={20} stroke={1.5} />
           </motion.button>
 
-          {/* Shuffle */}
-          <div className="hidden md:block">
-            <ShuffleButton size={18} />
-          </div>
-
           {/* Queue Toggle */}
           <motion.button
             onClick={toggleQueue}
             whileHover={{ scale: 1.1, color: "var(--color-accent)" }}
             whileTap={{ scale: 0.9 }}
-            className="text-text-muted transition-colors"
+            className="text-text-muted transition-colors flex items-center justify-center p-1.5"
             aria-label="Toggle queue"
           >
             <IconPlaylist size={20} stroke={1.5} />

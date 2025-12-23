@@ -31,9 +31,9 @@
   --spacing-xl: 3rem;
 
   /* Typography */
-  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+  --font-sans: 'Lexend', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-  --font-mono: 'Courier New', 'Consolas', 'Monaco', monospace;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', 'Consolas', 'Monaco', monospace;
 
   /* Border Radius */
   --radius-sm: 0.25rem;

@@ -5,7 +5,6 @@
  */
 
 import { useState, useRef, useEffect, useMemo } from "react";
-import { SearchBar } from "../../../shared/components/molecules";
 import { useLibraryStore } from "../../../shared/store/libraryStore";
 import { AlbumCard } from "../components/AlbumCard";
 import { IconDisc, IconSearch } from "@tabler/icons-react";
@@ -24,7 +23,7 @@ const containerVariants = {
 const ITEMS_PER_PAGE = 20;
 
 export function AlbumsPage() {
-  const { stats, searchQuery, setSearchQuery, selectAlbum, getFilteredAlbums } =
+  const { stats, searchQuery, selectAlbum, getFilteredAlbums } =
     useLibraryStore();
 
   const filteredAlbums = getFilteredAlbums();
@@ -81,13 +80,6 @@ export function AlbumsPage() {
             library
           </p>
         )}
-
-        {/* Search */}
-        <SearchBar
-          value={searchQuery}
-          onChange={setSearchQuery}
-          placeholder="Search albums..."
-        />
       </motion.div>
 
       {/* Content */}

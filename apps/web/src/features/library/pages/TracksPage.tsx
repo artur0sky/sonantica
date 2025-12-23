@@ -7,7 +7,6 @@
 
 import { useState, useRef, useEffect, useMemo } from "react";
 import { Button } from "../../../shared/components/atoms";
-import { SearchBar } from "../../../shared/components/molecules";
 import { useLibraryStore } from "../../../shared/store/libraryStore";
 import { TrackItem } from "../components/TrackItem";
 import {
@@ -16,6 +15,8 @@ import {
   IconSearch,
   IconPlayerPlay,
   IconArrowsShuffle,
+  IconSortAscending,
+  IconSortDescending,
 } from "@tabler/icons-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -36,6 +37,9 @@ const containerVariants = {
 
 const ITEMS_PER_PAGE = 50;
 
+type SortField = "title" | "artist" | "album" | "year" | "duration" | "genre";
+type SortOrder = "asc" | "desc";
+
 export function TracksPage() {
   const {
     stats,
@@ -43,11 +47,74 @@ export function TracksPage() {
     scanProgress,
     searchQuery,
     scan,
-    setSearchQuery,
     getFilteredTracks,
   } = useLibraryStore();
 
+  const [sortField, setSortField] = useState<SortField>("title");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
+
   const filteredTracks = getFilteredTracks();
+
+  // Sort tracks
+  const sortedTracks = useMemo(() => {
+    const tracks = [...filteredTracks];
+
+    tracks.sort((a, b) => {
+      let aVal: any;
+      let bVal: any;
+
+      switch (sortField) {
+        case "title":
+          aVal = a.metadata?.title?.toLowerCase() || "";
+          bVal = b.metadata?.title?.toLowerCase() || "";
+          break;
+        case "artist":
+          aVal =
+            (Array.isArray(a.metadata?.artist)
+              ? a.metadata.artist[0]
+              : a.metadata?.artist
+            )?.toLowerCase() || "";
+          bVal =
+            (Array.isArray(b.metadata?.artist)
+              ? b.metadata.artist[0]
+              : b.metadata?.artist
+            )?.toLowerCase() || "";
+          break;
+        case "album":
+          aVal = a.metadata?.album?.toLowerCase() || "";
+          bVal = b.metadata?.album?.toLowerCase() || "";
+          break;
+        case "year":
+          aVal = a.metadata?.year || 0;
+          bVal = b.metadata?.year || 0;
+          break;
+        case "duration":
+          aVal = a.metadata?.duration || 0;
+          bVal = b.metadata?.duration || 0;
+          break;
+        case "genre":
+          aVal =
+            (Array.isArray(a.metadata?.genre)
+              ? a.metadata.genre[0]
+              : a.metadata?.genre
+            )?.toLowerCase() || "";
+          bVal =
+            (Array.isArray(b.metadata?.genre)
+              ? b.metadata.genre[0]
+              : b.metadata?.genre
+            )?.toLowerCase() || "";
+          break;
+        default:
+          return 0;
+      }
+
+      if (aVal < bVal) return sortOrder === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortOrder === "asc" ? 1 : -1;
+      return 0;
+    });
+
+    return tracks;
+  }, [filteredTracks, sortField, sortOrder]);
 
   // Infinite Scroll State
   const [displayedCount, setDisplayedCount] = useState(ITEMS_PER_PAGE);
@@ -55,7 +122,7 @@ export function TracksPage() {
 
   useEffect(() => {
     setDisplayedCount(ITEMS_PER_PAGE);
-  }, [searchQuery]); // Only reset on search query change, NOT on new data arriving
+  }, [searchQuery, sortField, sortOrder]); // Reset on search or sort change
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -74,11 +141,11 @@ export function TracksPage() {
     }
 
     return () => observer.disconnect();
-  }, [filteredTracks.length]);
+  }, [sortedTracks.length]);
 
   const visibleTracks = useMemo(
-    () => filteredTracks.slice(0, displayedCount),
-    [filteredTracks, displayedCount]
+    () => sortedTracks.slice(0, displayedCount),
+    [sortedTracks, displayedCount]
   );
 
   const handleScan = async () => {
@@ -91,10 +158,8 @@ export function TracksPage() {
 
   const handleTrackClick = async (_track: any, index: number) => {
     try {
-      // Create context from ALL filtered tracks (not just visible ones)
-      // Memoized mapping could be better but this is fast enough usually
-      // The massive DOM was the main issue for lag
-      const mediaSources = filteredTracks.map((t) => ({
+      // Create context from ALL sorted tracks (not just visible ones)
+      const mediaSources = sortedTracks.map((t) => ({
         id: t.id,
         url: t.path,
         mimeType: t.mimeType,
@@ -110,7 +175,7 @@ export function TracksPage() {
 
   const handlePlayAll = async () => {
     try {
-      const mediaSources = filteredTracks.map((t) => ({
+      const mediaSources = sortedTracks.map((t) => ({
         id: t.id,
         url: t.path,
         mimeType: t.mimeType,
@@ -124,7 +189,7 @@ export function TracksPage() {
 
   const handleShuffle = async () => {
     try {
-      const mediaSources = filteredTracks.map((t) => ({
+      const mediaSources = sortedTracks.map((t) => ({
         id: t.id,
         url: t.path,
         mimeType: t.mimeType,
@@ -162,8 +227,41 @@ export function TracksPage() {
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Sort Controls */}
+            {sortedTracks.length > 0 && (
+              <div className="flex items-center gap-2">
+                <select
+                  value={sortField}
+                  onChange={(e) => setSortField(e.target.value as SortField)}
+                  className="px-3 py-2 bg-surface-elevated border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent/50"
+                >
+                  <option value="title">Title</option>
+                  <option value="artist">Artist</option>
+                  <option value="album">Album</option>
+                  <option value="year">Year</option>
+                  <option value="duration">Duration</option>
+                  <option value="genre">Genre</option>
+                </select>
+
+                <Button
+                  onClick={() =>
+                    setSortOrder(sortOrder === "asc" ? "desc" : "asc")
+                  }
+                  variant="ghost"
+                  size="sm"
+                  className="flex items-center gap-1"
+                >
+                  {sortOrder === "asc" ? (
+                    <IconSortAscending size={18} />
+                  ) : (
+                    <IconSortDescending size={18} />
+                  )}
+                </Button>
+              </div>
+            )}
+
             {/* Play All Button */}
-            {filteredTracks.length > 0 && (
+            {sortedTracks.length > 0 && (
               <>
                 <Button
                   onClick={handlePlayAll}
@@ -205,13 +303,6 @@ export function TracksPage() {
             </Button>
           </div>
         </div>
-
-        {/* Search */}
-        <SearchBar
-          value={searchQuery}
-          onChange={setSearchQuery}
-          placeholder="Search tracks, artists, albums..."
-        />
       </motion.div>
 
       {/* Content */}
@@ -270,7 +361,7 @@ export function TracksPage() {
             ))}
 
             {/* Sentinel for Infinite Scroll */}
-            {displayedCount < filteredTracks.length && (
+            {displayedCount < sortedTracks.length && (
               <div
                 ref={observerTarget}
                 className="py-8 text-center text-text-muted/50 text-sm"
@@ -280,7 +371,7 @@ export function TracksPage() {
             )}
 
             <div className="py-4 text-center text-xs text-text-muted/30">
-              Showing {visibleTracks.length} of {filteredTracks.length} tracks
+              Showing {visibleTracks.length} of {sortedTracks.length} tracks
             </div>
           </motion.div>
         )}

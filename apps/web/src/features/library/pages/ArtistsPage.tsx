@@ -5,7 +5,6 @@
  */
 
 import { useState, useRef, useEffect, useMemo } from "react";
-import { SearchBar } from "../../../shared/components/molecules";
 import { useLibraryStore } from "../../../shared/store/libraryStore";
 import { ArtistCard } from "../components/ArtistCard";
 import { IconMicrophone, IconSearch } from "@tabler/icons-react";
@@ -24,13 +23,8 @@ const containerVariants = {
 const ITEMS_PER_PAGE = 20; // 20 grid items per page
 
 export function ArtistsPage() {
-  const {
-    stats,
-    searchQuery,
-    setSearchQuery,
-    selectArtist,
-    getFilteredArtists,
-  } = useLibraryStore();
+  const { stats, searchQuery, selectArtist, getFilteredArtists } =
+    useLibraryStore();
 
   const filteredArtists = getFilteredArtists();
 
@@ -86,13 +80,6 @@ export function ArtistsPage() {
             library
           </p>
         )}
-
-        {/* Search */}
-        <SearchBar
-          value={searchQuery}
-          onChange={setSearchQuery}
-          placeholder="Search artists..."
-        />
       </motion.div>
 
       {/* Content */}

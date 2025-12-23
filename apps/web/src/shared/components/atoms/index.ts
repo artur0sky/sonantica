@@ -9,4 +9,5 @@ export { Input } from './Input';
 export { Badge } from './Badge';
 export { Slider } from './Slider';
 export { ShuffleButton } from './ShuffleButton';
+export { RepeatButton } from './RepeatButton';
 export { SpectrumVisualizer } from './SpectrumVisualizer';

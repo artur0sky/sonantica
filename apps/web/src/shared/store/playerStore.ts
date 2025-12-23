@@ -20,6 +20,7 @@ interface PlayerState {
   currentTrack: MediaSource | null;
   currentTime: number;
   duration: number;
+  buffered: number; // Buffered time in seconds
   volume: number;
   muted: boolean;
   
@@ -52,6 +53,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     currentTrack: null,
     currentTime: 0,
     duration: 0,
+    buffered: 0,
     volume: 0.7,
     muted: false,
 

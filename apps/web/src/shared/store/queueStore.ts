@@ -8,6 +8,8 @@
 import { create } from 'zustand';
 import type { MediaSource } from '@sonantica/shared';
 
+export type RepeatMode = 'off' | 'all' | 'one';
+
 interface QueueState {
   // Queue data
   queue: MediaSource[];
@@ -16,6 +18,9 @@ interface QueueState {
   
   // Shuffle state
   isShuffled: boolean;
+  
+  // Repeat state
+  repeatMode: RepeatMode;
   
   // Actions
   setQueue: (tracks: MediaSource[], startIndex?: number) => void;
@@ -30,6 +35,9 @@ interface QueueState {
   
   // Shuffle
   toggleShuffle: () => void;
+  
+  // Repeat
+  toggleRepeat: () => void;
   
   // Getters
   getCurrentTrack: () => MediaSource | null;
@@ -57,6 +65,7 @@ export const useQueueStore = create<QueueState>((set, get) => ({
   currentIndex: -1,
   originalQueue: [],
   isShuffled: false,
+  repeatMode: 'off',
 
   setQueue: (tracks: MediaSource[], startIndex = 0) => {
     set({
@@ -101,11 +110,26 @@ export const useQueueStore = create<QueueState>((set, get) => ({
 
   next: () => {
     const state = get();
+    
+    // Repeat one: return current track
+    if (state.repeatMode === 'one') {
+      return state.queue[state.currentIndex] || null;
+    }
+    
+    // Normal next or repeat all
     if (state.currentIndex < state.queue.length - 1) {
       const newIndex = state.currentIndex + 1;
       set({ currentIndex: newIndex });
       return state.queue[newIndex];
     }
+    
+    // At end of queue
+    if (state.repeatMode === 'all' && state.queue.length > 0) {
+      // Loop back to start
+      set({ currentIndex: 0 });
+      return state.queue[0];
+    }
+    
     return null;
   },
 
@@ -156,6 +180,15 @@ export const useQueueStore = create<QueueState>((set, get) => ({
         isShuffled: true,
       });
     }
+  },
+
+  toggleRepeat: () => {
+    set((state) => {
+      const modes: RepeatMode[] = ['off', 'all', 'one'];
+      const currentIndex = modes.indexOf(state.repeatMode);
+      const nextIndex = (currentIndex + 1) % modes.length;
+      return { repeatMode: modes[nextIndex] };
+    });
   },
 
   getCurrentTrack: () => {

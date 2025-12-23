@@ -7,8 +7,10 @@
 
 import { usePlayerStore } from "../../../shared/store/playerStore";
 import { useUIStore } from "../../../shared/store/uiStore";
-import { Slider } from "../../../shared/components/atoms";
+import { ShuffleButton, RepeatButton } from "../../../shared/components/atoms";
 import { WaveformScrubber } from "../../../shared/components/molecules/WaveformScrubber";
+import { EnhancedVolumeControl } from "../../../shared/components/molecules/EnhancedVolumeControl";
+import { TrackRating } from "../../../shared/components/molecules/TrackRating";
 import { formatTime, PlaybackState } from "@sonantica/shared";
 import { formatArtists } from "../../../shared/utils/metadata";
 import {
@@ -17,10 +19,6 @@ import {
   IconPlayerPlay,
   IconPlayerPause,
   IconPlayerSkipForward,
-  IconVolume,
-  IconVolume2,
-  IconVolume3,
-  IconVolumeOff,
   IconMusic,
 } from "@tabler/icons-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -31,11 +29,8 @@ export function ExpandedPlayer() {
     state,
     currentTime,
     duration,
-    volume,
     play,
     pause,
-    seek,
-    setVolume,
     next,
     previous,
   } = usePlayerStore();
@@ -48,15 +43,6 @@ export function ExpandedPlayer() {
   }
 
   const isPlaying = state === PlaybackState.PLAYING;
-
-  const getVolumeIcon = () => {
-    if (volume === 0) return IconVolumeOff;
-    if (volume < 0.3) return IconVolume3;
-    if (volume < 0.7) return IconVolume2;
-    return IconVolume;
-  };
-
-  const VolumeIcon = getVolumeIcon();
 
   return (
     <motion.div
@@ -83,27 +69,31 @@ export function ExpandedPlayer() {
       {/* Album Art / Visualization */}
       <motion.div
         layoutId="player-artwork"
-        className="w-80 h-80 max-w-[80vw] max-h-[80vw] bg-surface-elevated rounded-2xl flex items-center justify-center text-text-muted mb-8 shadow-2xl border border-border overflow-hidden relative"
+        drag="x"
+        dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={0.2}
+        onDragEnd={(_, info) => {
+          // Swipe to change tracks
+          if (info.offset.x > 100) {
+            previous();
+          } else if (info.offset.x < -100) {
+            next();
+          }
+        }}
+        className="w-80 h-80 max-w-[80vw] max-h-[80vw] bg-surface-elevated rounded-2xl flex items-center justify-center text-text-muted mb-8 shadow-2xl border border-border overflow-hidden relative cursor-grab active:cursor-grabbing"
       >
         {currentTrack.metadata?.coverArt ? (
           <motion.img
             key={currentTrack.id}
             src={currentTrack.metadata.coverArt}
             alt="Cover"
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover select-none pointer-events-none"
+            draggable="false"
             initial={{ scale: 1.1, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.5 }}
             onError={(e) => {
               console.error("❌ Failed to load cover art:", e);
-              console.log(
-                "Cover art URL length:",
-                currentTrack.metadata?.coverArt?.length
-              );
-              console.log(
-                "Cover art preview:",
-                currentTrack.metadata?.coverArt?.substring(0, 100)
-              );
             }}
             onLoad={() => {
               console.log("✅ Cover art loaded successfully");
@@ -115,7 +105,7 @@ export function ExpandedPlayer() {
       </motion.div>
 
       {/* Track Info */}
-      <div className="text-center mb-10 max-w-2xl px-4 z-10 w-full">
+      <div className="text-center mb-6 max-w-2xl px-4 z-10 w-full">
         <motion.h1
           layoutId="player-title"
           className="text-3xl md:text-4xl font-bold mb-3 text-balance tracking-tight"
@@ -134,21 +124,26 @@ export function ExpandedPlayer() {
             <motion.p
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-lg text-text-muted/60"
+              className="text-lg text-text-muted/60 mb-4"
             >
               {currentTrack.metadata.album}
             </motion.p>
           )}
         </AnimatePresence>
+
+        {/* Rating */}
+        <div className="flex justify-center mt-4">
+          <TrackRating trackId={currentTrack.id} mode="both" size={20} />
+        </div>
       </div>
 
       {/* Timeline */}
-      <div className="w-full max-w-2xl mb-10 z-10 px-4">
+      <div className="w-full max-w-2xl mb-8 z-10 px-4">
         <WaveformScrubber
           trackId={currentTrack.id}
           progress={(currentTime / (duration || 1)) * 100}
           duration={duration}
-          onSeek={(time) => seek(time)}
+          onSeek={(time) => usePlayerStore.getState().seek(time)}
           className="mb-3 h-2 hover:h-16"
         />
         <div className="flex justify-between text-sm text-text-muted tabular-nums px-1 font-mono">
@@ -158,7 +153,10 @@ export function ExpandedPlayer() {
       </div>
 
       {/* Playback Controls */}
-      <div className="flex items-center gap-8 mb-12 z-10">
+      <div className="flex items-center gap-8 mb-8 z-10">
+        {/* Shuffle */}
+        <ShuffleButton size={28} />
+
         <motion.button
           onClick={previous}
           whileHover={{ scale: 1.1, x: -2 }}
@@ -207,30 +205,14 @@ export function ExpandedPlayer() {
         >
           <IconPlayerSkipForward size={32} stroke={1.5} />
         </motion.button>
+
+        {/* Repeat */}
+        <RepeatButton size={28} />
       </div>
 
       {/* Volume Control */}
-      <div className="flex items-center gap-4 w-72 z-10">
-        <motion.button
-          onClick={() => setVolume(volume > 0 ? 0 : 0.7)}
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          className="text-text-muted hover:text-text transition-colors"
-          aria-label={volume > 0 ? "Mute" : "Unmute"}
-        >
-          <VolumeIcon size={24} stroke={1.5} />
-        </motion.button>
-        <Slider
-          value={volume}
-          min={0}
-          max={1}
-          step={0.01}
-          onChange={(e) => setVolume(parseFloat(e.target.value))}
-          className="flex-1"
-        />
-        <span className="text-sm text-text-muted tabular-nums w-12 text-right font-mono">
-          {Math.round(volume * 100)}%
-        </span>
+      <div className="flex items-center justify-center gap-4 w-full max-w-md z-10 mb-8">
+        <EnhancedVolumeControl className="flex-1" />
       </div>
 
       {/* Philosophy Quote */}
