@@ -41,7 +41,7 @@ interface LibraryState {
   
   // Internal
   _initialize: () => void;
-  _updateLibrary: () => void;
+  _updateLibrary: (persist?: boolean) => void;
 }
 
 export const useLibraryStore = create<LibraryState>((set, get) => {
@@ -158,7 +158,6 @@ export const useLibraryStore = create<LibraryState>((set, get) => {
         if (cachedData && cachedData.tracks && cachedData.tracks.length > 0) {
           console.log('📚 Loading library from cache:', cachedData.tracks.length, 'tracks');
           // Restore library instance - this will trigger LIBRARY_UPDATED event
-          // which in turn calls _updateLibrary to populate the store state
           library.restore(cachedData.tracks);
         }
       } catch (error) {
@@ -176,15 +175,34 @@ export const useLibraryStore = create<LibraryState>((set, get) => {
 
       library.on(LIBRARY_EVENTS.SCAN_COMPLETE, async () => {
         set({ scanning: false });
-        await get()._updateLibrary();
+        // Full update with persistence when complete
+        await get()._updateLibrary(true);
+      });
+
+      // Real-time updates for new tracks found during scan
+      // NO PERSISTENCE - Just UI update
+      let updateTimeout: ReturnType<typeof setTimeout> | null = null;
+      library.on(LIBRARY_EVENTS.TRACK_ADDED, (data: any) => {
+        console.log('🎵 Track added:', data.track?.filename);
+        if (!updateTimeout) {
+          updateTimeout = setTimeout(() => {
+            console.log('🔄 Updating UI with new tracks...');
+            get()._updateLibrary(false);
+            updateTimeout = null;
+          }, 100); // Batched UI update every 100ms for faster feedback
+        }
       });
 
       library.on(LIBRARY_EVENTS.LIBRARY_UPDATED, async () => {
-        await get()._updateLibrary();
+        await get()._updateLibrary(true);
       });
+
+      // Start background scan after initialization
+      console.log('🚀 Starting background library scan...');
+      get().scan(['/media/']);
     },
 
-    _updateLibrary: async () => {
+    _updateLibrary: async (persist = true) => {
       const tracks = library.getTracks();
       const stats = library.getStats();
       
@@ -198,16 +216,17 @@ export const useLibraryStore = create<LibraryState>((set, get) => {
       set(newData);
 
       // Save to IndexedDB - ONLY tracks and stats
-      // calculating artists/albums from tracks is fast enough on load
-      // and avoids saving massive duplicated object graphs
-      try {
-        await saveToStorage(STORES.LIBRARY, 'data', {
-          tracks,
-          stats
-        });
-        console.log('💾 Library saved to cache:', stats.totalTracks, 'tracks');
-      } catch (error) {
-        console.error('Failed to save library to cache:', error);
+      // Skip if persist is false (e.g. during rapid scan updates)
+      if (persist) {
+        try {
+          await saveToStorage(STORES.LIBRARY, 'data', {
+            tracks,
+            stats
+          });
+          console.log('💾 Library saved to cache:', stats.totalTracks, 'tracks');
+        } catch (error) {
+          console.error('Failed to save library to cache:', error);
+        }
       }
     },
   };

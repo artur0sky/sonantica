@@ -60,6 +60,11 @@ export interface IPlayerEngine {
   on(eventType: string, callback: (event: PlayerEvent) => void): () => void;
 
   /**
+   * Get the internal audio element (for analysis/visualization)
+   */
+  getAudioElement(): HTMLAudioElement | null;
+
+  /**
    * Cleanup and release resources
    */
   dispose(): void;

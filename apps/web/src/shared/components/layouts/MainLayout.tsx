@@ -1,33 +1,41 @@
 /**
  * Main Layout
- * 
+ *
  * SoundCloud-inspired layout with dual sidebars and sticky player.
  * Following Sonántica's minimalist philosophy.
  */
 
-import { AnimatePresence } from 'framer-motion';
-import { usePlayerStore } from '../../store/playerStore';
-import { useUIStore } from '../../store/uiStore';
-import { Header } from '../organisms/Header';
-import { LeftSidebar } from './LeftSidebar';
-import { RightSidebar } from './RightSidebar';
-import { MetadataPanel } from '../molecules/MetadataPanel';
-import { MiniPlayer } from '../../../features/player/components/MiniPlayer';
-import { ExpandedPlayer } from '../../../features/player/components/ExpandedPlayer';
+import { AnimatePresence } from "framer-motion";
+import { usePlayerStore } from "../../store/playerStore";
+import { useUIStore } from "../../store/uiStore";
+import { Header } from "../organisms/Header";
+import { LeftSidebar } from "./LeftSidebar";
+import { RightSidebar } from "./RightSidebar";
+import { MetadataPanel } from "../molecules/MetadataPanel";
+import { MiniPlayer } from "../../../features/player/components/MiniPlayer";
+import { ExpandedPlayer } from "../../../features/player/components/ExpandedPlayer";
+import { BackgroundSpectrum } from "../molecules/BackgroundSpectrum";
+import { useWaveformLoader } from "../../../features/player/hooks/useWaveformLoader";
 
 interface MainLayoutProps {
   children: React.ReactNode;
 }
 
 export function MainLayout({ children }: MainLayoutProps) {
+  // Pre-load waveforms
+  useWaveformLoader();
+
   const currentTrack = usePlayerStore((s) => s.currentTrack);
-  const { 
-    isLeftSidebarOpen, 
-    isRightSidebarOpen, 
+  const {
+    isLeftSidebarOpen,
+    isRightSidebarOpen,
     isPlayerExpanded,
     isMetadataPanelOpen,
-    toggleMetadataPanel
+    toggleMetadataPanel,
+    isVisualizationEnabled,
   } = useUIStore();
+
+  const getAudioElement = usePlayerStore((s) => s.getAudioElement);
 
   return (
     <div className="h-screen flex flex-col bg-bg text-text overflow-hidden relative">
@@ -36,6 +44,12 @@ export function MainLayout({ children }: MainLayoutProps) {
 
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden relative">
+        {/* Visualization Layer */}
+        <BackgroundSpectrum
+          audioElement={getAudioElement()}
+          enabled={isVisualizationEnabled}
+        />
+
         {/* Left Sidebar - Navigation */}
         <AnimatePresence mode="wait">
           {isLeftSidebarOpen && (
@@ -46,7 +60,7 @@ export function MainLayout({ children }: MainLayoutProps) {
         </AnimatePresence>
 
         {/* Center Content */}
-        <main className="flex-1 overflow-y-auto relative z-10">
+        <main className="flex-1 overflow-y-auto relative z-10 transition-colors duration-500">
           <AnimatePresence mode="wait">
             {isPlayerExpanded ? <ExpandedPlayer /> : children}
           </AnimatePresence>
@@ -65,14 +79,14 @@ export function MainLayout({ children }: MainLayoutProps) {
         <AnimatePresence>
           {isMetadataPanelOpen && currentTrack?.metadata && (
             <>
-               <div 
-                 className="fixed inset-0 bg-black/50 z-40 lg:hidden" 
-                 onClick={toggleMetadataPanel}
-               />
-               <MetadataPanel 
-                 metadata={currentTrack.metadata} 
-                 onClose={toggleMetadataPanel}
-               />
+              <div
+                className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+                onClick={toggleMetadataPanel}
+              />
+              <MetadataPanel
+                metadata={currentTrack.metadata}
+                onClose={toggleMetadataPanel}
+              />
             </>
           )}
         </AnimatePresence>

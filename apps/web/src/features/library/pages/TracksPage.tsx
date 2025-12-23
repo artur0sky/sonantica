@@ -55,7 +55,7 @@ export function TracksPage() {
 
   useEffect(() => {
     setDisplayedCount(ITEMS_PER_PAGE);
-  }, [searchQuery, filteredTracks.length]);
+  }, [searchQuery]); // Only reset on search query change, NOT on new data arriving
 
   useEffect(() => {
     const observer = new IntersectionObserver(

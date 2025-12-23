@@ -36,6 +36,9 @@ interface PlayerState {
   next: () => Promise<void>;
   previous: () => Promise<void>;
   
+  // Audio element accessor (for analyzer)
+  getAudioElement: () => HTMLAudioElement | null;
+  
   // Internal
   _initialize: () => void;
 }
@@ -144,6 +147,10 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
           await get().play();
         }
       }
+    },
+
+    getAudioElement: () => {
+      return player.getAudioElement();
     },
 
     _initialize: () => {

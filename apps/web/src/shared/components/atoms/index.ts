@@ -9,3 +9,4 @@ export { Input } from './Input';
 export { Badge } from './Badge';
 export { Slider } from './Slider';
 export { ShuffleButton } from './ShuffleButton';
+export { SpectrumVisualizer } from './SpectrumVisualizer';

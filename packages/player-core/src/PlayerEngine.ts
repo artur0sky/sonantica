@@ -218,6 +218,13 @@ export class PlayerEngine implements IPlayerEngine {
   }
 
   /**
+   * Get the internal audio element
+   */
+  getAudioElement(): HTMLAudioElement | null {
+    return this.audio;
+  }
+
+  /**
    * Full cleanup (including listeners)
    */
   dispose(): void {

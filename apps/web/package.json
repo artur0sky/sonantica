@@ -12,6 +12,7 @@
     "clean": "rimraf dist"
   },
   "dependencies": {
+    "@sonantica/audio-analyzer": "workspace:*",
     "@sonantica/media-library": "workspace:*",
     "@sonantica/metadata": "workspace:*",
     "@sonantica/player-core": "workspace:*",

@@ -10,6 +10,7 @@ interface UIState {
   // Player UI state
   isPlayerExpanded: boolean;
   isQueueOpen: boolean;
+  isVisualizationEnabled: boolean;
   
   // Sidebar state
   isLeftSidebarOpen: boolean;
@@ -19,17 +20,20 @@ interface UIState {
   // Actions
   togglePlayerExpanded: () => void;
   toggleQueue: () => void;
+  toggleVisualization: () => void;
   toggleLeftSidebar: () => void;
   toggleRightSidebar: () => void;
   toggleMetadataPanel: () => void;
   setPlayerExpanded: (expanded: boolean) => void;
   setQueueOpen: (open: boolean) => void;
   setMetadataPanelOpen: (open: boolean) => void;
+  setVisualizationEnabled: (enabled: boolean) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
   isPlayerExpanded: false,
   isQueueOpen: false,
+  isVisualizationEnabled: false,
   isLeftSidebarOpen: true,
   isRightSidebarOpen: false,
   isMetadataPanelOpen: false,
@@ -43,6 +47,10 @@ export const useUIStore = create<UIState>((set) => ({
       isQueueOpen: !state.isQueueOpen,
       isRightSidebarOpen: !state.isQueueOpen, // Sync with sidebar
     }));
+  },
+
+  toggleVisualization: () => {
+    set((state) => ({ isVisualizationEnabled: !state.isVisualizationEnabled }));
   },
 
   toggleLeftSidebar: () => {
@@ -70,5 +78,9 @@ export const useUIStore = create<UIState>((set) => ({
 
   setMetadataPanelOpen: (open: boolean) => {
     set({ isMetadataPanelOpen: open });
+  },
+
+  setVisualizationEnabled: (enabled: boolean) => {
+    set({ isVisualizationEnabled: enabled });
   },
 }));

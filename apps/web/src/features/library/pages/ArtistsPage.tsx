@@ -40,7 +40,7 @@ export function ArtistsPage() {
 
   useEffect(() => {
     setDisplayedCount(ITEMS_PER_PAGE);
-  }, [searchQuery, filteredArtists.length]);
+  }, [searchQuery]); // Only reset on search query change
 
   useEffect(() => {
     const observer = new IntersectionObserver(

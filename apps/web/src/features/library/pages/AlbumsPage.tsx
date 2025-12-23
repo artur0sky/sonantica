@@ -35,7 +35,7 @@ export function AlbumsPage() {
 
   useEffect(() => {
     setDisplayedCount(ITEMS_PER_PAGE);
-  }, [searchQuery, filteredAlbums.length]);
+  }, [searchQuery]); // Only reset on search query change
 
   useEffect(() => {
     const observer = new IntersectionObserver(
