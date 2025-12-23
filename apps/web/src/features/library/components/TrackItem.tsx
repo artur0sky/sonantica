@@ -4,7 +4,7 @@
  * Individual track row in lists.
  */
 
-import { IconPlayerPlay, IconPlayerPause } from '@tabler/icons-react';
+import { IconPlayerPlay, IconPlayerPause, IconMusic } from '@tabler/icons-react';
 import { motion } from 'framer-motion';
 import { cn } from '../../../shared/utils';
 import { usePlayerStore } from '../../../shared/store/playerStore';
@@ -39,33 +39,38 @@ export function TrackItem({ track, onClick }: TrackItemProps) {
         isCurrentTrack ? "bg-surface-elevated border-accent/20" : "hover:bg-surface-elevated/50"
       )}
     >
-      {/* Icon / Action */}
-      <div className="w-10 h-10 flex items-center justify-center relative">
-        {/* Default Icon */}
+      {/* Album Art / Icon */}
+      <div className="w-12 h-12 flex-shrink-0 relative rounded-md overflow-hidden bg-surface-elevated border border-border">
+        {/* Cover Art or Music Icon */}
+        {track.metadata?.coverArt ? (
+          <img 
+            src={track.metadata.coverArt} 
+            alt="Cover" 
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <IconMusic size={20} className="text-text-muted/30" stroke={1.5} />
+          </div>
+        )}
+
+        {/* Play/Pause Overlay (Hover) */}
         <div className={cn(
-          "transition-opacity duration-200 absolute inset-0 flex items-center justify-center",
-          "group-hover:opacity-0"
+          "absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center",
+          "transition-opacity duration-200",
+          "opacity-0 group-hover:opacity-100"
         )}>
-          {isCurrentTrack ? (
-             <div className="w-3 h-3 bg-accent rounded-full animate-pulse" />
+          {isPlaying ? (
+            <IconPlayerPause size={24} className="text-white fill-current drop-shadow-lg" />
           ) : (
-            <span className="text-text-muted text-sm font-mono opacity-50">
-              {track.metadata?.trackNumber || "•"}
-            </span>
+            <IconPlayerPlay size={24} className="text-white fill-current drop-shadow-lg" />
           )}
         </div>
 
-        {/* Play Action (Hover) */}
-        <div className={cn(
-          "transition-opacity duration-200 absolute inset-0 flex items-center justify-center opacity-0",
-          "group-hover:opacity-100"
-        )}>
-          {isPlaying ? (
-            <IconPlayerPause size={18} className="text-accent fill-current" />
-          ) : (
-            <IconPlayerPlay size={18} className="text-text fill-current" />
-          )}
-        </div>
+        {/* Current Track Indicator */}
+        {isCurrentTrack && (
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-accent" />
+        )}
       </div>
 
       {/* Track Details */}
