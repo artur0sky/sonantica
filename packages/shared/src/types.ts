@@ -43,6 +43,9 @@ export interface MediaMetadata {
   album?: string;
   duration?: number; // in seconds
   coverArt?: string; // URL or data URI
+  year?: number; // Release year
+  trackNumber?: number; // Track number in album
+  genre?: string; // Music genre
 }
 
 /**

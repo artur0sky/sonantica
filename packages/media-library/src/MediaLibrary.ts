@@ -1,10 +1,13 @@
 /**
- * MediaLibrary - Core library management implementation
+ * MediaLibrary - Enhanced implementation with change detection
  * 
  * "Every file has an intention."
  * 
- * This is a browser-based implementation that works with the File System Access API
- * or accepts pre-scanned file lists from the server.
+ * Improvements:
+ * - Track-based change detection
+ * - Optimized recursive scanning
+ * - Better metadata extraction
+ * - Incremental updates
  */
 
 import { generateId, isSupportedFormat } from '@sonantica/shared';
@@ -20,32 +23,30 @@ export const LIBRARY_EVENTS = {
   SCAN_COMPLETE: 'library:scan-complete',
   SCAN_ERROR: 'library:scan-error',
   TRACK_ADDED: 'library:track-added',
+  TRACK_REMOVED: 'library:track-removed',
   LIBRARY_UPDATED: 'library:updated',
 } as const;
 
 /**
- * MediaLibrary implementation
- * 
- * For the Hello World version, this works with a mock file list
- * or files from the /media endpoint exposed by nginx.
+ * MediaLibrary implementation with enhanced indexing
  */
 export class MediaLibrary implements IMediaLibrary {
   private tracks: Map<string, Track> = new Map();
+  private tracksByPath: Map<string, string> = new Map(); // path -> trackId mapping
   private scanProgress: ScanProgress = {
     status: 'idle',
     filesScanned: 0,
     filesFound: 0,
   };
   private listeners: Map<string, Set<Function>> = new Map();
+  private lastScanPaths: Set<string> = new Set();
 
   constructor() {
-    console.log('📚 Sonántica Media Library initialized');
+    console.log('📚 Sonántica Media Library initialized (Enhanced)');
   }
 
   /**
-   * Scan for media files
-   * 
-   * In browser context, this fetches the file list from /media endpoint
+   * Scan for media files with change detection
    */
   async scan(paths: string[]): Promise<void> {
     this.scanProgress = {
@@ -57,15 +58,22 @@ export class MediaLibrary implements IMediaLibrary {
     this.emit(LIBRARY_EVENTS.SCAN_START, {});
 
     try {
-      // Fetch file list from nginx autoindex
+      const scannedPaths = new Set<string>();
+
+      // Scan all paths
       for (const path of paths) {
-        await this.scanPath(path);
+        await this.scanPathRecursive(path, scannedPaths);
       }
+
+      // Remove tracks that no longer exist
+      this.removeOrphanedTracks(scannedPaths);
 
       this.scanProgress.status = 'complete';
       this.emit(LIBRARY_EVENTS.SCAN_COMPLETE, {
         tracksFound: this.tracks.size,
       });
+
+      this.emit(LIBRARY_EVENTS.LIBRARY_UPDATED, {});
 
       console.log(`✅ Scan complete: ${this.tracks.size} tracks found`);
     } catch (error) {
@@ -77,27 +85,27 @@ export class MediaLibrary implements IMediaLibrary {
   }
 
   /**
-   * Scan a specific path
+   * Recursively scan a path
    */
-  private async scanPath(path: string): Promise<void> {
+  private async scanPathRecursive(path: string, scannedPaths: Set<string>): Promise<void> {
     try {
-      // Fetch directory listing from nginx autoindex (JSON format)
       const response = await fetch(path);
-      
+
       if (!response.ok) {
-        throw new Error(`Failed to fetch ${path}: ${response.statusText}`);
+        console.warn(`Failed to fetch ${path}: ${response.statusText}`);
+        return;
       }
 
       const contentType = response.headers.get('content-type');
-      
+
       // Check if it's JSON (nginx autoindex with autoindex_format json)
       if (contentType?.includes('application/json')) {
         const files = await response.json();
-        await this.processFileList(files, path);
+        await this.processFileListRecursive(files, path, scannedPaths);
       } else {
         // Fallback: try to parse HTML directory listing
         const html = await response.text();
-        await this.parseHtmlListing(html, path);
+        await this.parseHtmlListingRecursive(html, path, scannedPaths);
       }
     } catch (error) {
       console.error(`Error scanning ${path}:`, error);
@@ -105,38 +113,60 @@ export class MediaLibrary implements IMediaLibrary {
   }
 
   /**
-   * Process file list from JSON response
+   * Process file list from JSON response (recursive)
    */
-  private async processFileList(files: any[], basePath: string): Promise<void> {
+  private async processFileListRecursive(
+    files: any[],
+    basePath: string,
+    scannedPaths: Set<string>
+  ): Promise<void> {
     for (const file of files) {
       if (file.type === 'file') {
         const filename = file.name;
+        const fullPath = `${basePath}${filename}`;
         const ext = filename.split('.').pop()?.toLowerCase();
-        
+
         // Check if it's a supported audio format
         const mimeType = this.getMimeType(ext || '');
         if (mimeType && isSupportedFormat(mimeType)) {
-          const track = await this.createTrack(basePath, filename, file.size || 0);
-          this.addTrack(track);
+          scannedPaths.add(fullPath);
+
+          // Check if track already exists
+          const existingTrackId = this.tracksByPath.get(fullPath);
+          if (!existingTrackId) {
+            // New track - add it
+            const track = await this.createTrack(basePath, filename, file.size || 0, file.mtime);
+            this.addTrack(track);
+          } else {
+            // Track exists - update scan progress
+            this.scanProgress.filesScanned++;
+            this.emit(LIBRARY_EVENTS.SCAN_PROGRESS, {
+              filesScanned: this.scanProgress.filesScanned,
+              currentFile: filename,
+            });
+          }
         }
       } else if (file.type === 'directory') {
         // Recursively scan subdirectories
-        await this.scanPath(`${basePath}/${file.name}/`);
+        await this.scanPathRecursive(`${basePath}${file.name}/`, scannedPaths);
       }
     }
   }
 
   /**
-   * Parse HTML directory listing (fallback)
+   * Parse HTML directory listing (fallback, recursive)
    */
-  private async parseHtmlListing(html: string, basePath: string): Promise<void> {
-    // Simple HTML parsing for nginx directory listing
+  private async parseHtmlListingRecursive(
+    html: string,
+    basePath: string,
+    scannedPaths: Set<string>
+  ): Promise<void> {
     const linkRegex = /href="([^"]+)"/g;
     const matches = html.matchAll(linkRegex);
 
     for (const match of matches) {
       const href = match[1];
-      
+
       // Skip parent directory and absolute URLs
       if (href === '../' || href.startsWith('http') || href.startsWith('/')) {
         continue;
@@ -144,46 +174,104 @@ export class MediaLibrary implements IMediaLibrary {
 
       // Check if it's a directory
       if (href.endsWith('/')) {
-        await this.scanPath(`${basePath}${href}`);
+        await this.scanPathRecursive(`${basePath}${href}`, scannedPaths);
       } else {
         // Check if it's an audio file
         const ext = href.split('.').pop()?.toLowerCase();
         const mimeType = this.getMimeType(ext || '');
-        
+
         if (mimeType && isSupportedFormat(mimeType)) {
-          const track = await this.createTrack(basePath, href, 0);
-          this.addTrack(track);
+          const fullPath = `${basePath}${href}`;
+          scannedPaths.add(fullPath);
+
+          const existingTrackId = this.tracksByPath.get(fullPath);
+          if (!existingTrackId) {
+            const track = await this.createTrack(basePath, href, 0);
+            this.addTrack(track);
+          } else {
+            this.scanProgress.filesScanned++;
+          }
         }
       }
     }
   }
 
   /**
-   * Create a track object
+   * Remove tracks that no longer exist
    */
-  private async createTrack(basePath: string, filename: string, size: number): Promise<Track> {
+  private removeOrphanedTracks(scannedPaths: Set<string>): void {
+    const tracksToRemove: string[] = [];
+
+    for (const [path, trackId] of this.tracksByPath.entries()) {
+      if (!scannedPaths.has(path)) {
+        tracksToRemove.push(trackId);
+      }
+    }
+
+    for (const trackId of tracksToRemove) {
+      const track = this.tracks.get(trackId);
+      if (track) {
+        this.tracks.delete(trackId);
+        this.tracksByPath.delete(track.path);
+        this.emit(LIBRARY_EVENTS.TRACK_REMOVED, { track });
+        console.log(`🗑️ Removed orphaned track: ${track.filename}`);
+      }
+    }
+
+    if (tracksToRemove.length > 0) {
+      console.log(`🧹 Removed ${tracksToRemove.length} orphaned tracks`);
+    }
+  }
+
+  /**
+   * Create a track object with enhanced metadata extraction
+   */
+  private async createTrack(
+    basePath: string,
+    filename: string,
+    size: number,
+    mtime?: string
+  ): Promise<Track> {
     const path = `${basePath}${filename}`;
     const ext = filename.split('.').pop()?.toLowerCase() || '';
-    
-    // Extract metadata from filename/path
-    // Format: Artist/Album/Track.ext or Artist - Album - Track.ext
+
+    // Extract metadata from path structure
+    // Supports: Artist/Album/Track.ext or Artist/Year - Album/Track.ext
     const parts = path.split('/').filter(p => p && p !== 'media');
-    
+
     let artist = 'Unknown Artist';
     let album = 'Unknown Album';
     let title = filename.replace(`.${ext}`, '');
+    let year: number | undefined;
+    let trackNumber: number | undefined;
 
     if (parts.length >= 3) {
       artist = parts[parts.length - 3];
       album = parts[parts.length - 2];
       title = parts[parts.length - 1].replace(`.${ext}`, '');
+
+      // Extract year from album name (e.g., "2020 - Album Name")
+      const yearMatch = album.match(/^(\d{4})\s*[-–]\s*(.+)$/);
+      if (yearMatch) {
+        year = parseInt(yearMatch[1]);
+        album = yearMatch[2];
+      }
     } else if (parts.length === 2) {
       artist = parts[0];
       title = parts[1].replace(`.${ext}`, '');
     }
 
-    // Clean up track number from title (e.g., "01 - Song" -> "Song")
-    title = title.replace(/^\d+\s*[-_.]\s*/, '');
+    // Extract track number from title (e.g., "01 - Song" or "01. Song")
+    const trackMatch = title.match(/^(\d+)\s*[-_.]?\s*(.+)$/);
+    if (trackMatch) {
+      trackNumber = parseInt(trackMatch[1]);
+      title = trackMatch[2];
+    }
+
+    // Clean up metadata
+    artist = this.cleanMetadata(artist);
+    album = this.cleanMetadata(album);
+    title = this.cleanMetadata(title);
 
     return {
       id: generateId(),
@@ -195,10 +283,22 @@ export class MediaLibrary implements IMediaLibrary {
         title,
         artist,
         album,
+        year,
+        trackNumber,
       },
       addedAt: new Date(),
-      lastModified: new Date(),
+      lastModified: mtime ? new Date(mtime) : new Date(),
     };
+  }
+
+  /**
+   * Clean metadata string
+   */
+  private cleanMetadata(str: string): string {
+    return str
+      .replace(/_/g, ' ') // Replace underscores with spaces
+      .replace(/\s+/g, ' ') // Normalize whitespace
+      .trim();
   }
 
   /**
@@ -215,6 +315,8 @@ export class MediaLibrary implements IMediaLibrary {
       'aac': 'audio/aac',
       'aiff': 'audio/aiff',
       'alac': 'audio/x-m4a',
+      'wma': 'audio/x-ms-wma',
+      'ape': 'audio/x-ape',
     };
 
     return mimeTypes[ext.toLowerCase()] || '';
@@ -225,6 +327,7 @@ export class MediaLibrary implements IMediaLibrary {
    */
   private addTrack(track: Track): void {
     this.tracks.set(track.id, track);
+    this.tracksByPath.set(track.path, track.id);
     this.scanProgress.filesScanned++;
     this.scanProgress.filesFound++;
     this.scanProgress.currentFile = track.filename;
@@ -245,12 +348,12 @@ export class MediaLibrary implements IMediaLibrary {
 
     if (filter) {
       if (filter.artist) {
-        tracks = tracks.filter(t => 
+        tracks = tracks.filter(t =>
           t.metadata.artist?.toLowerCase().includes(filter.artist!.toLowerCase())
         );
       }
       if (filter.album) {
-        tracks = tracks.filter(t => 
+        tracks = tracks.filter(t =>
           t.metadata.album?.toLowerCase().includes(filter.album!.toLowerCase())
         );
       }
@@ -264,7 +367,16 @@ export class MediaLibrary implements IMediaLibrary {
       }
     }
 
-    return tracks;
+    // Sort by artist, album, track number
+    return tracks.sort((a, b) => {
+      const artistCompare = (a.metadata.artist || '').localeCompare(b.metadata.artist || '');
+      if (artistCompare !== 0) return artistCompare;
+
+      const albumCompare = (a.metadata.album || '').localeCompare(b.metadata.album || '');
+      if (albumCompare !== 0) return albumCompare;
+
+      return (a.metadata.trackNumber || 0) - (b.metadata.trackNumber || 0);
+    });
   }
 
   /**
@@ -275,12 +387,13 @@ export class MediaLibrary implements IMediaLibrary {
 
     for (const track of this.tracks.values()) {
       const albumKey = `${track.metadata.artist}-${track.metadata.album}`;
-      
+
       if (!albumsMap.has(albumKey)) {
         albumsMap.set(albumKey, {
           id: generateId(),
           name: track.metadata.album || 'Unknown Album',
           artist: track.metadata.artist || 'Unknown Artist',
+          year: track.metadata.year,
           tracks: [],
         });
       }
@@ -288,7 +401,12 @@ export class MediaLibrary implements IMediaLibrary {
       albumsMap.get(albumKey)!.tracks.push(track);
     }
 
-    return Array.from(albumsMap.values()).sort((a, b) => 
+    // Sort tracks within each album by track number
+    for (const album of albumsMap.values()) {
+      album.tracks.sort((a, b) => (a.metadata.trackNumber || 0) - (b.metadata.trackNumber || 0));
+    }
+
+    return Array.from(albumsMap.values()).sort((a, b) =>
       a.name.localeCompare(b.name)
     );
   }
@@ -314,7 +432,7 @@ export class MediaLibrary implements IMediaLibrary {
       artist.trackCount += album.tracks.length;
     }
 
-    return Array.from(artistsMap.values()).sort((a, b) => 
+    return Array.from(artistsMap.values()).sort((a, b) =>
       a.name.localeCompare(b.name)
     );
   }
@@ -382,6 +500,7 @@ export class MediaLibrary implements IMediaLibrary {
    */
   clear(): void {
     this.tracks.clear();
+    this.tracksByPath.clear();
     this.scanProgress = {
       status: 'idle',
       filesScanned: 0,
