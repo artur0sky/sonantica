@@ -1,0 +1,69 @@
+# Docker ignore file for Sonántica
+# Optimizes build context and reduces image size
+
+# Node modules
+node_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+**/dist/
+build/
+**/build/
+
+# Development files
+.git/
+.github/
+.vscode/
+.idea/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Testing
+coverage/
+.nyc_output/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Documentation (not needed in production)
+docs/
+*.md
+!README.md
+
+# Media files (will be mounted as volumes)
+media/
+buckets/
+config/
+
+# Development tools
+.eslintcache
+.stylelintcache
+*.tsbuildinfo
+
+# Temporary files
+tmp/
+temp/
+.cache/
+
+# IDE
+*.swp
+*.swo
+*~
+
+# Docker files (avoid recursion)
+Dockerfile*
+docker-compose*.yml
+.dockerignore

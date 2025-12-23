@@ -73,6 +73,40 @@ pnpm build
 pnpm dev
 ```
 
+### Docker Deployment 🐳
+
+Run Sonántica in Docker with volume support for your media library:
+
+```bash
+# Quick start (production)
+docker compose up -d
+
+# Or use the helper script
+./docker.sh start        # Linux/macOS
+.\docker.ps1 start       # Windows
+
+# Development mode with hot-reload
+docker compose --profile dev up
+
+# With file browser for media management
+docker compose --profile tools up -d
+```
+
+**Access:**
+- Production: http://localhost:3000
+- Development: http://localhost:5173
+- File Browser: http://localhost:8080
+
+**Volume mounting:**
+```bash
+# Edit .env to configure paths
+MEDIA_PATH=./media          # Your music library
+BUCKETS_PATH=./buckets      # Cloud storage or additional media
+CONFIG_PATH=./config        # User preferences
+```
+
+See [DOCKER_QUICKSTART.md](./DOCKER_QUICKSTART.md) for more details.
+
 ### Project Structure
 
 Each package is independent:
@@ -129,6 +163,8 @@ See [docs/ROADMAP.md](./docs/ROADMAP.md) for the full feature roadmap.
 - [Architecture](./docs/ARCHITECTURE.md) - Technical design and principles
 - [Identity](./docs/IDENTITY.md) - Brand philosophy and voice
 - [Roadmap](./docs/ROADMAP.md) - Feature planning and progress
+- [Docker Deployment](./docs/DOCKER.md) - Complete Docker guide
+- [Docker Quick Start](./DOCKER_QUICKSTART.md) - Get started with Docker in 5 minutes
 
 ## 🤝 Contributing
 

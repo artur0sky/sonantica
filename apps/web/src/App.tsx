@@ -22,17 +22,17 @@ function App() {
   useEffect(() => {
     // Subscribe to player events
     const unsubscribeState = player.on('player:state-change', (event) => {
-      setState(event.data.newState);
+      setState((event.data as any).newState);
     });
 
     const unsubscribeTime = player.on('player:time-update', (event) => {
-      setCurrentTime(event.data.currentTime);
-      setDuration(event.data.duration);
+      setCurrentTime((event.data as any).currentTime);
+      setDuration((event.data as any).duration);
     });
 
     const unsubscribeVolume = player.on('player:volume-change', (event) => {
-      if (event.data.volume !== undefined) {
-        setVolume(event.data.volume);
+      if ((event.data as any).volume !== undefined) {
+        setVolume((event.data as any).volume);
       }
     });
 

@@ -1,0 +1,154 @@
+# Sonántica - Docker Compose Configuration
+# Philosophy: "User autonomy" - flexible volume mounting
+#
+# Usage:
+#   Production:  docker compose up -d
+#   Development: docker compose --profile dev up
+#   Stop:        docker compose down
+
+services:
+  # ============================================
+  # PRODUCTION SERVICE
+  # ============================================
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: sonantica-web
+    ports:
+      - "${WEB_PORT:-3000}:80"
+    volumes:
+      # Media files - Mount your music library here
+      # Example: ./media or /path/to/your/music
+      - ${MEDIA_PATH:-./media}:/media:ro
+
+      # Buckets - For cloud storage mounts or additional libraries
+      # Example: ./buckets or /mnt/s3-music
+      - ${BUCKETS_PATH:-./buckets}:/buckets:ro
+
+      # Config - User preferences, playlists, settings
+      - ${CONFIG_PATH:-./config}:/config:rw
+    environment:
+      - NODE_ENV=production
+      - SONANTICA_VERSION=${SONANTICA_VERSION:-0.1.0}
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health" ]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    networks:
+      - sonantica-net
+    labels:
+      com.sonantica.description: "Audio-first multimedia player"
+      com.sonantica.version: "0.1.0"
+      com.sonantica.mode: "production"
+
+  # ============================================
+  # DEVELOPMENT SERVICE (with hot-reload)
+  # ============================================
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      target: development
+    container_name: sonantica-dev
+    ports:
+      - "${DEV_PORT:-5173}:5173"
+    volumes:
+      # Source code - mounted for hot-reload
+      - ./packages:/app/packages:cached
+      - ./apps:/app/apps:cached
+      - ./docs:/app/docs:ro
+      - ./package.json:/app/package.json:ro
+      - ./pnpm-workspace.yaml:/app/pnpm-workspace.yaml:ro
+      - ./pnpm-lock.yaml:/app/pnpm-lock.yaml:ro
+      - ./.npmrc:/app/.npmrc:ro
+
+      # Media volumes (same as production)
+      - ${MEDIA_PATH:-./media}:/media:ro
+      - ${BUCKETS_PATH:-./buckets}:/buckets:ro
+      - ${CONFIG_PATH:-./config}:/config:rw
+
+      # Node modules - use named volume for better performance
+      - node_modules:/app/node_modules
+      - shared_dist:/app/packages/shared/dist
+      - core_dist:/app/packages/player-core/dist
+    environment:
+      - NODE_ENV=development
+      - VITE_HOST=0.0.0.0
+      - VITE_PORT=5173
+    command: sh -c "pnpm install && pnpm build && pnpm dev --host 0.0.0.0"
+    networks:
+      - sonantica-net
+    profiles:
+      - dev
+    labels:
+      com.sonantica.description: "Audio-first multimedia player (development)"
+      com.sonantica.version: "0.1.0"
+      com.sonantica.mode: "development"
+
+  # ============================================
+  # OPTIONAL: File Browser for Media Management
+  # ============================================
+  filebrowser:
+    image: filebrowser/filebrowser:latest
+    container_name: sonantica-filebrowser
+    ports:
+      - "${FILEBROWSER_PORT:-8080}:80"
+    volumes:
+      - ${MEDIA_PATH:-./media}:/srv/media
+      - ${BUCKETS_PATH:-./buckets}:/srv/buckets
+      - filebrowser_db:/database
+      - filebrowser_config:/config
+    environment:
+      - FB_BASEURL=/files
+    networks:
+      - sonantica-net
+    profiles:
+      - tools
+    labels:
+      com.sonantica.description: "File browser for media management"
+
+  # ============================================
+  # OPTIONAL: Nginx Reverse Proxy (for multiple services)
+  # ============================================
+  nginx-proxy:
+    image: nginx:alpine
+    container_name: sonantica-proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx-proxy.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - web
+    networks:
+      - sonantica-net
+    profiles:
+      - proxy
+    labels:
+      com.sonantica.description: "Reverse proxy for Sonántica services"
+
+networks:
+  sonantica-net:
+    driver: bridge
+    name: sonantica-network
+
+volumes:
+  # Development volumes
+  node_modules:
+    driver: local
+  shared_dist:
+    driver: local
+  core_dist:
+    driver: local
+
+  # File browser volumes
+  filebrowser_db:
+    driver: local
+  filebrowser_config:
+    driver: local
