@@ -659,6 +659,31 @@ export class MediaLibrary implements IMediaLibrary {
   }
 
   /**
+   * Restore library from cached tracks
+   */
+  restore(tracks: Track[]): void {
+    this.clear();
+    
+    for (const track of tracks) {
+      // Re-map dates from strings if needed (JSON serialization)
+      if (typeof track.addedAt === 'string') track.addedAt = new Date(track.addedAt);
+      if (typeof track.lastModified === 'string') track.lastModified = new Date(track.lastModified);
+      
+      this.tracks.set(track.id, track);
+      this.tracksByPath.set(track.path, track.id);
+    }
+    
+    this.scanProgress = {
+      status: 'complete',
+      filesScanned: tracks.length,
+      filesFound: tracks.length,
+    };
+    
+    console.log(`♻️ Restored ${tracks.length} tracks from cache`);
+    this.emit(LIBRARY_EVENTS.LIBRARY_UPDATED, {});
+  }
+
+  /**
    * Clear the library
    */
   clear(): void {

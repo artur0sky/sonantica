@@ -152,20 +152,14 @@ export const useLibraryStore = create<LibraryState>((set, get) => {
       try {
         const cachedData = await loadFromStorage<{
           tracks: Track[];
-          albums: Album[];
-          artists: Artist[];
           stats: LibraryStats;
         }>(STORES.LIBRARY, 'data');
 
-        if (cachedData && cachedData.tracks.length > 0) {
-          // Restore library data
-          set({
-            tracks: cachedData.tracks,
-            albums: cachedData.albums,
-            artists: cachedData.artists,
-            stats: cachedData.stats,
-          });
-          console.log('📚 Loaded library from cache:', cachedData.stats.totalTracks, 'tracks');
+        if (cachedData && cachedData.tracks && cachedData.tracks.length > 0) {
+          console.log('📚 Loading library from cache:', cachedData.tracks.length, 'tracks');
+          // Restore library instance - this will trigger LIBRARY_UPDATED event
+          // which in turn calls _updateLibrary to populate the store state
+          library.restore(cachedData.tracks);
         }
       } catch (error) {
         console.warn('Failed to load cached library:', error);
@@ -191,19 +185,27 @@ export const useLibraryStore = create<LibraryState>((set, get) => {
     },
 
     _updateLibrary: async () => {
+      const tracks = library.getTracks();
+      const stats = library.getStats();
+      
       const newData = {
         artists: library.getArtists(),
         albums: library.getAlbums(),
-        tracks: library.getTracks(),
-        stats: library.getStats(),
+        tracks,
+        stats,
       };
 
       set(newData);
 
-      // Save to IndexedDB
+      // Save to IndexedDB - ONLY tracks and stats
+      // calculating artists/albums from tracks is fast enough on load
+      // and avoids saving massive duplicated object graphs
       try {
-        await saveToStorage(STORES.LIBRARY, 'data', newData);
-        console.log('💾 Library saved to cache:', newData.stats.totalTracks, 'tracks');
+        await saveToStorage(STORES.LIBRARY, 'data', {
+          tracks,
+          stats
+        });
+        console.log('💾 Library saved to cache:', stats.totalTracks, 'tracks');
       } catch (error) {
         console.error('Failed to save library to cache:', error);
       }

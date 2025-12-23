@@ -1,10 +1,18 @@
 /**
  * Media Library Contracts
- * 
+ *
  * Interfaces defining the public API for media library operations.
  */
 
-import type { Track, Album, Artist, Genre, LibraryStats, ScanProgress, LibraryFilter } from './types';
+import type {
+  Track,
+  Album,
+  Artist,
+  Genre,
+  LibraryStats,
+  ScanProgress,
+  LibraryFilter,
+} from "./types";
 
 /**
  * Main interface for media library operations
@@ -49,6 +57,11 @@ export interface IMediaLibrary {
    * Subscribe to library events
    */
   on(eventType: string, callback: (data: any) => void): () => void;
+
+  /**
+   * Restore library from cached tracks
+   */
+  restore(tracks: Track[]): void;
 
   /**
    * Clear the library
