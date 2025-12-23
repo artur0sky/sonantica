@@ -1,42 +1,62 @@
 /**
  * UI Store
  * 
- * Manages UI state (view mode, modals, etc.)
+ * Manages UI state (layout, player visibility, queue, etc.)
  */
 
 import { create } from 'zustand';
 
-type ViewMode = 'player' | 'library';
-type LibraryView = 'artists' | 'albums' | 'tracks';
-
 interface UIState {
-  // View state
-  currentView: ViewMode;
-  libraryView: LibraryView;
+  // Player UI state
+  isPlayerExpanded: boolean;
+  isQueueOpen: boolean;
   
-  // UI state
-  sidebarOpen: boolean;
+  // Sidebar state
+  isLeftSidebarOpen: boolean;
+  isRightSidebarOpen: boolean;
   
   // Actions
-  setView: (view: ViewMode) => void;
-  setLibraryView: (view: LibraryView) => void;
-  toggleSidebar: () => void;
+  togglePlayerExpanded: () => void;
+  toggleQueue: () => void;
+  toggleLeftSidebar: () => void;
+  toggleRightSidebar: () => void;
+  setPlayerExpanded: (expanded: boolean) => void;
+  setQueueOpen: (open: boolean) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
-  currentView: 'player',
-  libraryView: 'artists',
-  sidebarOpen: false,
+  isPlayerExpanded: false,
+  isQueueOpen: false,
+  isLeftSidebarOpen: true,
+  isRightSidebarOpen: false,
 
-  setView: (view: ViewMode) => {
-    set({ currentView: view });
+  togglePlayerExpanded: () => {
+    set((state) => ({ isPlayerExpanded: !state.isPlayerExpanded }));
   },
 
-  setLibraryView: (view: LibraryView) => {
-    set({ libraryView: view });
+  toggleQueue: () => {
+    set((state) => ({ 
+      isQueueOpen: !state.isQueueOpen,
+      isRightSidebarOpen: !state.isQueueOpen, // Sync with sidebar
+    }));
   },
 
-  toggleSidebar: () => {
-    set((state) => ({ sidebarOpen: !state.sidebarOpen }));
+  toggleLeftSidebar: () => {
+    set((state) => ({ isLeftSidebarOpen: !state.isLeftSidebarOpen }));
+  },
+
+  toggleRightSidebar: () => {
+    set((state) => ({ isRightSidebarOpen: !state.isRightSidebarOpen }));
+  },
+
+  setPlayerExpanded: (expanded: boolean) => {
+    set({ isPlayerExpanded: expanded });
+  },
+
+  setQueueOpen: (open: boolean) => {
+    set({ 
+      isQueueOpen: open,
+      isRightSidebarOpen: open,
+    });
   },
 }));

@@ -67,6 +67,8 @@ export const useLibraryStore = create<LibraryState>((set, get) => {
     scan: async (paths: string[]) => {
       try {
         set({ scanning: true, scanProgress: 0 });
+        // Clear library before scanning to prevent duplicates
+        library.clear();
         await library.scan(paths);
       } catch (error) {
         console.error('Scan failed:', error);

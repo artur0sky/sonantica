@@ -1,37 +1,49 @@
 /**
  * Sonántica Web App
  * 
- * Main application with routing.
+ * Main application with SoundCloud-inspired layout.
  * "Apps never implement domain logic."
  */
 
 import { Route, Switch } from 'wouter';
-import { Header } from './shared/components/organisms';
-import { PlayerPage } from './features/player/PlayerPage';
-import { LibraryPage } from './features/library/LibraryPage';
+import { MainLayout } from './shared/components/layouts/MainLayout';
+import { TracksPage } from './features/library/pages/TracksPage';
+import { AlbumsPage } from './features/library/pages/AlbumsPage';
+import { ArtistsPage } from './features/library/pages/ArtistsPage';
 
 function App() {
   return (
-    <div className="min-h-screen bg-bg text-text flex flex-col">
-      <Header />
-      
-      <main className="flex-1 container mx-auto px-4 py-6 max-w-6xl">
-        <Switch>
-          <Route path="/" component={PlayerPage} />
-          <Route path="/library" component={LibraryPage} />
-          <Route>
-            <div className="text-center py-12">
-              <h1 className="text-2xl font-bold mb-2">404</h1>
+    <MainLayout>
+      <Switch>
+        {/* Default view: Tracks */}
+        <Route path="/" component={TracksPage} />
+        
+        {/* Library views */}
+        <Route path="/albums" component={AlbumsPage} />
+        <Route path="/artists" component={ArtistsPage} />
+        
+        {/* Playlists - Coming soon */}
+        <Route path="/playlists">
+          <div className="max-w-6xl mx-auto p-6">
+            <div className="text-center py-20">
+              <div className="text-6xl mb-4">📋</div>
+              <h2 className="text-2xl font-semibold mb-2">Playlists</h2>
+              <p className="text-text-muted">Coming soon...</p>
+            </div>
+          </div>
+        </Route>
+        
+        {/* 404 */}
+        <Route>
+          <div className="max-w-6xl mx-auto p-6">
+            <div className="text-center py-20">
+              <h1 className="text-4xl font-bold mb-2">404</h1>
               <p className="text-text-muted">Page not found</p>
             </div>
-          </Route>
-        </Switch>
-      </main>
-
-      <footer className="border-t border-border py-6 text-center text-sm text-text-muted">
-        <p>"Respect the intention of the sound and the freedom of the listener."</p>
-      </footer>
-    </div>
+          </div>
+        </Route>
+      </Switch>
+    </MainLayout>
   );
 }
 
