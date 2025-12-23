@@ -54,6 +54,13 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
 
     loadTrack: async (source: MediaSource) => {
       try {
+        // Immediately set loading state
+        set({ 
+          state: PlaybackState.LOADING,
+          currentTime: 0,
+          duration: 0,
+        });
+
         // First, try to extract real metadata from the file
         let enhancedSource = { ...source };
         
@@ -77,6 +84,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
         set({ currentTrack: enhancedSource });
       } catch (error) {
         console.error('Failed to load track:', error);
+        set({ state: PlaybackState.ERROR });
         throw error;
       }
     },

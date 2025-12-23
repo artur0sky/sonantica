@@ -55,9 +55,9 @@ export class PlayerEngine implements IPlayerEngine {
     try {
       this.setState(PlaybackState.LOADING);
 
-      // Clean up previous audio element
+      // Clean up previous audio element (but keep listeners!)
       if (this.audio) {
-        this.dispose();
+        this.cleanupAudio();
       }
 
       // Create new audio element
@@ -207,15 +207,21 @@ export class PlayerEngine implements IPlayerEngine {
   }
 
   /**
-   * Cleanup
+   * Cleanup audio element only (keeps event listeners)
    */
-  dispose(): void {
+  private cleanupAudio(): void {
     if (this.audio) {
       this.audio.pause();
       this.audio.src = '';
       this.audio = null;
     }
+  }
 
+  /**
+   * Full cleanup (including listeners)
+   */
+  dispose(): void {
+    this.cleanupAudio();
     this.listeners.clear();
     this.setState(PlaybackState.IDLE);
     console.log('🧹 Player disposed');

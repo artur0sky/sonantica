@@ -8,6 +8,7 @@
 import { create } from 'zustand';
 import { MediaLibrary, LIBRARY_EVENTS } from '@sonantica/media-library';
 import type { Artist, Album, Track, LibraryStats } from '@sonantica/media-library';
+import { saveToStorage, loadFromStorage, STORES } from '../utils/storage';
 
 interface LibraryState {
   // Library instance
@@ -146,7 +147,30 @@ export const useLibraryStore = create<LibraryState>((set, get) => {
       return filtered;
     },
 
-    _initialize: () => {
+    _initialize: async () => {
+      // Load cached library data
+      try {
+        const cachedData = await loadFromStorage<{
+          tracks: Track[];
+          albums: Album[];
+          artists: Artist[];
+          stats: LibraryStats;
+        }>(STORES.LIBRARY, 'data');
+
+        if (cachedData && cachedData.tracks.length > 0) {
+          // Restore library data
+          set({
+            tracks: cachedData.tracks,
+            albums: cachedData.albums,
+            artists: cachedData.artists,
+            stats: cachedData.stats,
+          });
+          console.log('📚 Loaded library from cache:', cachedData.stats.totalTracks, 'tracks');
+        }
+      } catch (error) {
+        console.warn('Failed to load cached library:', error);
+      }
+
       // Subscribe to library events
       library.on(LIBRARY_EVENTS.SCAN_START, () => {
         set({ scanning: true, scanProgress: 0 });
@@ -156,23 +180,33 @@ export const useLibraryStore = create<LibraryState>((set, get) => {
         set({ scanProgress: data.filesScanned || 0 });
       });
 
-      library.on(LIBRARY_EVENTS.SCAN_COMPLETE, () => {
+      library.on(LIBRARY_EVENTS.SCAN_COMPLETE, async () => {
         set({ scanning: false });
-        get()._updateLibrary();
+        await get()._updateLibrary();
       });
 
-      library.on(LIBRARY_EVENTS.LIBRARY_UPDATED, () => {
-        get()._updateLibrary();
+      library.on(LIBRARY_EVENTS.LIBRARY_UPDATED, async () => {
+        await get()._updateLibrary();
       });
     },
 
-    _updateLibrary: () => {
-      set({
+    _updateLibrary: async () => {
+      const newData = {
         artists: library.getArtists(),
         albums: library.getAlbums(),
         tracks: library.getTracks(),
         stats: library.getStats(),
-      });
+      };
+
+      set(newData);
+
+      // Save to IndexedDB
+      try {
+        await saveToStorage(STORES.LIBRARY, 'data', newData);
+        console.log('💾 Library saved to cache:', newData.stats.totalTracks, 'tracks');
+      } catch (error) {
+        console.error('Failed to save library to cache:', error);
+      }
     },
   };
 });

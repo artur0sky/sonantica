@@ -9,9 +9,9 @@ import { Button } from '../../../shared/components/atoms';
 import { SearchBar } from '../../../shared/components/molecules';
 import { useLibraryStore } from '../../../shared/store/libraryStore';
 import { TrackItem } from '../components/TrackItem';
-import { IconRefresh, IconMusic, IconSearch } from '@tabler/icons-react';
+import { IconRefresh, IconMusic, IconSearch, IconPlayerPlay, IconArrowsShuffle } from '@tabler/icons-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { playFromContext } from '../../../shared/utils/playContext';
+import { playFromContext, playAll, playAllShuffled } from '../../../shared/utils/playContext';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -62,6 +62,34 @@ export function TracksPage() {
     }
   };
 
+  const handlePlayAll = async () => {
+    try {
+      const mediaSources = filteredTracks.map(t => ({
+        id: t.id,
+        url: t.path,
+        mimeType: t.mimeType,
+        metadata: t.metadata,
+      }));
+      await playAll(mediaSources);
+    } catch (error) {
+      console.error('Failed to play all:', error);
+    }
+  };
+
+  const handleShuffle = async () => {
+    try {
+      const mediaSources = filteredTracks.map(t => ({
+        id: t.id,
+        url: t.path,
+        mimeType: t.mimeType,
+        metadata: t.metadata,
+      }));
+      await playAllShuffled(mediaSources);
+    } catch (error) {
+      console.error('Failed to shuffle:', error);
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto p-6 pb-32">
       {/* Header */}
@@ -86,20 +114,45 @@ export function TracksPage() {
             </AnimatePresence>
           </div>
 
-          <Button
-            onClick={handleScan}
-            disabled={scanning}
-            variant="primary"
-            className="flex items-center gap-2"
-          >
-            <motion.div
-              animate={scanning ? { rotate: 360 } : { rotate: 0 }}
-              transition={scanning ? { duration: 1, repeat: Infinity, ease: "linear" } : {}}
+          <div className="flex items-center gap-3">
+            {/* Play All Button */}
+            {filteredTracks.length > 0 && (
+              <>
+                <Button
+                  onClick={handlePlayAll}
+                  variant="secondary"
+                  className="flex items-center gap-2"
+                >
+                  <IconPlayerPlay size={18} />
+                  Play All
+                </Button>
+
+                <Button
+                  onClick={handleShuffle}
+                  variant="secondary"
+                  className="flex items-center gap-2"
+                >
+                  <IconArrowsShuffle size={18} />
+                  Shuffle
+                </Button>
+              </>
+            )}
+
+            <Button
+              onClick={handleScan}
+              disabled={scanning}
+              variant="primary"
+              className="flex items-center gap-2"
             >
-              <IconRefresh size={18} />
-            </motion.div>
-            {scanning ? `Scanning... (${scanProgress})` : 'Scan Library'}
-          </Button>
+              <motion.div
+                animate={scanning ? { rotate: 360 } : { rotate: 0 }}
+                transition={scanning ? { duration: 1, repeat: Infinity, ease: "linear" } : {}}
+              >
+                <IconRefresh size={18} />
+              </motion.div>
+              {scanning ? `Scanning... (${scanProgress})` : 'Scan Library'}
+            </Button>
+          </div>
         </div>
 
         {/* Search */}
