@@ -15,7 +15,7 @@ export async function extractMetadata(url: string): Promise<Partial<MediaMetadat
     // Fetch the file with range request (first 1MB for better artwork support)
     const response = await fetch(url, {
       headers: {
-        'Range': 'bytes=0-1048575', // First 1MB (increased from 512KB to support larger artwork)
+        'Range': 'bytes=0-16777215', // First 16MB to support HQ artwork (User requested no limits)
       },
     });
 
