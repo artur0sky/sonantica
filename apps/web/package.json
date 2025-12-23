@@ -13,8 +13,11 @@
   },
   "dependencies": {
     "@sonantica/media-library": "workspace:*",
+    "@sonantica/metadata": "workspace:*",
     "@sonantica/player-core": "workspace:*",
     "@sonantica/shared": "workspace:*",
+    "@tabler/icons-react": "^3.29.0",
+    "framer-motion": "^12.0.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "wouter": "^3.5.0",

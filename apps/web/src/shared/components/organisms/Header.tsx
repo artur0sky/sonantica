@@ -1,56 +1,63 @@
 /**
- * Header Organism
+ * Header Component
  * 
- * Main application header with navigation.
+ * Application header with search and navigation.
  */
 
-import { Link, useLocation } from 'wouter';
-import { APP_NAME } from '@sonantica/shared';
-import { cn } from '../../utils/cn';
+import { Link } from 'wouter';
+import { IconMenu2, IconUser, IconSettings } from '@tabler/icons-react';
+import { motion } from 'framer-motion';
+import { Button } from '../atoms';
+import { useUIStore } from '../../store/uiStore';
 
 export function Header() {
-  const [location] = useLocation();
-
-  const navItems = [
-    { path: '/', label: '▶️ Player', icon: '▶️' },
-    { path: '/library', label: '📚 Library', icon: '📚' },
-  ];
+  const { toggleLeftSidebar } = useUIStore();
 
   return (
-    <header className="border-b border-border bg-surface sticky top-0 z-50 backdrop-blur-sm bg-opacity-95">
-      <div className="container mx-auto px-4 max-w-6xl">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link href="/">
-            <a className="flex items-center gap-2 hover:opacity-80 transition-fast">
-              <span className="text-2xl font-bold">{APP_NAME}</span>
-              <span className="text-sm text-text-muted hidden sm:inline">
-                Audio-first player
-              </span>
-            </a>
-          </Link>
+    <motion.header
+      initial={{ y: -20, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      className="h-16 border-b border-border bg-surface flex items-center px-4 justify-between select-none z-30"
+    >
+      <div className="flex items-center gap-4">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={toggleLeftSidebar}
+          className="text-text-muted hover:text-text"
+        >
+          <IconMenu2 size={24} stroke={1.5} />
+        </Button>
 
-          {/* Navigation */}
-          <nav className="flex gap-1">
-            {navItems.map((item) => (
-              <Link key={item.path} href={item.path}>
-                <a
-                  className={cn(
-                    'px-4 py-2 rounded-md font-medium transition-fast',
-                    'hover:bg-surface-elevated',
-                    location === item.path
-                      ? 'text-accent bg-surface-elevated'
-                      : 'text-text-muted'
-                  )}
-                >
-                  <span className="hidden sm:inline">{item.label}</span>
-                  <span className="sm:hidden text-xl">{item.icon}</span>
-                </a>
-              </Link>
-            ))}
-          </nav>
+        <Link href="/">
+          <a className="flex items-center gap-2 group">
+            <motion.div
+              whileHover={{ rotate: 180 }}
+              transition={{ duration: 0.5 }}
+              className="w-8 h-8 bg-accent rounded-lg flex items-center justify-center text-white font-bold text-lg"
+            >
+              S
+            </motion.div>
+            <span className="text-xl font-bold tracking-tight group-hover:text-accent transition-colors">
+              Sonántica
+            </span>
+          </a>
+        </Link>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-text-muted hover:text-text"
+        >
+          <IconSettings size={20} stroke={1.5} />
+        </Button>
+        
+        <div className="w-8 h-8 rounded-full bg-surface-elevated flex items-center justify-center text-text-muted hover:text-text hover:bg-accent/20 cursor-pointer transition-colors">
+          <IconUser size={20} stroke={1.5} />
         </div>
       </div>
-    </header>
+    </motion.header>
   );
 }

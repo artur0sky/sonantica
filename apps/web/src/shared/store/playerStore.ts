@@ -49,8 +49,27 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
 
     loadTrack: async (source: MediaSource) => {
       try {
-        await player.load(source);
-        set({ currentTrack: source });
+        // First, try to extract real metadata from the file
+        let enhancedSource = { ...source };
+        
+        try {
+          const { extractMetadata } = await import('@sonantica/metadata');
+          const realMetadata = await extractMetadata(source.url);
+          
+          // Merge real metadata with existing metadata (real metadata takes precedence)
+          enhancedSource.metadata = {
+            ...source.metadata,
+            ...realMetadata,
+          };
+          
+          console.log('✅ Extracted metadata:', enhancedSource.metadata);
+        } catch (metadataError) {
+          console.warn('⚠️ Could not extract metadata, using fallback:', metadataError);
+          // Continue with original metadata from filename parsing
+        }
+        
+        await player.load(enhancedSource);
+        set({ currentTrack: enhancedSource });
       } catch (error) {
         console.error('Failed to load track:', error);
         throw error;

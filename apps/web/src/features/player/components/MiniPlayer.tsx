@@ -10,6 +10,19 @@ import { useUIStore } from '../../../shared/store/uiStore';
 import { Slider } from '../../../shared/components/atoms';
 import { formatTime, PlaybackState } from '@sonantica/shared';
 import { cn } from '../../../shared/utils';
+import { 
+  IconPlayerSkipBack, 
+  IconPlayerPlay, 
+  IconPlayerPause, 
+  IconPlayerSkipForward, 
+  IconVolume, 
+  IconVolume2, 
+  IconVolume3,
+  IconVolumeOff,
+  IconPlaylist,
+  IconMusic
+} from '@tabler/icons-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export function MiniPlayer() {
   const {
@@ -31,13 +44,29 @@ export function MiniPlayer() {
   const isPlaying = state === PlaybackState.PLAYING;
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
+  const getVolumeIcon = () => {
+    if (volume === 0) return IconVolumeOff;
+    if (volume < 0.3) return IconVolume3;
+    if (volume < 0.7) return IconVolume2;
+    return IconVolume;
+  };
+
+  const VolumeIcon = getVolumeIcon();
+
   return (
-    <div className="bg-surface-elevated">
+    <motion.div 
+      initial={{ y: 100, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      exit={{ y: 100, opacity: 0 }}
+      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      className="bg-surface-elevated border-t border-border"
+    >
       {/* Progress Bar */}
-      <div className="h-1 bg-surface relative overflow-hidden">
-        <div
-          className="absolute top-0 left-0 h-full bg-accent transition-all duration-200"
+      <div className="h-1 bg-surface relative overflow-hidden group">
+        <motion.div
+          className="absolute top-0 left-0 h-full bg-accent transition-none"
           style={{ width: `${progress}%` }}
+          layoutId="progressBar"
         />
         <input
           type="range"
@@ -49,92 +78,127 @@ export function MiniPlayer() {
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
           aria-label="Seek"
         />
+        {/* Hover Effect Helper */}
+        <div className="absolute inset-0 bg-accent opacity-0 group-hover:opacity-20 transition-opacity" />
       </div>
 
       {/* Player Controls */}
       <div className="flex items-center gap-4 px-4 py-3">
         {/* Track Info - Clickable to expand */}
-        <button
+        <motion.button
           onClick={togglePlayerExpanded}
-          className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition-fast text-left"
+          whileHover={{ scale: 1.01, backgroundColor: "rgba(255,255,255,0.02)" }}
+          whileTap={{ scale: 0.99 }}
+          className="flex items-center gap-3 flex-1 min-w-0 p-1 rounded-md transition-colors text-left"
         >
-          <div className="w-14 h-14 bg-surface rounded flex items-center justify-center text-2xl flex-shrink-0">
-            🎵
-          </div>
+          <motion.div 
+            layoutId="player-artwork"
+            className="w-12 h-12 bg-surface rounded-md flex items-center justify-center text-text-muted border border-border overflow-hidden"
+          >
+            {currentTrack.metadata?.coverArt ? (
+              <img src={currentTrack.metadata.coverArt} alt="Cover" className="w-full h-full object-cover" />
+            ) : (
+              <IconMusic size={24} stroke={1.5} />
+            )}
+          </motion.div>
           <div className="min-w-0 flex-1">
-            <div className="font-medium truncate">
+            <motion.div layoutId="player-title" className="font-medium truncate text-sm">
               {currentTrack.metadata?.title || 'Unknown Title'}
-            </div>
-            <div className="text-sm text-text-muted truncate">
+            </motion.div>
+            <motion.div layoutId="player-artist" className="text-xs text-text-muted truncate">
               {currentTrack.metadata?.artist || 'Unknown Artist'}
-            </div>
+            </motion.div>
           </div>
-        </button>
+        </motion.button>
 
         {/* Center Controls */}
-        <div className="flex items-center gap-3">
-          <button
-            className="text-text-muted hover:text-text transition-fast"
+        <div className="flex items-center gap-4">
+          <motion.button
+            whileHover={{ scale: 1.1, color: "var(--color-text)" }}
+            whileTap={{ scale: 0.9 }}
+            className="text-text-muted transition-colors"
             aria-label="Previous"
           >
-            ⏮️
-          </button>
+            <IconPlayerSkipBack size={20} stroke={1.5} />
+          </motion.button>
 
-          <button
+          <motion.button
             onClick={isPlaying ? pause : play}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             className={cn(
-              'w-12 h-12 rounded-full flex items-center justify-center text-white transition-fast',
-              'bg-accent hover:bg-accent-hover hover:scale-105'
+              'w-10 h-10 rounded-full flex items-center justify-center text-white shadow-lg',
+              'bg-accent hover:bg-accent-hover'
             )}
             aria-label={isPlaying ? 'Pause' : 'Play'}
           >
-            <span className="text-xl">{isPlaying ? '⏸️' : '▶️'}</span>
-          </button>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={isPlaying ? 'pause' : 'play'}
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.5, opacity: 0 }}
+                transition={{ duration: 0.1 }}
+              >
+                {isPlaying ? (
+                  <IconPlayerPause size={20} className="fill-current" stroke={0} />
+                ) : (
+                  <IconPlayerPlay size={20} className="fill-current" stroke={0} />
+                )}
+              </motion.div>
+            </AnimatePresence>
+          </motion.button>
 
-          <button
-            className="text-text-muted hover:text-text transition-fast"
+          <motion.button
+            whileHover={{ scale: 1.1, color: "var(--color-text)" }}
+            whileTap={{ scale: 0.9 }}
+            className="text-text-muted transition-colors"
             aria-label="Next"
           >
-            ⏭️
-          </button>
+            <IconPlayerSkipForward size={20} stroke={1.5} />
+          </motion.button>
         </div>
 
         {/* Right Controls */}
         <div className="flex items-center gap-4 flex-1 justify-end">
           {/* Time Display */}
-          <div className="text-sm text-text-muted tabular-nums hidden md:block">
+          <div className="text-xs text-text-muted tabular-nums hidden md:block font-mono">
             {formatTime(currentTime)} / {formatTime(duration)}
           </div>
 
           {/* Volume Control */}
-          <div className="hidden lg:flex items-center gap-2 w-32">
-            <button
+          <div className="hidden lg:flex items-center gap-2 w-32 group/vol">
+            <motion.button
               onClick={() => setVolume(volume > 0 ? 0 : 0.7)}
-              className="text-text-muted hover:text-text transition-fast"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              className="text-text-muted hover:text-text transition-colors"
               aria-label={volume > 0 ? 'Mute' : 'Unmute'}
             >
-              {volume > 0.5 ? '🔊' : volume > 0 ? '🔉' : '🔇'}
-            </button>
+              <VolumeIcon size={18} stroke={1.5} />
+            </motion.button>
             <Slider
               value={volume}
               min={0}
               max={1}
               step={0.01}
               onChange={(e) => setVolume(parseFloat(e.target.value))}
-              className="flex-1"
+              className="flex-1 opacity-60 group-hover/vol:opacity-100 transition-opacity"
             />
           </div>
 
           {/* Queue Toggle */}
-          <button
+          <motion.button
             onClick={toggleQueue}
-            className="text-text-muted hover:text-accent transition-fast"
+            whileHover={{ scale: 1.1, color: "var(--color-accent)" }}
+            whileTap={{ scale: 0.9 }}
+            className="text-text-muted transition-colors"
             aria-label="Toggle queue"
           >
-            📋
-          </button>
+            <IconPlaylist size={20} stroke={1.5} />
+          </motion.button>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

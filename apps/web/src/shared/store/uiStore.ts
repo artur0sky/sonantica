@@ -14,14 +14,17 @@ interface UIState {
   // Sidebar state
   isLeftSidebarOpen: boolean;
   isRightSidebarOpen: boolean;
+  isMetadataPanelOpen: boolean;
   
   // Actions
   togglePlayerExpanded: () => void;
   toggleQueue: () => void;
   toggleLeftSidebar: () => void;
   toggleRightSidebar: () => void;
+  toggleMetadataPanel: () => void;
   setPlayerExpanded: (expanded: boolean) => void;
   setQueueOpen: (open: boolean) => void;
+  setMetadataPanelOpen: (open: boolean) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -29,6 +32,7 @@ export const useUIStore = create<UIState>((set) => ({
   isQueueOpen: false,
   isLeftSidebarOpen: true,
   isRightSidebarOpen: false,
+  isMetadataPanelOpen: false,
 
   togglePlayerExpanded: () => {
     set((state) => ({ isPlayerExpanded: !state.isPlayerExpanded }));
@@ -49,6 +53,10 @@ export const useUIStore = create<UIState>((set) => ({
     set((state) => ({ isRightSidebarOpen: !state.isRightSidebarOpen }));
   },
 
+  toggleMetadataPanel: () => {
+    set((state) => ({ isMetadataPanelOpen: !state.isMetadataPanelOpen }));
+  },
+
   setPlayerExpanded: (expanded: boolean) => {
     set({ isPlayerExpanded: expanded });
   },
@@ -58,5 +66,9 @@ export const useUIStore = create<UIState>((set) => ({
       isQueueOpen: open,
       isRightSidebarOpen: open,
     });
+  },
+
+  setMetadataPanelOpen: (open: boolean) => {
+    set({ isMetadataPanelOpen: open });
   },
 }));

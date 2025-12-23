@@ -5,11 +5,13 @@
  * Following Sonántica's minimalist philosophy.
  */
 
+import { AnimatePresence } from 'framer-motion';
 import { usePlayerStore } from '../../store/playerStore';
 import { useUIStore } from '../../store/uiStore';
 import { Header } from '../organisms/Header';
 import { LeftSidebar } from './LeftSidebar';
 import { RightSidebar } from './RightSidebar';
+import { MetadataPanel } from '../molecules/MetadataPanel';
 import { MiniPlayer } from '../../../features/player/components/MiniPlayer';
 import { ExpandedPlayer } from '../../../features/player/components/ExpandedPlayer';
 
@@ -19,41 +21,71 @@ interface MainLayoutProps {
 
 export function MainLayout({ children }: MainLayoutProps) {
   const currentTrack = usePlayerStore((s) => s.currentTrack);
-  const { isLeftSidebarOpen, isRightSidebarOpen, isPlayerExpanded } = useUIStore();
+  const { 
+    isLeftSidebarOpen, 
+    isRightSidebarOpen, 
+    isPlayerExpanded,
+    isMetadataPanelOpen,
+    toggleMetadataPanel
+  } = useUIStore();
 
   return (
-    <div className="h-screen flex flex-col bg-bg text-text">
+    <div className="h-screen flex flex-col bg-bg text-text overflow-hidden relative">
       {/* Header */}
       <Header />
 
       {/* Main Content Area */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden relative">
         {/* Left Sidebar - Navigation */}
-        {isLeftSidebarOpen && (
-          <aside className="w-64 bg-surface border-r border-border overflow-y-auto flex-shrink-0">
-            <LeftSidebar />
-          </aside>
-        )}
+        <AnimatePresence mode="wait">
+          {isLeftSidebarOpen && (
+            <aside className="w-64 bg-surface border-r border-border overflow-y-auto flex-shrink-0 z-20">
+              <LeftSidebar />
+            </aside>
+          )}
+        </AnimatePresence>
 
         {/* Center Content */}
-        <main className="flex-1 overflow-y-auto">
-          {isPlayerExpanded ? <ExpandedPlayer /> : children}
+        <main className="flex-1 overflow-y-auto relative z-10">
+          <AnimatePresence mode="wait">
+            {isPlayerExpanded ? <ExpandedPlayer /> : children}
+          </AnimatePresence>
         </main>
 
         {/* Right Sidebar - Queue */}
-        {isRightSidebarOpen && currentTrack && (
-          <aside className="w-80 bg-surface border-l border-border overflow-y-auto flex-shrink-0">
-            <RightSidebar />
-          </aside>
-        )}
+        <AnimatePresence mode="wait">
+          {isRightSidebarOpen && currentTrack && (
+            <aside className="w-80 bg-surface border-l border-border overflow-y-auto flex-shrink-0 z-20">
+              <RightSidebar />
+            </aside>
+          )}
+        </AnimatePresence>
+
+        {/* Metadata Panel (Overlay) */}
+        <AnimatePresence>
+          {isMetadataPanelOpen && currentTrack?.metadata && (
+            <>
+               <div 
+                 className="fixed inset-0 bg-black/50 z-40 lg:hidden" 
+                 onClick={toggleMetadataPanel}
+               />
+               <MetadataPanel 
+                 metadata={currentTrack.metadata} 
+                 onClose={toggleMetadataPanel}
+               />
+            </>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Bottom Mini Player - Sticky */}
-      {currentTrack && !isPlayerExpanded && (
-        <div className="sticky bottom-0 z-50 border-t border-border">
-          <MiniPlayer />
-        </div>
-      )}
+      <AnimatePresence mode="wait">
+        {currentTrack && !isPlayerExpanded && (
+          <div className="sticky bottom-0 z-50 border-t border-border">
+            <MiniPlayer />
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
