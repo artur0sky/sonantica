@@ -1,0 +1,38 @@
+{
+    "name": "@sonantica/player-core",
+    "version": "0.1.0",
+    "description": "Core audio playback engine for Sonántica - platform-agnostic",
+    "main": "./dist/index.js",
+    "module": "./dist/index.mjs",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.mjs",
+            "require": "./dist/index.js"
+        }
+    },
+    "scripts": {
+        "build": "tsup src/index.ts --format cjs,esm --dts",
+        "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
+        "clean": "rimraf dist",
+        "test": "echo \"No tests yet\"",
+        "lint": "echo \"No linting configured yet\""
+    },
+    "keywords": [
+        "sonantica",
+        "audio",
+        "player",
+        "core"
+    ],
+    "author": "Sonántica Team",
+    "license": "Apache-2.0",
+    "dependencies": {
+        "@sonantica/shared": "workspace:*"
+    },
+    "devDependencies": {
+        "tsup": "^8.0.0",
+        "typescript": "^5.3.0",
+        "rimraf": "^5.0.0"
+    }
+}
