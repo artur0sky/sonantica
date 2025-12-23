@@ -36,20 +36,28 @@ export function WaveformScrubber({
 
   // Generate simulated waveform (fallback) or use real data
   const waveformBars = useMemo(() => {
+    const desiredBarCount = 120; // Consistent bar count for UI
+
     if (storedWaveform && storedWaveform.length > 0) {
+      // If we have more peaks than desired, downsample
+      if (storedWaveform.length > desiredBarCount) {
+        const factor = Math.floor(storedWaveform.length / desiredBarCount);
+        return storedWaveform
+          .filter((_, i) => i % factor === 0)
+          .slice(0, desiredBarCount);
+      }
       return storedWaveform;
     }
 
     if (!duration) return [];
 
-    // Fallback simulation
-    const count = 100;
+    // Fallback simulation (consistent 120 bars)
     const bars = [];
-    for (let i = 0; i < count; i++) {
-      const x = i / count;
+    for (let i = 0; i < desiredBarCount; i++) {
+      const x = i / desiredBarCount;
       const val =
-        (Math.sin(x * 10) + Math.sin(x * 23) + Math.sin(x * 5) + 3) / 6;
-      const noise = Math.random() * 0.3;
+        (Math.sin(x * 12) + Math.sin(x * 25) + Math.sin(x * 7) + 3) / 6;
+      const noise = Math.random() * 0.2;
       bars.push(Math.max(0.1, Math.min(1.0, val + noise)));
     }
     return bars;
@@ -80,7 +88,7 @@ export function WaveformScrubber({
     <div
       ref={containerRef}
       className={cn(
-        "relative h-1 hover:h-12 w-full transition-all duration-200 group cursor-pointer",
+        "relative h-1 hover:h-12 w-full transition-all duration-300 group cursor-pointer",
         className
       )}
       onMouseEnter={() => setIsHovered(true)}
@@ -90,9 +98,9 @@ export function WaveformScrubber({
     >
       {/* Base Progress Bar (Always visible) */}
       <div className="absolute inset-0 flex items-end">
-        <div className="w-full h-1 bg-surface-elevated relative overflow-hidden group-hover:opacity-0 transition-opacity">
+        <div className="w-full h-1 bg-white/10 relative overflow-hidden group-hover:opacity-0 transition-opacity">
           <div
-            className="absolute top-0 left-0 h-full bg-accent"
+            className="absolute top-0 left-0 h-full bg-accent shadow-[0_0_10px_rgba(var(--color-accent-rgb),0.5)]"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -105,7 +113,7 @@ export function WaveformScrubber({
             initial={{ opacity: 0, scaleY: 0 }}
             animate={{ opacity: 1, scaleY: 1 }}
             exit={{ opacity: 0, scaleY: 0 }}
-            className="absolute inset-0 flex items-end gap-[1px] bg-surface/90 backdrop-blur-sm rounded-md overflow-hidden border border-border/50"
+            className="absolute inset-0 flex items-end gap-[2px] px-[2px] bg-bg/80 backdrop-blur-md rounded-sm overflow-hidden border border-white/5"
             style={{ transformOrigin: "bottom" }}
           >
             {waveformBars.map((height, i) => {
@@ -118,16 +126,20 @@ export function WaveformScrubber({
                 <div
                   key={i}
                   className={cn(
-                    "flex-1 transition-colors duration-75",
-                    isPlayed ? "bg-accent" : "bg-text-muted/30",
-                    isHovering && !isPlayed && "bg-text/50"
+                    "flex-1 min-w-[1px] rounded-t-[2px] transition-all duration-150",
+                    isPlayed
+                      ? "bg-accent"
+                      : isHovering
+                      ? "bg-white/40"
+                      : "bg-white/10"
                   )}
-                  style={{ height: `${height * 100}%` }}
+                  style={{
+                    height: `${Math.max(4, height * 100)}%`,
+                    opacity: isPlayed ? 1 : 0.6,
+                  }}
                 />
               );
             })}
-
-            {/* Hover Time Tooltip could go here */}
           </motion.div>
         )}
       </AnimatePresence>
