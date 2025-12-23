@@ -1,6 +1,23 @@
-# Gemini Agent – ​​Architecture and Planning
+# Sonantica – Roadmap & Implementation Tracking
 ## Project: Open Source Multimedia Player
 ## Brand Identity: (strictly use the identity defined in [IDENTITY.md](./IDENTITY.md))
+
+---
+
+## 📖 How to Read This Roadmap
+
+### Status Indicators
+- ✅ **Done** - Feature is fully implemented and tested
+- 🚧 **In Progress** - Currently being developed
+- 📋 **Planned** - Scheduled for development
+- ⏸️ **On Hold** - Postponed or blocked
+- ❌ **Cancelled** - No longer planned
+
+### Priority Levels
+- 🔴 **Critical** - Essential for MVP, blocks other features
+- 🟠 **High** - Important for core functionality
+- 🟡 **Medium** - Valuable enhancement
+- ⚪ **Low** - Nice to have, future consideration
 
 ---
 
@@ -25,22 +42,22 @@ Must:
 ## 2. Guiding Principles
 
 1. **Audio-first**
-Playback is the core, UI is a consequence.
+   Playback is the core, UI is a consequence.
 
 2. **Web-first, Store-ready**
-Web App → PWA → Native Wrappers (Android / iOS / Windows).
+   Web App → PWA → Native Wrappers (Android / iOS / Windows).
 
 3. **One Core, Multiple Surfaces**
-All the logic resides in a player-agnostic core.
+   All the logic resides in a player-agnostic core.
 
 4. **High Fidelity Without Elitism**
-FLAC and HQ codecs, but without breaking common support.
+   FLAC and HQ codecs, but without breaking common support.
 
 5. **Modular Scalability (SOLID/Clean)**
-Nothing monolithic, everything extensible. Core is closed for modification, open for extension.
+   Nothing monolithic, everything extensible. Core is closed for modification, open for extension.
 
 6. **User Autonomy (The "Picky" User)**
-Support for granular control, custom themes, and external API connectors.
+   Support for granular control, custom themes, and external API connectors.
 
 ---
 
@@ -48,43 +65,53 @@ Support for granular control, custom themes, and external API connectors.
 
 ### 3.1 Layers
 
-| Layer | Responsibilities |
-| :--- | :--- |
-| **UI Layer** | Web / Mobile / Desktop |
-| **Application Layer** | Playlists, UX logic |
-| **Player Core** | Audio engine |
-| **Platform Abstractions** | FS, Media Session |
-| **Native / Web APIs** | Browser / OS Primitives |
+| Layer | Responsibilities | Status | Priority |
+| :--- | :--- | :---: | :---: |
+| **UI Layer** | Web / Mobile / Desktop | 📋 | 🔴 |
+| **Application Layer** | Playlists, UX logic | 📋 | 🔴 |
+| **Player Core** | Audio engine | 📋 | 🔴 |
+| **Platform Abstractions** | FS, Media Session | 📋 | 🟠 |
+| **Native / Web APIs** | Browser / OS Primitives | 📋 | 🟠 |
+
+---
 
 ## 4. Player Core
 
 ### 4.1 Responsibilities
 
-- Audio Decoding
-- Buffer Management
-- State Control
-- EQ and DSP Processing
-- Playback Metrics
-- **Gapless Playback** (Critical for continuity)
-- **Exclusive Mode / Bit-perfect** (Where supported)
+| Feature | Status | Priority | Notes |
+| :--- | :---: | :---: | :--- |
+| Audio Decoding | 📋 | 🔴 | Foundation for all playback |
+| Buffer Management | 📋 | 🔴 | Critical for smooth playback |
+| State Control | 📋 | 🔴 | Play/Pause/Stop/Seek |
+| EQ and DSP Processing | 📋 | 🟠 | Phase 3 feature |
+| Playback Metrics | 📋 | 🟡 | Analytics and monitoring |
+| **Gapless Playback** | 📋 | 🟠 | Critical for continuity |
+| **Exclusive Mode / Bit-perfect** | 📋 | 🟡 | Where supported |
 
 ### 4.2 Supported Codecs
 
 #### High Fidelity (High Priority)
-- FLAC
-- ALAC
-- WAV / AIFF
-- Opus (HQ)
+
+| Codec | Status | Priority | Notes |
+| :--- | :---: | :---: | :--- |
+| FLAC | 📋 | 🔴 | Primary HQ format |
+| ALAC | 📋 | 🟠 | Apple ecosystem |
+| WAV / AIFF | 📋 | 🟠 | Uncompressed |
+| Opus (HQ) | 📋 | 🟡 | Modern codec |
 
 #### Common (Compatibility)
-- MP3
-- AAC / M4A
-- OGG Vorbis
 
-> The agent should evaluate:
+| Codec | Status | Priority | Notes |
+| :--- | :---: | :---: | :--- |
+| MP3 | 📋 | 🔴 | Universal compatibility |
+| AAC / M4A | 📋 | 🔴 | Modern standard |
+| OGG Vorbis | 📋 | 🟡 | Open format |
+
+> **Evaluation Criteria:**
 > - Native support vs. WASM
-> - Licensing
-> - Battery impact
+> - Licensing implications
+> - Battery impact on mobile
 
 ---
 
@@ -92,45 +119,48 @@ Support for granular control, custom themes, and external API connectors.
 
 ### 5.1 Advanced Equalizer
 
-- Parametric EQ (minimum 10 bands)
-- Presets:
-
-- Flat
-
-- Bass Boost
-
-- V-Shape
-
-- Vocal
-
-- Custom
-
-- Preamp
-- Gain per track/album
+| Feature | Status | Priority | Notes |
+| :--- | :---: | :---: | :--- |
+| Parametric EQ (10+ bands) | 📋 | 🟠 | Phase 3 |
+| Preset: Flat | 📋 | 🟠 | Default |
+| Preset: Bass Boost | 📋 | 🟡 | Popular preset |
+| Preset: V-Shape | 📋 | 🟡 | Popular preset |
+| Preset: Vocal | 📋 | 🟡 | Specialized |
+| Custom Presets | 📋 | 🟡 | User-defined |
+| Preamp | 📋 | 🟡 | Volume normalization |
+| Gain per track/album | 📋 | 🟡 | Advanced feature |
 
 ### 5.2 Future (non-MVP)
 
-- Crossfeed
-- ReplayGain (Scanner & Player)
-- EBU R128 Normalization
-- **Pitch / Speed Control** (High quality resampling)
+| Feature | Status | Priority | Notes |
+| :--- | :---: | :---: | :--- |
+| Crossfeed | 📋 | ⚪ | Headphone enhancement |
+| ReplayGain (Scanner & Player) | 📋 | 🟡 | Volume normalization |
+| EBU R128 Normalization | 📋 | ⚪ | Professional standard |
+| **Pitch / Speed Control** | 📋 | 🟡 | HQ resampling required |
 
 ---
 
 ## 6. Multimedia Controls
 
-### 6.1 Basic
-- Play/Pause
-- Next/Previous
-- Precise Seek
-- Independent Volume
+### 6.1 Basic Controls
 
-### 6.2 Advanced
-- Media Session API
-- Lockscreen Controls
-- Headset/Bluetooth
-- Background playback (stores)
-- **Keyboard Shortcuts** (Desktop - "Active Listening")
+| Feature | Status | Priority | Notes |
+| :--- | :---: | :---: | :--- |
+| Play/Pause | 📋 | 🔴 | Core functionality |
+| Next/Previous | 📋 | 🔴 | Core functionality |
+| Precise Seek | 📋 | 🔴 | Timeline navigation |
+| Independent Volume | 📋 | 🔴 | Volume control |
+
+### 6.2 Advanced Controls
+
+| Feature | Status | Priority | Notes |
+| :--- | :---: | :---: | :--- |
+| Media Session API | 📋 | 🟠 | OS integration |
+| Lockscreen Controls | 📋 | 🟠 | Mobile essential |
+| Headset/Bluetooth | 📋 | 🟠 | Hardware integration |
+| Background playback | 📋 | 🟠 | Mobile stores requirement |
+| **Keyboard Shortcuts** | 📋 | 🟡 | Desktop "Active Listening" |
 
 ---
 
@@ -138,53 +168,71 @@ Support for granular control, custom themes, and external API connectors.
 
 ### 7.1 Main Views
 
-- Artist
-- Album
-- Song
-- Genre
-- Era/Year
-- Collections (custom)
-- Folders (optional, advanced mode)
+| View | Status | Priority | Notes |
+| :--- | :---: | :---: | :--- |
+| Artist | 📋 | 🔴 | Core view |
+| Album | 📋 | 🔴 | Core view |
+| Song | 📋 | 🔴 | Core view |
+| Genre | 📋 | 🟠 | Categorization |
+| Era/Year | 📋 | 🟡 | Temporal organization |
+| Collections (custom) | 📋 | 🟡 | User-defined groups |
+| Folders | 📋 | ⚪ | Advanced mode, optional |
 
 ### 7.2 Metadata & Enrichment
-- **Core Metadata:**
-  - ID3/Vorbis/FLAC Tags
-  - Embedded/External Covers
-- **Extended Content (Plugins/APIs):**
-  - **Lyrics** (Synced/Unsynced - "Sound is language")
-  - **Artist Biographies**
-  - **Match Validation** (MusicBrainz/Discogs)
-- Users can provide own API keys for heavy usage.
+
+#### Core Metadata
+
+| Feature | Status | Priority | Notes |
+| :--- | :---: | :---: | :--- |
+| ID3 Tags | 📋 | 🔴 | MP3 standard |
+| Vorbis Comments | 📋 | 🔴 | OGG/FLAC/Opus |
+| FLAC Tags | 📋 | 🔴 | FLAC metadata |
+| Embedded Covers | 📋 | 🟠 | Album art |
+| External Covers | 📋 | 🟡 | Folder.jpg, etc. |
+
+#### Extended Content (Plugins/APIs)
+
+| Feature | Status | Priority | Notes |
+| :--- | :---: | :---: | :--- |
+| **Lyrics** (Synced) | 📋 | 🟡 | "Sound is language" |
+| **Lyrics** (Unsynced) | 📋 | 🟡 | Static lyrics |
+| **Artist Biographies** | 📋 | ⚪ | Context enrichment |
+| **Match Validation** (MusicBrainz) | 📋 | 🟡 | Metadata accuracy |
+| **Match Validation** (Discogs) | 📋 | ⚪ | Alternative source |
+| User API Keys | 📋 | 🟡 | Heavy usage support |
 
 ---
 
 ## 8. Playlists
 
 ### 8.1 Types
-- Manual
-- Intelligent (rules)
-- Temporary (queue-based)
+
+| Type | Status | Priority | Notes |
+| :--- | :---: | :---: | :--- |
+| Manual | 📋 | 🔴 | User-created |
+| Intelligent (rules) | 📋 | 🟡 | Smart playlists |
+| Temporary (queue) | 📋 | 🟠 | Current session |
 
 ### 8.2 Functions
-- Manual order
-- Dynamic reordering
-- Export/import
+
+| Feature | Status | Priority | Notes |
+| :--- | :---: | :---: | :--- |
+| Manual order | 📋 | 🔴 | Drag & drop |
+| Dynamic reordering | 📋 | 🟡 | Auto-sort |
+| Export | 📋 | 🟡 | M3U/PLS format |
+| Import | 📋 | 🟡 | M3U/PLS format |
 
 ---
 
 ## 9. Shuffle
 
-The agent must define:
-
-- True shuffle (not pseudo-sequential)
-- Shuffle by:
-
-- Album
-
-- Artist
-
-- Genre
-- Avoid early repetition
+| Feature | Status | Priority | Notes |
+| :--- | :---: | :---: | :--- |
+| True shuffle | 📋 | 🟠 | Not pseudo-sequential |
+| Shuffle by Album | 📋 | 🟡 | Album-aware |
+| Shuffle by Artist | 📋 | 🟡 | Artist-aware |
+| Shuffle by Genre | 📋 | 🟡 | Genre-aware |
+| Avoid early repetition | 📋 | 🟡 | Better randomness |
 
 ---
 
@@ -192,12 +240,13 @@ The agent must define:
 
 ### 10.1 Key Decision (comparative)
 
-Options:
-1. ⭐ Classic 1–5 rating
-2. ❤️ Binary favorite
-3. ⭐ + ❤️ Combined (Poweramp-like)
+| Option | Status | Priority | Notes |
+| :--- | :---: | :---: | :--- |
+| ⭐ Classic 1–5 rating | 📋 | 🟡 | Granular preference |
+| ❤️ Binary favorite | 📋 | 🟡 | Simple UX |
+| ⭐ + ❤️ Combined (Poweramp-like) | 📋 | 🟡 | Power user option |
 
-The agent must:
+**Agent must:**
 - Evaluate UX simplicity vs. power
 - Propose one as the default
 - Allow user to change it
@@ -207,111 +256,184 @@ The agent must:
 ## 11. Visualization and UI
 
 ### 11.1 Navigation
-- Minimalist
-- No strict Material Design
-- Inspiration: “Pro” audio players
+
+| Feature | Status | Priority | Notes |
+| :--- | :---: | :---: | :--- |
+| Minimalist design | 📋 | 🔴 | Core philosophy |
+| No strict Material Design | 📋 | 🔴 | Custom identity |
+| "Pro" audio player inspiration | 📋 | 🟠 | Reference design |
 
 ### 11.2 Visuals
-- Prominent cover art
-- Adaptive background (blur/color)
-- **Zen Mode** (Hide all UI, only sound)
-- **Technical Inspector** (Show bitrate, format, processing chain - "Transparency")
-- **Educational UI** (Contextual tooltips explaining audio concepts - "Wise Craftsman")
-- Audio visualizers (later phase)
-- **Themes & Customization:**
-  - Token-based theming engine.
-  - User-defined CSS injection.
-  - Community theme import.
+
+| Feature | Status | Priority | Notes |
+| :--- | :---: | :---: | :--- |
+| Prominent cover art | 📋 | 🔴 | Visual focus |
+| Adaptive background (blur) | 📋 | 🟠 | Dynamic theming |
+| Adaptive background (color) | 📋 | 🟠 | Dynamic theming |
+| **Zen Mode** | 📋 | 🟡 | Hide all UI, only sound |
+| **Technical Inspector** | 📋 | 🟡 | Bitrate, format, chain - "Transparency" |
+| **Educational UI** | 📋 | 🟡 | Tooltips - "Wise Craftsman" |
+| Audio visualizers | 📋 | ⚪ | Later phase |
+
+### 11.3 Themes & Customization
+
+| Feature | Status | Priority | Notes |
+| :--- | :---: | :---: | :--- |
+| Token-based theming engine | 📋 | 🟠 | Phase 4 |
+| User-defined CSS injection | 📋 | 🟡 | Advanced customization |
+| Community theme import | 📋 | 🟡 | Ecosystem growth |
 
 ---
 
 ## 12. Platforms
 
 ### 12.1 Web / PWA
-- HTML5 Audio
-- Web Audio API
-- Service Workers
+
+| Feature | Status | Priority | Notes |
+| :--- | :---: | :---: | :--- |
+| HTML5 Audio | 📋 | 🔴 | Foundation |
+| Web Audio API | 📋 | 🔴 | Advanced features |
+| Service Workers | 📋 | 🟠 | Offline support |
 
 ### 12.2 Android
-- Native wrapper
-- Background audio
-- Media notifications
+
+| Feature | Status | Priority | Notes |
+| :--- | :---: | :---: | :--- |
+| Native wrapper | 📋 | 🟠 | Store deployment |
+| Background audio | 📋 | 🟠 | Essential feature |
+| Media notifications | 📋 | 🟠 | OS integration |
 
 ### 12.3 iOS
-- AVAudioSession
-- Apple-first restrictions
-- Correct background modes
+
+| Feature | Status | Priority | Notes |
+| :--- | :---: | :---: | :--- |
+| AVAudioSession | 📋 | 🟠 | iOS audio system |
+| Apple-first restrictions | 📋 | 🟠 | Compliance |
+| Correct background modes | 📋 | 🟠 | Background playback |
 
 ### 12.4 Windows (Microsoft Store)
-- Packaged PWA
-- Media keys
-- Basic OS integration
+
+| Feature | Status | Priority | Notes |
+| :--- | :---: | :---: | :--- |
+| Packaged PWA | 📋 | 🟡 | Store deployment |
+| Media keys | 📋 | 🟡 | Hardware integration |
+| Basic OS integration | 📋 | 🟡 | Windows features |
 
 ---
 
-## 13. Planning Roadmap
+## 13. Implementation Phases
 
-### Phase 1 – Core
-- Stable playback
-- Base codecs
-- Minimal UI
+### Phase 1 – Core (MVP)
+**Target:** Functional audio player with basic features
+
+| Feature | Status | Priority | Owner | Notes |
+| :--- | :---: | :---: | :--- | :--- |
+| Stable playback | 📋 | 🔴 | - | Foundation |
+| Base codecs (MP3, AAC, FLAC) | 📋 | 🔴 | - | Essential formats |
+| Minimal UI | 📋 | 🔴 | - | Basic controls |
+| File system access | 📋 | 🔴 | - | Load music |
+| Basic playlist | 📋 | 🔴 | - | Queue management |
 
 ### Phase 2 – Library
-- Indexing
-- Metadata
-- Playlists
-- **External Metadata APIs** (MusicBrainz, etc.)
-- **Plugin System Alpha** (Metadata providers)
+**Target:** Complete music library management
+
+| Feature | Status | Priority | Owner | Notes |
+| :--- | :---: | :---: | :--- | :--- |
+| Indexing | 📋 | 🔴 | - | Scan library |
+| Metadata parsing | 📋 | 🔴 | - | ID3/Vorbis/FLAC |
+| Playlists (manual) | 📋 | 🔴 | - | User-created |
+| Search functionality | 📋 | 🟠 | - | Find music |
+| **External Metadata APIs** | 📋 | 🟡 | - | MusicBrainz, etc. |
+| **Plugin System Alpha** | 📋 | 🟡 | - | Metadata providers |
+| **Accessibility features** | 📋 | 🟠 | - | Screen readers, contrast |
 
 ### Phase 3 – Pro Audio
-- Advanced EQ
-- Gain
-- HQ tuning
+**Target:** Advanced audio processing and quality
+
+| Feature | Status | Priority | Owner | Notes |
+| :--- | :---: | :---: | :--- | :--- |
+| Advanced EQ | 📋 | 🟠 | - | 10+ band parametric |
+| Gain control | 📋 | 🟡 | - | Per track/album |
+| HQ tuning | 📋 | 🟡 | - | Bit-perfect, exclusive |
+| Gapless playback | 📋 | 🟠 | - | Seamless transitions |
+| ReplayGain | 📋 | 🟡 | - | Volume normalization |
 
 ### Phase 4 – Advanced UX
-- Visualizations
-- Smart playlists
-- Personalization
-- **Theme Engine (CSS Variables / JSON)**
-- **Plugin System Beta** (DSP & UI Widgets)
+**Target:** Rich user experience and personalization
+
+| Feature | Status | Priority | Owner | Notes |
+| :--- | :---: | :---: | :--- | :--- |
+| Visualizations | 📋 | 🟡 | - | Audio visualizers |
+| Smart playlists | 📋 | 🟡 | - | Rule-based |
+| Personalization | 📋 | 🟡 | - | User preferences |
+| **Theme Engine** | 📋 | 🟠 | - | CSS Variables / JSON |
+| **Plugin System Beta** | 📋 | 🟠 | - | DSP & UI Widgets |
+| Lyrics integration | 📋 | 🟡 | - | Synced/unsynced |
 
 ### Phase 5 – Competitive Polishing
-- Performance
-- Cloud Sync (Optional)
-- Differentiators
+**Target:** Production-ready, competitive product
 
-**Note on Accessibility:** Accessibility features (Screen readers, high contrast) must be considered from **Phase 2** onwards, not left for the end.
+| Feature | Status | Priority | Owner | Notes |
+| :--- | :---: | :---: | :--- | :--- |
+| Performance optimization | 📋 | 🟠 | - | Speed, memory |
+| Cloud Sync (Optional) | 📋 | ⚪ | - | Cross-device |
+| Differentiators | 📋 | 🟡 | - | Unique features |
+| Mobile apps (Android/iOS) | 📋 | 🟠 | - | Native wrappers |
+| Windows Store | 📋 | 🟡 | - | Desktop distribution |
 
 ---
 
 ## 14. Brand Identity (Required)
 
-- Use the previously defined identity:
+**Use the previously defined identity:**
+- Name: Sonantica
+- Tone: Professional, passionate about audio
+- Philosophy: Audio-first, user autonomy, transparency
 
-- Name
-
-- Tone
-
-- Philosophy
-- Apply to:
-
+**Apply to:**
 - Code (names, comments)
-
 - Documentation
-
 - UX copy
-
 - Issues / PRs
-
 - Releases
 
-⚠️ Do not introduce new identities without explicit consent.
+⚠️ **Do not introduce new identities without explicit consent.**
 
 ---
 
 ## 15. Agent's Final Criterion
 
 Every decision must answer:
-> “Does this improve the user's actual listening experience?”
+> **"Does this improve the user's actual listening experience?"**
 
 If not, it is postponed or discarded.
+
+---
+
+## 16. Progress Tracking
+
+### Current Sprint
+- **Sprint:** Not started
+- **Focus:** Project setup and architecture
+- **Completed:** 0 features
+- **In Progress:** 0 features
+- **Blocked:** 0 features
+
+### Overall Progress
+- **Phase 1 (Core):** 0% complete
+- **Phase 2 (Library):** 0% complete
+- **Phase 3 (Pro Audio):** 0% complete
+- **Phase 4 (Advanced UX):** 0% complete
+- **Phase 5 (Polishing):** 0% complete
+
+### Quick Stats
+- ✅ Done: 0
+- 🚧 In Progress: 0
+- 📋 Planned: ~100+
+- ⏸️ On Hold: 0
+- ❌ Cancelled: 0
+
+---
+
+**Last Updated:** 2025-12-22
+**Version:** 2.0.0
