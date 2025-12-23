@@ -1,6 +1,6 @@
 # Gemini Agent – ​​Architecture and Planning
 ## Project: Open Source Multimedia Player
-## Brand Identity: (strictly use the identity defined in IDENTITY.md)
+## Brand Identity: (strictly use the identity defined in [IDENTITY.md](./IDENTITY.md))
 
 ---
 
