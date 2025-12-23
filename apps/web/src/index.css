@@ -95,3 +95,9 @@ body {
 ::selection {
   @apply bg-accent text-white;
 }
+/* Resizing state */
+.is-resizing, 
+.is-resizing * {
+  user-select: none !important;
+  cursor: col-resize !important;
+}

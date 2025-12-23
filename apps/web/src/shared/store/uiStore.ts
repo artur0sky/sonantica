@@ -17,6 +17,10 @@ interface UIState {
   isRightSidebarOpen: boolean;
   isMetadataPanelOpen: boolean;
   
+  // Sidebar widths
+  leftSidebarWidth: number;
+  rightSidebarWidth: number;
+  
   // Actions
   togglePlayerExpanded: () => void;
   toggleQueue: () => void;
@@ -28,6 +32,8 @@ interface UIState {
   setQueueOpen: (open: boolean) => void;
   setMetadataPanelOpen: (open: boolean) => void;
   setVisualizationEnabled: (enabled: boolean) => void;
+  setLeftSidebarWidth: (width: number) => void;
+  setRightSidebarWidth: (width: number) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -37,6 +43,8 @@ export const useUIStore = create<UIState>((set) => ({
   isLeftSidebarOpen: true,
   isRightSidebarOpen: false,
   isMetadataPanelOpen: false,
+  leftSidebarWidth: 280,
+  rightSidebarWidth: 320,
 
   togglePlayerExpanded: () => {
     set((state) => ({ isPlayerExpanded: !state.isPlayerExpanded }));
@@ -82,5 +90,13 @@ export const useUIStore = create<UIState>((set) => ({
 
   setVisualizationEnabled: (enabled: boolean) => {
     set({ isVisualizationEnabled: enabled });
+  },
+
+  setLeftSidebarWidth: (width: number) => {
+    set({ leftSidebarWidth: width });
+  },
+
+  setRightSidebarWidth: (width: number) => {
+    set({ rightSidebarWidth: width });
   },
 }));

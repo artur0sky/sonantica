@@ -9,7 +9,6 @@ import {
   IconX,
   IconTrash,
   IconMusic,
-  IconActivity,
   IconGripVertical,
   IconPlayerPlay,
 } from "@tabler/icons-react";
@@ -49,7 +48,11 @@ const itemVariants: Variants = {
   },
 };
 
-export function RightSidebar() {
+interface RightSidebarProps {
+  isCollapsed?: boolean;
+}
+
+export function RightSidebar({ isCollapsed }: RightSidebarProps) {
   const currentTrack = usePlayerStore((s) => s.currentTrack);
   const { loadTrack, play } = usePlayerStore();
   const { toggleQueue } = useUIStore();
@@ -117,24 +120,54 @@ export function RightSidebar() {
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: 300, opacity: 0 }}
       transition={{ type: "spring", damping: 20 }}
-      className="flex flex-col h-full"
+      className="flex flex-col h-full overflow-hidden"
     >
       {/* Header */}
-      <div className="p-4 border-b border-border flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Queue</h2>
-        <motion.button
-          onClick={toggleQueue}
-          whileHover={{ scale: 1.1, rotate: 90 }}
-          whileTap={{ scale: 0.9 }}
-          className="text-text-muted hover:text-text transition-fast"
-          aria-label="Close queue"
+      <div
+        className={cn(
+          "p-4 border-b border-border flex items-center justify-between transition-all",
+          isCollapsed && "flex-col gap-4 px-2"
+        )}
+      >
+        {!isCollapsed && (
+          <h2 className="text-lg font-semibold truncate tracking-tight">
+            Queue
+          </h2>
+        )}
+        <div
+          className={cn("flex items-center gap-2", isCollapsed && "flex-col")}
         >
-          <IconX size={20} stroke={1.5} />
-        </motion.button>
+          {queue.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearQueue}
+              className={cn(isCollapsed && "p-2")}
+              title="Clear Queue"
+            >
+              <IconTrash size={18} stroke={1.5} />
+              {!isCollapsed && <span className="ml-1">Clear</span>}
+            </Button>
+          )}
+          <motion.button
+            onClick={toggleQueue}
+            whileHover={{ scale: 1.1, rotate: 90 }}
+            whileTap={{ scale: 0.9 }}
+            className="text-text-muted hover:text-text p-1 transition-fast"
+            aria-label="Close queue"
+          >
+            <IconX size={20} stroke={1.5} />
+          </motion.button>
+        </div>
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div
+        className={cn(
+          "flex-1 overflow-y-auto custom-scrollbar transition-all",
+          isCollapsed ? "p-2" : "p-4 lg:p-3"
+        )}
+      >
         {/* Now Playing */}
         <AnimatePresence mode="wait">
           {currentTrack && (
@@ -144,21 +177,41 @@ export function RightSidebar() {
               exit={{ y: -20, opacity: 0 }}
               className="mb-6"
             >
-              <h3 className="text-sm text-text-muted mb-3 uppercase tracking-wide">
-                Now Playing
-              </h3>
+              {!isCollapsed && (
+                <h3 className="text-[10px] text-accent/70 font-bold mb-3 uppercase tracking-[0.2em]">
+                  Now Playing
+                </h3>
+              )}
               <motion.div
-                whileHover={{ scale: 1.02 }}
-                className="bg-surface-elevated p-4 rounded-md border border-accent"
+                whileHover={{ scale: 1.05 }}
+                className={cn(
+                  "transition-all",
+                  !isCollapsed
+                    ? "bg-surface-elevated border border-accent/20 p-4 rounded-xl"
+                    : "p-0 bg-transparent border-none"
+                )}
               >
-                <div className="flex items-center gap-3">
+                <div
+                  className={cn(
+                    "flex items-center gap-3",
+                    isCollapsed && "justify-center"
+                  )}
+                >
                   {/* Album Art */}
-                  <div className="w-12 h-12 flex-shrink-0 rounded-md overflow-hidden bg-surface border border-border relative">
+                  <div
+                    className={cn(
+                      "flex-shrink-0 rounded-lg overflow-hidden relative shadow-lg transition-all",
+                      isCollapsed
+                        ? "w-12 h-12"
+                        : "w-12 h-12 bg-surface border border-border"
+                    )}
+                  >
                     {currentTrack.metadata?.coverArt ? (
                       <img
                         src={currentTrack.metadata.coverArt}
                         alt="Cover"
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover select-none pointer-events-none"
+                        draggable="false"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
@@ -169,18 +222,19 @@ export function RightSidebar() {
                         />
                       </div>
                     )}
-                    {/* Playing indicator */}
                     <div className="absolute inset-0 bg-accent/10 animate-pulse" />
                   </div>
 
-                  <div className="min-w-0 flex-1">
-                    <div className="font-medium truncate">
-                      {currentTrack.metadata?.title || "Unknown Title"}
+                  {!isCollapsed && (
+                    <div className="min-w-0 flex-1">
+                      <div className="font-semibold truncate text-sm">
+                        {currentTrack.metadata?.title || "Unknown Title"}
+                      </div>
+                      <div className="text-xs text-text-muted truncate">
+                        {formatArtists(currentTrack.metadata?.artist)}
+                      </div>
                     </div>
-                    <div className="text-sm text-text-muted truncate">
-                      {formatArtists(currentTrack.metadata?.artist)}
-                    </div>
-                  </div>
+                  )}
                 </div>
               </motion.div>
             </motion.div>
@@ -188,18 +242,12 @@ export function RightSidebar() {
         </AnimatePresence>
 
         {/* Queue List */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm text-text-muted uppercase tracking-wide">
+        <div className="relative">
+          {!isCollapsed && (
+            <h3 className="text-[10px] text-text-muted/70 font-bold mb-4 uppercase tracking-[0.2em]">
               Next Up
             </h3>
-            {queue.length > 0 && (
-              <Button variant="ghost" size="sm" onClick={clearQueue}>
-                <IconTrash size={16} stroke={1.5} />
-                <span className="ml-1">Clear</span>
-              </Button>
-            )}
-          </div>
+          )}
 
           <AnimatePresence mode="popLayout">
             {queue.length === 0 ? (
@@ -209,9 +257,8 @@ export function RightSidebar() {
                 exit={{ opacity: 0, y: -20 }}
                 className="text-center py-12"
               >
-                <p className="text-text-muted text-sm">No tracks in queue</p>
-                <p className="text-text-muted text-xs mt-2">
-                  Tracks will appear here when you play them
+                <p className="text-text-muted text-sm px-4">
+                  The air is silent. Add some tracks.
                 </p>
               </motion.div>
             ) : (
@@ -219,12 +266,13 @@ export function RightSidebar() {
                 axis="y"
                 values={visibleQueue}
                 onReorder={handleReorder}
-                className="space-y-1"
+                className="space-y-1.5"
               >
                 {visibleQueue.map((track, index) => (
                   <QueueItem
                     key={track.id}
                     track={track}
+                    isCollapsed={isCollapsed}
                     onPlay={async () => {
                       const queueStore = useQueueStore.getState();
                       queueStore.jumpTo(queueStore.currentIndex + index + 1);
@@ -253,6 +301,7 @@ interface QueueItemProps {
   onPlay: () => void;
   getExtension: (url: string) => string;
   getBadgeClass: (ext: string) => string;
+  isCollapsed?: boolean;
 }
 
 function QueueItem({
@@ -260,9 +309,11 @@ function QueueItem({
   onPlay,
   getExtension,
   getBadgeClass,
+  isCollapsed,
 }: QueueItemProps) {
   const dragControls = useDragControls();
   const ext = getExtension(track.url);
+  const [isHovered, setIsHovered] = useState(false);
 
   return (
     <Reorder.Item
@@ -273,6 +324,8 @@ function QueueItem({
       initial="hidden"
       animate="visible"
       exit="exit"
+      onHoverStart={() => setIsHovered(true)}
+      onHoverEnd={() => setIsHovered(false)}
       whileDrag={{
         scale: 1.02,
         backgroundColor: "rgba(255, 255, 255, 0.08)",
@@ -281,26 +334,39 @@ function QueueItem({
         zIndex: 50,
       }}
       transition={{ type: "spring", stiffness: 500, damping: 30, mass: 0.8 }}
-      className="group relative flex items-center gap-3 p-2 rounded-lg transition-colors hover:bg-white/5 border border-transparent hover:border-white/5"
+      className={cn(
+        "group relative flex items-center transition-all select-none",
+        isCollapsed
+          ? "justify-center p-0 mb-1"
+          : "p-2 rounded-xl border border-transparent hover:border-white/10 hover:bg-white/5 gap-2"
+      )}
     >
       {/* Drag Handle */}
-      <div
-        onPointerDown={(e) => dragControls.start(e)}
-        className="w-6 h-10 flex items-center justify-center text-text-muted/20 group-hover:text-text-muted/60 cursor-grab active:cursor-grabbing transition-colors"
-      >
-        <IconGripVertical size={18} stroke={1.5} />
-      </div>
+      {!isCollapsed && (
+        <div
+          onPointerDown={(e) => dragControls.start(e)}
+          className="w-5 h-10 flex items-center justify-center text-text-muted/20 group-hover:text-text-muted/60 cursor-grab active:cursor-grabbing transition-colors"
+        >
+          <IconGripVertical size={16} stroke={1.5} />
+        </div>
+      )}
 
-      {/* Album Art Thumbnail */}
       <div
-        className="w-10 h-10 flex-shrink-0 rounded overflow-hidden bg-surface border border-border group-hover:border-accent/40 transition-all relative"
+        className={cn(
+          "flex-shrink-0 rounded-lg overflow-hidden transition-all relative shadow-sm",
+          isCollapsed
+            ? "w-14 h-14"
+            : "w-10 h-10 bg-surface border border-border group-hover:border-accent/40"
+        )}
         onClick={onPlay}
+        onPointerDown={(e) => isCollapsed && dragControls.start(e)}
       >
         {track.metadata?.coverArt ? (
           <img
             src={track.metadata.coverArt}
             alt="Cover"
-            className="w-full h-full object-cover transition-transform group-hover:scale-110"
+            className="w-full h-full object-cover transition-transform group-hover:scale-110 select-none pointer-events-none"
+            draggable="false"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
@@ -313,49 +379,37 @@ function QueueItem({
         </div>
       </div>
 
-      <div className="min-w-0 flex-1 cursor-pointer" onClick={onPlay}>
-        <div className="font-medium truncate text-sm group-hover:text-accent transition-colors">
-          {track.metadata?.title}
+      {!isCollapsed && (
+        <div className="min-w-0 flex-1 cursor-pointer" onClick={onPlay}>
+          <div className="font-medium truncate text-sm group-hover:text-accent transition-colors">
+            {track.metadata?.title}
+          </div>
+          <div className="flex items-center gap-2 text-[10px] text-text-muted truncate">
+            <span className="truncate opacity-70">
+              {formatArtists(track.metadata?.artist)}
+            </span>
+
+            {/* Bitrate Badge (Compact) */}
+            <motion.span
+              initial={{ opacity: 0 }}
+              whileHover={{ opacity: 1 }}
+              className="hidden lg:group-hover:inline-flex items-center gap-1 text-[9px] text-accent font-mono bg-accent/10 px-1 py-0.5 rounded shadow-sm border border-accent/20"
+            >
+              {track.metadata?.bitrate || "1411"}k
+            </motion.span>
+          </div>
         </div>
-        <div className="flex items-center gap-2 text-xs text-text-muted truncate">
-          <span className="truncate">
-            {formatArtists(track.metadata?.artist)}
+      )}
+
+      {!isCollapsed && (
+        <div className="flex flex-col items-end gap-1 min-w-fit pr-1">
+          <span className="text-[10px] text-text-muted tabular-nums font-mono opacity-50 group-hover:opacity-100">
+            {formatTime(track.metadata?.duration || 0)}
           </span>
-
-          {/* Hover Metadata (Bitrate) */}
-          <motion.span
-            initial={{ opacity: 0, x: -5 }}
-            whileHover={{ opacity: 1, x: 0 }}
-            className="hidden group-hover:inline-flex items-center gap-1 text-[10px] text-accent font-mono bg-accent/10 px-1.5 py-0.5 rounded shadow-sm border border-accent/20"
-          >
-            <IconActivity size={10} />
-            {track.metadata?.bitrate || "1411"} kbps
-            {track.metadata?.sampleRate && (
-              <span className="ml-1 opacity-60">
-                {(track.metadata.sampleRate / 1000).toFixed(1)}kHz
-              </span>
-            )}
-            {track.metadata?.bitsPerSample && (
-              <span className="ml-1 opacity-60">
-                {track.metadata.bitsPerSample}-bit
-              </span>
-            )}
-          </motion.span>
-        </div>
-      </div>
-
-      {/* Right Section: Duration & Badges */}
-      <div className="flex flex-col items-end gap-1.5 min-w-fit pr-1">
-        <span className="text-[11px] text-text-muted tabular-nums font-mono opacity-60 group-hover:opacity-100 transition-opacity">
-          {formatTime(track.metadata?.duration || 0)}
-        </span>
-
-        {/* Extension Badge */}
-        <div className="flex gap-1 items-center">
           <Badge
             variant="custom"
             className={cn(
-              "text-[9px] px-1.5 py-0 transition-all transform scale-90 group-hover:scale-100 shadow-sm",
+              "text-[8px] px-1 py-0 transition-opacity",
               getBadgeClass(ext),
               ext !== "FLAC" && ext !== "WAV"
                 ? "opacity-0 group-hover:opacity-100"
@@ -365,7 +419,29 @@ function QueueItem({
             {ext}
           </Badge>
         </div>
-      </div>
+      )}
+
+      {/* Collapsed Tooltip */}
+      {isCollapsed && isHovered && (
+        <motion.div
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="absolute right-full mr-4 bg-surface-elevated border border-white/10 p-2.5 rounded-lg shadow-2xl z-[100] min-w-[150px] pointer-events-none"
+        >
+          <div className="font-semibold text-xs truncate max-w-[140px]">
+            {track.metadata?.title}
+          </div>
+          <div className="text-[10px] text-text-muted truncate mb-1">
+            {formatArtists(track.metadata?.artist)}
+          </div>
+          <div className="flex items-center justify-between mt-1 pt-1 border-t border-white/5">
+            <span className="text-[9px] font-mono text-accent">{ext}</span>
+            <span className="text-[9px] font-mono opacity-60">
+              {formatTime(track.metadata?.duration || 0)}
+            </span>
+          </div>
+        </motion.div>
+      )}
     </Reorder.Item>
   );
 }
