@@ -1,12 +1,7 @@
-/**
- * Metadata Panel
- * 
- * Detailed view of track information.
- */
-
 import { motion } from 'framer-motion';
 import type { MediaMetadata } from '@sonantica/shared';
 import { IconMusic, IconX } from '@tabler/icons-react';
+import { formatArtists, formatGenres } from '../../utils/metadata';
 
 interface MetadataPanelProps {
   metadata: MediaMetadata;
@@ -51,14 +46,21 @@ export function MetadataPanel({ metadata, onClose }: MetadataPanelProps) {
           
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <dt className="text-xs text-text-muted uppercase tracking-wide mb-1">Artist</dt>
-              <dd className="font-medium">{metadata.artist || 'Unknown'}</dd>
+              <dt className="text-xs text-text-muted uppercase tracking-wide mb-1">Artist{Array.isArray(metadata.artist) && metadata.artist.length > 1 ? 's' : ''}</dt>
+              <dd className="font-medium">{formatArtists(metadata.artist)}</dd>
             </div>
             <div>
               <dt className="text-xs text-text-muted uppercase tracking-wide mb-1">Album</dt>
               <dd className="font-medium">{metadata.album || 'Unknown'}</dd>
             </div>
           </div>
+
+          {metadata.albumArtist && (
+            <div>
+              <dt className="text-xs text-text-muted uppercase tracking-wide mb-1">Album Artist</dt>
+              <dd className="font-medium">{metadata.albumArtist}</dd>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -72,8 +74,8 @@ export function MetadataPanel({ metadata, onClose }: MetadataPanelProps) {
           </div>
 
           <div>
-            <dt className="text-xs text-text-muted uppercase tracking-wide mb-1">Genre</dt>
-            <dd>{metadata.genre || '-'}</dd>
+            <dt className="text-xs text-text-muted uppercase tracking-wide mb-1">Genre{Array.isArray(metadata.genre) && metadata.genre.length > 1 ? 's' : ''}</dt>
+            <dd>{formatGenres(metadata.genre)}</dd>
           </div>
         </dl>
       </div>

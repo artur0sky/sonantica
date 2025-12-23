@@ -2,7 +2,7 @@
 # Philosophy: "Intentional minimalism" - optimized for production
 
 # Stage 1: Build all packages
-FROM node:18-alpine AS builder
+FROM node:22-alpine AS builder
 
 # Install pnpm
 RUN corepack enable && corepack prepare pnpm@8.15.0 --activate
@@ -28,11 +28,11 @@ COPY packages/media-library ./packages/media-library
 COPY packages/metadata ./packages/metadata
 COPY apps/web ./apps/web
 
-# Build packages
+# Build packages (in dependency order)
 RUN pnpm --filter @sonantica/shared build
+RUN pnpm --filter @sonantica/metadata build
 RUN pnpm --filter @sonantica/player-core build
 RUN pnpm --filter @sonantica/media-library build
-RUN pnpm --filter @sonantica/metadata build
 RUN pnpm --filter @sonantica/web build
 
 # Stage 2: Production image

@@ -12,10 +12,10 @@ import type { MediaMetadata } from '@sonantica/shared';
  */
 export async function extractMetadata(url: string): Promise<Partial<MediaMetadata>> {
   try {
-    // Fetch the file with range request (first 256KB should contain metadata)
+    // Fetch the file with range request (first 512KB for better artwork support)
     const response = await fetch(url, {
       headers: {
-        'Range': 'bytes=0-262143', // First 256KB
+        'Range': 'bytes=0-524287', // First 512KB
       },
     });
 
@@ -26,14 +26,23 @@ export async function extractMetadata(url: string): Promise<Partial<MediaMetadat
     const buffer = await response.arrayBuffer();
     const view = new DataView(buffer);
 
+    console.log(`📊 Metadata extraction for ${url.split('/').pop()}: ${buffer.byteLength} bytes`);
+
     // Detect format and extract metadata
     if (isID3v2(view)) {
-      return extractID3v2(view);
+      const metadata = extractID3v2(view);
+      console.log('✅ ID3v2 metadata extracted:', { 
+        title: metadata.title, 
+        artist: metadata.artist,
+        hasArtwork: !!metadata.coverArt 
+      });
+      return metadata;
     } else if (isFLAC(view)) {
       return extractFLAC(view);
     }
 
     // Fallback: return empty metadata
+    console.warn('⚠️ Unknown format, no metadata extracted');
     return {};
   } catch (error) {
     console.warn('Metadata extraction failed:', error);
@@ -131,15 +140,29 @@ function extractID3v2(view: DataView): Partial<MediaMetadata> {
       // Map frame IDs to metadata
       switch (frameId) {
         case 'TIT2': metadata.title = text; break;
-        case 'TPE1': metadata.artist = text; break;
+        case 'TPE1': 
+          // Support multiple artists (separated by ; / feat. & etc.)
+          metadata.artist = parseMultipleValues(text);
+          break;
+        case 'TPE2': 
+          // Album artist
+          metadata.albumArtist = text;
+          break;
         case 'TALB': metadata.album = text; break;
         case 'TYER': 
         case 'TDRC': metadata.year = parseInt(text) || undefined; break;
         case 'TRCK': metadata.trackNumber = parseInt(text.split('/')[0]) || undefined; break;
-        case 'TCON': metadata.genre = text; break;
+        case 'TCON': 
+          // Support multiple genres
+          metadata.genre = parseMultipleValues(text);
+          break;
         case 'APIC': 
           // Album art
-          metadata.coverArt = extractAPIC(frameData);
+          const artUrl = extractAPIC(frameData);
+          if (artUrl) {
+            metadata.coverArt = artUrl;
+            console.log('✅ Album art extracted successfully');
+          }
           break;
       }
 
@@ -194,11 +217,18 @@ function extractFLAC(view: DataView): Partial<MediaMetadata> {
 
           switch (key.toUpperCase()) {
             case 'TITLE': metadata.title = value; break;
-            case 'ARTIST': metadata.artist = value; break;
+            case 'ARTIST': 
+              metadata.artist = parseMultipleValues(value);
+              break;
+            case 'ALBUMARTIST': 
+              metadata.albumArtist = value;
+              break;
             case 'ALBUM': metadata.album = value; break;
             case 'DATE': metadata.year = parseInt(value) || undefined; break;
             case 'TRACKNUMBER': metadata.trackNumber = parseInt(value) || undefined; break;
-            case 'GENRE': metadata.genre = value; break;
+            case 'GENRE': 
+              metadata.genre = parseMultipleValues(value);
+              break;
           }
 
           offset += commentLength;
@@ -237,15 +267,34 @@ function extractAPIC(data: Uint8Array): string | undefined {
     // Remaining data is the image
     const imageData = data.slice(offset);
     
+    if (imageData.length === 0) {
+      console.warn('⚠️ APIC frame has no image data');
+      return undefined;
+    }
+
+    console.log(`🖼️ Extracting artwork: ${imageData.length} bytes`);
+    
     // Detect MIME type from magic bytes
     let mimeType = 'image/jpeg'; // Default
     if (imageData[0] === 0x89 && imageData[1] === 0x50) {
       mimeType = 'image/png';
+    } else if (imageData[0] === 0xFF && imageData[1] === 0xD8) {
+      mimeType = 'image/jpeg';
     }
 
-    // Convert to base64
-    const base64 = btoa(String.fromCharCode(...Array.from(imageData)));
-    return `data:${mimeType};base64,${base64}`;
+    // Convert to base64 in chunks to avoid stack overflow
+    const chunkSize = 8192;
+    let base64 = '';
+    
+    for (let i = 0; i < imageData.length; i += chunkSize) {
+      const chunk = imageData.slice(i, Math.min(i + chunkSize, imageData.length));
+      base64 += btoa(String.fromCharCode(...Array.from(chunk)));
+    }
+    
+    const dataUrl = `data:${mimeType};base64,${base64}`;
+    console.log(`✅ Artwork extracted: ${mimeType}, ${dataUrl.length} chars`);
+    
+    return dataUrl;
   } catch (error) {
     console.warn('APIC extraction failed:', error);
     return undefined;
@@ -263,4 +312,23 @@ function decodeText(bytes: Uint8Array): string {
     // Fallback to ISO-8859-1
     return new TextDecoder('iso-8859-1').decode(bytes);
   }
+}
+
+/**
+ * Parse multiple values from a string (artists, genres, etc.)
+ * Supports separators: ; / feat. ft. & and
+ */
+function parseMultipleValues(text: string): string | string[] {
+  if (!text) return text;
+  
+  // Common separators for multiple values
+  const separators = /[;/]|\s+(?:feat\.?|ft\.?|&|and)\s+/gi;
+  
+  const values = text
+    .split(separators)
+    .map(v => v.trim())
+    .filter(v => v.length > 0);
+  
+  // Return single string if only one value, array if multiple
+  return values.length === 1 ? values[0] : values;
 }

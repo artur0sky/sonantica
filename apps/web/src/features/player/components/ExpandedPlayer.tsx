@@ -9,6 +9,7 @@ import { usePlayerStore } from '../../../shared/store/playerStore';
 import { useUIStore } from '../../../shared/store/uiStore';
 import { Slider } from '../../../shared/components/atoms';
 import { formatTime, PlaybackState } from '@sonantica/shared';
+import { formatArtists } from '../../../shared/utils/metadata';
 import { 
   IconX, 
   IconPlayerSkipBack, 
@@ -107,7 +108,7 @@ export function ExpandedPlayer() {
           layoutId="player-artist"
           className="text-xl text-text-muted mb-2 font-medium"
         >
-          {currentTrack.metadata?.artist || 'Unknown Artist'}
+          {formatArtists(currentTrack.metadata?.artist)}
         </motion.p>
         
         <AnimatePresence>

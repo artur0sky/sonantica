@@ -39,13 +39,14 @@ export interface MediaSource {
  */
 export interface MediaMetadata {
   title?: string;
-  artist?: string;
+  artist?: string | string[]; // Single artist or multiple artists
   album?: string;
   duration?: number; // in seconds
   coverArt?: string; // URL or data URI
   year?: number; // Release year
   trackNumber?: number; // Track number in album
-  genre?: string; // Music genre
+  genre?: string | string[]; // Single genre or multiple genres
+  albumArtist?: string; // Primary album artist (for compilations)
 }
 
 /**

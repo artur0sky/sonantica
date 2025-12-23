@@ -124,11 +124,23 @@ export const useLibraryStore = create<LibraryState>((set, get) => {
       
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
-        filtered = filtered.filter((t: Track) =>
-          t.metadata.title?.toLowerCase().includes(query) ||
-          t.metadata.artist?.toLowerCase().includes(query) ||
-          t.metadata.album?.toLowerCase().includes(query)
-        );
+        filtered = filtered.filter((t: Track) => {
+          const titleMatch = t.metadata.title?.toLowerCase().includes(query);
+          const albumMatch = t.metadata.album?.toLowerCase().includes(query);
+          
+          // Handle artist as string or array
+          let artistMatch = false;
+          const artist = t.metadata.artist;
+          if (artist) {
+            if (Array.isArray(artist)) {
+              artistMatch = artist.some(a => a.toLowerCase().includes(query));
+            } else {
+              artistMatch = artist.toLowerCase().includes(query);
+            }
+          }
+          
+          return titleMatch || artistMatch || albumMatch;
+        });
       }
       
       return filtered;

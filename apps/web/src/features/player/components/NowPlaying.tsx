@@ -6,6 +6,7 @@
 
 import { Badge } from '../../../shared/components/atoms';
 import { usePlayerStore } from '../../../shared/store/playerStore';
+import { formatArtists } from '../../../shared/utils/metadata';
 
 export function NowPlaying() {
   const { currentTrack, state } = usePlayerStore();
@@ -34,7 +35,7 @@ export function NowPlaying() {
       </h2>
       
       <p className="text-lg text-text-muted mb-1">
-        {currentTrack.metadata?.artist || 'Unknown Artist'}
+        {formatArtists(currentTrack.metadata?.artist)}
       </p>
       
       <p className="text-sm text-text-muted">

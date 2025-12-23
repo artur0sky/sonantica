@@ -9,6 +9,7 @@ import { motion } from 'framer-motion';
 import { cn } from '../../../shared/utils';
 import { usePlayerStore } from '../../../shared/store/playerStore';
 import { PlaybackState } from '@sonantica/shared';
+import { formatArtists } from '../../../shared/utils/metadata';
 
 interface TrackItemProps {
   track: any;
@@ -76,7 +77,7 @@ export function TrackItem({ track, onClick }: TrackItemProps) {
           {track.metadata?.title || track.filename}
         </div>
         <div className="text-sm text-text-muted truncate flex items-center gap-2">
-          <span>{track.metadata?.artist || 'Unknown Artist'}</span>
+          <span>{formatArtists(track.metadata?.artist)}</span>
           {track.metadata?.album && (
             <>
               <span className="opacity-40">•</span>

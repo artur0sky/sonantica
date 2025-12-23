@@ -239,11 +239,14 @@ export class MediaLibrary implements IMediaLibrary {
     // Supports: Artist/Album/Track.ext or Artist/Year - Album/Track.ext
     const parts = path.split('/').filter(p => p && p !== 'media');
 
-    let artist = 'Unknown Artist';
+    let artist: string | string[] = 'Unknown Artist';
     let album = 'Unknown Album';
     let title = filename.replace(`.${ext}`, '');
     let year: number | undefined;
     let trackNumber: number | undefined;
+    let coverArt: string | undefined;
+    let genre: string | string[] | undefined;
+    let albumArtist: string | undefined;
 
     if (parts.length >= 3) {
       artist = parts[parts.length - 3];
@@ -268,10 +271,41 @@ export class MediaLibrary implements IMediaLibrary {
       title = trackMatch[2];
     }
 
-    // Clean up metadata
-    artist = this.cleanMetadata(artist);
+    // Clean up metadata from path
+    if (typeof artist === 'string') {
+      artist = this.cleanMetadata(artist);
+    }
     album = this.cleanMetadata(album);
     title = this.cleanMetadata(title);
+
+    // Try to extract actual metadata from the file
+    try {
+      // Dynamic import to avoid build issues
+      const metadataModule = await import('@sonantica/metadata').catch(() => null);
+      
+      if (metadataModule) {
+        const extractedMetadata = await metadataModule.extractMetadata(path);
+        
+        // Use extracted metadata if available, fallback to path-based
+        if (extractedMetadata.title) title = extractedMetadata.title;
+        if (extractedMetadata.artist) artist = extractedMetadata.artist;
+        if (extractedMetadata.album) album = extractedMetadata.album;
+        if (extractedMetadata.year) year = extractedMetadata.year;
+        if (extractedMetadata.trackNumber) trackNumber = extractedMetadata.trackNumber;
+        if (extractedMetadata.coverArt) coverArt = extractedMetadata.coverArt;
+        if (extractedMetadata.genre) genre = extractedMetadata.genre;
+        if (extractedMetadata.albumArtist) albumArtist = extractedMetadata.albumArtist;
+        
+        console.log(`📊 Metadata extracted for ${filename}:`, {
+          title,
+          artist,
+          album,
+          hasCoverArt: !!coverArt
+        });
+      }
+    } catch (error) {
+      console.warn(`⚠️ Could not extract metadata from ${filename}, using path-based metadata:`, error);
+    }
 
     return {
       id: generateId(),
@@ -285,6 +319,9 @@ export class MediaLibrary implements IMediaLibrary {
         album,
         year,
         trackNumber,
+        coverArt,
+        genre,
+        albumArtist,
       },
       addedAt: new Date(),
       lastModified: mtime ? new Date(mtime) : new Date(),
@@ -299,6 +336,24 @@ export class MediaLibrary implements IMediaLibrary {
       .replace(/_/g, ' ') // Replace underscores with spaces
       .replace(/\s+/g, ' ') // Normalize whitespace
       .trim();
+  }
+
+  /**
+   * Normalize artists to always return an array
+   */
+  private normalizeArtists(artist: string | string[] | undefined): string[] {
+    if (!artist) return ['Unknown Artist'];
+    if (Array.isArray(artist)) return artist;
+    return [artist];
+  }
+
+  /**
+   * Get primary artist from artist field
+   */
+  private getPrimaryArtist(artist: string | string[] | undefined): string {
+    if (!artist) return 'Unknown Artist';
+    if (Array.isArray(artist)) return artist[0] || 'Unknown Artist';
+    return artist;
   }
 
   /**
@@ -348,9 +403,15 @@ export class MediaLibrary implements IMediaLibrary {
 
     if (filter) {
       if (filter.artist) {
-        tracks = tracks.filter(t =>
-          t.metadata.artist?.toLowerCase().includes(filter.artist!.toLowerCase())
-        );
+        const filterArtist = filter.artist.toLowerCase();
+        tracks = tracks.filter(t => {
+          const artist = t.metadata.artist;
+          if (!artist) return false;
+          if (Array.isArray(artist)) {
+            return artist.some(a => a.toLowerCase().includes(filterArtist));
+          }
+          return artist.toLowerCase().includes(filterArtist);
+        });
       }
       if (filter.album) {
         tracks = tracks.filter(t =>
@@ -359,17 +420,31 @@ export class MediaLibrary implements IMediaLibrary {
       }
       if (filter.search) {
         const search = filter.search.toLowerCase();
-        tracks = tracks.filter(t =>
-          t.metadata.title?.toLowerCase().includes(search) ||
-          t.metadata.artist?.toLowerCase().includes(search) ||
-          t.metadata.album?.toLowerCase().includes(search)
-        );
+        tracks = tracks.filter(t => {
+          const titleMatch = t.metadata.title?.toLowerCase().includes(search);
+          const albumMatch = t.metadata.album?.toLowerCase().includes(search);
+          
+          // Handle artist as string or array
+          let artistMatch = false;
+          const artist = t.metadata.artist;
+          if (artist) {
+            if (Array.isArray(artist)) {
+              artistMatch = artist.some(a => a.toLowerCase().includes(search));
+            } else {
+              artistMatch = artist.toLowerCase().includes(search);
+            }
+          }
+          
+          return titleMatch || artistMatch || albumMatch;
+        });
       }
     }
 
     // Sort by artist, album, track number
     return tracks.sort((a, b) => {
-      const artistCompare = (a.metadata.artist || '').localeCompare(b.metadata.artist || '');
+      const artistA = this.getPrimaryArtist(a.metadata.artist);
+      const artistB = this.getPrimaryArtist(b.metadata.artist);
+      const artistCompare = artistA.localeCompare(artistB);
       if (artistCompare !== 0) return artistCompare;
 
       const albumCompare = (a.metadata.album || '').localeCompare(b.metadata.album || '');
@@ -386,19 +461,34 @@ export class MediaLibrary implements IMediaLibrary {
     const albumsMap = new Map<string, Album>();
 
     for (const track of this.tracks.values()) {
-      const albumKey = `${track.metadata.artist}-${track.metadata.album}`;
+      // Get primary artist (first artist if multiple, or albumArtist if available)
+      const primaryArtist = track.metadata.albumArtist || 
+                           this.getPrimaryArtist(track.metadata.artist) || 
+                           'Unknown Artist';
+      const albumName = track.metadata.album || 'Unknown Album';
+      const albumKey = `${primaryArtist}-${albumName}`;
 
       if (!albumsMap.has(albumKey)) {
+        // Find cover art from any track in the album
+        const coverArt = track.metadata.coverArt;
+        
         albumsMap.set(albumKey, {
           id: generateId(),
-          name: track.metadata.album || 'Unknown Album',
-          artist: track.metadata.artist || 'Unknown Artist',
+          name: albumName,
+          artist: primaryArtist,
           year: track.metadata.year,
+          coverArt,
           tracks: [],
         });
       }
 
-      albumsMap.get(albumKey)!.tracks.push(track);
+      const album = albumsMap.get(albumKey)!;
+      album.tracks.push(track);
+      
+      // Update cover art if this track has one and album doesn't
+      if (!album.coverArt && track.metadata.coverArt) {
+        album.coverArt = track.metadata.coverArt;
+      }
     }
 
     // Sort tracks within each album by track number
@@ -413,23 +503,67 @@ export class MediaLibrary implements IMediaLibrary {
 
   /**
    * Get all artists
+   * Handles multiple artists per track - each artist gets the track listed
    */
   getArtists(): Artist[] {
     const artistsMap = new Map<string, Artist>();
+    const artistAlbumsMap = new Map<string, Map<string, Album>>();
 
-    for (const album of this.getAlbums()) {
-      if (!artistsMap.has(album.artist)) {
-        artistsMap.set(album.artist, {
-          id: generateId(),
-          name: album.artist,
-          albums: [],
-          trackCount: 0,
-        });
+    // First pass: collect all albums for each artist
+    for (const track of this.tracks.values()) {
+      const artists = this.normalizeArtists(track.metadata.artist);
+      
+      for (const artistName of artists) {
+        if (!artistsMap.has(artistName)) {
+          artistsMap.set(artistName, {
+            id: generateId(),
+            name: artistName,
+            albums: [],
+            trackCount: 0,
+          });
+          artistAlbumsMap.set(artistName, new Map());
+        }
+
+        const albumName = track.metadata.album || 'Unknown Album';
+        const albumKey = `${artistName}-${albumName}`;
+        const albumsForArtist = artistAlbumsMap.get(artistName)!;
+
+        if (!albumsForArtist.has(albumKey)) {
+          albumsForArtist.set(albumKey, {
+            id: generateId(),
+            name: albumName,
+            artist: artistName,
+            year: track.metadata.year,
+            coverArt: track.metadata.coverArt,
+            tracks: [],
+          });
+        }
+
+        const album = albumsForArtist.get(albumKey)!;
+        album.tracks.push(track);
+        
+        // Update cover art if this track has one and album doesn't
+        if (!album.coverArt && track.metadata.coverArt) {
+          album.coverArt = track.metadata.coverArt;
+        }
       }
+    }
 
-      const artist = artistsMap.get(album.artist)!;
-      artist.albums.push(album);
-      artist.trackCount += album.tracks.length;
+    // Second pass: populate artists with their albums
+    for (const [artistName, artist] of artistsMap.entries()) {
+      const albumsForArtist = artistAlbumsMap.get(artistName)!;
+      artist.albums = Array.from(albumsForArtist.values());
+      
+      // Sort tracks within each album
+      for (const album of artist.albums) {
+        album.tracks.sort((a, b) => (a.metadata.trackNumber || 0) - (b.metadata.trackNumber || 0));
+      }
+      
+      // Sort albums by name
+      artist.albums.sort((a, b) => a.name.localeCompare(b.name));
+      
+      // Calculate total track count
+      artist.trackCount = artist.albums.reduce((sum, album) => sum + album.tracks.length, 0);
     }
 
     return Array.from(artistsMap.values()).sort((a, b) =>
@@ -441,8 +575,37 @@ export class MediaLibrary implements IMediaLibrary {
    * Get all genres
    */
   getGenres(): Genre[] {
-    // For now, return empty array (genre detection would require metadata parsing)
-    return [];
+    const genresMap = new Map<string, Genre>();
+
+    for (const track of this.tracks.values()) {
+      const genres = this.normalizeGenres(track.metadata.genre);
+      
+      for (const genreName of genres) {
+        if (!genresMap.has(genreName)) {
+          genresMap.set(genreName, {
+            id: generateId(),
+            name: genreName,
+            trackCount: 0,
+          });
+        }
+
+        const genre = genresMap.get(genreName)!;
+        genre.trackCount++;
+      }
+    }
+
+    return Array.from(genresMap.values()).sort((a, b) =>
+      a.name.localeCompare(b.name)
+    );
+  }
+
+  /**
+   * Normalize genres to always return an array
+   */
+  private normalizeGenres(genre: string | string[] | undefined): string[] {
+    if (!genre) return [];
+    if (Array.isArray(genre)) return genre;
+    return [genre];
   }
 
   /**

@@ -10,6 +10,7 @@ import { useUIStore } from '../../../shared/store/uiStore';
 import { Slider } from '../../../shared/components/atoms';
 import { formatTime, PlaybackState } from '@sonantica/shared';
 import { cn } from '../../../shared/utils';
+import { formatArtists } from '../../../shared/utils/metadata';
 import { 
   IconPlayerSkipBack, 
   IconPlayerPlay, 
@@ -106,7 +107,7 @@ export function MiniPlayer() {
               {currentTrack.metadata?.title || 'Unknown Title'}
             </motion.div>
             <motion.div layoutId="player-artist" className="text-xs text-text-muted truncate">
-              {currentTrack.metadata?.artist || 'Unknown Artist'}
+              {formatArtists(currentTrack.metadata?.artist)}
             </motion.div>
           </div>
         </motion.button>
