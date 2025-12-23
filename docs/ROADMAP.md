@@ -44,18 +44,14 @@ Nothing monolithic, everything extensible.
 ## 3. Global Architecture
 
 ### 3.1 Layers
-┌──────────────────────────┐
-│ UI Layer │ (Web / Mobile / Desktop)
-├──────────────────────────┤
-│ Application Layer │ (Playlists, UX logic)
-├──────────────────────────┤
-│ Player Core │ (Audio engine)
-├──────────────────────────┤
-│ Platform Abstractions │ (FS, Media Session)
-├──────────────────────────┤
-│ Native / Web APIs │
-└──────────────────────────┘
----
+
+| Layer | Responsibilities |
+| :--- | :--- |
+| **UI Layer** | Web / Mobile / Desktop |
+| **Application Layer** | Playlists, UX logic |
+| **Player Core** | Audio engine |
+| **Platform Abstractions** | FS, Media Session |
+| **Native / Web APIs** | Browser / OS Primitives |
 
 ## 4. Player Core
 
