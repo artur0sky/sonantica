@@ -14,6 +14,7 @@ WORKDIR /app
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
 COPY packages/shared/package.json ./packages/shared/
 COPY packages/player-core/package.json ./packages/player-core/
+COPY packages/media-library/package.json ./packages/media-library/
 COPY apps/web/package.json ./apps/web/
 
 # Install dependencies
@@ -22,11 +23,13 @@ RUN pnpm install --frozen-lockfile
 # Copy source code
 COPY packages/shared ./packages/shared
 COPY packages/player-core ./packages/player-core
+COPY packages/media-library ./packages/media-library
 COPY apps/web ./apps/web
 
 # Build packages
 RUN pnpm --filter @sonantica/shared build
 RUN pnpm --filter @sonantica/player-core build
+RUN pnpm --filter @sonantica/media-library build
 RUN pnpm --filter @sonantica/web build
 
 # Stage 2: Production image

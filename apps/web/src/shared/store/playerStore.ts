@@ -1,0 +1,119 @@
+/**
+ * Player Store
+ * 
+ * Manages player state using Zustand.
+ * Integrates with @sonantica/player-core.
+ */
+
+import { create } from 'zustand';
+import { PlayerEngine } from '@sonantica/player-core';
+import { PlaybackState, PLAYER_EVENTS } from '@sonantica/shared';
+import type { MediaSource } from '@sonantica/shared';
+
+interface PlayerState {
+  // Player instance
+  player: PlayerEngine;
+  
+  // State
+  state: PlaybackState;
+  currentTrack: MediaSource | null;
+  currentTime: number;
+  duration: number;
+  volume: number;
+  muted: boolean;
+  
+  // Actions
+  loadTrack: (source: MediaSource) => Promise<void>;
+  play: () => Promise<void>;
+  pause: () => void;
+  stop: () => void;
+  seek: (time: number) => void;
+  setVolume: (volume: number) => void;
+  toggleMute: () => void;
+  
+  // Internal
+  _initialize: () => void;
+}
+
+export const usePlayerStore = create<PlayerState>((set, get) => {
+  const player = new PlayerEngine();
+
+  return {
+    player,
+    state: PlaybackState.IDLE,
+    currentTrack: null,
+    currentTime: 0,
+    duration: 0,
+    volume: 0.7,
+    muted: false,
+
+    loadTrack: async (source: MediaSource) => {
+      try {
+        await player.load(source);
+        set({ currentTrack: source });
+      } catch (error) {
+        console.error('Failed to load track:', error);
+        throw error;
+      }
+    },
+
+    play: async () => {
+      try {
+        await player.play();
+      } catch (error) {
+        console.error('Failed to play:', error);
+        throw error;
+      }
+    },
+
+    pause: () => {
+      player.pause();
+    },
+
+    stop: () => {
+      player.stop();
+      set({ currentTrack: null });
+    },
+
+    seek: (time: number) => {
+      player.seek(time);
+    },
+
+    setVolume: (volume: number) => {
+      player.setVolume(volume);
+      set({ volume });
+    },
+
+    toggleMute: () => {
+      const { muted } = get();
+      player.setMuted(!muted);
+      set({ muted: !muted });
+    },
+
+    _initialize: () => {
+      // Subscribe to player events
+      player.on(PLAYER_EVENTS.STATE_CHANGE, (event: any) => {
+        set({ state: event.data.newState });
+      });
+
+      player.on(PLAYER_EVENTS.TIME_UPDATE, (event: any) => {
+        set({
+          currentTime: event.data.currentTime,
+          duration: event.data.duration,
+        });
+      });
+
+      player.on(PLAYER_EVENTS.VOLUME_CHANGE, (event: any) => {
+        if (event.data.volume !== undefined) {
+          set({ volume: event.data.volume });
+        }
+      });
+
+      // Set initial volume
+      player.setVolume(0.7);
+    },
+  };
+});
+
+// Initialize on store creation
+usePlayerStore.getState()._initialize();
