@@ -97,7 +97,20 @@ export function MiniPlayer() {
             className="w-12 h-12 bg-surface rounded-md flex items-center justify-center text-text-muted border border-border overflow-hidden"
           >
             {currentTrack.metadata?.coverArt ? (
-              <img src={currentTrack.metadata.coverArt} alt="Cover" className="w-full h-full object-cover" />
+              <img 
+                src={currentTrack.metadata.coverArt} 
+                alt="Cover" 
+                className="w-full h-full object-cover"
+                onError={() => {
+                  console.error('❌ MiniPlayer: Failed to load cover art');
+                  console.log('Cover art length:', currentTrack.metadata?.coverArt?.length);
+                  console.log('Cover art starts with:', currentTrack.metadata?.coverArt?.substring(0, 50));
+                  console.log('Is valid data URL:', currentTrack.metadata?.coverArt?.startsWith('data:'));
+                }}
+                onLoad={() => {
+                  console.log('✅ MiniPlayer: Cover art loaded successfully');
+                }}
+              />
             ) : (
               <IconMusic size={24} stroke={1.5} />
             )}

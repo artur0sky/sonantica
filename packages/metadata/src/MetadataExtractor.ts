@@ -12,10 +12,10 @@ import type { MediaMetadata } from '@sonantica/shared';
  */
 export async function extractMetadata(url: string): Promise<Partial<MediaMetadata>> {
   try {
-    // Fetch the file with range request (first 512KB for better artwork support)
+    // Fetch the file with range request (first 1MB for better artwork support)
     const response = await fetch(url, {
       headers: {
-        'Range': 'bytes=0-524287', // First 512KB
+        'Range': 'bytes=0-1048575', // First 1MB (increased from 512KB to support larger artwork)
       },
     });
 
@@ -233,7 +233,30 @@ function extractFLAC(view: DataView): Partial<MediaMetadata> {
 
           offset += commentLength;
         }
-      } else {
+      } 
+      // PICTURE block (type 6) - Album art
+      else if (blockType === 6) {
+        try {
+          // Check if the entire block is within our buffer
+          const availableBytes = view.byteLength - offset;
+          if (blockSize > availableBytes) {
+            console.warn(`⚠️ FLAC PICTURE block (${blockSize} bytes) extends beyond buffer (${availableBytes} bytes available). Skipping.`);
+            offset += availableBytes; // Skip what we can
+            break; // Stop processing blocks
+          }
+          
+          const pictureData = new Uint8Array(view.buffer, view.byteOffset + offset, blockSize);
+          const artUrl = extractFLACPicture(pictureData);
+          if (artUrl) {
+            metadata.coverArt = artUrl;
+            console.log('✅ FLAC album art extracted successfully');
+          }
+        } catch (error) {
+          console.warn('⚠️ FLAC picture extraction failed:', error);
+        }
+        offset += blockSize;
+      } 
+      else {
         offset += blockSize;
       }
 
@@ -282,14 +305,13 @@ function extractAPIC(data: Uint8Array): string | undefined {
       mimeType = 'image/jpeg';
     }
 
-    // Convert to base64 in chunks to avoid stack overflow
-    const chunkSize = 8192;
-    let base64 = '';
-    
-    for (let i = 0; i < imageData.length; i += chunkSize) {
-      const chunk = imageData.slice(i, Math.min(i + chunkSize, imageData.length));
-      base64 += btoa(String.fromCharCode(...Array.from(chunk)));
+    // Convert to base64 using a more robust method
+    let binary = '';
+    const len = imageData.length;
+    for (let i = 0; i < len; i++) {
+      binary += String.fromCharCode(imageData[i]);
     }
+    const base64 = btoa(binary);
     
     const dataUrl = `data:${mimeType};base64,${base64}`;
     console.log(`✅ Artwork extracted: ${mimeType}, ${dataUrl.length} chars`);
@@ -297,6 +319,77 @@ function extractAPIC(data: Uint8Array): string | undefined {
     return dataUrl;
   } catch (error) {
     console.warn('APIC extraction failed:', error);
+    return undefined;
+  }
+}
+
+/**
+ * Extract FLAC PICTURE block
+ * Format: https://xiph.org/flac/format.html#metadata_block_picture
+ */
+function extractFLACPicture(data: Uint8Array): string | undefined {
+  try {
+    const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+    let offset = 0;
+
+    // Picture type (4 bytes, big-endian)
+    const pictureType = view.getUint32(offset, false);
+    offset += 4;
+
+    // MIME type length (4 bytes, big-endian)
+    const mimeLength = view.getUint32(offset, false);
+    offset += 4;
+
+    // MIME type string
+    const mimeBytes = data.slice(offset, offset + mimeLength);
+    const mimeType = decodeText(mimeBytes);
+    offset += mimeLength;
+
+    // Description length (4 bytes, big-endian)
+    const descLength = view.getUint32(offset, false);
+    offset += 4;
+
+    // Skip description
+    offset += descLength;
+
+    // Width, height, depth, colors (4 bytes each)
+    offset += 16;
+
+    // Picture data length (4 bytes, big-endian)
+    const dataLength = view.getUint32(offset, false);
+    offset += 4;
+
+    // Picture data
+    const imageData = data.slice(offset, offset + dataLength);
+
+    if (imageData.length === 0) {
+      console.warn('⚠️ FLAC PICTURE block has no image data');
+      return undefined;
+    }
+
+    console.log(`🖼️ Extracting FLAC artwork: ${imageData.length} bytes, type: ${mimeType}`);
+
+    // Convert to base64 using a more robust method
+    let binary = '';
+    const len = imageData.length;
+    for (let i = 0; i < len; i++) {
+      binary += String.fromCharCode(imageData[i]);
+    }
+    const base64 = btoa(binary);
+    
+    const dataUrl = `data:${mimeType};base64,${base64}`;
+    console.log(`✅ FLAC artwork extracted: ${mimeType}, ${dataUrl.length} chars`);
+    console.log(`🔍 Data URL preview: ${dataUrl.substring(0, 100)}...`);
+    
+    // Validate Data URL format
+    if (!dataUrl.startsWith('data:')) {
+      console.error('❌ Invalid Data URL format');
+      return undefined;
+    }
+    
+    return dataUrl;
+  } catch (error) {
+    console.warn('FLAC PICTURE extraction failed:', error);
     return undefined;
   }
 }

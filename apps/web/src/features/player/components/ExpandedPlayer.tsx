@@ -84,12 +84,21 @@ export function ExpandedPlayer() {
       >
         {currentTrack.metadata?.coverArt ? (
           <motion.img 
+            key={currentTrack.id}
             src={currentTrack.metadata.coverArt} 
             alt="Cover" 
             className="w-full h-full object-cover"
             initial={{ scale: 1.1, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.5 }}
+            onError={(e) => {
+              console.error('❌ Failed to load cover art:', e);
+              console.log('Cover art URL length:', currentTrack.metadata?.coverArt?.length);
+              console.log('Cover art preview:', currentTrack.metadata?.coverArt?.substring(0, 100));
+            }}
+            onLoad={() => {
+              console.log('✅ Cover art loaded successfully');
+            }}
           />
         ) : (
           <IconMusic size={80} stroke={1} className="opacity-20" />
