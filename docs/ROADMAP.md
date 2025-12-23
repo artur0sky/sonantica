@@ -36,8 +36,11 @@ All the logic resides in a player-agnostic core.
 4. **High Fidelity Without Elitism**
 FLAC and HQ codecs, but without breaking common support.
 
-5. **Modular Scalability**
-Nothing monolithic, everything extensible.
+5. **Modular Scalability (SOLID/Clean)**
+Nothing monolithic, everything extensible. Core is closed for modification, open for extension.
+
+6. **User Autonomy (The "Picky" User)**
+Support for granular control, custom themes, and external API connectors.
 
 ---
 
@@ -143,13 +146,15 @@ Nothing monolithic, everything extensible.
 - Collections (custom)
 - Folders (optional, advanced mode)
 
-### 7.2 Metadata
-
-- ID3/Vorbis/FLAC Tags
-- Embedded Covers
-- External Covers
-- **Lyrics** (Synced/Unsynced - "Sound is language")
-- Biography (optional, future)
+### 7.2 Metadata & Enrichment
+- **Core Metadata:**
+  - ID3/Vorbis/FLAC Tags
+  - Embedded/External Covers
+- **Extended Content (Plugins/APIs):**
+  - **Lyrics** (Synced/Unsynced - "Sound is language")
+  - **Artist Biographies**
+  - **Match Validation** (MusicBrainz/Discogs)
+- Users can provide own API keys for heavy usage.
 
 ---
 
@@ -213,6 +218,10 @@ The agent must:
 - **Technical Inspector** (Show bitrate, format, processing chain - "Transparency")
 - **Educational UI** (Contextual tooltips explaining audio concepts - "Wise Craftsman")
 - Audio visualizers (later phase)
+- **Themes & Customization:**
+  - Token-based theming engine.
+  - User-defined CSS injection.
+  - Community theme import.
 
 ---
 
@@ -251,6 +260,8 @@ The agent must:
 - Indexing
 - Metadata
 - Playlists
+- **External Metadata APIs** (MusicBrainz, etc.)
+- **Plugin System Alpha** (Metadata providers)
 
 ### Phase 3 – Pro Audio
 - Advanced EQ
@@ -261,6 +272,8 @@ The agent must:
 - Visualizations
 - Smart playlists
 - Personalization
+- **Theme Engine (CSS Variables / JSON)**
+- **Plugin System Beta** (DSP & UI Widgets)
 
 ### Phase 5 – Competitive Polishing
 - Performance
