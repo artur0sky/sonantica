@@ -1,48 +1,72 @@
 /**
  * Sonántica Web App
- * 
+ *
  * Main application with SoundCloud-inspired layout.
  * "Apps never implement domain logic."
  */
 
-import { Route, Switch } from 'wouter';
-import { MainLayout } from './shared/components/layouts/MainLayout';
-import { TracksPage } from './features/library/pages/TracksPage';
-import { AlbumsPage } from './features/library/pages/AlbumsPage';
-import { ArtistsPage } from './features/library/pages/ArtistsPage';
+import { Suspense, lazy } from "react";
+import { Route, Switch } from "wouter";
+import { MainLayout } from "./shared/components/layouts/MainLayout";
+import { IconLoader } from "@tabler/icons-react";
+
+// Lazy load pages
+const TracksPage = lazy(() =>
+  import("./features/library/pages/TracksPage").then((m) => ({
+    default: m.TracksPage,
+  }))
+);
+const AlbumsPage = lazy(() =>
+  import("./features/library/pages/AlbumsPage").then((m) => ({
+    default: m.AlbumsPage,
+  }))
+);
+const ArtistsPage = lazy(() =>
+  import("./features/library/pages/ArtistsPage").then((m) => ({
+    default: m.ArtistsPage,
+  }))
+);
+
+const PageLoader = () => (
+  <div className="flex items-center justify-center min-h-[50vh] text-text-muted">
+    <IconLoader className="animate-spin" size={32} />
+  </div>
+);
 
 function App() {
   return (
     <MainLayout>
-      <Switch>
-        {/* Default view: Tracks */}
-        <Route path="/" component={TracksPage} />
-        
-        {/* Library views */}
-        <Route path="/albums" component={AlbumsPage} />
-        <Route path="/artists" component={ArtistsPage} />
-        
-        {/* Playlists - Coming soon */}
-        <Route path="/playlists">
-          <div className="max-w-6xl mx-auto p-6">
-            <div className="text-center py-20">
-              <div className="text-6xl mb-4">📋</div>
-              <h2 className="text-2xl font-semibold mb-2">Playlists</h2>
-              <p className="text-text-muted">Coming soon...</p>
+      <Suspense fallback={<PageLoader />}>
+        <Switch>
+          {/* Default view: Tracks */}
+          <Route path="/" component={TracksPage} />
+
+          {/* Library views */}
+          <Route path="/albums" component={AlbumsPage} />
+          <Route path="/artists" component={ArtistsPage} />
+
+          {/* Playlists - Coming soon */}
+          <Route path="/playlists">
+            <div className="max-w-6xl mx-auto p-6">
+              <div className="text-center py-20">
+                <div className="text-6xl mb-4">📋</div>
+                <h2 className="text-2xl font-semibold mb-2">Playlists</h2>
+                <p className="text-text-muted">Coming soon...</p>
+              </div>
             </div>
-          </div>
-        </Route>
-        
-        {/* 404 */}
-        <Route>
-          <div className="max-w-6xl mx-auto p-6">
-            <div className="text-center py-20">
-              <h1 className="text-4xl font-bold mb-2">404</h1>
-              <p className="text-text-muted">Page not found</p>
+          </Route>
+
+          {/* 404 */}
+          <Route>
+            <div className="max-w-6xl mx-auto p-6">
+              <div className="text-center py-20">
+                <h1 className="text-4xl font-bold mb-2">404</h1>
+                <p className="text-text-muted">Page not found</p>
+              </div>
             </div>
-          </div>
-        </Route>
-      </Switch>
+          </Route>
+        </Switch>
+      </Suspense>
     </MainLayout>
   );
 }

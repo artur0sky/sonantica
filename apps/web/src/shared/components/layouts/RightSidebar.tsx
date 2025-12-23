@@ -1,18 +1,19 @@
 /**
  * Right Sidebar - Queue
- * 
+ *
  * Playback queue management.
  * Shows current track and upcoming tracks.
  */
 
-import { IconX, IconTrash, IconMusic } from '@tabler/icons-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import type { Variants } from 'framer-motion';
-import { usePlayerStore } from '../../store/playerStore';
-import { useQueueStore } from '../../store/queueStore';
-import { useUIStore } from '../../store/uiStore';
-import { Button } from '../atoms';
-import { formatArtists } from '../../utils/metadata';
+import { IconX, IconTrash, IconMusic } from "@tabler/icons-react";
+import { motion, AnimatePresence } from "framer-motion";
+import type { Variants } from "framer-motion";
+import { useState, useRef, useEffect, useMemo } from "react";
+import { usePlayerStore } from "../../store/playerStore";
+import { useQueueStore } from "../../store/queueStore";
+import { useUIStore } from "../../store/uiStore";
+import { Button } from "../atoms";
+import { formatArtists } from "../../utils/metadata";
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -51,6 +52,32 @@ export function RightSidebar() {
   const { getRemainingTracks, clearQueue } = useQueueStore();
 
   const queue = getRemainingTracks();
+
+  // Infinite Scroll State
+  const [displayedCount, setDisplayedCount] = useState(50);
+  const observerTarget = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setDisplayedCount((prev) => Math.min(prev + 50, queue.length));
+        }
+      },
+      { threshold: 0.1, rootMargin: "100px" }
+    );
+
+    if (observerTarget.current) {
+      observer.observe(observerTarget.current);
+    }
+
+    return () => observer.disconnect();
+  }, [queue.length]);
+
+  const visibleQueue = useMemo(
+    () => queue.slice(0, displayedCount),
+    [queue, displayedCount]
+  );
 
   return (
     <motion.div
@@ -96,23 +123,27 @@ export function RightSidebar() {
                   {/* Album Art */}
                   <div className="w-12 h-12 flex-shrink-0 rounded-md overflow-hidden bg-surface border border-border relative">
                     {currentTrack.metadata?.coverArt ? (
-                      <img 
-                        src={currentTrack.metadata.coverArt} 
-                        alt="Cover" 
+                      <img
+                        src={currentTrack.metadata.coverArt}
+                        alt="Cover"
                         className="w-full h-full object-cover"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
-                        <IconMusic size={20} className="text-text-muted/30" stroke={1.5} />
+                        <IconMusic
+                          size={20}
+                          className="text-text-muted/30"
+                          stroke={1.5}
+                        />
                       </div>
                     )}
                     {/* Playing indicator */}
                     <div className="absolute inset-0 bg-accent/10 animate-pulse" />
                   </div>
-                  
+
                   <div className="min-w-0 flex-1">
                     <div className="font-medium truncate">
-                      {currentTrack.metadata?.title || 'Unknown Title'}
+                      {currentTrack.metadata?.title || "Unknown Title"}
                     </div>
                     <div className="text-sm text-text-muted truncate">
                       {formatArtists(currentTrack.metadata?.artist)}
@@ -146,9 +177,7 @@ export function RightSidebar() {
                 exit={{ opacity: 0, y: -20 }}
                 className="text-center py-12"
               >
-                <p className="text-text-muted text-sm">
-                  No tracks in queue
-                </p>
+                <p className="text-text-muted text-sm">No tracks in queue</p>
                 <p className="text-text-muted text-xs mt-2">
                   Tracks will appear here when you play them
                 </p>
@@ -160,12 +189,15 @@ export function RightSidebar() {
                 animate="visible"
                 className="space-y-2"
               >
-                {queue.map((track: any, index: number) => (
+                {visibleQueue.map((track: any, index: number) => (
                   <motion.li
                     key={track.id}
                     variants={itemVariants}
-                    layout
-                    whileHover={{ x: 4, backgroundColor: 'rgba(255,255,255,0.05)' }}
+                    layout // Keep basic layout animation but remove complex transitions if sluggish
+                    whileHover={{
+                      x: 4,
+                      backgroundColor: "rgba(255,255,255,0.05)",
+                    }}
                     onClick={async () => {
                       // Jump to this track in queue (index + 1 because current track is at index 0)
                       const queueStore = useQueueStore.getState();
@@ -178,22 +210,26 @@ export function RightSidebar() {
                     {/* Album Art Thumbnail */}
                     <div className="w-10 h-10 flex-shrink-0 rounded overflow-hidden bg-surface border border-border">
                       {track.metadata?.coverArt ? (
-                        <img 
-                          src={track.metadata.coverArt} 
-                          alt="Cover" 
+                        <img
+                          src={track.metadata.coverArt}
+                          alt="Cover"
                           className="w-full h-full object-cover"
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
-                          <IconMusic size={16} className="text-text-muted/30" stroke={1.5} />
+                          <IconMusic
+                            size={16}
+                            className="text-text-muted/30"
+                            stroke={1.5}
+                          />
                         </div>
                       )}
                     </div>
-                    
+
                     <span className="text-text-muted text-sm w-6">
                       {index + 1}
                     </span>
-                    
+
                     <div className="min-w-0 flex-1">
                       <div className="font-medium truncate text-sm">
                         {track.metadata?.title}
@@ -204,6 +240,10 @@ export function RightSidebar() {
                     </div>
                   </motion.li>
                 ))}
+                {/* Sentinel */}
+                {displayedCount < queue.length && (
+                  <div ref={observerTarget} className="py-2 h-4" />
+                )}
               </motion.ul>
             )}
           </AnimatePresence>
