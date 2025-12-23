@@ -7,7 +7,7 @@
 
 import { usePlayerStore } from '../../../shared/store/playerStore';
 import { useUIStore } from '../../../shared/store/uiStore';
-import { Slider } from '../../../shared/components/atoms';
+import { Slider, ShuffleButton } from '../../../shared/components/atoms';
 import { formatTime, PlaybackState } from '@sonantica/shared';
 import { cn } from '../../../shared/utils';
 import { formatArtists } from '../../../shared/utils/metadata';
@@ -36,6 +36,8 @@ export function MiniPlayer() {
     pause,
     seek,
     setVolume,
+    next,
+    previous,
   } = usePlayerStore();
 
   const { togglePlayerExpanded, toggleQueue } = useUIStore();
@@ -128,6 +130,7 @@ export function MiniPlayer() {
         {/* Center Controls */}
         <div className="flex items-center gap-4">
           <motion.button
+            onClick={previous}
             whileHover={{ scale: 1.1, color: "var(--color-text)" }}
             whileTap={{ scale: 0.9 }}
             className="text-text-muted transition-colors"
@@ -164,6 +167,7 @@ export function MiniPlayer() {
           </motion.button>
 
           <motion.button
+            onClick={next}
             whileHover={{ scale: 1.1, color: "var(--color-text)" }}
             whileTap={{ scale: 0.9 }}
             className="text-text-muted transition-colors"
@@ -199,6 +203,11 @@ export function MiniPlayer() {
               onChange={(e) => setVolume(parseFloat(e.target.value))}
               className="flex-1 opacity-60 group-hover/vol:opacity-100 transition-opacity"
             />
+          </div>
+
+          {/* Shuffle */}
+          <div className="hidden md:block">
+            <ShuffleButton size={18} />
           </div>
 
           {/* Queue Toggle */}

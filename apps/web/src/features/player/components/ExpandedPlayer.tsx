@@ -35,6 +35,8 @@ export function ExpandedPlayer() {
     pause,
     seek,
     setVolume,
+    next,
+    previous,
   } = usePlayerStore();
 
   const { setPlayerExpanded } = useUIStore();
@@ -153,6 +155,7 @@ export function ExpandedPlayer() {
       {/* Playback Controls */}
       <div className="flex items-center gap-8 mb-12 z-10">
         <motion.button
+          onClick={previous}
           whileHover={{ scale: 1.1, x: -2 }}
           whileTap={{ scale: 0.9 }}
           className="text-text-muted hover:text-text transition-colors p-2"
@@ -184,6 +187,7 @@ export function ExpandedPlayer() {
         </motion.button>
 
         <motion.button
+          onClick={next}
           whileHover={{ scale: 1.1, x: 2 }}
           whileTap={{ scale: 0.9 }}
           className="text-text-muted hover:text-text transition-colors p-2"

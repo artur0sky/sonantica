@@ -8,11 +8,10 @@
 import { Button } from '../../../shared/components/atoms';
 import { SearchBar } from '../../../shared/components/molecules';
 import { useLibraryStore } from '../../../shared/store/libraryStore';
-import { usePlayerStore } from '../../../shared/store/playerStore';
-import { useUIStore } from '../../../shared/store/uiStore';
 import { TrackItem } from '../components/TrackItem';
 import { IconRefresh, IconMusic, IconSearch } from '@tabler/icons-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { playFromContext } from '../../../shared/utils/playContext';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -36,9 +35,6 @@ export function TracksPage() {
     getFilteredTracks,
   } = useLibraryStore();
 
-  const { loadTrack, play } = usePlayerStore();
-  const { setQueueOpen } = useUIStore();
-
   const filteredTracks = getFilteredTracks();
 
   const handleScan = async () => {
@@ -49,16 +45,18 @@ export function TracksPage() {
     }
   };
 
-  const handleTrackClick = async (track: any) => {
+  const handleTrackClick = async (_track: any, index: number) => {
     try {
-      await loadTrack({
-        id: track.id,
-        url: track.path,
-        mimeType: track.mimeType,
-        metadata: track.metadata,
-      });
-      await play();
-      setQueueOpen(true); // Open queue when playing
+      // Convert tracks to MediaSource format
+      const mediaSources = filteredTracks.map(t => ({
+        id: t.id,
+        url: t.path,
+        mimeType: t.mimeType,
+        metadata: t.metadata,
+      }));
+
+      // Play from context with all tracks, starting at clicked track
+      await playFromContext(mediaSources, index);
     } catch (error) {
       console.error('Failed to play track:', error);
     }
@@ -155,11 +153,11 @@ export function TracksPage() {
             animate="visible"
             className="space-y-1"
           >
-            {filteredTracks.map((track: any) => (
+            {filteredTracks.map((track: any, index: number) => (
               <TrackItem
                 key={track.id}
                 track={track}
-                onClick={() => handleTrackClick(track)}
+                onClick={() => handleTrackClick(track, index)}
               />
             ))}
           </motion.div>

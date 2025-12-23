@@ -9,6 +9,7 @@ import { IconX, IconTrash, IconMusic } from '@tabler/icons-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Variants } from 'framer-motion';
 import { usePlayerStore } from '../../store/playerStore';
+import { useQueueStore } from '../../store/queueStore';
 import { useUIStore } from '../../store/uiStore';
 import { Button } from '../atoms';
 import { formatArtists } from '../../utils/metadata';
@@ -45,10 +46,11 @@ const itemVariants: Variants = {
 
 export function RightSidebar() {
   const currentTrack = usePlayerStore((s) => s.currentTrack);
+  const { loadTrack, play } = usePlayerStore();
   const { toggleQueue } = useUIStore();
+  const { getRemainingTracks, clearQueue } = useQueueStore();
 
-  // TODO: Implement queue store
-  const queue: any[] = [];
+  const queue = getRemainingTracks();
 
   return (
     <motion.div
@@ -129,7 +131,7 @@ export function RightSidebar() {
               Next Up
             </h3>
             {queue.length > 0 && (
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" onClick={clearQueue}>
                 <IconTrash size={16} stroke={1.5} />
                 <span className="ml-1">Clear</span>
               </Button>
@@ -164,6 +166,13 @@ export function RightSidebar() {
                     variants={itemVariants}
                     layout
                     whileHover={{ x: 4, backgroundColor: 'rgba(255,255,255,0.05)' }}
+                    onClick={async () => {
+                      // Jump to this track in queue (index + 1 because current track is at index 0)
+                      const queueStore = useQueueStore.getState();
+                      queueStore.jumpTo(queueStore.currentIndex + index + 1);
+                      await loadTrack(track);
+                      await play();
+                    }}
                     className="flex items-center gap-3 p-3 rounded-md transition-fast cursor-pointer"
                   >
                     {/* Album Art Thumbnail */}

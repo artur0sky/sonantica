@@ -2,13 +2,14 @@
  * Player Store
  * 
  * Manages player state using Zustand.
- * Integrates with @sonantica/player-core.
+ * Integrates with @sonantica/player-core and Queue Store.
  */
 
 import { create } from 'zustand';
 import { PlayerEngine } from '@sonantica/player-core';
 import { PlaybackState, PLAYER_EVENTS } from '@sonantica/shared';
 import type { MediaSource } from '@sonantica/shared';
+import { useQueueStore } from './queueStore';
 
 interface PlayerState {
   // Player instance
@@ -30,6 +31,10 @@ interface PlayerState {
   seek: (time: number) => void;
   setVolume: (volume: number) => void;
   toggleMute: () => void;
+  
+  // Queue navigation
+  next: () => Promise<void>;
+  previous: () => Promise<void>;
   
   // Internal
   _initialize: () => void;
@@ -109,6 +114,30 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       set({ muted: !muted });
     },
 
+    next: async () => {
+      const nextTrack = useQueueStore.getState().next();
+      if (nextTrack) {
+        await get().loadTrack(nextTrack);
+        await get().play();
+      }
+    },
+
+    previous: async () => {
+      const { currentTime } = get();
+      
+      // If more than 3 seconds into the track, restart it
+      if (currentTime > 3) {
+        get().seek(0);
+      } else {
+        // Otherwise, go to previous track
+        const prevTrack = useQueueStore.getState().previous();
+        if (prevTrack) {
+          await get().loadTrack(prevTrack);
+          await get().play();
+        }
+      }
+    },
+
     _initialize: () => {
       // Subscribe to player events
       player.on(PLAYER_EVENTS.STATE_CHANGE, (event: any) => {
@@ -126,6 +155,12 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
         if (event.data.volume !== undefined) {
           set({ volume: event.data.volume });
         }
+      });
+
+      // Auto-play next track when current track ends
+      player.on(PLAYER_EVENTS.ENDED, async () => {
+        console.log('🎵 Track ended, playing next...');
+        await get().next();
       });
 
       // Set initial volume
