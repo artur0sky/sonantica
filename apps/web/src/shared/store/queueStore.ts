@@ -36,6 +36,7 @@ interface QueueState {
   getNextTrack: () => MediaSource | null;
   getPreviousTrack: () => MediaSource | null;
   getRemainingTracks: () => MediaSource[];
+  reorderUpcoming: (newUpcoming: MediaSource[]) => void;
 }
 
 /**
@@ -175,5 +176,14 @@ export const useQueueStore = create<QueueState>((set, get) => ({
   getRemainingTracks: () => {
     const state = get();
     return state.queue.slice(state.currentIndex + 1);
+  },
+
+  reorderUpcoming: (newUpcoming: MediaSource[]) => {
+    set((state) => {
+      const before = state.queue.slice(0, state.currentIndex + 1);
+      return {
+        queue: [...before, ...newUpcoming],
+      };
+    });
   },
 }));

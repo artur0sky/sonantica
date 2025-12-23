@@ -5,25 +5,29 @@
  * Shows current track and upcoming tracks.
  */
 
-import { IconX, IconTrash, IconMusic } from "@tabler/icons-react";
-import { motion, AnimatePresence } from "framer-motion";
+import {
+  IconX,
+  IconTrash,
+  IconMusic,
+  IconActivity,
+  IconGripVertical,
+  IconPlayerPlay,
+} from "@tabler/icons-react";
+import {
+  motion,
+  AnimatePresence,
+  Reorder,
+  useDragControls,
+} from "framer-motion";
 import type { Variants } from "framer-motion";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { usePlayerStore } from "../../store/playerStore";
 import { useQueueStore } from "../../store/queueStore";
 import { useUIStore } from "../../store/uiStore";
-import { Button } from "../atoms";
+import { Button, Badge } from "../atoms";
 import { formatArtists } from "../../utils/metadata";
-
-const containerVariants: Variants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.05,
-    },
-  },
-};
+import { formatTime } from "@sonantica/shared";
+import { cn } from "../../utils/cn";
 
 const itemVariants: Variants = {
   hidden: { x: 20, opacity: 0 },
@@ -49,7 +53,7 @@ export function RightSidebar() {
   const currentTrack = usePlayerStore((s) => s.currentTrack);
   const { loadTrack, play } = usePlayerStore();
   const { toggleQueue } = useUIStore();
-  const { getRemainingTracks, clearQueue } = useQueueStore();
+  const { getRemainingTracks, clearQueue, reorderUpcoming } = useQueueStore();
 
   const queue = getRemainingTracks();
 
@@ -78,6 +82,34 @@ export function RightSidebar() {
     () => queue.slice(0, displayedCount),
     [queue, displayedCount]
   );
+
+  const handleReorder = (newVisibleQueue: any[]) => {
+    // Merge reordered visible tracks with the rest of the upcoming tracks
+    const remaining = queue.slice(displayedCount);
+    reorderUpcoming([...newVisibleQueue, ...remaining]);
+  };
+
+  const getExtension = (url: string): string => {
+    try {
+      const filename = url.split("/").pop() || "";
+      const parts = filename.split(".");
+      if (parts.length > 1) {
+        const ext = parts.pop();
+        return ext ? ext.toUpperCase() : "AUDIO";
+      }
+      return "AUDIO";
+    } catch {
+      return "AUDIO";
+    }
+  };
+
+  const getBadgeClass = (ext: string) => {
+    if (ext === "FLAC")
+      return "bg-[#C0C0C0] text-black border-none ring-1 ring-white/20 shadow-[0_0_10px_rgba(192,192,192,0.3)]";
+    if (ext === "WAV")
+      return "bg-[#FFD700] text-black border-none ring-1 ring-white/20 shadow-[0_0_10px_rgba(255,215,0,0.3)]";
+    return "";
+  };
 
   return (
     <motion.div
@@ -183,72 +215,157 @@ export function RightSidebar() {
                 </p>
               </motion.div>
             ) : (
-              <motion.ul
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-                className="space-y-2"
+              <Reorder.Group
+                axis="y"
+                values={visibleQueue}
+                onReorder={handleReorder}
+                className="space-y-1"
               >
-                {visibleQueue.map((track: any, index: number) => (
-                  <motion.li
+                {visibleQueue.map((track, index) => (
+                  <QueueItem
                     key={track.id}
-                    variants={itemVariants}
-                    layout // Keep basic layout animation but remove complex transitions if sluggish
-                    whileHover={{
-                      x: 4,
-                      backgroundColor: "rgba(255,255,255,0.05)",
-                    }}
-                    onClick={async () => {
-                      // Jump to this track in queue (index + 1 because current track is at index 0)
+                    track={track}
+                    onPlay={async () => {
                       const queueStore = useQueueStore.getState();
                       queueStore.jumpTo(queueStore.currentIndex + index + 1);
                       await loadTrack(track);
                       await play();
                     }}
-                    className="flex items-center gap-3 p-3 rounded-md transition-fast cursor-pointer"
-                  >
-                    {/* Album Art Thumbnail */}
-                    <div className="w-10 h-10 flex-shrink-0 rounded overflow-hidden bg-surface border border-border">
-                      {track.metadata?.coverArt ? (
-                        <img
-                          src={track.metadata.coverArt}
-                          alt="Cover"
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <IconMusic
-                            size={16}
-                            className="text-text-muted/30"
-                            stroke={1.5}
-                          />
-                        </div>
-                      )}
-                    </div>
-
-                    <span className="text-text-muted text-sm w-6">
-                      {index + 1}
-                    </span>
-
-                    <div className="min-w-0 flex-1">
-                      <div className="font-medium truncate text-sm">
-                        {track.metadata?.title}
-                      </div>
-                      <div className="text-xs text-text-muted truncate">
-                        {formatArtists(track.metadata?.artist)}
-                      </div>
-                    </div>
-                  </motion.li>
+                    getExtension={getExtension}
+                    getBadgeClass={getBadgeClass}
+                  />
                 ))}
                 {/* Sentinel */}
                 {displayedCount < queue.length && (
                   <div ref={observerTarget} className="py-2 h-4" />
                 )}
-              </motion.ul>
+              </Reorder.Group>
             )}
           </AnimatePresence>
         </div>
       </div>
     </motion.div>
+  );
+}
+
+interface QueueItemProps {
+  track: any;
+  onPlay: () => void;
+  getExtension: (url: string) => string;
+  getBadgeClass: (ext: string) => string;
+}
+
+function QueueItem({
+  track,
+  onPlay,
+  getExtension,
+  getBadgeClass,
+}: QueueItemProps) {
+  const dragControls = useDragControls();
+  const ext = getExtension(track.url);
+
+  return (
+    <Reorder.Item
+      value={track}
+      dragListener={false}
+      dragControls={dragControls}
+      variants={itemVariants}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
+      whileDrag={{
+        scale: 1.02,
+        backgroundColor: "rgba(255, 255, 255, 0.08)",
+        boxShadow:
+          "0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+        zIndex: 50,
+      }}
+      transition={{ type: "spring", stiffness: 500, damping: 30, mass: 0.8 }}
+      className="group relative flex items-center gap-3 p-2 rounded-lg transition-colors hover:bg-white/5 border border-transparent hover:border-white/5"
+    >
+      {/* Drag Handle */}
+      <div
+        onPointerDown={(e) => dragControls.start(e)}
+        className="w-6 h-10 flex items-center justify-center text-text-muted/20 group-hover:text-text-muted/60 cursor-grab active:cursor-grabbing transition-colors"
+      >
+        <IconGripVertical size={18} stroke={1.5} />
+      </div>
+
+      {/* Album Art Thumbnail */}
+      <div
+        className="w-10 h-10 flex-shrink-0 rounded overflow-hidden bg-surface border border-border group-hover:border-accent/40 transition-all relative"
+        onClick={onPlay}
+      >
+        {track.metadata?.coverArt ? (
+          <img
+            src={track.metadata.coverArt}
+            alt="Cover"
+            className="w-full h-full object-cover transition-transform group-hover:scale-110"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <IconMusic size={16} className="text-text-muted/30" stroke={1.5} />
+          </div>
+        )}
+        {/* Play Icon on Hover */}
+        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity cursor-pointer">
+          <IconPlayerPlay size={18} className="text-white fill-current" />
+        </div>
+      </div>
+
+      <div className="min-w-0 flex-1 cursor-pointer" onClick={onPlay}>
+        <div className="font-medium truncate text-sm group-hover:text-accent transition-colors">
+          {track.metadata?.title}
+        </div>
+        <div className="flex items-center gap-2 text-xs text-text-muted truncate">
+          <span className="truncate">
+            {formatArtists(track.metadata?.artist)}
+          </span>
+
+          {/* Hover Metadata (Bitrate) */}
+          <motion.span
+            initial={{ opacity: 0, x: -5 }}
+            whileHover={{ opacity: 1, x: 0 }}
+            className="hidden group-hover:inline-flex items-center gap-1 text-[10px] text-accent font-mono bg-accent/10 px-1.5 py-0.5 rounded shadow-sm border border-accent/20"
+          >
+            <IconActivity size={10} />
+            {track.metadata?.bitrate || "1411"} kbps
+            {track.metadata?.sampleRate && (
+              <span className="ml-1 opacity-60">
+                {(track.metadata.sampleRate / 1000).toFixed(1)}kHz
+              </span>
+            )}
+            {track.metadata?.bitsPerSample && (
+              <span className="ml-1 opacity-60">
+                {track.metadata.bitsPerSample}-bit
+              </span>
+            )}
+          </motion.span>
+        </div>
+      </div>
+
+      {/* Right Section: Duration & Badges */}
+      <div className="flex flex-col items-end gap-1.5 min-w-fit pr-1">
+        <span className="text-[11px] text-text-muted tabular-nums font-mono opacity-60 group-hover:opacity-100 transition-opacity">
+          {formatTime(track.metadata?.duration || 0)}
+        </span>
+
+        {/* Extension Badge */}
+        <div className="flex gap-1 items-center">
+          <Badge
+            variant="custom"
+            className={cn(
+              "text-[9px] px-1.5 py-0 transition-all transform scale-90 group-hover:scale-100 shadow-sm",
+              getBadgeClass(ext),
+              ext !== "FLAC" && ext !== "WAV"
+                ? "opacity-0 group-hover:opacity-100"
+                : "opacity-100"
+            )}
+          >
+            {ext}
+          </Badge>
+        </div>
+      </div>
+    </Reorder.Item>
   );
 }

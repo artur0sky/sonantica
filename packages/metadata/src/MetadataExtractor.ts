@@ -197,6 +197,40 @@ function extractFLAC(view: DataView): Partial<MediaMetadata> {
 
       offset += 4;
 
+      // STREAMINFO block (type 0) - contains audio specs and duration
+      if (blockType === 0 && blockSize >= 34) {
+        // Sample rate (20 bits, starting at bit 80)
+        // In StreamInfo: 
+        // offset 10-12 (3 bytes) contain sample rate, channels, bits per sample
+        const b10_12 = (view.getUint8(offset + 10) << 16) | (view.getUint8(offset + 11) << 8) | view.getUint8(offset + 12);
+        const sampleRate = b10_12 >> 4;
+        const channels = ((b10_12 >> 1) & 0x07) + 1;
+        const bitsPerSample = ((view.getUint8(offset + 12) & 0x01) << 4) | (view.getUint8(offset + 13) >> 4) + 1;
+        
+        // Total samples (36 bits, starting at bit 138)
+        // offset 13-17
+        const b13_17_high = view.getUint8(offset + 13) & 0x0F;
+        const b14 = view.getUint8(offset + 14);
+        const b15 = view.getUint8(offset + 15);
+        const b16 = view.getUint8(offset + 16);
+        const b17 = view.getUint8(offset + 17);
+        
+        const totalSamples = (b13_17_high * Math.pow(2, 32)) + (b14 << 24 | b15 << 16 | b16 << 8 | b17);
+
+        metadata.sampleRate = sampleRate;
+        metadata.bitsPerSample = bitsPerSample;
+        
+        if (sampleRate > 0) {
+          metadata.duration = totalSamples / sampleRate;
+          
+          // Estimate bitrate (very rough for FLAC, it's variable)
+          // Average Bitrate = (File Size * 8) / Duration
+          // But we don't have total file size easily here if it's a stream, 
+          // though we might have it from the fetch.
+          // For now, let's just use the duration.
+        }
+      }
+
       // Vorbis comment block (type 4)
       if (blockType === 4) {
         // Parse Vorbis comments

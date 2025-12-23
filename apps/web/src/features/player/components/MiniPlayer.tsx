@@ -10,6 +10,7 @@ import { useUIStore } from "../../../shared/store/uiStore";
 import { ShuffleButton } from "../../../shared/components/atoms";
 import { EnhancedVolumeControl } from "../../../shared/components/molecules/EnhancedVolumeControl";
 import { WaveformScrubber } from "../../../shared/components/molecules/WaveformScrubber";
+import { BackgroundSpectrum } from "../../../shared/components/molecules/BackgroundSpectrum";
 import { formatTime, PlaybackState } from "@sonantica/shared";
 import { cn } from "../../../shared/utils";
 import { formatArtists } from "../../../shared/utils/metadata";
@@ -35,6 +36,7 @@ export function MiniPlayer() {
     seek,
     next,
     previous,
+    getAudioElement,
   } = usePlayerStore();
 
   const {
@@ -55,7 +57,7 @@ export function MiniPlayer() {
       animate={{ y: 0, opacity: 1 }}
       exit={{ y: 100, opacity: 0 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      className="bg-surface-elevated border-t border-border"
+      className="border-t border-border"
     >
       {/* Progress Bar */}
       {/* Progress Bar with Waveform */}
@@ -69,8 +71,16 @@ export function MiniPlayer() {
 
       {/* Spacer to preserve layout if needed, though scrubber is absolute top-aligned */}
 
+      {/* Real-time Visualization Background */}
+      <BackgroundSpectrum
+        audioElement={getAudioElement()}
+        enabled={isVisualizationEnabled}
+        className="absolute inset-0 z-0 opacity-20 pointer-events-none"
+        height={64} // Matches approximate height of player
+      />
+
       {/* Player Controls */}
-      <div className="flex items-center gap-4 px-4 py-3">
+      <div className="flex items-center gap-4 px-4 py-3 relative z-10">
         {/* Track Info - Clickable to expand */}
         <motion.button
           onClick={togglePlayerExpanded}

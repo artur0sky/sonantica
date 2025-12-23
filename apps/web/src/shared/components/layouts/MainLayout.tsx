@@ -14,7 +14,6 @@ import { RightSidebar } from "./RightSidebar";
 import { MetadataPanel } from "../molecules/MetadataPanel";
 import { MiniPlayer } from "../../../features/player/components/MiniPlayer";
 import { ExpandedPlayer } from "../../../features/player/components/ExpandedPlayer";
-import { BackgroundSpectrum } from "../molecules/BackgroundSpectrum";
 import { useWaveformLoader } from "../../../features/player/hooks/useWaveformLoader";
 
 interface MainLayoutProps {
@@ -32,10 +31,7 @@ export function MainLayout({ children }: MainLayoutProps) {
     isPlayerExpanded,
     isMetadataPanelOpen,
     toggleMetadataPanel,
-    isVisualizationEnabled,
   } = useUIStore();
-
-  const getAudioElement = usePlayerStore((s) => s.getAudioElement);
 
   return (
     <div className="h-screen flex flex-col bg-bg text-text overflow-hidden relative">
@@ -44,12 +40,6 @@ export function MainLayout({ children }: MainLayoutProps) {
 
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden relative">
-        {/* Visualization Layer */}
-        <BackgroundSpectrum
-          audioElement={getAudioElement()}
-          enabled={isVisualizationEnabled}
-        />
-
         {/* Left Sidebar - Navigation */}
         <AnimatePresence mode="wait">
           {isLeftSidebarOpen && (

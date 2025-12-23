@@ -55,8 +55,8 @@ export function BackgroundSpectrum({
           exit={{ opacity: 0, y: 50 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
           className={cn(
-            "fixed bottom-0 left-0 right-0 pointer-events-none",
-            "z-0", // Behind everything
+            "pointer-events-none absolute inset-0 z-0", // Absolute positioning for container
+            "opacity-20", // Significant transparency as requested
             className
           )}
           style={{ height: `${height}px` }}

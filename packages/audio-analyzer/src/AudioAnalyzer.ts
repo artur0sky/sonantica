@@ -368,7 +368,10 @@ export class AudioAnalyzer implements IAudioAnalyzer {
       const maxFreq = (endBin / binCount) * nyquist;
 
       // Normalize amplitude (0-255 -> 0.0-1.0)
-      const amplitude = average / 255;
+      let amplitude = average / 255;
+      
+      // Apply contrast curve for visual dynamics (prevents 'brick' look on loud tracks)
+      amplitude = Math.pow(amplitude, 1.5);
 
       // Convert to dB (approximate)
       const db = this.config.minDecibels + 

@@ -1,28 +1,29 @@
 /**
  * Expanded Player Component
- * 
+ *
  * Full-screen player view.
  * "Intentional minimalism" - focus on the listening experience.
  */
 
-import { usePlayerStore } from '../../../shared/store/playerStore';
-import { useUIStore } from '../../../shared/store/uiStore';
-import { Slider } from '../../../shared/components/atoms';
-import { formatTime, PlaybackState } from '@sonantica/shared';
-import { formatArtists } from '../../../shared/utils/metadata';
-import { 
-  IconX, 
-  IconPlayerSkipBack, 
-  IconPlayerPlay, 
-  IconPlayerPause, 
-  IconPlayerSkipForward, 
-  IconVolume, 
-  IconVolume2, 
+import { usePlayerStore } from "../../../shared/store/playerStore";
+import { useUIStore } from "../../../shared/store/uiStore";
+import { Slider } from "../../../shared/components/atoms";
+import { WaveformScrubber } from "../../../shared/components/molecules/WaveformScrubber";
+import { formatTime, PlaybackState } from "@sonantica/shared";
+import { formatArtists } from "../../../shared/utils/metadata";
+import {
+  IconX,
+  IconPlayerSkipBack,
+  IconPlayerPlay,
+  IconPlayerPause,
+  IconPlayerSkipForward,
+  IconVolume,
+  IconVolume2,
   IconVolume3,
   IconVolumeOff,
-  IconMusic
-} from '@tabler/icons-react';
-import { motion, AnimatePresence } from 'framer-motion';
+  IconMusic,
+} from "@tabler/icons-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 export function ExpandedPlayer() {
   const {
@@ -58,7 +59,7 @@ export function ExpandedPlayer() {
   const VolumeIcon = getVolumeIcon();
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
@@ -80,26 +81,32 @@ export function ExpandedPlayer() {
       </motion.button>
 
       {/* Album Art / Visualization */}
-      <motion.div 
+      <motion.div
         layoutId="player-artwork"
         className="w-80 h-80 max-w-[80vw] max-h-[80vw] bg-surface-elevated rounded-2xl flex items-center justify-center text-text-muted mb-8 shadow-2xl border border-border overflow-hidden relative"
       >
         {currentTrack.metadata?.coverArt ? (
-          <motion.img 
+          <motion.img
             key={currentTrack.id}
-            src={currentTrack.metadata.coverArt} 
-            alt="Cover" 
+            src={currentTrack.metadata.coverArt}
+            alt="Cover"
             className="w-full h-full object-cover"
             initial={{ scale: 1.1, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.5 }}
             onError={(e) => {
-              console.error('❌ Failed to load cover art:', e);
-              console.log('Cover art URL length:', currentTrack.metadata?.coverArt?.length);
-              console.log('Cover art preview:', currentTrack.metadata?.coverArt?.substring(0, 100));
+              console.error("❌ Failed to load cover art:", e);
+              console.log(
+                "Cover art URL length:",
+                currentTrack.metadata?.coverArt?.length
+              );
+              console.log(
+                "Cover art preview:",
+                currentTrack.metadata?.coverArt?.substring(0, 100)
+              );
             }}
             onLoad={() => {
-              console.log('✅ Cover art loaded successfully');
+              console.log("✅ Cover art loaded successfully");
             }}
           />
         ) : (
@@ -109,22 +116,22 @@ export function ExpandedPlayer() {
 
       {/* Track Info */}
       <div className="text-center mb-10 max-w-2xl px-4 z-10 w-full">
-        <motion.h1 
+        <motion.h1
           layoutId="player-title"
           className="text-3xl md:text-4xl font-bold mb-3 text-balance tracking-tight"
         >
-          {currentTrack.metadata?.title || 'Unknown Title'}
+          {currentTrack.metadata?.title || "Unknown Title"}
         </motion.h1>
-        <motion.p 
+        <motion.p
           layoutId="player-artist"
           className="text-xl text-text-muted mb-2 font-medium"
         >
           {formatArtists(currentTrack.metadata?.artist)}
         </motion.p>
-        
+
         <AnimatePresence>
           {currentTrack.metadata?.album && (
-            <motion.p 
+            <motion.p
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               className="text-lg text-text-muted/60"
@@ -137,14 +144,12 @@ export function ExpandedPlayer() {
 
       {/* Timeline */}
       <div className="w-full max-w-2xl mb-10 z-10 px-4">
-        <Slider
-          value={currentTime}
-          min={0}
-          max={duration || 0}
-          step={0.1}
-          onChange={(e) => seek(parseFloat(e.target.value))}
-          disabled={!duration}
-          className="mb-3 h-2"
+        <WaveformScrubber
+          trackId={currentTrack.id}
+          progress={(currentTime / (duration || 1)) * 100}
+          duration={duration}
+          onSeek={(time) => seek(time)}
+          className="mb-3 h-2 hover:h-16"
         />
         <div className="flex justify-between text-sm text-text-muted tabular-nums px-1 font-mono">
           <span>{formatTime(currentTime)}</span>
@@ -170,18 +175,26 @@ export function ExpandedPlayer() {
           className="w-20 h-20 rounded-full bg-accent hover:bg-accent-hover text-white flex items-center justify-center shadow-xl transition-colors"
         >
           <AnimatePresence mode="wait">
-             <motion.div
-                key={isPlaying ? 'pause' : 'play'}
-                initial={{ scale: 0.5, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.5, opacity: 0 }}
-                transition={{ duration: 0.1 }}
-              >
-                {isPlaying ? (
-                  <IconPlayerPause size={36} className="fill-current" stroke={0} />
-                ) : (
-                  <IconPlayerPlay size={36} className="fill-current pl-1" stroke={0} />
-                )}
+            <motion.div
+              key={isPlaying ? "pause" : "play"}
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.5, opacity: 0 }}
+              transition={{ duration: 0.1 }}
+            >
+              {isPlaying ? (
+                <IconPlayerPause
+                  size={36}
+                  className="fill-current"
+                  stroke={0}
+                />
+              ) : (
+                <IconPlayerPlay
+                  size={36}
+                  className="fill-current pl-1"
+                  stroke={0}
+                />
+              )}
             </motion.div>
           </AnimatePresence>
         </motion.button>
@@ -203,7 +216,7 @@ export function ExpandedPlayer() {
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           className="text-text-muted hover:text-text transition-colors"
-          aria-label={volume > 0 ? 'Mute' : 'Unmute'}
+          aria-label={volume > 0 ? "Mute" : "Unmute"}
         >
           <VolumeIcon size={24} stroke={1.5} />
         </motion.button>
@@ -221,7 +234,7 @@ export function ExpandedPlayer() {
       </div>
 
       {/* Philosophy Quote */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.5 }}

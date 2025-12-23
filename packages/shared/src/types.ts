@@ -47,6 +47,9 @@ export interface MediaMetadata {
   trackNumber?: number; // Track number in album
   genre?: string | string[]; // Single genre or multiple genres
   albumArtist?: string; // Primary album artist (for compilations)
+  bitrate?: number; // in kbps
+  sampleRate?: number; // in Hz
+  bitsPerSample?: number; // bit depth
 }
 
 /**
