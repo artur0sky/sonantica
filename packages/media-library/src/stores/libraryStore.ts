@@ -31,7 +31,7 @@ interface LibraryState {
   onLoad?: () => Promise<{ tracks: Track[]; stats: LibraryStats } | null>;
   
   // Actions
-  scan: (paths: string[]) => Promise<void>;
+  scan: (paths: string[], cancel?: boolean) => Promise<void>;
   setSearchQuery: (query: string) => void;
   selectArtist: (artist: Artist | null) => void;
   selectAlbum: (album: Album | null) => void;
@@ -72,8 +72,13 @@ export const useLibraryStore = create<LibraryState>((set, get) => {
     selectedArtist: null,
     selectedAlbum: null,
 
-    scan: async (paths: string[]) => {
+    scan: async (paths: string[], cancel: boolean = false) => {
       try {
+        if (cancel) {
+             library.cancelScan();
+             set({ scanning: false });
+             return;
+        }
         set({ scanning: true, scanProgress: 0 });
         // MediaLibrary now handles change detection automatically
         await library.scan(paths);
@@ -81,7 +86,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => {
         console.error('Scan failed:', error);
         throw error;
       } finally {
-        set({ scanning: false });
+        if (!cancel) set({ scanning: false });
       }
     },
 

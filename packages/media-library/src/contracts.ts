@@ -24,6 +24,11 @@ export interface IMediaLibrary {
   scan(paths: string[]): Promise<void>;
 
   /**
+   * Cancel an ongoing scan
+   */
+  cancelScan(): void;
+
+  /**
    * Get all tracks
    */
   getTracks(filter?: LibraryFilter): Track[];

@@ -17,6 +17,7 @@ import {
   IconArrowsShuffle,
   IconSortAscending,
   IconSortDescending,
+  IconPlayerStop,
 } from "@tabler/icons-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -41,14 +42,8 @@ type SortField = "title" | "artist" | "album" | "year" | "duration" | "genre";
 type SortOrder = "asc" | "desc";
 
 export function TracksPage() {
-  const {
-    stats,
-    scanning,
-    scanProgress,
-    searchQuery,
-    scan,
-    getFilteredTracks,
-  } = useLibraryStore();
+  const { stats, scanning, searchQuery, scan, getFilteredTracks } =
+    useLibraryStore();
 
   const [sortField, setSortField] = useState<SortField>("title");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
@@ -284,22 +279,25 @@ export function TracksPage() {
             )}
 
             <Button
-              onClick={handleScan}
-              disabled={scanning}
-              variant="primary"
+              onClick={scanning ? () => scan([], true) : handleScan}
+              variant={scanning ? "danger" : "primary"}
               className="flex items-center gap-2"
             >
               <motion.div
-                animate={scanning ? { rotate: 360 } : { rotate: 0 }}
+                animate={scanning ? { rotate: 0 } : { rotate: 0 }}
                 transition={
                   scanning
                     ? { duration: 1, repeat: Infinity, ease: "linear" }
                     : {}
                 }
               >
-                <IconRefresh size={18} />
+                {scanning ? (
+                  <IconPlayerStop size={18} fill="white" />
+                ) : (
+                  <IconRefresh size={18} />
+                )}
               </motion.div>
-              {scanning ? `Scanning... (${scanProgress})` : "Scan Library"}
+              {scanning ? "" : "Scan Library"}
             </Button>
           </div>
         </div>

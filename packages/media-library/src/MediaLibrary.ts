@@ -41,14 +41,26 @@ export class MediaLibrary implements IMediaLibrary {
   private listeners: Map<string, Set<Function>> = new Map();
   private lastScanPaths: Set<string> = new Set();
 
+  private cancelScanFlag = false;
+
   constructor() {
     console.log('📚 Sonántica Media Library initialized (Enhanced)');
+  }
+
+  cancelScan() {
+    this.cancelScanFlag = true;
+     this.scanProgress.status = 'idle';
+      this.emit(LIBRARY_EVENTS.SCAN_COMPLETE, {
+        tracksFound: this.tracks.size,
+         aborted: true
+      });
   }
 
   /**
    * Scan for media files with change detection
    */
   async scan(paths: string[]): Promise<void> {
+    this.cancelScanFlag = false;
     this.scanProgress = {
       status: 'scanning',
       filesScanned: 0,
@@ -62,7 +74,13 @@ export class MediaLibrary implements IMediaLibrary {
 
       // Scan all paths
       for (const path of paths) {
+        if (this.cancelScanFlag) break;
         await this.scanPathRecursive(path, scannedPaths);
+      }
+
+      if (this.cancelScanFlag) {
+           console.log('🛑 Scan cancelled by user');
+           return;
       }
 
       // Remove tracks that no longer exist
@@ -121,6 +139,7 @@ export class MediaLibrary implements IMediaLibrary {
     scannedPaths: Set<string>
   ): Promise<void> {
     for (const file of files) {
+       if (this.cancelScanFlag) return;
       if (file.type === 'file') {
         const filename = file.name;
         const fullPath = `${basePath}${filename}`;
@@ -165,6 +184,7 @@ export class MediaLibrary implements IMediaLibrary {
     const matches = html.matchAll(linkRegex);
 
     for (const match of matches) {
+      if (this.cancelScanFlag) return;
       const href = match[1];
 
       // Skip parent directory and absolute URLs

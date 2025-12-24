@@ -7,6 +7,7 @@
 
 import { create } from 'zustand';
 import { PlayerEngine } from '../PlayerEngine';
+import { useQueueStore } from './queueStore';
 import { PLAYER_EVENTS } from '@sonantica/shared';
 import { PlaybackState, type MediaSource } from '@sonantica/shared';
 
@@ -177,6 +178,12 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     },
 
     _initialize: () => {
+      // Default wiring to queueStore
+      set({
+        onNext: () => useQueueStore.getState().next(),
+        onPrevious: () => useQueueStore.getState().previous(),
+      });
+
       // Subscribe to player events
       player.on(PLAYER_EVENTS.STATE_CHANGE, (event: any) => {
         set({ state: event.data.newState });
