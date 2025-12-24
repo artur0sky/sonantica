@@ -95,7 +95,7 @@ export function Header() {
       </div>
 
       {/* Center: Global Search */}
-      <div className="flex-1 max-w-xs sm:max-w-md md:max-w-lg lg:max-w-2xl mx-auto min-w-0">
+      <div className="flex-1 max-w-sm sm:max-w-md md:max-w-lg lg:max-w-2xl mx-auto min-w-0">
         <GlobalSearchBar onResultSelect={handleSearchResultSelect} />
       </div>
 

@@ -183,8 +183,8 @@ export function SearchBar({ onResultSelect, className }: GlobalSearchBarProps) {
       {/* Search Input */}
       <div className="relative">
         <IconSearch
-          size={18}
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
+          size={20}
+          className="absolute left-3 sm:left-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"
           stroke={1.5}
         />
         <input
@@ -195,8 +195,8 @@ export function SearchBar({ onResultSelect, className }: GlobalSearchBarProps) {
           onFocus={() => setIsOpen(true)}
           placeholder="Search tracks, artists, albums..."
           className={cn(
-            "w-full pl-10 pr-10 py-2 bg-surface-elevated border border-border rounded-lg",
-            "text-sm text-text placeholder:text-text-muted",
+            "w-full pl-10 pr-10 py-2.5 sm:py-2 bg-surface-elevated border border-border rounded-lg",
+            "text-base sm:text-sm text-text placeholder:text-text-muted",
             "focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent",
             "transition-all"
           )}
@@ -209,7 +209,7 @@ export function SearchBar({ onResultSelect, className }: GlobalSearchBarProps) {
             }}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text transition-colors"
           >
-            <IconX size={16} stroke={1.5} />
+            <IconX size={18} stroke={1.5} />
           </button>
         )}
       </div>
@@ -221,7 +221,7 @@ export function SearchBar({ onResultSelect, className }: GlobalSearchBarProps) {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="absolute top-full left-0 right-0 mt-2 bg-surface-elevated border border-border rounded-lg shadow-2xl overflow-hidden z-50 max-h-96 overflow-y-auto custom-scrollbar"
+            className="absolute top-full left-0 right-0 mt-2 bg-surface-elevated border border-border rounded-lg shadow-2xl overflow-hidden z-50 max-h-[60vh] sm:max-h-96 overflow-y-auto custom-scrollbar"
           >
             {results.map((result, index) => (
               <motion.button
@@ -229,14 +229,14 @@ export function SearchBar({ onResultSelect, className }: GlobalSearchBarProps) {
                 onClick={() => handleResultClick(result)}
                 onMouseEnter={() => setSelectedIndex(index)}
                 className={cn(
-                  "w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors",
+                  "w-full flex items-center gap-3 sm:gap-3 px-4 py-3 sm:py-2.5 text-left transition-colors",
                   index === selectedIndex
                     ? "bg-accent/10 text-text"
                     : "hover:bg-white/5 text-text-muted"
                 )}
               >
                 {/* Cover Art or Icon */}
-                <div className="w-10 h-10 flex-shrink-0 rounded-md overflow-hidden bg-surface flex items-center justify-center text-lg">
+                <div className="w-12 h-12 sm:w-10 sm:h-10 flex-shrink-0 rounded-md overflow-hidden bg-surface flex items-center justify-center text-xl sm:text-lg">
                   {result.coverArt ? (
                     <img
                       src={result.coverArt}
@@ -250,18 +250,18 @@ export function SearchBar({ onResultSelect, className }: GlobalSearchBarProps) {
 
                 {/* Info */}
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium text-sm truncate">
+                  <div className="font-medium text-base sm:text-sm truncate">
                     {result.title}
                   </div>
                   {result.subtitle && (
-                    <div className="text-xs text-text-muted truncate">
+                    <div className="text-sm sm:text-xs text-text-muted truncate">
                       {result.subtitle}
                     </div>
                   )}
                 </div>
 
                 {/* Type Badge */}
-                <div className="text-[10px] text-text-muted/50 uppercase tracking-wider">
+                <div className="text-[11px] sm:text-[10px] text-text-muted/50 uppercase tracking-wider">
                   {result.type}
                 </div>
               </motion.button>

@@ -7,6 +7,7 @@ interface AlphabetNavigatorProps {
   onLetterClick: (index: number, letter: string) => void;
   className?: string;
   vertical?: boolean;
+  scrollContainerId?: string;
 }
 
 const ALPHABET = "#ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
@@ -16,10 +17,13 @@ export function AlphabetNavigator({
   onLetterClick,
   className,
   vertical = true,
+  scrollContainerId,
 }: AlphabetNavigatorProps) {
   const [activeLetter, setActiveLetter] = useState<string | null>(null);
   const [isHovering, setIsHovering] = useState(false);
+  const [isScrolling, setIsScrolling] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Map letters to their first index in the items list
   const letterIndices = useMemo(() => {
@@ -39,6 +43,50 @@ export function AlphabetNavigator({
     return ALPHABET.filter((l) => letterIndices[l] !== undefined);
   }, [letterIndices]);
 
+  // Detect scroll for mobile
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolling(true);
+
+      // Clear existing timer
+      if (scrollTimerRef.current) {
+        clearTimeout(scrollTimerRef.current);
+      }
+
+      // Hide after 1.5s of no scrolling
+      scrollTimerRef.current = setTimeout(() => {
+        setIsScrolling(false);
+      }, 1500);
+    };
+
+    // Find the scroll container
+    let scrollContainer: HTMLElement | Window = window;
+
+    if (scrollContainerId) {
+      const element = document.getElementById(scrollContainerId);
+      if (element) {
+        scrollContainer = element;
+      }
+    } else {
+      // Try to find main element with overflow-y-auto
+      const mainElement = document.querySelector("main.overflow-y-auto");
+      if (mainElement) {
+        scrollContainer = mainElement as HTMLElement;
+      }
+    }
+
+    scrollContainer.addEventListener("scroll", handleScroll, {
+      passive: true,
+    } as any);
+
+    return () => {
+      scrollContainer.removeEventListener("scroll", handleScroll);
+      if (scrollTimerRef.current) {
+        clearTimeout(scrollTimerRef.current);
+      }
+    };
+  }, [scrollContainerId]);
+
   const handleLetterInteraction = (letter: string) => {
     const index = letterIndices[letter];
     if (index !== undefined) {
@@ -54,7 +102,12 @@ export function AlphabetNavigator({
     <div
       className={cn(
         "fixed right-2 top-1/2 -translate-y-1/2 z-40 flex flex-col items-center gap-0.5 py-4 px-1 rounded-full bg-surface-elevated/20 backdrop-blur-md border border-white/5 transition-all duration-300",
-        isHovering ? "bg-surface-elevated/40" : "opacity-40 hover:opacity-100",
+        // Mobile: show only when scrolling, Desktop: always show with hover effect
+        "md:opacity-40 md:hover:opacity-100",
+        isScrolling
+          ? "opacity-100"
+          : "opacity-0 pointer-events-none md:pointer-events-auto md:opacity-40",
+        isHovering && "bg-surface-elevated/40",
         className
       )}
       onMouseEnter={() => setIsHovering(true)}
