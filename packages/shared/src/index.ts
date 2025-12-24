@@ -12,7 +12,7 @@
 // Core exports
 export * from './types';
 export * from './constants';
-export * from './utils';
+export * from './utils/index';
 
 // Additional utilities
 export * from './utils/cn';

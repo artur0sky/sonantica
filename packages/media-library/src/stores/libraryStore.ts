@@ -127,8 +127,8 @@ export const useLibraryStore = create<LibraryState>((set, get) => {
     },
 
     getFilteredAlbums: () => {
-      const { albums, selectedArtist, searchQuery } = get();
-      let filtered = selectedArtist ? selectedArtist.albums : albums;
+      const { albums, searchQuery } = get();
+      let filtered = albums;
       
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
@@ -142,8 +142,8 @@ export const useLibraryStore = create<LibraryState>((set, get) => {
     },
 
     getFilteredTracks: () => {
-      const { tracks, selectedAlbum, searchQuery } = get();
-      let filtered = selectedAlbum ? selectedAlbum.tracks : tracks;
+      const { tracks, searchQuery } = get();
+      let filtered = tracks;
       
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
@@ -178,22 +178,6 @@ export const useLibraryStore = create<LibraryState>((set, get) => {
     },
 
     _initialize: async () => {
-      // Load cached library data via injected callback
-      try {
-        const { onLoad } = get();
-        if (onLoad) {
-          const cachedData = await onLoad();
-
-          if (cachedData && cachedData.tracks && cachedData.tracks.length > 0) {
-            console.log('📚 Loading library from cache:', cachedData.tracks.length, 'tracks');
-            // Restore library instance - this will trigger LIBRARY_UPDATED event
-            library.restore(cachedData.tracks);
-          }
-        }
-      } catch (error) {
-        console.warn('Failed to load cached library:', error);
-      }
-
       // Subscribe to library events
       library.on(LIBRARY_EVENTS.SCAN_START, () => {
         set({ scanning: true, scanProgress: 0 });
@@ -210,16 +194,13 @@ export const useLibraryStore = create<LibraryState>((set, get) => {
       });
 
       // Real-time updates for new tracks found during scan
-      // NO PERSISTENCE - Just UI update
       let updateTimeout: ReturnType<typeof setTimeout> | null = null;
       library.on(LIBRARY_EVENTS.TRACK_ADDED, (data: any) => {
-        console.log('🎵 Track added:', data.track?.filename);
         if (!updateTimeout) {
           updateTimeout = setTimeout(() => {
-            console.log('🔄 Updating UI with new tracks...');
             get()._updateLibrary(false);
             updateTimeout = null;
-          }, 100); // Batched UI update every 100ms for faster feedback
+          }, 200); // Batched UI update for faster feedback
         }
       });
 
@@ -227,9 +208,31 @@ export const useLibraryStore = create<LibraryState>((set, get) => {
         await get()._updateLibrary(true);
       });
 
-      // Start background scan after initialization
-      console.log('🚀 Starting background library scan...');
-      get().scan(['/media/']);
+      // Load cached library data via injected callback
+      let hasCache = false;
+      try {
+        const { onLoad } = get();
+        if (onLoad) {
+          const cachedData = await onLoad();
+
+          if (cachedData && cachedData.tracks && cachedData.tracks.length > 0) {
+            console.log('📚 Loading library from cache:', cachedData.tracks.length, 'tracks');
+            library.restore(cachedData.tracks);
+            hasCache = true;
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to load cached library:', error);
+      }
+
+      // Start background scan ONLY if no index exists
+      if (!hasCache) {
+        console.log('🚀 No library index found. Starting initial scan...');
+        // Default music paths - could be configurable later
+        get().scan(['/media/']);
+      } else {
+        console.log('✨ Library index loaded from cache. Background scan skipped.');
+      }
     },
 
     _updateLibrary: async (persist = true) => {

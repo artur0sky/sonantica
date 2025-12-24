@@ -1,7 +1,5 @@
 /**
- * Utility functions for Sonántica
- * 
- * "Adjust. Listen. Decide."
+ * Common Utilities
  */
 
 /**

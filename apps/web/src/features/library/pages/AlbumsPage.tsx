@@ -24,8 +24,7 @@ const containerVariants = {
 const ITEMS_PER_PAGE = 20;
 
 export function AlbumsPage() {
-  const { stats, searchQuery, selectAlbum, getFilteredAlbums } =
-    useLibraryStore();
+  const { stats, searchQuery, getFilteredAlbums } = useLibraryStore();
   const [, setLocation] = useLocation();
 
   const filteredAlbums = getFilteredAlbums();
@@ -63,7 +62,6 @@ export function AlbumsPage() {
   );
 
   const handleAlbumClick = (album: any) => {
-    selectAlbum(album);
     setLocation(`/album/${album.id}`);
   };
 

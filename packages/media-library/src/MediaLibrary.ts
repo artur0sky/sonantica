@@ -10,7 +10,7 @@
  * - Incremental updates
  */
 
-import { generateId, isSupportedFormat } from '@sonantica/shared';
+import { generateId, generateStableId, isSupportedFormat } from '@sonantica/shared';
 import type { IMediaLibrary } from './contracts';
 import type { Track, Album, Artist, Genre, LibraryStats, ScanProgress, LibraryFilter } from './types';
 
@@ -54,6 +54,20 @@ export class MediaLibrary implements IMediaLibrary {
         tracksFound: this.tracks.size,
          aborted: true
       });
+  }
+
+  /**
+   * Pre-populate library with existing tracks
+   */
+  setTracks(tracks: Track[]) {
+    this.tracks.clear();
+    this.tracksByPath.clear();
+    for (const track of tracks) {
+      this.tracks.set(track.id, track);
+      this.tracksByPath.set(track.path, track.id);
+    }
+    console.log(`📋 Library pre-populated with ${tracks.length} tracks`);
+    this.emit(LIBRARY_EVENTS.LIBRARY_UPDATED, {});
   }
 
   /**
@@ -174,12 +188,19 @@ export class MediaLibrary implements IMediaLibrary {
 
           // Check if track already exists
           const existingTrackId = this.tracksByPath.get(fullPath);
-          if (!existingTrackId) {
-            // New track - add it
+          const existingTrack = existingTrackId ? this.tracks.get(existingTrackId) : null;
+          
+          // Basic change detection using mtime and size
+          const fileModifiedTime = file.mtime ? new Date(file.mtime).getTime() : 0;
+          const trackModifiedTime = existingTrack?.lastModified ? new Date(existingTrack.lastModified).getTime() : 0;
+          const sizeChanged = existingTrack && existingTrack.size !== (file.size || 0);
+          
+          if (!existingTrack || (fileModifiedTime > trackModifiedTime && fileModifiedTime > 0) || sizeChanged) {
+            // New or modified track - add it
             const track = await this.createTrack(basePath, filename, file.size || 0, file.mtime);
             this.addTrack(track);
           } else {
-            // Track exists - update scan progress
+            // Track exists and is unchanged - update scan progress only
             this.scanProgress.filesScanned++;
             this.emit(LIBRARY_EVENTS.SCAN_PROGRESS, {
               filesScanned: this.scanProgress.filesScanned,
@@ -508,23 +529,27 @@ export class MediaLibrary implements IMediaLibrary {
                            this.getPrimaryArtist(track.metadata.artist) || 
                            'Unknown Artist';
       const albumName = track.metadata.album || 'Unknown Album';
-      const albumKey = `${primaryArtist}-${albumName}`;
+      // Use consistent key format: "Artist - Album"
+      const albumKey = `${primaryArtist} - ${albumName}`;
 
-      if (!albumsMap.has(albumKey)) {
+      const albumId = generateStableId(albumKey);
+
+      if (!albumsMap.has(albumId)) {
         // Find cover art from any track in the album
         const coverArt = track.metadata.coverArt;
         
-        albumsMap.set(albumKey, {
-          id: generateId(),
+        albumsMap.set(albumId, {
+          id: albumId,
           name: albumName,
           artist: primaryArtist,
+          artistId: generateStableId(primaryArtist),
           year: track.metadata.year,
           coverArt,
           tracks: [],
         });
       }
 
-      const album = albumsMap.get(albumKey)!;
+      const album = albumsMap.get(albumId)!;
       album.tracks.push(track);
       
       // Update cover art if this track has one and album doesn't
@@ -556,33 +581,41 @@ export class MediaLibrary implements IMediaLibrary {
       const artists = this.normalizeArtists(track.metadata.artist);
       
       for (const artistName of artists) {
-        if (!artistsMap.has(artistName)) {
-          artistsMap.set(artistName, {
-            id: generateId(),
+        const artistId = generateStableId(artistName);
+
+        if (!artistsMap.has(artistId)) {
+          artistsMap.set(artistId, {
+            id: artistId,
             name: artistName,
             albums: [],
             trackCount: 0,
           });
-          artistAlbumsMap.set(artistName, new Map());
+          artistAlbumsMap.set(artistId, new Map());
         }
 
         const albumName = track.metadata.album || 'Unknown Album';
-        const albumKey = `${artistName}-${albumName}`;
-        const albumsForArtist = artistAlbumsMap.get(artistName)!;
+        // For sub-filtering in artists, we still want the GLOBAL album ID 
+        // to be based on the Primary Artist to ensure consistency across the app.
+        const albumPrimaryArtist = track.metadata.albumArtist || 
+                                   this.getPrimaryArtist(track.metadata.artist) || 
+                                   'Unknown Artist';
+        const globalAlbumKey = `${albumPrimaryArtist} - ${albumName}`;
+        const albumId = generateStableId(globalAlbumKey);
+        const albumsForArtist = artistAlbumsMap.get(artistId)!;
 
-        if (!albumsForArtist.has(albumKey)) {
-          albumsForArtist.set(albumKey, {
-            id: generateId(),
+        if (!albumsForArtist.has(albumId)) {
+          albumsForArtist.set(albumId, {
+            id: albumId,
             name: albumName,
             artist: artistName,
-            artistId: artistsMap.get(artistName)!.id,
+            artistId: artistId,
             year: track.metadata.year,
             coverArt: track.metadata.coverArt,
             tracks: [],
           });
         }
 
-        const album = albumsForArtist.get(albumKey)!;
+        const album = albumsForArtist.get(albumId)!;
         album.tracks.push(track);
         
         // Update cover art if this track has one and album doesn't

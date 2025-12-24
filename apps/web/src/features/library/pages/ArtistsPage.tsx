@@ -24,8 +24,7 @@ const containerVariants = {
 const ITEMS_PER_PAGE = 20; // 20 grid items per page
 
 export function ArtistsPage() {
-  const { stats, searchQuery, selectArtist, getFilteredArtists } =
-    useLibraryStore();
+  const { stats, searchQuery, getFilteredArtists } = useLibraryStore();
   const [, setLocation] = useLocation();
 
   const filteredArtists = getFilteredArtists();
@@ -63,7 +62,6 @@ export function ArtistsPage() {
   );
 
   const handleArtistClick = (artist: any) => {
-    selectArtist(artist);
     setLocation(`/artist/${artist.id}`);
   };
 
