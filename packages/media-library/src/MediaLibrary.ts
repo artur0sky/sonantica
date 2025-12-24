@@ -455,7 +455,7 @@ export class MediaLibrary implements IMediaLibrary {
   /**
    * Add track to library
    */
-   private addTrack(track: Track): void {
+  private addTrack(track: Track): void {
     // Prevent duplicates: If this path already exists with a different ID, remove the old one first
     const existingId = this.tracksByPath.get(track.path);
     if (existingId && existingId !== track.id) {
@@ -474,6 +474,47 @@ export class MediaLibrary implements IMediaLibrary {
     });
 
     this.emit(LIBRARY_EVENTS.TRACK_ADDED, { track });
+  }
+
+  /**
+   * Get track by ID
+   */
+  getTrack(id: string): Track | undefined {
+    return this.tracks.get(id);
+  }
+
+  /**
+   * Hydrate track metadata (lazy extraction)
+   */
+  async hydrateTrack(trackId: string): Promise<Track | undefined> {
+    const track = this.tracks.get(trackId);
+    if (!track) return undefined;
+
+    // Only hydrate if missing critical info like coverArt
+    if (track.metadata.coverArt) return track;
+
+    try {
+      console.log(`💧 Hydrating metadata for: ${track.filename}`);
+      const metadataModule = await import('@sonantica/metadata').catch(() => null);
+      
+      if (metadataModule) {
+        const extracted = await metadataModule.extractMetadata(track.path);
+        
+        // Merge extracted metadata
+        track.metadata = {
+          ...track.metadata,
+          ...extracted,
+        };
+        
+        this.emit(LIBRARY_EVENTS.LIBRARY_UPDATED, {});
+        console.log(`✨ Hydration complete for: ${track.filename}`);
+        return track;
+      }
+    } catch (error) {
+      console.warn(`⚠️ Hydration failed for ${track.filename}:`, error);
+    }
+    
+    return track;
   }
 
   /**

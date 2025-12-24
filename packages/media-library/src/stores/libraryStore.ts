@@ -37,6 +37,7 @@ interface LibraryState {
   selectArtist: (artist: Artist | null) => void;
   selectAlbum: (album: Album | null) => void;
   clearSelection: () => void;
+  hydrateTrack: (id: string) => Promise<void>;
   
   // Callback setters
   setOnSave: (callback: (data: { tracks: Track[]; stats: LibraryStats }) => Promise<void>) => void;
@@ -107,6 +108,11 @@ export const useLibraryStore = create<LibraryState>((set, get) => {
 
     clearSelection: () => {
       set({ selectedArtist: null, selectedAlbum: null, searchQuery: '' });
+    },
+
+    hydrateTrack: async (id: string) => {
+      await library.hydrateTrack(id);
+      // No need for set() here as library emits LIBRARY_UPDATED which triggers _updateLibrary
     },
 
     setOnSave: (callback: (data: { tracks: Track[]; stats: LibraryStats }) => Promise<void>) => {

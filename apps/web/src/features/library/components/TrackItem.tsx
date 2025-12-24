@@ -14,6 +14,7 @@ import { cn } from "@sonantica/shared";
 import { usePlayerStore } from "@sonantica/player-core";
 import { useLibraryStore } from "@sonantica/media-library";
 import { PlaybackState, formatArtists } from "@sonantica/shared";
+import { useEffect } from "react";
 
 interface TrackItemProps {
   track: any;
@@ -25,6 +26,17 @@ export function TrackItem({ track, onClick }: TrackItemProps) {
 
   const isCurrentTrack = currentTrack?.id === track.id;
   const isPlaying = isCurrentTrack && state === PlaybackState.PLAYING;
+  const hydrateTrack = useLibraryStore((s) => s.hydrateTrack);
+
+  // Lazy hydration on appearance
+  useEffect(() => {
+    if (!track.metadata?.coverArt) {
+      const timer = setTimeout(() => {
+        hydrateTrack(track.id);
+      }, 1000); // 1s delay for list items to avoid overhead during scroll
+      return () => clearTimeout(timer);
+    }
+  }, [track.id, track.metadata?.coverArt, hydrateTrack]);
 
   return (
     <motion.div

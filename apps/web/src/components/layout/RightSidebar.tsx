@@ -347,6 +347,18 @@ function QueueItem({
   const [isHovered, setIsHovered] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
   const [dragProgress, setDragProgress] = useState(0); // 0 to 1
+  const hydrateTrack = useLibraryStore((s) => s.hydrateTrack);
+
+  // Lazy hydration on appearance
+  useEffect(() => {
+    if (!track.metadata?.coverArt) {
+      // Small timeout to avoid hammering the decoder if scrolling fast
+      const timer = setTimeout(() => {
+        hydrateTrack(track.id);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [track.id, track.metadata?.coverArt, hydrateTrack]);
 
   return (
     <Reorder.Item

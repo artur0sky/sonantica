@@ -10,8 +10,9 @@ const STORAGE_KEYS = {
 
 // --- IndexedDB Helper for Large Data (Library Tracks) ---
 const DB_NAME = "sonantica_db";
-const STORE_NAME = "library_tracks";
-const DB_VERSION = 1;
+const STORE_TRACKS = "library_tracks";
+const STORE_ARTWORK = "library_artwork";
+const DB_VERSION = 2; // Incremented for new store
 
 async function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -20,36 +21,93 @@ async function openDB(): Promise<IDBDatabase> {
     request.onsuccess = () => resolve(request.result);
     request.onupgradeneeded = (event) => {
       const db = (event.target as IDBOpenDBRequest).result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME);
+      if (!db.objectStoreNames.contains(STORE_TRACKS)) {
+        db.createObjectStore(STORE_TRACKS);
+      }
+      if (!db.objectStoreNames.contains(STORE_ARTWORK)) {
+        db.createObjectStore(STORE_ARTWORK);
       }
     };
   });
 }
 
-async function saveTracksToDB(tracks: any[]) {
+async function saveLibraryToDB(tracks: any[]) {
   const db = await openDB();
-  const tx = db.transaction(STORE_NAME, "readwrite");
-  const store = tx.objectStore(STORE_NAME);
-  await store.put(tracks, "all_tracks");
+  const tx = db.transaction([STORE_TRACKS, STORE_ARTWORK], "readwrite");
+
+  // 1. Save tracks (thinned but keeping link to album)
+  const trackStore = tx.objectStore(STORE_TRACKS);
+
+  // 2. Extract and deduplicate artwork
+  const artStore = tx.objectStore(STORE_ARTWORK);
+  const processedAlbums = new Set<string>();
+
+  const minimalTracks = tracks.map((t) => {
+    const albumKey = `${t.metadata?.artist} - ${t.metadata?.album}`;
+
+    if (t.metadata?.coverArt && !processedAlbums.has(albumKey)) {
+      artStore.put(t.metadata.coverArt, albumKey);
+      processedAlbums.add(albumKey);
+    }
+
+    return {
+      ...t,
+      metadata: {
+        ...t.metadata,
+        coverArt: undefined, // Remove from track to save space, will be re-hydrated
+      },
+    };
+  });
+
+  trackStore.put(minimalTracks, "all_tracks");
+
   return new Promise((resolve, reject) => {
     tx.oncomplete = () => resolve(true);
     tx.onerror = () => reject(tx.error);
   });
 }
 
-async function loadTracksFromDB(): Promise<any[]> {
+async function loadLibraryFromDB(): Promise<any[]> {
   try {
     const db = await openDB();
-    const tx = db.transaction(STORE_NAME, "readonly");
-    const store = tx.objectStore(STORE_NAME);
-    const request = store.get("all_tracks");
-    return new Promise((resolve, reject) => {
-      request.onsuccess = () => resolve(request.result || []);
-      request.onerror = () => reject(request.error);
+    const tx = db.transaction([STORE_TRACKS, STORE_ARTWORK], "readonly");
+
+    const trackStore = tx.objectStore(STORE_TRACKS);
+    const artStore = tx.objectStore(STORE_ARTWORK);
+
+    const requestToPromise = (req: IDBRequest) =>
+      new Promise((res, rej) => {
+        req.onsuccess = () => res(req.result);
+        req.onerror = () => rej(req.error);
+      });
+
+    const tracks =
+      ((await requestToPromise(trackStore.get("all_tracks"))) as any[]) || [];
+    if (tracks.length === 0) return [];
+
+    // Load both artwork and keys concurrently
+    const [artworks, keys] = (await Promise.all([
+      requestToPromise(artStore.getAll()),
+      requestToPromise(artStore.getAllKeys()),
+    ])) as [any[], any[]];
+
+    const artMap = new Map();
+    keys.forEach((key, i) => artMap.set(key, artworks[i]));
+
+    // Re-hydrate tracks
+    return tracks.map((t) => {
+      const albumKey = `${t.metadata?.artist} - ${t.metadata?.album}`;
+      const coverArt = artMap.get(albumKey);
+      if (coverArt) {
+        return {
+          ...t,
+          metadata: { ...t.metadata, coverArt },
+        };
+      }
+      return t;
     });
   } catch (e) {
-    console.warn("⚠️ [Persistence] Failed to load tracks from IndexedDB:", e);
+    console.warn("⚠️ [Persistence] Failed to load from IndexedDB:", e);
     return [];
   }
 }
@@ -141,28 +199,11 @@ export function PlaybackPersistence() {
             JSON.stringify(data.stats)
           );
 
-          // B. Save tracks to IndexedDB (high capacity)
-          // Aggressive thinning to keep DB size manageable
-          const minimalTracks = data.tracks.map((t) => ({
-            id: t.id,
-            path: t.path,
-            mimeType: t.mimeType,
-            size: t.size,
-            metadata: {
-              title: t.metadata?.title,
-              artist: t.metadata?.artist,
-              album: t.metadata?.album,
-              duration: t.metadata?.duration,
-              year: t.metadata?.year,
-              trackNumber: t.metadata?.trackNumber,
-              genre: t.metadata?.genre,
-            },
-            addedAt: t.addedAt,
-            lastModified: t.lastModified,
-          }));
-
-          await saveTracksToDB(minimalTracks);
-          console.log("💾 [Persistence] Library index saved to IndexedDB");
+          // B. Save library (tracks + deduplicated artwork) to IndexedDB
+          await saveLibraryToDB(data.tracks);
+          console.log(
+            "💾 [Persistence] Library index and artwork saved to IndexedDB"
+          );
         } catch (e) {
           console.error("❌ [Persistence] Failed to save library state:", e);
         }
@@ -171,11 +212,11 @@ export function PlaybackPersistence() {
       setLibraryOnLoad(async () => {
         try {
           const statsSaved = localStorage.getItem(STORAGE_KEYS.LIBRARY_STATS);
-          const tracks = await loadTracksFromDB();
+          const tracks = await loadLibraryFromDB();
 
           if (tracks.length > 0) {
             console.log(
-              "📖 [Persistence] Restoring library index from IndexedDB:",
+              "📖 [Persistence] Restoring library index and artwork from IndexedDB:",
               tracks.length,
               "tracks"
             );
