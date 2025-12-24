@@ -8,5 +8,10 @@
  * "Respect the intention of the sound and the freedom of the listener."
  */
 
-export * from './PlayerEngine';
+export { PlayerEngine } from './PlayerEngine';
 export * from './contracts';
+// Stores
+export { usePlayerStore } from './stores/playerStore';
+export type { PlayerState } from './stores/playerStore';
+export { useQueueStore } from './stores/queueStore';
+export type { QueueState, RepeatMode } from './stores/queueStore';

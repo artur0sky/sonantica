@@ -1,12 +1,12 @@
 /**
  * Timeline Component
- * 
+ *
  * Playback timeline with seek functionality.
  */
 
-import { Slider } from '../../../shared/components/atoms';
-import { usePlayerStore } from '../../../shared/store/playerStore';
-import { formatTime } from '@sonantica/shared';
+import { Slider } from "@sonantica/ui";
+import { usePlayerStore } from "@sonantica/player-core";
+import { formatTime } from "@sonantica/shared";
 
 export function Timeline() {
   const { currentTime, duration, seek, state } = usePlayerStore();
@@ -16,7 +16,7 @@ export function Timeline() {
     seek(newTime);
   };
 
-  if (state === 'idle') {
+  if (state === "idle") {
     return null;
   }
 
@@ -30,7 +30,7 @@ export function Timeline() {
         onChange={handleSeek}
         disabled={!duration}
       />
-      
+
       <div className="flex justify-between text-sm text-text-muted tabular-nums">
         <span>{formatTime(currentTime)}</span>
         <span>{formatTime(duration)}</span>

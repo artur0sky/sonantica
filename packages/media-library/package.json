@@ -28,10 +28,11 @@
     "author": "Sonántica Team",
     "license": "Apache-2.0",
     "dependencies": {
-        "@sonantica/shared": "workspace:*"
+        "@sonantica/shared": "workspace:*",
+        "@sonantica/metadata": "workspace:*",
+        "zustand": "^5.0.2"
     },
     "devDependencies": {
-        "@sonantica/metadata": "workspace:*",
         "tsup": "^8.0.0",
         "typescript": "^5.3.0",
         "rimraf": "^5.0.0"

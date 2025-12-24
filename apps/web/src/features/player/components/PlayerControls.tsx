@@ -1,12 +1,12 @@
 /**
  * Player Controls Component
- * 
+ *
  * Play, pause, stop controls for the player.
  */
 
-import { Button } from '../../../shared/components/atoms';
-import { usePlayerStore } from '../../../shared/store/playerStore';
-import { PlaybackState } from '@sonantica/shared';
+import { Button } from "@sonantica/ui";
+import { usePlayerStore } from "@sonantica/player-core";
+import { PlaybackState } from "@sonantica/shared";
 
 export function PlayerControls() {
   const { state, play, pause, stop } = usePlayerStore();
@@ -24,18 +24,13 @@ export function PlayerControls() {
         size="lg"
         className="w-24"
       >
-        {isLoading ? '⏳' : '▶️'} Play
+        {isLoading ? "⏳" : "▶️"} Play
       </Button>
-      
-      <Button
-        onClick={pause}
-        disabled={!isPlaying}
-        size="lg"
-        className="w-24"
-      >
+
+      <Button onClick={pause} disabled={!isPlaying} size="lg" className="w-24">
         ⏸️ Pause
       </Button>
-      
+
       <Button
         onClick={stop}
         disabled={isIdle}

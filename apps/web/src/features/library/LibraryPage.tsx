@@ -5,13 +5,13 @@
  */
 
 import React from "react";
-import { Button } from "../../shared/components/atoms";
-import { useLibraryStore } from "../../shared/store/libraryStore";
-import { usePlayerStore } from "../../shared/store/playerStore";
+import { Button } from "@sonantica/ui";
+import { useLibraryStore } from "@sonantica/media-library";
+import { usePlayerStore } from "@sonantica/player-core";
 import { TrackItem } from "./components/TrackItem";
 import { AlbumCard } from "./components/AlbumCard";
 import { ArtistCard } from "./components/ArtistCard";
-import { cn } from "../../shared/utils";
+import { cn } from "@sonantica/shared";
 
 type ViewMode = "artists" | "albums" | "tracks";
 

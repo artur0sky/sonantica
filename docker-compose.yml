@@ -22,7 +22,7 @@ services:
       # Media files - Mount your music library here
       # Example: ./media or /path/to/your/music
       - ${MEDIA_PATH:-./media}:/media:ro
-
+      - F:\Music:/media:ro
       # Buckets - For cloud storage mounts or additional libraries
       # Example: ./buckets or /mnt/s3-music
       - ${BUCKETS_PATH:-./buckets}:/buckets:ro

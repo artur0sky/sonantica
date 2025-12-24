@@ -1,7 +1,7 @@
 {
     "name": "@sonantica/shared",
     "version": "0.1.0",
-    "description": "Shared types, utilities, and constants for Sonántica",
+    "description": "Shared types, utilities, constants for Sonántica - NO state management",
     "main": "./dist/index.js",
     "module": "./dist/index.mjs",
     "types": "./dist/index.d.ts",
@@ -22,10 +22,13 @@
     "keywords": [
         "sonantica",
         "shared",
-        "types"
+        "types",
+        "utils",
+        "constants"
     ],
     "author": "Sonántica Team",
     "license": "Apache-2.0",
+    "dependencies": {},
     "devDependencies": {
         "tsup": "^8.0.0",
         "typescript": "^5.3.0",

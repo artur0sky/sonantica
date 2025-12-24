@@ -6,8 +6,8 @@
  */
 
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Button } from "../../../shared/components/atoms";
-import { useLibraryStore } from "../../../shared/store/libraryStore";
+import { Button } from "@sonantica/ui";
+import { useLibraryStore } from "@sonantica/media-library";
 import { TrackItem } from "../components/TrackItem";
 import {
   IconRefresh,
@@ -23,7 +23,7 @@ import {
   playFromContext,
   playAll,
   playAllShuffled,
-} from "../../../shared/utils/playContext";
+} from "../../../utils/playContext";
 
 const containerVariants = {
   hidden: { opacity: 0 },

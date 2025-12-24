@@ -1,12 +1,12 @@
 /**
  * Now Playing Component
- * 
+ *
  * Displays current track information.
  */
 
-import { Badge } from '../../../shared/components/atoms';
-import { usePlayerStore } from '../../../shared/store/playerStore';
-import { formatArtists } from '../../../shared/utils/metadata';
+import { Badge } from "@sonantica/ui";
+import { usePlayerStore } from "@sonantica/player-core";
+import { formatArtists } from "@sonantica/shared";
 
 export function NowPlaying() {
   const { currentTrack, state } = usePlayerStore();
@@ -29,17 +29,17 @@ export function NowPlaying() {
       <Badge variant="accent" className="mb-4">
         {state}
       </Badge>
-      
+
       <h2 className="text-2xl font-bold mb-2">
-        {currentTrack.metadata?.title || 'Unknown Title'}
+        {currentTrack.metadata?.title || "Unknown Title"}
       </h2>
-      
+
       <p className="text-lg text-text-muted mb-1">
         {formatArtists(currentTrack.metadata?.artist)}
       </p>
-      
+
       <p className="text-sm text-text-muted">
-        {currentTrack.metadata?.album || 'Unknown Album'}
+        {currentTrack.metadata?.album || "Unknown Album"}
       </p>
     </div>
   );

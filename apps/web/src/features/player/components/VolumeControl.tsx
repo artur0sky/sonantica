@@ -1,11 +1,11 @@
 /**
  * Volume Control Component
- * 
+ *
  * Volume slider with mute toggle.
  */
 
-import { Button, Slider } from '../../../shared/components/atoms';
-import { usePlayerStore } from '../../../shared/store/playerStore';
+import { Button, Slider } from "@sonantica/ui";
+import { usePlayerStore } from "@sonantica/player-core";
 
 export function VolumeControl() {
   const { volume, muted, setVolume, toggleMute } = usePlayerStore();
@@ -15,7 +15,13 @@ export function VolumeControl() {
     setVolume(newVolume);
   };
 
-  const volumeIcon = muted ? '🔇' : volume > 0.5 ? '🔊' : volume > 0 ? '🔉' : '🔈';
+  const volumeIcon = muted
+    ? "🔇"
+    : volume > 0.5
+    ? "🔊"
+    : volume > 0
+    ? "🔉"
+    : "🔈";
 
   return (
     <div className="flex items-center gap-3">
@@ -27,7 +33,7 @@ export function VolumeControl() {
       >
         {volumeIcon}
       </Button>
-      
+
       <Slider
         value={volume}
         min={0}
@@ -36,7 +42,7 @@ export function VolumeControl() {
         onChange={handleVolumeChange}
         className="w-32"
       />
-      
+
       <span className="text-sm text-text-muted tabular-nums w-12 text-right">
         {Math.round(volume * 100)}%
       </span>

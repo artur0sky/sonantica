@@ -10,3 +10,5 @@
 
 export * from './AudioAnalyzer';
 export * from './contracts';
+export * from './stores/analyzerStore';
+export * from './stores/waveformStore';

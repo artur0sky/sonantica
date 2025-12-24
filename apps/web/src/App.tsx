@@ -7,7 +7,7 @@
 
 import { Suspense, lazy } from "react";
 import { Route, Switch } from "wouter";
-import { MainLayout } from "./shared/components/layouts/MainLayout";
+import { MainLayout } from "./components/layout/MainLayout";
 import { IconLoader } from "@tabler/icons-react";
 
 // Lazy load pages

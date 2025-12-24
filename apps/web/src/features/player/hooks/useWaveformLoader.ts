@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
-import { usePlayerStore } from '../../../shared/store/playerStore';
-import { useQueueStore } from '../../../shared/store/queueStore';
-import { useWaveformStore } from '../../../shared/store/waveformStore';
+import { usePlayerStore, useQueueStore } from '@sonantica/player-core';
+import { useWaveformStore } from '@sonantica/audio-analyzer';
 
 export function useWaveformLoader() {
   const currentTrack = usePlayerStore(state => state.currentTrack);

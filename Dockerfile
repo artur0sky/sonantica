@@ -11,12 +11,13 @@ RUN corepack enable && corepack prepare pnpm@8.15.0 --activate
 WORKDIR /app
 
 # Copy package files
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc tsconfig.base.json ./
 COPY packages/shared/package.json ./packages/shared/
 COPY packages/player-core/package.json ./packages/player-core/
 COPY packages/audio-analyzer/package.json ./packages/audio-analyzer/
 COPY packages/media-library/package.json ./packages/media-library/
 COPY packages/metadata/package.json ./packages/metadata/
+COPY packages/ui/package.json ./packages/ui/
 COPY apps/web/package.json ./apps/web/
 
 # Install dependencies
@@ -28,6 +29,7 @@ COPY packages/player-core ./packages/player-core
 COPY packages/audio-analyzer ./packages/audio-analyzer
 COPY packages/media-library ./packages/media-library
 COPY packages/metadata ./packages/metadata
+COPY packages/ui ./packages/ui
 COPY apps/web ./apps/web
 
 # Build packages (in dependency order)
@@ -36,6 +38,7 @@ RUN pnpm --filter @sonantica/metadata build
 RUN pnpm --filter @sonantica/player-core build
 RUN pnpm --filter @sonantica/audio-analyzer build
 RUN pnpm --filter @sonantica/media-library build
+RUN pnpm --filter @sonantica/ui build
 RUN pnpm --filter @sonantica/web build
 
 # Stage 2: Production image

@@ -5,7 +5,7 @@
  */
 
 import { useState, useRef, useEffect, useMemo } from "react";
-import { useLibraryStore } from "../../../shared/store/libraryStore";
+import { useLibraryStore } from "@sonantica/media-library";
 import { ArtistCard } from "../components/ArtistCard";
 import { IconMicrophone, IconSearch } from "@tabler/icons-react";
 import { motion, AnimatePresence } from "framer-motion";
