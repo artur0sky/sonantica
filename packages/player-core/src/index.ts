@@ -14,4 +14,8 @@ export * from './contracts';
 export { usePlayerStore } from './stores/playerStore';
 export type { PlayerState } from './stores/playerStore';
 export { useQueueStore } from './stores/queueStore';
-export type { QueueState, RepeatMode } from './stores/queueStore';
+export type { RepeatMode } from './stores/queueStore';
+export type { QueueState } from './stores/queueStore';
+// Services
+export { MediaSessionService, mediaSessionService } from './services/MediaSessionService';
+export type { MediaSessionHandlers } from './services/MediaSessionService';

@@ -156,11 +156,11 @@ Must:
 
 | Feature | Status | Priority | Notes |
 | :--- | :---: | :---: | :--- |
-| Media Session API | 🚧 | 🟠 | Partial OS integration |
-| Lockscreen Controls | 📋 | 🟠 | Mobile essential |
-| Headset/Bluetooth | 📋 | 🟠 | Hardware integration |
-| Background playback | 📋 | 🟠 | Mobile stores requirement |
-| **Keyboard Shortcuts** | 📋 | 🟡 | Desktop "Active Listening" |
+| Media Session API | ✅ | 🟠 | Full OS integration |
+| Lockscreen Controls | ✅ | 🟠 | Via Media Session API |
+| Headset/Bluetooth | ✅ | 🟠 | Hardware integration working |
+| Background playback | 🚧 | 🟠 | PWA supports, native pending |
+| **Keyboard Shortcuts** | ✅ | 🟡 | Complete desktop control |
 
 ---
 

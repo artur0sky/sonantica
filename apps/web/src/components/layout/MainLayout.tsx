@@ -20,6 +20,8 @@ import { LyricsSidebar } from "./LyricsSidebar";
 import { useWaveformLoader } from "../../features/player/hooks/useWaveformLoader";
 import { PlaybackPersistence } from "../../features/player/components/PlaybackPersistence";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
+import { useMediaSession } from "../../hooks/useMediaSession";
+import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
 import { useCallback, useRef, useEffect } from "react";
 
 interface MainLayoutProps {
@@ -29,6 +31,12 @@ interface MainLayoutProps {
 export function MainLayout({ children }: MainLayoutProps) {
   // Pre-load waveforms
   useWaveformLoader();
+
+  // Enable Media Session API (lockscreen, media keys, headset)
+  useMediaSession();
+
+  // Enable keyboard shortcuts
+  useKeyboardShortcuts();
 
   const currentTrack = usePlayerStore((s) => s.currentTrack);
   const {
