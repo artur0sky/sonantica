@@ -1,72 +1,49 @@
 # @sonantica/player-core
 
-Core audio playback engine for Sonántica.
+> "Audio playback is the core, UI is a consequence."
 
-## Philosophy
+The professional audio engine at the heart of Sonántica. This package is responsible for the entire lifecycle of sound—from raw bits to the listener's ear.
 
-> "The core must be able to run without a UI."
+## 🧠 Philosophy
 
-This package contains the audio playback engine. It is:
-- **Platform-agnostic**: Works in any JavaScript environment
-- **UI-agnostic**: No knowledge of React, Vue, or any framework
-- **Framework-agnostic**: Pure TypeScript with minimal dependencies
+The Player Core follows the **Non-negotiable Principle**: It must be able to run without a UI. It doesn't know about buttons, sliders, or React. It only knows about signal, state, and intention.
 
-## What's Inside
+## 📦 Features
 
-- **PlayerEngine**: Main audio playback class
-- **Contracts**: Interfaces defining the public API (`IPlayerEngine`)
+- **Platform-Agnostic**: Pure TypeScript core that can be wrapped for Web, Desktop (Electron/Tauri), or Mobile.
+- **Contract-Based**: Strictly defined interfaces (`IPlayerEngine`) ensure technical transparency.
+- **State Management**: Encapsulated Zustand store for predictable playback state across components.
+- **Event-Driven**: Complete observer pattern implementation for time updates, state changes, and errors.
+- **Queue Logic**: Integrated queue management with shuffle and repeat support.
 
-## Usage
+## 🛠️ Usage
 
 ```typescript
-import { PlayerEngine } from '@sonantica/player-core';
-import { PlaybackState } from '@sonantica/shared';
+import { usePlayerStore } from '@sonantica/player-core';
 
-const player = new PlayerEngine();
+// Within a component or logic block
+const { play, pause, loadTrack } = usePlayerStore.getState();
 
-// Load audio
-await player.load({
-  id: 'song-1',
-  url: 'path/to/audio.mp3',
-  metadata: {
-    title: 'Song Title',
-    artist: 'Artist Name',
-  },
-});
-
-// Play
-await player.play();
-
-// Listen to events
-player.on('player:state-change', (event) => {
-  console.log('State changed:', event.data.newState);
-});
-
-// Cleanup
-player.dispose();
+await loadTrack(myMediaSource);
+play();
 ```
 
-## Architecture
+## 🏗️ Architecture
 
-The player core follows **Clean Architecture** principles:
-- Depends only on `@sonantica/shared` (types and utilities)
-- Exposes a contract-based API (`IPlayerEngine`)
-- Communicates via events (observer pattern)
-- Encapsulates all state internally
+- **Clean Architecture**: Decoupled from all external dependencies except `@sonantica/shared` and `@sonantica/metadata`.
+- **Zustand**: Used as the internal state orchestrator.
+- **HTML5 Audio**: Leverages the browser's native engine for stability while preparing for WASM-based decoding in future phases.
 
-```
-player-core ───▶ shared ───▶ (nothing)
-```
+## ⚖️ Responsibility
 
-## Current Implementation
+This package handles:
+- Audio decoding and buffering.
+- Playback state (IDLE, LOADING, PLAYING, etc.).
+- Volume and Mute states.
+- Event emission for all playback lifecycle steps.
 
-This is a minimal "Hello World" implementation using the Web Audio API. Future versions will include:
-- Advanced codec support (FLAC, ALAC, etc.)
-- Gapless playback
-- DSP processing
-- Buffer management
-- Bit-perfect output
+> "Rhythm is the architecture of time."
 
-## License
+---
 
-Apache-2.0
+Made with ❤ and **Metalcore**.

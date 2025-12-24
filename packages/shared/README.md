@@ -1,36 +1,40 @@
 # @sonantica/shared
 
-Shared types, utilities, and constants for Sonántica.
-
-## Philosophy
-
 > "Sound is a form of language."
 
-This package contains the fundamental building blocks used across all Sonántica packages. It has no dependencies on other packages.
+The bedrock of the Sonántica ecosystem. This package defines the common vocabulary used by all other packages and applications.
 
-## What's Inside
+## 📖 Responsibility
 
-- **Types**: Core domain types (`PlaybackState`, `MediaSource`, `PlaybackStatus`, etc.)
-- **Constants**: Application constants and supported formats
-- **Utils**: Common utility functions (time formatting, validation, etc.)
+As the most foundational layer of our architecture, `@sonantica/shared` defines:
+- **Core Domain Types**: `Track`, `Album`, `Artist`, `PlaybackState`.
+- **Global Constants**: Application names, versioning, and default settings.
+- **Fundamental Utilities**: Time formatting, math helpers (clamp, normalize), and ID generation.
+- **Contracts**: Base event types used for cross-package communication.
 
-## Usage
+## 🧠 Philosophy
+
+This package follows the **Strict Proximity Rule**: It depends on nothing. It is the purest expression of our architecture, containing no logic that isn't universal to the player.
+
+## 🏗️ Dependency Rule
+
+```text
+packages ───▶ shared ───▶ (nothing)
+```
+
+By keeping `shared` dependency-free, we ensure that every other part of the system has a stable and lightweight foundation to build upon.
+
+## 🚀 Usage
 
 ```typescript
-import { PlaybackState, formatTime, APP_NAME } from '@sonantica/shared';
+import { PlaybackState, formatTime } from '@sonantica/shared';
 
-const time = formatTime(125.5); // "2:05"
-console.log(APP_NAME); // "Sonántica"
+const label = formatTime(300); // "5:00"
+const currentState = PlaybackState.PLAYING;
 ```
 
-## Architecture
+> "A common pulse for every signal."
 
-This package follows the **Dependency Rule**: it depends on nothing else in the monorepo. All other packages can depend on `shared`.
+---
 
-```
-shared ───▶ (nothing)
-```
-
-## License
-
-Apache-2.0
+Made with ❤ and **Jazz**.

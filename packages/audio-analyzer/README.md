@@ -1,66 +1,47 @@
 # @sonantica/audio-analyzer
 
-Professional audio analysis engine for Sonántica.
-
-## Features
-
-- **Real-time Spectrum Analysis**: FFT-based frequency analysis with configurable bands
-- **Waveform Capture**: Time-domain audio visualization
-- **Quality Detection**: Automatic detection of audio format quality (lossy/CD/Hi-Res)
-- **Format Agnostic**: Works with any audio format supported by the browser
-- **Zero Dependencies**: Pure Web Audio API implementation
-
-## Philosophy
-
 > "Sound deserves respect."
 
-This package provides professional-grade audio analysis tools for audiophiles and sound engineers, without imposing unnecessary complexity on casual users.
+The analytical eye of Sonántica. This package provides high-precision audio analysis, allowing users to "see" the music they hear with technical clarity.
 
-## Usage
+## 🧬 Responsibility
+
+Audio is more than just hearing; it's understanding the signal. This package provides:
+- **Fast Fourier Transform (FFT)**: Real-time frequency spectrum analysis.
+- **Waveform Data**: Accurate time-domain representation of the audio signal.
+- **Quality Detection**: Analyzing sample rates and bit depths to provide "Technical Transparency".
+- **State Integration**: Store-based synchronization for audio visualization across the UI.
+
+## 🧠 Philosophy
+
+Following the **Conscious Audiophile** trait, the analyzer provides educational and technical value. It’s not just a "flashing light"—it's a representation of the audio's fidelity.
+
+## 📦 What's Inside
+
+- **AudioAnalyzer**: Core engine using the Web Audio API.
+- **SpectrumStore**: Global state for frequency bands and amplitude.
+- **WaveformStore**: Management for pre-rendered and real-time waveform samples.
+
+## 🛠️ Usage
 
 ```typescript
-import { AudioAnalyzer } from '@sonantica/audio-analyzer';
+import { useAnalyzerStore } from '@sonantica/audio-analyzer';
 
-// Create analyzer
-const analyzer = new AudioAnalyzer({
-  fftSize: 2048,
-  bandCount: 32,
-  smoothingTimeConstant: 0.75
-});
+// Inside a React component
+const bands = useAnalyzerStore(s => s.spectrum.bands);
 
-// Connect to audio element
-const audioElement = document.querySelector('audio');
-analyzer.connect(audioElement);
-
-// Get spectrum data (in animation loop)
-function visualize() {
-  const spectrum = analyzer.getSpectrum();
-  const waveform = analyzer.getWaveform();
-  
-  // Use spectrum.bands for frequency visualization
-  // Use waveform.samples for waveform visualization
-  
-  requestAnimationFrame(visualize);
-}
-
-// Get quality info
-const quality = analyzer.getQualityInfo();
-console.log(`Sample rate: ${quality.sampleRate} Hz`);
-console.log(`Quality: ${quality.qualityTier}`);
-
-// Cleanup
-analyzer.dispose();
+// The BackgroundSpectrum molecule in @sonantica/ui uses this data
+<BackgroundSpectrum bands={bands} enabled={true} />
 ```
 
-## Architecture
+## 🏗️ Architecture
 
-This package follows Sonántica's core principles:
+- **Low Latency**: Optimized FFT processing for minimal visual delay.
+- **Decoupled**: Analyzes any `HTMLAudioElement` without knowledge of its source.
+- **Modular**: The analysis logic is separated from the visualization components in `@sonantica/ui`.
 
-- **Single Responsibility**: Only analyzes audio, doesn't render
-- **Open/Closed**: Extensible through configuration
-- **Dependency Inversion**: Depends on Web Audio API abstractions
-- **Platform Agnostic**: Works in any browser with Web Audio API
+> "The anatomy of a wave."
 
-## License
+---
 
-Apache-2.0
+Made with ❤ and **Dubstep**.

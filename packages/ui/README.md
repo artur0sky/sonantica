@@ -1,76 +1,60 @@
 # @sonantica/ui
 
-Shared UI components for Sonántica multimedia player.
+> "The UI should feel like a well-acoustically treated room."
 
-## Overview
+The official design system and component library for Sonántica. This package provides the "Acoustic Aesthetics" that define our player's visual identity.
 
-This package contains reusable React components that work across all Sonántica applications (Web, Mobile, Desktop).
+## 🎨 Identity & Principles
 
-## Components
+Our UI is designed to be **invisible but present**. We prioritize:
+- **Calmness**: Neutral tones and ample whitespace to let cover art speak.
+- **Precision**: Clean lines and tabular numerals for technical data.
+- **Subtlety**: Micro-animations that guide rather than distract.
 
-### Atoms
-- `Button` - Primary UI button
-- `Badge` - Status and label badges
-- `Input` - Form inputs
-- `RepeatButton` - Repeat mode toggle
-- `ShuffleButton` - Shuffle mode toggle
-- `VolumeSlider` - Volume control slider
+## 📦 What's Inside
 
-### Molecules
-- `TrackCard` - Unified track display component
-- `TrackRating` - Star/heart rating component
-- `WaveformScrubber` - Audio waveform progress bar
-- `EnhancedVolumeControl` - Advanced volume control
-- `BackgroundSpectrum` - Real-time audio visualization
-- `GlobalSearchBar` - Multi-metadata search
+Built on **Atomic Design** principles:
 
-### Player Components
-- `MiniPlayer` - Compact player UI
-- `ExpandedPlayer` - Full-screen player UI
+- **Atoms**: Primitive elements (`Button`, `ShuffleButton`, `RepeatButton`, `VolumeSlider`).
+- **Molecules**: Compound logic (`WaveformScrubber`, `TrackRating`, `EnhancedVolumeControl`).
+- **Organisms**: Complex features (`MiniPlayer`, `ExpandedPlayer`, `MetadataPanel`).
+- **Layouts**: Structural foundations for the application.
 
-## Usage
+## 🛠️ Built With
+
+- **React**: Core component architecture.
+- **Framer Motion**: Smooth, physics-based transitions.
+- **Tailwind CSS**: Token-based design system (Custom variables).
+- **Tabler Icons**: Professional and clear iconography.
+
+## 🚀 Usage
 
 ```tsx
-import { Button, TrackCard, MiniPlayer } from '@sonantica/ui';
-import '@sonantica/ui/styles';
+import { MiniPlayer, Button } from '@sonantica/ui';
 
-function App() {
+export function MyView() {
   return (
-    <div>
-      <Button variant="primary">Play</Button>
-      <TrackCard track={track} />
+    <>
+      <Button variant="primary">Start Listening</Button>
       <MiniPlayer />
-    </div>
+    </>
   );
 }
 ```
 
-## Styling
+## 📐 Theming
 
-This package uses Tailwind CSS with CSS variables for theming. Make sure to include the styles:
+All components use CSS Custom Properties for easy extensibility per the **User Autonomy** value:
 
-```tsx
-import '@sonantica/ui/styles';
+```css
+:root {
+  --color-accent: #f43f5e;
+  --bg-surface: #0a0a0a;
+}
 ```
 
-## Development
+> "The silence between the notes, visualized."
 
-```bash
-# Build the package
-pnpm build
+---
 
-# Watch mode for development
-pnpm dev
-```
-
-## Philosophy
-
-All components follow the Sonántica brand identity:
-- **Minimalist** - Clean, uncluttered interfaces
-- **Functional** - Every element serves a purpose
-- **Elegant** - Subtle animations and transitions
-- **Accessible** - Keyboard navigation and screen reader support
-
-## License
-
-Apache License 2.0
+Made with ❤ and **Orchestral**.

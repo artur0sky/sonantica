@@ -1,73 +1,56 @@
-# React + TypeScript + Vite
+# Sonántica Web (PWA)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+The flagship interface for the Sonántica ecosystem. A Progressive Web App designed to feel like a high-end audio workspace—clean, professional, and deeply focused on the music.
 
-Currently, two official plugins are available:
+## 🎨 Intentional Design
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Following our **Acoustic Aesthetics** philosophy, the web application avoids visual clutter. It serves as a window into your library, providing:
 
-## React Compiler
+- **Immersive Playback**: Dual-view player (Mini and Expanded) with real-time audio visualization.
+- **Fast Navigation**: Infinite scrolling and instant search across tracks, albums, and artists.
+- **Responsive Layout**: Designed for the desktop but ready for the palm of your hand.
+- **Technical Transparency**: Direct access to track quality, bitrates, and waveform data.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 🛠️ Technology Stack
 
-## Expanding the ESLint configuration
+This application is built as a thin layer of orchestration over our core packages:
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- **Framework**: `React 19`
+- **Build Tool**: `Vite` & `TypeScript`
+- **State**: `Zustand` (connected to cross-package stores)
+- **Styling**: `Tailwind CSS 4.0` (Acoustic Design System)
+- **Animations**: `Framer Motion`
+- **Icons**: `Tabler Icons`
+- **Routing**: `Wouter` (Minimalist router)
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## 🏗️ Structure
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```text
+src/
+├─ components/     # Layout-specific components (Header, Sidebars)
+├─ features/       # Domain-driven features (Library, Player)
+├─ hooks/          # Application-level hooks
+├─ stores/         # UI-specific state
+└─ utils/          # Orchestration helpers (PlayContext)
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 🚀 Running Locally
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+From the root directory:
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+pnpm dev --filter @sonantica/web
 ```
+
+## ⚖️ Responsibility
+
+This application **never implements domain logic**. It only:
+1.  Wires the UI to `@sonantica/*` packages.
+2.  Handles platform-specific integration (Web Media Session API).
+3.  Manages layout and navigation state.
+
+> "A window that breathes with the sound."
+
+---
+
+Made with ❤ and **Indie Pop**.

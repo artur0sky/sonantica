@@ -1,63 +1,47 @@
 # @sonantica/metadata
 
-> Lightweight metadata extraction for audio files
+> "Every file has an intention."
 
-## Features
+A lightweight, dedicated package for extracting the hidden intention (metadata) within audio files. Designed for speed and technical transparency.
 
-- ✅ **ID3v2** support (MP3)
-- ✅ **FLAC** Vorbis comments
-- ✅ **Album artwork** extraction
-- ✅ **Browser-optimized** (range requests)
-- ✅ **Zero dependencies** (except @sonantica/shared)
-- ✅ **TypeScript** first
+## 🧬 Responsibility
 
-## Installation
+In modern audio, metadata is often as important as the signal itself. This package:
+- Reads **ID3v2** (MP3) and **Vorbis Comments** (FLAC/OGG) tags.
+- Identifies file containers by magic bytes.
+- Extracts high-resolution **Cover Art** directly from the binary data.
+- Optimized for the web using **HTTP Range Requests** to read only the necessary headers.
 
-```bash
-pnpm add @sonantica/metadata
-```
+## 🧠 Philosophy
 
-## Usage
+We believe in **Technical Transparency**. This package doesn't invent metadata; it faithfully uncovers what the artist and engineers embedded in the file.
+
+## 📦 Features
+
+- **Format Detection**: Support for MP3, FLAC, and more.
+- **Zero External Dependencies**: Focused, lightweight binary parsing.
+- **Browser & Node compatible**: Optimized for range fetching.
+
+## 🛠️ Usage
 
 ```typescript
 import { extractMetadata } from '@sonantica/metadata';
 
-const metadata = await extractMetadata('/media/song.mp3');
-
-console.log(metadata);
-// {
-//   title: 'Another Brick in the Wall, Pt. 2',
-//   artist: 'Pink Floyd',
-//   album: 'The Wall',
-//   year: 1979,
-//   trackNumber: 5,
-//   genre: 'Progressive Rock',
-//   coverArt: 'data:image/jpeg;base64,...'
-// }
+const trackInfo = await extractMetadata('https://server.com/music.flac');
+console.log(trackInfo.title, trackInfo.artist);
 ```
 
-## Supported Formats
+## 📐 Supported Formats
 
-| Format | Tags | Artwork |
-|--------|------|---------|
-| MP3    | ID3v2.3, ID3v2.4 | ✅ APIC |
-| FLAC   | Vorbis Comments | 🚧 Planned |
-| M4A    | 🚧 Planned | 🚧 Planned |
-| OGG    | 🚧 Planned | 🚧 Planned |
+| Format | Tag Type | Cover Art |
+| :--- | :--- | :---: |
+| **MP3** | ID3v2.3 / ID3v2.4 | ✅ |
+| **FLAC** | Vorbis Comments | ✅ |
+| **OGG** | Vorbis Comments | 🚧 |
+| **M4A** | Atoms | 🚧 |
 
-## How It Works
+> "The truth hidden in the headers."
 
-1. Fetches first 256KB of the audio file (range request)
-2. Detects format from magic bytes
-3. Parses metadata tags
-4. Returns structured metadata object
+---
 
-## Philosophy
-
-*"Every file has an intention."*
-
-This package respects the original metadata embedded in audio files, extracting it faithfully without modification or interpretation.
-
-## License
-
-MIT
+Made with ❤ and **Grunge**.

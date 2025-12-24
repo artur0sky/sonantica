@@ -2,195 +2,103 @@
 
 > "Respect the intention of the sound and the freedom of the listener."
 
-An audio-first, open-source multimedia player built with clean architecture principles.
+Sonántica is a professional, open-source multimedia player centered on high-fidelity audio and user autonomy. It is designed not just as a tool for playback, but as a **sound interpreter** that respects the original essence of every file.
 
-## 🎵 Philosophy
+## 🎵 Philosophy & Persona
 
-Sonántica is not just a player. It is a **sound interpreter**.
+Sonántica embodies the **Wise Craftsman**. It is meticulous with detail, reflective in its approach, and technically skilled without being arrogant. We believe that:
 
-- **Audio-first**: Playback is the core, UI is a consequence
-- **User autonomy**: Granular control, custom themes, extensibility
-- **Technical transparency**: Open standards, clear architecture
-- **Intentional minimalism**: Clean, quiet, without distractions
-- **Shared knowledge**: Open-source, educational
-
-Read more in [docs/IDENTITY.md](./docs/IDENTITY.md)
+*   **Sound is a language**: Every recording carries an intention that deserves to be heard faithfully.
+*   **Listening is an active act**: The player should accompany the listener, not dictate the experience.
+*   **Acoustic Aesthetics**: Our interfaces are designed like well-treated rooms—quiet, clean, and free from visual noise.
+*   **User Autonomy**: You decide. The software facilitates.
 
 ## 🏗️ Architecture
 
-This is a **monorepo** structured for clean separation of concerns:
+Following strict **Clean Architecture** and **SOLID** principles, Sonántica is built as a modular monorepo. This structure ensures that the core logic remains pure and platform-independent.
 
-```
+### Monorepo Structure
+
+```text
 sonantica/
 ├─ apps/
-│  └─ web/              # React PWA (main app)
+│  └─ web/              # Main PWA / Web Interface
 │
 ├─ packages/
-│  ├─ player-core/      # Audio engine (UI-agnostic)
-│  ├─ shared/           # Common types & utilities
-│  ├─ dsp/              # Audio processing (future)
-│  ├─ media-library/    # Metadata & indexing (future)
-│  └─ ui/               # Shared components (future)
+│  ├─ player-core/      # Audio engine & playback logic (UI-agnostic)
+│  ├─ media-library/    # Indexing, metadata management & search
+│  ├─ metadata/         # Low-level metadata extraction (ID3, Vorbis, FLAC)
+│  ├─ audio-analyzer/   # FFT Analysis & waveform generation
+│  ├─ ui/               # Shared Design System & Components
+│  └─ shared/           # Fundamental types & utilities
 │
-└─ docs/
-   ├─ ARCHITECTURE.md   # Technical architecture
-   ├─ IDENTITY.md       # Brand & philosophy
-   └─ ROADMAP.md        # Feature roadmap
+└─ docs/                # Identity, Architecture & Roadmap
 ```
 
 ### Dependency Rules
 
-```
-apps ───▶ packages
-packages ───▶ shared
-shared ───▶ (nothing)
-```
-
-- **Packages don't know apps**
-- **Apps never implement domain logic**
-- **All communication is by contract**
-- **The core can run without a UI**
-
-Read more in [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)
+1.  **Packages don't know apps.**
+2.  **Apps never implement domain logic.**
+3.  **Communication is by contract.**
+4.  **The core runs without a UI.**
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-
-- Node.js >= 18
-- pnpm >= 8
+- **Node.js**: >= 18.0.0
+- **pnpm**: >= 8.0.0
 
 ### Installation
-
 ```bash
-# Install dependencies
+# Clone and install
 pnpm install
 
-# Build all packages
+# Build all packages in the correct order
 pnpm build
 
-# Run web app in development
+# Start the web application
 pnpm dev
 ```
 
 ### Docker Deployment 🐳
 
-Run Sonántica in Docker with volume support for your media library:
+For a production-ready environment with localized media support:
 
 ```bash
-# Quick start (production)
 docker compose up -d
-
-# Or use the helper script
-./docker.sh start        # Linux/macOS
-.\docker.ps1 start       # Windows
-
-# Development mode with hot-reload
-docker compose --profile dev up
-
-# With file browser for media management
-docker compose --profile tools up -d
 ```
 
-**Access:**
-- Production: http://localhost:3000
-- Development: http://localhost:5173
-- File Browser: http://localhost:8080
+Configure your library paths in `.env`:
+- `MEDIA_PATH`: Your high-fidelity music collection.
+- `CONFIG_PATH`: Where Sonántica remembers your preferences.
 
-**Volume mounting:**
-```bash
-# Edit .env to configure paths
-MEDIA_PATH=./media          # Your music library
-BUCKETS_PATH=./buckets      # Cloud storage or additional media
-CONFIG_PATH=./config        # User preferences
-```
+## 📦 Core Packages
 
-See [DOCKER_QUICKSTART.md](./DOCKER_QUICKSTART.md) for more details.
+*   **[@sonantica/player-core](./packages/player-core)**: The heartbeat of the system. A framework-agnostic audio engine.
+*   **[@sonantica/media-library](./packages/media-library)**: The librarian. Organized indexing and fast search.
+*   **[@sonantica/ui](./packages/ui)**: The aesthetic interface. Built with React and Framer Motion.
+*   **[@sonantica/audio-analyzer](./packages/audio-analyzer)**: The scientific eye. Visualizing sound with precision.
 
-### Project Structure
+## 🛠️ Built With
 
-Each package is independent:
+We stand on the shoulders of giants. Sonántica is made possible by:
 
-```bash
-# Build a specific package
-pnpm --filter @sonantica/player-core build
-
-# Run tests for all packages
-pnpm test
-```
-
-## 📦 Packages
-
-### [@sonantica/shared](./packages/shared)
-Common types, utilities, and constants. No dependencies.
-
-### [@sonantica/player-core](./packages/player-core)
-Core audio playback engine. Platform-agnostic, UI-agnostic.
-
-### [@sonantica/web](./apps/web)
-React PWA - the main web application.
-
-## 🎯 Current Status
-
-This is a **"Hello World"** implementation demonstrating the architecture:
-
-✅ Monorepo structure with pnpm workspaces  
-✅ Shared types and utilities  
-✅ Core audio engine (basic playback)  
-✅ Web app with React  
-✅ Event-based communication  
-✅ Clean architecture boundaries  
-
-See [docs/ROADMAP.md](./docs/ROADMAP.md) for the full feature roadmap.
-
-## 🧪 Try It Out
-
-1. Start the development server:
-   ```bash
-   pnpm dev
-   ```
-
-2. Open http://localhost:5173
-
-3. Click "Load Demo Track" to load a sample audio file
-
-4. Use the playback controls to test the player
-
-5. Open the browser console to see player events
-
-## 📚 Documentation
-
-- [Architecture](./docs/ARCHITECTURE.md) - Technical design and principles
-- [Identity](./docs/IDENTITY.md) - Brand philosophy and voice
-- [Roadmap](./docs/ROADMAP.md) - Feature planning and progress
-- [Docker Deployment](./docs/DOCKER.md) - Complete Docker guide
-- [Docker Quick Start](./DOCKER_QUICKSTART.md) - Get started with Docker in 5 minutes
-
-## 🤝 Contributing
-
-This project follows strict architectural principles. Before contributing:
-
-1. Read [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)
-2. Read [docs/IDENTITY.md](./docs/IDENTITY.md)
-3. Ensure your changes respect the dependency rules
-4. Ask: "Does this improve the user's actual listening experience?"
-
-## 📄 License
-
-Apache-2.0 - See [LICENSE](./LICENSE)
-
-## 🎼 Manifesto
-
-> Sonántica believes that listening is not passive.
-> 
-> That sound is not noise, but language.
-> 
-> We don't optimize to attract attention,
-> but to preserve intention.
-> 
-> Because when the audio is honest,
-> the listener is too.
+- **[React](https://reactjs.org/)**: For a reactive and expressive UI.
+- **[TypeScript](https://www.typescriptlang.org/)**: For technical reliability and clarity.
+- **[Vite](https://vitejs.dev/)**: For a fast and modern development experience.
+- **[Framer Motion](https://www.framer.com/motion/)**: For subtle, functional animations.
+- **[Zustand](https://github.com/pmndrs/zustand)**: For minimalist and predictable state management.
+- **[Tailwind CSS](https://tailwindcss.com/)**: For our token-based design system.
+- **[Tabler Icons](https://tabler.io/icons)**: For clear, professional iconography.
 
 ---
 
-**"Every file has an intention."**
+## 📄 License
+
+Licensed under the **Apache License, Version 2.0**.
+
+> "Fidelity is not a destination, but a promise."
+
+---
+
+Made with ❤ and **Progressive Rock**.
