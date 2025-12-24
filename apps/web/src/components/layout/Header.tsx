@@ -5,9 +5,13 @@
  */
 
 import { Link } from "wouter";
-import { IconUser, IconSettings } from "@tabler/icons-react";
+import { IconSettings } from "@tabler/icons-react";
 import { motion } from "framer-motion";
-import { Button, SearchBar as GlobalSearchBar } from "@sonantica/ui";
+import {
+  Button,
+  SearchBar as GlobalSearchBar,
+  UserButton,
+} from "@sonantica/ui";
 import { useHeaderLogic } from "../../hooks/useHeaderLogic";
 
 export function Header() {
@@ -58,9 +62,7 @@ export function Header() {
           <IconSettings size={18} stroke={1.5} className="sm:w-5 sm:h-5" />
         </Button>
 
-        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-surface-elevated flex items-center justify-center text-text-muted hover:text-text hover:bg-accent/20 cursor-pointer transition-colors flex-shrink-0">
-          <IconUser size={18} stroke={1.5} className="sm:w-5 sm:h-5" />
-        </div>
+        <UserButton />
       </div>
     </motion.header>
   );

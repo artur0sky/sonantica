@@ -12,3 +12,6 @@ export { BackgroundSpectrum } from './BackgroundSpectrum';
 export { BandControl } from './BandControl';
 export { SidebarResizer } from './SidebarResizer';
 export { SidebarContainer } from './SidebarContainer';
+export * from './EmptyState';
+export * from './PageHeader';
+export * from './SortControl';
