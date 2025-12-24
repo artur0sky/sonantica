@@ -151,6 +151,12 @@ export interface IDSPEngine {
   deletePreset(presetId: string): void;
 
   /**
+   * Restore custom presets from storage
+   * @param presets - Array of custom presets to restore
+   */
+  restoreCustomPresets(presets: IEQPreset[]): void;
+
+  /**
    * Cleanup and disconnect all nodes
    */
   dispose(): void;

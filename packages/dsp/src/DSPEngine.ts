@@ -284,6 +284,14 @@ export class DSPEngine implements IDSPEngine {
   }
 
   /**
+   * Restore custom presets from storage
+   */
+  restoreCustomPresets(presets: IEQPreset[]): void {
+    this.customPresets = [...presets];
+    console.log(`♻️  Restored ${presets.length} custom presets`);
+  }
+
+  /**
    * Get current audio metrics
    */
   getMetrics(): IAudioMetrics | null {

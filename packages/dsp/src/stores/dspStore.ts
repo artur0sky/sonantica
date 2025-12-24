@@ -6,6 +6,7 @@
  */
 
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import type { IDSPConfig, IEQPreset, IEQBand, IAudioMetrics } from '../contracts';
 import { DSPEngine } from '../DSPEngine';
 import { BUILTIN_PRESETS } from '../presets';
@@ -22,6 +23,9 @@ export interface DSPState {
   
   // Available presets
   presets: IEQPreset[];
+  
+  // Custom presets (for persistence)
+  customPresets: IEQPreset[];
   
   // Current metrics
   metrics: IAudioMetrics | null;
@@ -46,21 +50,24 @@ export interface DSPState {
 /**
  * Create DSP store
  */
-export const useDSPStore = create<DSPState>((set, get) => ({
-  engine: null,
-  config: {
-    enabled: false,
-    currentPreset: 'flat',
-    customBands: null,
-    preamp: 0,
-    replayGainMode: 'off',
-    replayGainPreamp: 0,
-    crossfeedEnabled: false,
-    crossfeedStrength: 0.5,
-  },
-  presets: BUILTIN_PRESETS,
-  metrics: null,
-  isInitialized: false,
+export const useDSPStore = create<DSPState>()(
+  persist(
+    (set, get) => ({
+      engine: null,
+      config: {
+        enabled: false,
+        currentPreset: 'flat',
+        customBands: null,
+        preamp: 0,
+        replayGainMode: 'off',
+        replayGainPreamp: 0,
+        crossfeedEnabled: false,
+        crossfeedStrength: 0.5,
+      },
+      presets: BUILTIN_PRESETS,
+      customPresets: [],
+      metrics: null,
+      isInitialized: false,
 
   /**
    * Initialize the DSP engine
@@ -70,7 +77,12 @@ export const useDSPStore = create<DSPState>((set, get) => ({
     await engine.initialize(audioElement);
     
     // Apply current store config to the new engine
-    const { config } = get();
+    const { config, customPresets } = get();
+
+    // 0. Restore Custom Presets
+    if (customPresets.length > 0) {
+      engine.restoreCustomPresets(customPresets);
+    }
     
     // 1. Set Preamp
     engine.setPreamp(config.preamp);
@@ -252,6 +264,7 @@ export const useDSPStore = create<DSPState>((set, get) => ({
     
     set({
       presets: engine.getPresets(),
+      customPresets: engine.getPresets().filter(p => !p.isBuiltIn),
     });
 
     return id;
@@ -269,6 +282,7 @@ export const useDSPStore = create<DSPState>((set, get) => ({
     set({
       config: engine.getConfig(),
       presets: engine.getPresets(),
+      customPresets: engine.getPresets().filter(p => !p.isBuiltIn),
     });
   },
 
@@ -298,5 +312,17 @@ export const useDSPStore = create<DSPState>((set, get) => ({
       isInitialized: false,
       metrics: null,
     });
+  },
+}), {
+  name: 'sonantica-dsp-storage',
+  partialize: (state) => ({
+    config: state.config,
+    customPresets: state.customPresets,
+  }),
+  storage: createJSONStorage(() => localStorage),
+  onRehydrateStorage: () => (state) => {
+    if (state && state.customPresets) {
+      state.presets = [...BUILTIN_PRESETS, ...state.customPresets];
+    }
   },
 }));
