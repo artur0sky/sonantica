@@ -12,3 +12,5 @@ export { ShuffleButton } from './ShuffleButton';
 export { RepeatButton } from './RepeatButton';
 export { SpectrumVisualizer } from './SpectrumVisualizer';
 export { AlphabetNavigator } from './AlphabetNavigator';
+export { Toggle } from './Toggle';
+export { Select } from './Select';

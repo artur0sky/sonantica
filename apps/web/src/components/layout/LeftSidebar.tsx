@@ -5,7 +5,7 @@
  * "User autonomy" - clear, accessible navigation.
  */
 
-import { Link, useLocation } from "wouter";
+import { Link } from "wouter";
 import {
   IconMusic,
   IconDisc,
@@ -15,6 +15,7 @@ import {
 import { motion } from "framer-motion";
 import type { Variants } from "framer-motion";
 import { cn } from "@sonantica/shared";
+import { useLeftSidebarLogic } from "../../hooks/useLeftSidebarLogic";
 
 interface NavItem {
   path: string;
@@ -58,7 +59,7 @@ interface LeftSidebarProps {
 }
 
 export function LeftSidebar({ isCollapsed }: LeftSidebarProps) {
-  const [location] = useLocation();
+  const { location } = useLeftSidebarLogic();
 
   return (
     <nav

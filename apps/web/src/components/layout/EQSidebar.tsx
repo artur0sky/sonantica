@@ -11,10 +11,9 @@ import { IconX, IconWaveSquare, IconRefresh } from "@tabler/icons-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Variants } from "framer-motion";
 
-import { useDSPStore, type IEQBand } from "@sonantica/dsp";
-import { useUIStore } from "@sonantica/ui";
 import { Button, Badge } from "@sonantica/ui";
 import { cn } from "@sonantica/shared";
+import { useEQSidebarLogic } from "../../hooks/useEQSidebarLogic";
 
 const itemVariants: Variants = {
   hidden: { x: 20, opacity: 0 },
@@ -45,49 +44,19 @@ export function EQSidebar({ isCollapsed }: EQSidebarProps) {
     config,
     presets,
     isInitialized,
-    applyPreset,
-    updateBand,
-    setPreamp,
+    eqOpen,
+    toggleEQ,
+    eqSidebarWidth,
+    currentPreset,
+    currentBands,
     setEnabled,
     reset,
-  } = useDSPStore();
-
-  const { eqOpen, toggleEQ, eqSidebarWidth } = useUIStore();
+    handlePresetChange,
+    handleBandChange,
+    handlePreampChange,
+  } = useEQSidebarLogic();
 
   if (!eqOpen) return null;
-
-  const currentPreset = presets.find((p: any) => p.id === config.currentPreset);
-  const currentBands = getCurrentBands();
-
-  function getCurrentBands(): IEQBand[] {
-    if (config.customBands) {
-      return config.customBands;
-    }
-    if (currentPreset) {
-      return currentPreset.bands;
-    }
-    return [];
-  }
-
-  function handlePresetChange(presetId: string) {
-    if (presetId === "reset") {
-      reset();
-    } else {
-      applyPreset(presetId);
-    }
-  }
-
-  function handleBandChange(
-    bandId: string,
-    property: keyof IEQBand,
-    value: number | boolean
-  ) {
-    updateBand(bandId, { [property]: value });
-  }
-
-  function handlePreampChange(value: number) {
-    setPreamp(value);
-  }
 
   return (
     <motion.div

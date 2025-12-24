@@ -12,6 +12,7 @@ import {
   MetadataPanel,
   MiniPlayer,
   ExpandedPlayer,
+  SidebarResizer, // New Molecule
 } from "@sonantica/ui";
 import { Header } from "./Header";
 import { LeftSidebar } from "./LeftSidebar";
@@ -23,7 +24,7 @@ import { PlaybackPersistence } from "../../features/player/components/PlaybackPe
 import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { useMediaSession } from "../../hooks/useMediaSession";
 import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
-import { useCallback, useRef, useEffect } from "react";
+import { useSidebarResize } from "../../hooks/useSidebarResize"; // New Hook
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -52,89 +53,9 @@ export function MainLayout({ children }: MainLayoutProps) {
     rightSidebarWidth,
     lyricsSidebarWidth,
     eqSidebarWidth,
-    setLeftSidebarWidth,
-    setRightSidebarWidth,
-    setLyricsSidebarWidth,
-    setEQSidebarWidth,
   } = useUIStore();
 
-  const isResizing = useRef<"left" | "right" | "lyrics" | "eq" | null>(null);
-
-  const startResizing = useCallback(
-    (sidebar: "left" | "right" | "lyrics" | "eq") => {
-      isResizing.current = sidebar;
-      document.body.classList.add("is-resizing");
-      document.body.style.cursor = "col-resize";
-      document.body.style.userSelect = "none";
-    },
-    []
-  );
-
-  const stopResizing = useCallback(() => {
-    isResizing.current = null;
-    document.body.classList.remove("is-resizing");
-    document.body.style.cursor = "default";
-    document.body.style.userSelect = "auto";
-  }, []);
-
-  const handleResize = useCallback(
-    (e: MouseEvent) => {
-      if (!isResizing.current) return;
-
-      if (isResizing.current === "left") {
-        const newWidth = e.clientX;
-        // Snap logic: 72 (icons), 240 (standard)
-        if (newWidth < 120) {
-          setLeftSidebarWidth(72);
-        } else {
-          setLeftSidebarWidth(240);
-        }
-      } else if (isResizing.current === "right") {
-        const newWidth = window.innerWidth - e.clientX;
-        // Snap logic: 80 (covers), 320 (standard)
-        if (newWidth < 160) {
-          setRightSidebarWidth(80);
-        } else {
-          setRightSidebarWidth(320);
-        }
-      } else if (isResizing.current === "lyrics") {
-        const newWidth = window.innerWidth - e.clientX;
-        // Snap logic: 80 (covers), 320 (standard)
-        if (newWidth < 160) {
-          setLyricsSidebarWidth(80);
-        } else {
-          setLyricsSidebarWidth(320);
-        }
-      } else if (isResizing.current === "eq") {
-        const newWidth = window.innerWidth - e.clientX;
-        // Snap logic: 80 (covers), 320 (standard)
-        if (newWidth < 160) {
-          setEQSidebarWidth(80);
-        } else {
-          setEQSidebarWidth(Math.min(newWidth, 800));
-        }
-      }
-    },
-    [
-      setLeftSidebarWidth,
-      setRightSidebarWidth,
-      setLyricsSidebarWidth,
-      setEQSidebarWidth,
-    ]
-  );
-
-  useEffect(() => {
-    const onMouseMove = (e: MouseEvent) => handleResize(e);
-    const onMouseUp = () => stopResizing();
-
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
-
-    return () => {
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
-    };
-  }, [handleResize, stopResizing]);
+  const { startResizing } = useSidebarResize();
 
   const isMobile = useMediaQuery("(max-width: 1023px)");
 
@@ -155,9 +76,10 @@ export function MainLayout({ children }: MainLayoutProps) {
             className="bg-surface border-r border-border h-full flex-shrink-0 z-20 relative"
           >
             <LeftSidebar isCollapsed={leftSidebarWidth === 72} />
-            <div
-              className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-accent/30 transition-colors z-30"
+            <SidebarResizer
+              orientation="vertical"
               onMouseDown={() => startResizing("left")}
+              className="right-0"
             />
           </aside>
         )}
@@ -175,9 +97,10 @@ export function MainLayout({ children }: MainLayoutProps) {
             style={{ width: rightSidebarWidth }}
             className="bg-surface border-l border-border h-full flex-shrink-0 z-20 relative"
           >
-            <div
-              className="absolute top-0 left-0 w-1 h-full cursor-col-resize hover:bg-accent/30 transition-colors z-30"
+            <SidebarResizer
+              orientation="vertical"
               onMouseDown={() => startResizing("right")}
+              className="left-0"
             />
             <RightSidebar isCollapsed={rightSidebarWidth === 80} />
           </aside>
@@ -189,9 +112,10 @@ export function MainLayout({ children }: MainLayoutProps) {
             style={{ width: lyricsSidebarWidth }}
             className="bg-surface border-l border-border h-full flex-shrink-0 z-20 relative"
           >
-            <div
-              className="absolute top-0 left-0 w-1 h-full cursor-col-resize hover:bg-accent/30 transition-colors z-30"
+            <SidebarResizer
+              orientation="vertical"
               onMouseDown={() => startResizing("lyrics")}
+              className="left-0"
             />
             <LyricsSidebar isCollapsed={lyricsSidebarWidth === 80} />
           </aside>
@@ -203,9 +127,10 @@ export function MainLayout({ children }: MainLayoutProps) {
             style={{ width: eqSidebarWidth }}
             className="bg-surface border-l border-border h-full flex-shrink-0 z-20 relative"
           >
-            <div
-              className="absolute top-0 left-0 w-1 h-full cursor-col-resize hover:bg-accent/30 transition-colors z-30"
+            <SidebarResizer
+              orientation="vertical"
               onMouseDown={() => startResizing("eq")}
+              className="left-0"
             />
             <EQSidebar isCollapsed={eqSidebarWidth === 80} />
           </aside>
