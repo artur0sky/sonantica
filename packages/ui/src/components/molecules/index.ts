@@ -11,3 +11,4 @@ export { EnhancedVolumeControl } from './EnhancedVolumeControl';
 export { BackgroundSpectrum } from './BackgroundSpectrum';
 export { BandControl } from './BandControl';
 export { SidebarResizer } from './SidebarResizer';
+export { SidebarContainer } from './SidebarContainer';

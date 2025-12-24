@@ -6,7 +6,6 @@
  */
 
 import {
-  IconX,
   IconTrash,
   IconMusic,
   IconGripVertical,
@@ -21,7 +20,7 @@ import {
 import type { Variants } from "framer-motion";
 import { useState, useEffect } from "react";
 import { useLibraryStore } from "@sonantica/media-library";
-import { Button, Badge } from "@sonantica/ui";
+import { Button, Badge, SidebarContainer } from "@sonantica/ui";
 import { formatArtists, formatTime, cn } from "@sonantica/shared";
 import { useQueueLogic } from "../../hooks/useQueueLogic";
 
@@ -69,66 +68,35 @@ export function RightSidebar({ isCollapsed }: RightSidebarProps) {
   } = useQueueLogic();
 
   return (
-    <motion.div
-      initial={{ x: 300, opacity: 0 }}
-      animate={{ x: 0, opacity: 1 }}
-      exit={{ x: 300, opacity: 0 }}
-      transition={{ type: "spring", damping: 20 }}
-      className="flex flex-col h-full overflow-hidden"
+    <SidebarContainer
+      title="Queue"
+      isCollapsed={isCollapsed}
+      onClose={toggleQueue}
+      headerActions={
+        !isCollapsed &&
+        upcomingQueue.length > 0 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={clearQueue}
+            className="p-2"
+            title="Clear Queue"
+          >
+            <IconTrash size={18} stroke={1.5} />
+            <span className="ml-1">Clear</span>
+          </Button>
+        )
+      }
     >
-      {/* Header */}
-      <div
-        className={cn(
-          "p-4 border-b border-border flex items-center justify-between transition-all",
-          isCollapsed && "flex-col gap-4 px-2"
-        )}
-      >
-        {!isCollapsed && (
-          <div className="flex flex-col">
-            <h2 className="text-lg font-semibold truncate tracking-tight">
-              Queue
-            </h2>
-            {fullQueue.length > 0 && (
-              <span className="text-[10px] text-text-muted font-mono uppercase tracking-wider">
-                {currentIndex + 1} / {fullQueue.length} tracks
-              </span>
-            )}
+      <div className="flex flex-col h-full">
+        {!isCollapsed && fullQueue.length > 0 && (
+          <div className="px-1 mb-4">
+            <span className="text-[10px] text-text-muted font-mono uppercase tracking-wider">
+              {currentIndex + 1} / {fullQueue.length} tracks
+            </span>
           </div>
         )}
-        <div
-          className={cn("flex items-center gap-2", isCollapsed && "flex-col")}
-        >
-          {upcomingQueue.length > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={clearQueue}
-              className={cn(isCollapsed && "p-2")}
-              title="Clear Queue"
-            >
-              <IconTrash size={18} stroke={1.5} />
-              {!isCollapsed && <span className="ml-1">Clear</span>}
-            </Button>
-          )}
-          <motion.button
-            onClick={toggleQueue}
-            whileHover={{ scale: 1.1, rotate: 90 }}
-            whileTap={{ scale: 0.9 }}
-            className="text-text-muted hover:text-text p-1 transition-fast"
-            aria-label="Close queue"
-          >
-            <IconX size={20} stroke={1.5} />
-          </motion.button>
-        </div>
-      </div>
 
-      {/* Content */}
-      <div
-        className={cn(
-          "flex-1 overflow-y-auto custom-scrollbar transition-all",
-          isCollapsed ? "p-2" : "p-4 lg:p-3"
-        )}
-      >
         {/* Now Playing */}
         <AnimatePresence mode="wait">
           {currentTrack && (
@@ -257,7 +225,7 @@ export function RightSidebar({ isCollapsed }: RightSidebarProps) {
           </AnimatePresence>
         </div>
       </div>
-    </motion.div>
+    </SidebarContainer>
   );
 }
 

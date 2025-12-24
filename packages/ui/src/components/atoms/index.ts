@@ -14,3 +14,6 @@ export { SpectrumVisualizer } from './SpectrumVisualizer';
 export { AlphabetNavigator } from './AlphabetNavigator';
 export { Toggle } from './Toggle';
 export { Select } from './Select';
+export * from './PlayButton';
+export * from './SkipButton';
+export * from './ActionIconButton';

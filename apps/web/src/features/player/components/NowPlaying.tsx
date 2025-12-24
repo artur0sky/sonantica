@@ -6,7 +6,7 @@
  */
 
 import { useState } from "react";
-import { Badge, Button } from "@sonantica/ui";
+import { Badge, Button, FullPlayerControls } from "@sonantica/ui";
 import { usePlayerStore } from "@sonantica/player-core";
 import { formatArtists, cn } from "@sonantica/shared";
 import { motion, AnimatePresence } from "framer-motion";
@@ -18,7 +18,6 @@ import {
   IconInfoCircle,
 } from "@tabler/icons-react";
 import { LyricsDisplay } from "./LyricsDisplay";
-import { PlayerControls } from "./PlayerControls";
 import { Timeline } from "./Timeline";
 import { VolumeControl } from "./VolumeControl";
 
@@ -233,7 +232,7 @@ export function NowPlaying() {
         <div className="p-6">
           {activeTab === "player" && (
             <div className="space-y-6">
-              <PlayerControls />
+              <FullPlayerControls />
               <Timeline />
               <div className="flex items-center justify-between pt-4 border-t border-border">
                 <Button onClick={handleLoadDemo} variant="ghost" size="sm">
