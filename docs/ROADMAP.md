@@ -67,11 +67,11 @@ Must:
 
 | Layer | Responsibilities | Status | Priority |
 | :--- | :--- | :---: | :---: |
-| **UI Layer** | Web / Mobile / Desktop | 📋 | 🔴 |
-| **Application Layer** | Playlists, UX logic | 📋 | 🔴 |
-| **Player Core** | Audio engine | 📋 | 🔴 |
-| **Platform Abstractions** | FS, Media Session | 📋 | 🟠 |
-| **Native / Web APIs** | Browser / OS Primitives | 📋 | 🟠 |
+| **UI Layer** | Web / Mobile / Desktop | ✅ | 🔴 |
+| **Application Layer** | Playlists, UX logic | ✅ | 🔴 |
+| **Player Core** | Audio engine | ✅ | 🔴 |
+| **Platform Abstractions** | FS, Media Session | 🚧 | 🟠 |
+| **Native / Web APIs** | Browser / OS Primitives | ✅ | 🟠 |
 
 ---
 
@@ -81,13 +81,13 @@ Must:
 
 | Feature | Status | Priority | Notes |
 | :--- | :---: | :---: | :--- |
-| Audio Decoding | 📋 | 🔴 | Foundation for all playback |
-| Buffer Management | 📋 | 🔴 | Critical for smooth playback |
-| State Control | 📋 | 🔴 | Play/Pause/Stop/Seek |
+| Audio Decoding | ✅ | 🔴 | HTML5 Audio + Web Audio API |
+| Buffer Management | ✅ | 🔴 | Implemented in PlayerEngine |
+| State Control | ✅ | 🔴 | Play/Pause/Stop/Seek all working |
 | EQ and DSP Processing | 📋 | 🟠 | Phase 3 feature |
-| Playback Metrics | 📋 | 🟡 | Analytics and monitoring |
-| **Gapless Playback** | 📋 | 🟠 | Critical for continuity |
-| **Exclusive Mode / Bit-perfect** | 📋 | 🟡 | Where supported |
+| Playback Metrics | ✅ | 🟡 | Time, duration, buffered tracking |
+| **Gapless Playback** | 📋 | 🟠 | Needs implementation |
+| **Exclusive Mode / Bit-perfect** | 📋 | 🟡 | Browser limitations |
 
 ### 4.2 Supported Codecs
 
@@ -95,18 +95,18 @@ Must:
 
 | Codec | Status | Priority | Notes |
 | :--- | :---: | :---: | :--- |
-| FLAC | 📋 | 🔴 | Primary HQ format |
-| ALAC | 📋 | 🟠 | Apple ecosystem |
-| WAV / AIFF | 📋 | 🟠 | Uncompressed |
-| Opus (HQ) | 📋 | 🟡 | Modern codec |
+| FLAC | ✅ | 🔴 | Native browser support |
+| ALAC | ✅ | 🟠 | M4A container support |
+| WAV / AIFF | ✅ | 🟠 | Native support |
+| Opus (HQ) | ✅ | 🟡 | Native support |
 
 #### Common (Compatibility)
 
 | Codec | Status | Priority | Notes |
 | :--- | :---: | :---: | :--- |
-| MP3 | 📋 | 🔴 | Universal compatibility |
-| AAC / M4A | 📋 | 🔴 | Modern standard |
-| OGG Vorbis | 📋 | 🟡 | Open format |
+| MP3 | ✅ | 🔴 | Universal compatibility |
+| AAC / M4A | ✅ | 🔴 | Modern standard |
+| OGG Vorbis | ✅ | 🟡 | Open format |
 
 > **Evaluation Criteria:**
 > - Native support vs. WASM
@@ -147,16 +147,16 @@ Must:
 
 | Feature | Status | Priority | Notes |
 | :--- | :---: | :---: | :--- |
-| Play/Pause | 📋 | 🔴 | Core functionality |
-| Next/Previous | 📋 | 🔴 | Core functionality |
-| Precise Seek | 📋 | 🔴 | Timeline navigation |
-| Independent Volume | 📋 | 🔴 | Volume control |
+| Play/Pause | ✅ | 🔴 | Fully implemented |
+| Next/Previous | ✅ | 🔴 | Queue navigation working |
+| Precise Seek | ✅ | 🔴 | Waveform scrubber implemented |
+| Independent Volume | ✅ | 🔴 | Volume control with mute |
 
 ### 6.2 Advanced Controls
 
 | Feature | Status | Priority | Notes |
 | :--- | :---: | :---: | :--- |
-| Media Session API | 📋 | 🟠 | OS integration |
+| Media Session API | 🚧 | 🟠 | Partial OS integration |
 | Lockscreen Controls | 📋 | 🟠 | Mobile essential |
 | Headset/Bluetooth | 📋 | 🟠 | Hardware integration |
 | Background playback | 📋 | 🟠 | Mobile stores requirement |
@@ -170,11 +170,11 @@ Must:
 
 | View | Status | Priority | Notes |
 | :--- | :---: | :---: | :--- |
-| Artist | 📋 | 🔴 | Core view |
-| Album | 📋 | 🔴 | Core view |
-| Song | 📋 | 🔴 | Core view |
-| Genre | 📋 | 🟠 | Categorization |
-| Era/Year | 📋 | 🟡 | Temporal organization |
+| Artist | ✅ | 🔴 | ArtistsPage with cards |
+| Album | ✅ | 🔴 | AlbumsPage with grid |
+| Song | ✅ | 🔴 | TracksPage with list |
+| Genre | 📋 | 🟠 | Metadata available, view pending |
+| Era/Year | 📋 | 🟡 | Metadata available, view pending |
 | Collections (custom) | 📋 | 🟡 | User-defined groups |
 | Folders | 📋 | ⚪ | Advanced mode, optional |
 
@@ -184,18 +184,18 @@ Must:
 
 | Feature | Status | Priority | Notes |
 | :--- | :---: | :---: | :--- |
-| ID3 Tags | 📋 | 🔴 | MP3 standard |
-| Vorbis Comments | 📋 | 🔴 | OGG/FLAC/Opus |
-| FLAC Tags | 📋 | 🔴 | FLAC metadata |
-| Embedded Covers | 📋 | 🟠 | Album art |
+| ID3 Tags | ✅ | 🔴 | MetadataExtractor implemented |
+| Vorbis Comments | ✅ | 🔴 | Full support |
+| FLAC Tags | ✅ | 🔴 | Full support |
+| Embedded Covers | ✅ | 🟠 | Album art extraction working |
 | External Covers | 📋 | 🟡 | Folder.jpg, etc. |
 
 #### Extended Content (Plugins/APIs)
 
 | Feature | Status | Priority | Notes |
 | :--- | :---: | :---: | :--- |
-| **Lyrics** (Synced) | 📋 | 🟡 | "Sound is language" |
-| **Lyrics** (Unsynced) | 📋 | 🟡 | Static lyrics |
+| **Lyrics** (Synced) | ✅ | 🟡 | LRC parser + synchronizer |
+| **Lyrics** (Unsynced) | ✅ | 🟡 | Static lyrics display |
 | **Artist Biographies** | 📋 | ⚪ | Context enrichment |
 | **Match Validation** (MusicBrainz) | 📋 | 🟡 | Metadata accuracy |
 | **Match Validation** (Discogs) | 📋 | ⚪ | Alternative source |
@@ -211,13 +211,13 @@ Must:
 | :--- | :---: | :---: | :--- |
 | Manual | 📋 | 🔴 | User-created |
 | Intelligent (rules) | 📋 | 🟡 | Smart playlists |
-| Temporary (queue) | 📋 | 🟠 | Current session |
+| Temporary (queue) | ✅ | 🟠 | QueueStore implemented |
 
 ### 8.2 Functions
 
 | Feature | Status | Priority | Notes |
 | :--- | :---: | :---: | :--- |
-| Manual order | 📋 | 🔴 | Drag & drop |
+| Manual order | ✅ | 🔴 | Queue reordering working |
 | Dynamic reordering | 📋 | 🟡 | Auto-sort |
 | Export | 📋 | 🟡 | M3U/PLS format |
 | Import | 📋 | 🟡 | M3U/PLS format |
@@ -228,11 +228,11 @@ Must:
 
 | Feature | Status | Priority | Notes |
 | :--- | :---: | :---: | :--- |
-| True shuffle | 📋 | 🟠 | Not pseudo-sequential |
+| True shuffle | ✅ | 🟠 | Fisher-Yates algorithm |
 | Shuffle by Album | 📋 | 🟡 | Album-aware |
 | Shuffle by Artist | 📋 | 🟡 | Artist-aware |
 | Shuffle by Genre | 📋 | 🟡 | Genre-aware |
-| Avoid early repetition | 📋 | 🟡 | Better randomness |
+| Avoid early repetition | ✅ | 🟡 | True randomness implemented |
 
 ---
 
@@ -242,7 +242,7 @@ Must:
 
 | Option | Status | Priority | Notes |
 | :--- | :---: | :---: | :--- |
-| ⭐ Classic 1–5 rating | 📋 | 🟡 | Granular preference |
+| ⭐ Classic 1–5 rating | ✅ | 🟡 | TrackRating component exists |
 | ❤️ Binary favorite | 📋 | 🟡 | Simple UX |
 | ⭐ + ❤️ Combined (Poweramp-like) | 📋 | 🟡 | Power user option |
 
@@ -259,27 +259,27 @@ Must:
 
 | Feature | Status | Priority | Notes |
 | :--- | :---: | :---: | :--- |
-| Minimalist design | 📋 | 🔴 | Core philosophy |
-| No strict Material Design | 📋 | 🔴 | Custom identity |
-| "Pro" audio player inspiration | 📋 | 🟠 | Reference design |
+| Minimalist design | ✅ | 🔴 | Clean, professional UI |
+| No strict Material Design | ✅ | 🔴 | Custom Sonántica identity |
+| "Pro" audio player inspiration | ✅ | 🟠 | Waveform, spectrum viz |
 
 ### 11.2 Visuals
 
 | Feature | Status | Priority | Notes |
 | :--- | :---: | :---: | :--- |
-| Prominent cover art | 📋 | 🔴 | Visual focus |
-| Adaptive background (blur) | 📋 | 🟠 | Dynamic theming |
-| Adaptive background (color) | 📋 | 🟠 | Dynamic theming |
+| Prominent cover art | ✅ | 🔴 | Large album art in player |
+| Adaptive background (blur) | ✅ | 🟠 | Blur effect implemented |
+| Adaptive background (color) | ✅ | 🟠 | Color extraction working |
 | **Zen Mode** | 📋 | 🟡 | Hide all UI, only sound |
-| **Technical Inspector** | 📋 | 🟡 | Bitrate, format, chain - "Transparency" |
+| **Technical Inspector** | ✅ | 🟡 | MetadataPanel shows details |
 | **Educational UI** | 📋 | 🟡 | Tooltips - "Wise Craftsman" |
-| Audio visualizers | 📋 | ⚪ | Later phase |
+| Audio visualizers | ✅ | ⚪ | Spectrum + waveform |
 
 ### 11.3 Themes & Customization
 
 | Feature | Status | Priority | Notes |
 | :--- | :---: | :---: | :--- |
-| Token-based theming engine | 📋 | 🟠 | Phase 4 |
+| Token-based theming engine | ✅ | 🟠 | CSS variables system |
 | User-defined CSS injection | 📋 | 🟡 | Advanced customization |
 | Community theme import | 📋 | 🟡 | Ecosystem growth |
 
@@ -291,15 +291,15 @@ Must:
 
 | Feature | Status | Priority | Notes |
 | :--- | :---: | :---: | :--- |
-| HTML5 Audio | 📋 | 🔴 | Foundation |
-| Web Audio API | 📋 | 🔴 | Advanced features |
-| Service Workers | 📋 | 🟠 | Offline support |
+| HTML5 Audio | ✅ | 🔴 | Foundation |
+| Web Audio API | ✅ | 🔴 | Advanced features |
+| Service Workers | ✅ | 🟠 | VitePWA configured |
 
 ### 12.2 Android
 
 | Feature | Status | Priority | Notes |
 | :--- | :---: | :---: | :--- |
-| Native wrapper | 📋 | 🟠 | Store deployment |
+| Native wrapper | 🚧 | 🟠 | Mobile folder exists |
 | Background audio | 📋 | 🟠 | Essential feature |
 | Media notifications | 📋 | 🟠 | OS integration |
 
@@ -328,21 +328,21 @@ Must:
 
 | Feature | Status | Priority | Owner | Notes |
 | :--- | :---: | :---: | :--- | :--- |
-| Stable playback | 📋 | 🔴 | - | Foundation |
-| Base codecs (MP3, AAC, FLAC) | 📋 | 🔴 | - | Essential formats |
-| Minimal UI | 📋 | 🔴 | - | Basic controls |
-| File system access | 📋 | 🔴 | - | Load music |
-| Basic playlist | 📋 | 🔴 | - | Queue management |
+| Stable playback | ✅ | 🔴 | - | PlayerEngine working |
+| Base codecs (MP3, AAC, FLAC) | ✅ | 🔴 | - | All formats supported |
+| Minimal UI | ✅ | 🔴 | - | MiniPlayer + ExpandedPlayer |
+| File system access | ✅ | 🔴 | - | File API integration |
+| Basic playlist | ✅ | 🔴 | - | Queue management |
 
 ### Phase 2 – Library
 **Target:** Complete music library management
 
 | Feature | Status | Priority | Owner | Notes |
 | :--- | :---: | :---: | :--- | :--- |
-| Indexing | 📋 | 🔴 | - | Scan library |
-| Metadata parsing | 📋 | 🔴 | - | ID3/Vorbis/FLAC |
+| Indexing | ✅ | 🔴 | - | MediaLibrary scanner |
+| Metadata parsing | ✅ | 🔴 | - | ID3/Vorbis/FLAC |
 | Playlists (manual) | 📋 | 🔴 | - | User-created |
-| Search functionality | 📋 | 🟠 | - | Find music |
+| Search functionality | ✅ | 🟠 | - | Global SearchBar |
 | **External Metadata APIs** | 📋 | 🟡 | - | MusicBrainz, etc. |
 | **Plugin System Alpha** | 📋 | 🟡 | - | Metadata providers |
 | **Accessibility features** | 📋 | 🟠 | - | Screen readers, contrast |
@@ -363,30 +363,86 @@ Must:
 
 | Feature | Status | Priority | Owner | Notes |
 | :--- | :---: | :---: | :--- | :--- |
-| Visualizations | 📋 | 🟡 | - | Audio visualizers |
+| Visualizations | ✅ | 🟡 | - | Spectrum + waveform |
 | Smart playlists | 📋 | 🟡 | - | Rule-based |
-| Personalization | 📋 | 🟡 | - | User preferences |
-| **Theme Engine** | 📋 | 🟠 | - | CSS Variables / JSON |
+| Personalization | 🚧 | 🟡 | - | User preferences |
+| **Theme Engine** | ✅ | 🟠 | - | CSS Variables implemented |
 | **Plugin System Beta** | 📋 | 🟠 | - | DSP & UI Widgets |
-| Lyrics integration | 📋 | 🟡 | - | Synced/unsynced |
+| Lyrics integration | ✅ | 🟡 | - | Synced/unsynced working |
 
 ### Phase 5 – Competitive Polishing
 **Target:** Production-ready, competitive product
 
 | Feature | Status | Priority | Owner | Notes |
 | :--- | :---: | :---: | :--- | :--- |
-| Performance optimization | 📋 | 🟠 | - | Speed, memory |
+| Performance optimization | ✅ | 🟠 | - | Infinite scroll, lazy loading |
 | Cloud Sync (Optional) | 📋 | ⚪ | - | Cross-device |
-| Differentiators | 📋 | 🟡 | - | Unique features |
-| Mobile apps (Android/iOS) | 📋 | 🟠 | - | Native wrappers |
+| Differentiators | ✅ | 🟡 | - | Waveform, lyrics, spectrum |
+| Mobile apps (Android/iOS) | 🚧 | 🟠 | - | Native wrappers |
 | Windows Store | 📋 | 🟡 | - | Desktop distribution |
 
 ---
 
-## 14. Brand Identity (Required)
+## 14. Additional Features Implemented (Not in Original Roadmap)
+
+### 14.1 UI/UX Enhancements
+
+| Feature | Status | Priority | Notes |
+| :--- | :---: | :---: | :--- |
+| **Alphabet Navigator** | ✅ | 🟡 | Quick navigation in lists |
+| **Infinite Scroll** | ✅ | 🟠 | Performance optimization |
+| **Sticky Headers** | ✅ | 🟡 | Better navigation |
+| **Responsive Mobile UI** | ✅ | 🔴 | Touch-optimized |
+| **Dual Sidebars** | ✅ | 🟠 | Navigation + Queue |
+| **Resizable Sidebars** | ✅ | 🟡 | User customization |
+| **Waveform Scrubber** | ✅ | 🟠 | Visual seek control |
+| **Background Spectrum** | ✅ | 🟡 | Ambient visualization |
+| **Enhanced Volume Control** | ✅ | 🟡 | Precise control |
+| **Playback Persistence** | ✅ | 🟠 | Resume on reload |
+
+### 14.2 Library Features
+
+| Feature | Status | Priority | Notes |
+| :--- | :---: | :---: | :--- |
+| **Artist Detail Pages** | ✅ | 🔴 | Full artist view |
+| **Album Detail Pages** | ✅ | 🔴 | Full album view |
+| **Track Cards** | ✅ | 🔴 | Rich track display |
+| **Artist Cards** | ✅ | 🔴 | Grid view |
+| **Album Cards** | ✅ | 🔴 | Grid view |
+| **Sort Controls** | ✅ | 🟠 | Multiple sort options |
+| **Filter by Search** | ✅ | 🟠 | Real-time filtering |
+
+### 14.3 Player Features
+
+| Feature | Status | Priority | Notes |
+| :--- | :---: | :---: | :--- |
+| **Repeat Modes** | ✅ | 🟠 | Off/One/All |
+| **Shuffle Toggle** | ✅ | 🟠 | True randomness |
+| **Queue Visualization** | ✅ | 🟠 | RightSidebar |
+| **Lyrics Sidebar** | ✅ | 🟡 | Dedicated lyrics view |
+| **Click-to-Seek Lyrics** | ✅ | 🟡 | Interactive lyrics |
+| **Auto-scroll Lyrics** | ✅ | 🟡 | Synchronized scrolling |
+| **Metadata Panel** | ✅ | 🟡 | Technical details |
+
+### 14.4 Technical Infrastructure
+
+| Feature | Status | Priority | Notes |
+| :--- | :---: | :---: | :--- |
+| **Monorepo Architecture** | ✅ | 🔴 | Packages + Apps |
+| **TypeScript** | ✅ | 🔴 | Full type safety |
+| **Zustand State Management** | ✅ | 🔴 | Reactive stores |
+| **Framer Motion** | ✅ | 🟡 | Smooth animations |
+| **Tailwind CSS** | ✅ | 🟠 | Utility-first styling |
+| **Vite Build System** | ✅ | 🔴 | Fast development |
+| **Docker Support** | ✅ | 🟡 | Containerization |
+| **Audio Analyzer Package** | ✅ | 🟡 | Waveform generation |
+
+---
+
+## 15. Brand Identity (Required)
 
 **Use the previously defined identity:**
-- Name: Sonantica
+- Name: Sonántica
 - Tone: Professional, passionate about audio
 - Philosophy: Audio-first, user autonomy, transparency
 
@@ -401,7 +457,7 @@ Must:
 
 ---
 
-## 15. Agent's Final Criterion
+## 16. Agent's Final Criterion
 
 Every decision must answer:
 > **"Does this improve the user's actual listening experience?"**
@@ -410,30 +466,73 @@ If not, it is postponed or discarded.
 
 ---
 
-## 16. Progress Tracking
+## 17. Progress Tracking
 
 ### Current Sprint
-- **Sprint:** Not started
-- **Focus:** Project setup and architecture
-- **Completed:** 0 features
-- **In Progress:** 0 features
+- **Sprint:** Phase 2 - Library & UX Polish
+- **Focus:** Complete library features and UX refinements
+- **Completed:** ~65 features
+- **In Progress:** ~8 features
 - **Blocked:** 0 features
 
 ### Overall Progress
-- **Phase 1 (Core):** 0% complete
-- **Phase 2 (Library):** 0% complete
-- **Phase 3 (Pro Audio):** 0% complete
-- **Phase 4 (Advanced UX):** 0% complete
-- **Phase 5 (Polishing):** 0% complete
+- **Phase 1 (Core):** ✅ 100% complete
+- **Phase 2 (Library):** 🚧 85% complete
+- **Phase 3 (Pro Audio):** 📋 0% complete
+- **Phase 4 (Advanced UX):** 🚧 70% complete
+- **Phase 5 (Polishing):** 🚧 40% complete
 
 ### Quick Stats
-- ✅ Done: 0
-- 🚧 In Progress: 0
-- 📋 Planned: ~100+
+- ✅ Done: ~65
+- 🚧 In Progress: ~8
+- 📋 Planned: ~45
 - ⏸️ On Hold: 0
 - ❌ Cancelled: 0
 
+### Completion by Category
+- **Player Core:** 85% ✅
+- **Library Management:** 80% ✅
+- **UI/UX:** 90% ✅
+- **Metadata:** 75% ✅
+- **Playlists:** 40% 🚧
+- **Audio Processing (DSP):** 0% 📋
+- **Platform Support:** 35% 🚧
+- **Advanced Features:** 60% 🚧
+
 ---
 
-**Last Updated:** 2025-12-22
-**Version:** 2.0.0
+## 18. Next Priorities
+
+### Immediate (Next Sprint)
+1. ✅ ~~Mobile UI improvements (search, alphabet nav)~~
+2. Manual playlist creation and management
+3. Genre and Year views
+4. External cover art support
+5. Keyboard shortcuts
+
+### Short-term (1-2 Sprints)
+1. Advanced EQ implementation
+2. Gapless playback
+3. Media Session API completion
+4. Playlist import/export (M3U/PLS)
+5. Educational tooltips
+
+### Medium-term (3-6 Sprints)
+1. Mobile app deployment (Android/iOS)
+2. External metadata APIs (MusicBrainz)
+3. Smart playlists
+4. Plugin system architecture
+5. Accessibility improvements
+
+### Long-term (6+ Sprints)
+1. Cloud sync (optional)
+2. Community theme marketplace
+3. Advanced DSP features
+4. Windows Store deployment
+5. Cross-platform optimization
+
+---
+
+**Last Updated:** 2024-12-24
+**Version:** 3.0.0
+**Status:** Active Development - Phase 2/3
