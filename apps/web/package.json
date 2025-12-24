@@ -9,7 +9,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "clean": "rimraf dist"
+    "clean": "rimraf dist",
+    "generate-icons": "node scripts/generate-icons.mjs"
   },
   "dependencies": {
     "@sonantica/audio-analyzer": "workspace:*",
@@ -40,6 +41,8 @@
     "tailwindcss": "^4.0.0-beta.10",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
-    "vite": "^7.2.4"
+    "vite": "^7.2.4",
+    "vite-plugin-pwa": "^1.2.0",
+    "workbox-window": "^7.4.0"
   }
 }

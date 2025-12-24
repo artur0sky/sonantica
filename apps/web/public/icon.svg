@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="256" fill="#0f172a"/>
+  
+  <!-- Sound wave representation - minimalist and elegant -->
+  <g transform="translate(256, 256)">
+    <!-- Center vertical line -->
+    <rect x="-4" y="-120" width="8" height="240" rx="4" fill="url(#grad)" opacity="0.9"/>
+    
+    <!-- Left waves -->
+    <rect x="-44" y="-90" width="6" height="180" rx="3" fill="url(#grad)" opacity="0.7"/>
+    <rect x="-84" y="-60" width="6" height="120" rx="3" fill="url(#grad)" opacity="0.5"/>
+    <rect x="-124" y="-40" width="6" height="80" rx="3" fill="url(#grad)" opacity="0.3"/>
+    
+    <!-- Right waves -->
+    <rect x="38" y="-90" width="6" height="180" rx="3" fill="url(#grad)" opacity="0.7"/>
+    <rect x="78" y="-60" width="6" height="120" rx="3" fill="url(#grad)" opacity="0.5"/>
+    <rect x="118" y="-40" width="6" height="80" rx="3" fill="url(#grad)" opacity="0.3"/>
+  </g>
+  
+  <!-- Subtle outer ring -->
+  <circle cx="256" cy="256" r="240" fill="none" stroke="url(#grad)" stroke-width="2" opacity="0.2"/>
+</svg>

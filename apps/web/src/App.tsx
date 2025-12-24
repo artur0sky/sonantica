@@ -8,6 +8,7 @@
 import { Suspense, lazy } from "react";
 import { Route, Switch } from "wouter";
 import { MainLayout } from "./components/layout/MainLayout";
+import { PWAUpdatePrompt } from "./components/PWAUpdatePrompt";
 import { IconLoader } from "@tabler/icons-react";
 
 // Lazy load pages
@@ -45,43 +46,48 @@ const PageLoader = () => (
 
 function App() {
   return (
-    <MainLayout>
-      <Suspense fallback={<PageLoader />}>
-        <Switch>
-          {/* Default view: Tracks */}
-          <Route path="/" component={TracksPage} />
+    <>
+      <MainLayout>
+        <Suspense fallback={<PageLoader />}>
+          <Switch>
+            {/* Default view: Tracks */}
+            <Route path="/" component={TracksPage} />
 
-          {/* Library views */}
-          <Route path="/albums" component={AlbumsPage} />
-          <Route path="/artists" component={ArtistsPage} />
+            {/* Library views */}
+            <Route path="/albums" component={AlbumsPage} />
+            <Route path="/artists" component={ArtistsPage} />
 
-          {/* Detail views */}
-          <Route path="/album/:id" component={AlbumDetailPage} />
-          <Route path="/artist/:id" component={ArtistDetailPage} />
+            {/* Detail views */}
+            <Route path="/album/:id" component={AlbumDetailPage} />
+            <Route path="/artist/:id" component={ArtistDetailPage} />
 
-          {/* Playlists - Coming soon */}
-          <Route path="/playlists">
-            <div className="max-w-6xl mx-auto p-6">
-              <div className="text-center py-20">
-                <div className="text-6xl mb-4">📋</div>
-                <h2 className="text-2xl font-semibold mb-2">Playlists</h2>
-                <p className="text-text-muted">Coming soon...</p>
+            {/* Playlists - Coming soon */}
+            <Route path="/playlists">
+              <div className="max-w-6xl mx-auto p-6">
+                <div className="text-center py-20">
+                  <div className="text-6xl mb-4">📋</div>
+                  <h2 className="text-2xl font-semibold mb-2">Playlists</h2>
+                  <p className="text-text-muted">Coming soon...</p>
+                </div>
               </div>
-            </div>
-          </Route>
+            </Route>
 
-          {/* 404 */}
-          <Route>
-            <div className="max-w-6xl mx-auto p-6">
-              <div className="text-center py-20">
-                <h1 className="text-4xl font-bold mb-2">404</h1>
-                <p className="text-text-muted">Page not found</p>
+            {/* 404 */}
+            <Route>
+              <div className="max-w-6xl mx-auto p-6">
+                <div className="text-center py-20">
+                  <h1 className="text-4xl font-bold mb-2">404</h1>
+                  <p className="text-text-muted">Page not found</p>
+                </div>
               </div>
-            </div>
-          </Route>
-        </Switch>
-      </Suspense>
-    </MainLayout>
+            </Route>
+          </Switch>
+        </Suspense>
+      </MainLayout>
+
+      {/* PWA Update Prompt */}
+      <PWAUpdatePrompt />
+    </>
   );
 }
 
