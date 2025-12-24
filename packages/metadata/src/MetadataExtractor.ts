@@ -3,9 +3,12 @@
  * 
  * Lightweight ID3 tag reader for browser environments.
  * Supports MP3 (ID3v2), FLAC, and basic formats.
+ * 
+ * "Every file has an intention."
  */
 
-import type { MediaMetadata } from '@sonantica/shared';
+import type { MediaMetadata, Lyrics } from '@sonantica/shared';
+import { LyricsExtractor } from '@sonantica/lyrics';
 
 /**
  * Extract metadata from an audio file URL
@@ -76,6 +79,7 @@ function isFLAC(view: DataView): boolean {
  */
 function extractID3v2(view: DataView): Partial<MediaMetadata> {
   const metadata: Partial<MediaMetadata> = {};
+  const tags: any = {}; // Collect all tags for lyrics extraction
 
   try {
     // ID3v2 header: "ID3" + version (2 bytes) + flags (1 byte) + size (4 bytes)
@@ -164,9 +168,33 @@ function extractID3v2(view: DataView): Partial<MediaMetadata> {
             console.log('✅ Album art extracted successfully');
           }
           break;
+        case 'USLT':
+          // Unsynchronized lyrics
+          tags.USLT = { data: { text } };
+          break;
+        case 'SYLT':
+          // Synchronized lyrics
+          tags.SYLT = { data: text };
+          break;
       }
 
       offset += 10 + frameSize;
+    }
+
+    // Extract lyrics using LyricsExtractor
+    console.log('🔍 Checking for lyrics tags:', Object.keys(tags));
+    const lyrics = LyricsExtractor.extractFromTags(tags);
+    if (lyrics) {
+      metadata.lyrics = lyrics;
+      console.log(`✅ Lyrics extracted from ID3v2:`, {
+        type: lyrics.isSynchronized ? 'synchronized' : 'unsynchronized',
+        hasText: !!lyrics.text,
+        hasSynced: !!lyrics.synced,
+        lines: lyrics.synced?.length || 0,
+        source: lyrics.source
+      });
+    } else {
+      console.log('ℹ️ No lyrics found in ID3v2 tags');
     }
   } catch (error) {
     console.warn('ID3v2 parsing error:', error);
@@ -180,6 +208,7 @@ function extractID3v2(view: DataView): Partial<MediaMetadata> {
  */
 function extractFLAC(view: DataView): Partial<MediaMetadata> {
   const metadata: Partial<MediaMetadata> = {};
+  const tags: any = {}; // Collect all tags for lyrics extraction
 
   try {
     let offset = 4; // Skip "fLaC"
@@ -263,6 +292,13 @@ function extractFLAC(view: DataView): Partial<MediaMetadata> {
             case 'GENRE': 
               metadata.genre = parseMultipleValues(value);
               break;
+            case 'LYRICS':
+            case 'UNSYNCEDLYRICS':
+              tags.LYRICS = value;
+              break;
+            case 'SYNCEDLYRICS':
+              tags.SYNCEDLYRICS = value;
+              break;
           }
 
           offset += commentLength;
@@ -295,6 +331,22 @@ function extractFLAC(view: DataView): Partial<MediaMetadata> {
       }
 
       if (isLast) break;
+    }
+
+    // Extract lyrics using LyricsExtractor
+    console.log('🔍 Checking for FLAC lyrics tags:', Object.keys(tags));
+    const lyrics = LyricsExtractor.extractFromTags(tags);
+    if (lyrics) {
+      metadata.lyrics = lyrics;
+      console.log(`✅ Lyrics extracted from FLAC:`, {
+        type: lyrics.isSynchronized ? 'synchronized' : 'unsynchronized',
+        hasText: !!lyrics.text,
+        hasSynced: !!lyrics.synced,
+        lines: lyrics.synced?.length || 0,
+        source: lyrics.source
+      });
+    } else {
+      console.log('ℹ️ No lyrics found in FLAC tags');
     }
   } catch (error) {
     console.warn('FLAC parsing error:', error);

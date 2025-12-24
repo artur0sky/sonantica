@@ -10,6 +10,7 @@ export interface UIState {
   // Player UI state
   isPlayerExpanded: boolean;
   isQueueOpen: boolean;
+  lyricsOpen: boolean;
   isVisualizationEnabled: boolean;
   
   // Sidebar state
@@ -20,31 +21,37 @@ export interface UIState {
   // Sidebar widths
   leftSidebarWidth: number;
   rightSidebarWidth: number;
+  lyricsSidebarWidth: number;
   
   // Actions
   togglePlayerExpanded: () => void;
   toggleQueue: () => void;
+  toggleLyrics: () => void;
   toggleVisualization: () => void;
   toggleLeftSidebar: () => void;
   toggleRightSidebar: () => void;
   toggleMetadataPanel: () => void;
   setPlayerExpanded: (expanded: boolean) => void;
   setQueueOpen: (open: boolean) => void;
+  setLyricsOpen: (open: boolean) => void;
   setMetadataPanelOpen: (open: boolean) => void;
   setVisualizationEnabled: (enabled: boolean) => void;
   setLeftSidebarWidth: (width: number) => void;
   setRightSidebarWidth: (width: number) => void;
+  setLyricsSidebarWidth: (width: number) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
   isPlayerExpanded: false,
   isQueueOpen: false,
+  lyricsOpen: false,
   isVisualizationEnabled: false,
   isLeftSidebarOpen: true,
   isRightSidebarOpen: false,
   isMetadataPanelOpen: false,
   leftSidebarWidth: 280,
   rightSidebarWidth: 320,
+  lyricsSidebarWidth: 320,
 
   togglePlayerExpanded: () => {
     set((state) => ({ isPlayerExpanded: !state.isPlayerExpanded }));
@@ -55,6 +62,10 @@ export const useUIStore = create<UIState>((set) => ({
       isQueueOpen: !state.isQueueOpen,
       isRightSidebarOpen: !state.isQueueOpen, // Sync with sidebar
     }));
+  },
+
+  toggleLyrics: () => {
+    set((state) => ({ lyricsOpen: !state.lyricsOpen }));
   },
 
   toggleVisualization: () => {
@@ -84,6 +95,10 @@ export const useUIStore = create<UIState>((set) => ({
     });
   },
 
+  setLyricsOpen: (open: boolean) => {
+    set({ lyricsOpen: open });
+  },
+
   setMetadataPanelOpen: (open: boolean) => {
     set({ isMetadataPanelOpen: open });
   },
@@ -98,5 +113,9 @@ export const useUIStore = create<UIState>((set) => ({
 
   setRightSidebarWidth: (width: number) => {
     set({ rightSidebarWidth: width });
+  },
+
+  setLyricsSidebarWidth: (width: number) => {
+    set({ lyricsSidebarWidth: width });
   },
 }));

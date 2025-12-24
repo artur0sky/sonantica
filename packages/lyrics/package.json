@@ -1,0 +1,25 @@
+{
+    "name": "@sonantica/lyrics",
+    "version": "0.1.0",
+    "description": "Lyrics extraction, parsing, and synchronization for Sonántica",
+    "type": "module",
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "import": "./dist/index.js",
+            "types": "./dist/index.d.ts"
+        }
+    },
+    "scripts": {
+        "build": "tsup src/index.ts --format cjs,esm --dts",
+        "dev": "tsup src/index.ts --format cjs,esm --dts --watch"
+    },
+    "dependencies": {
+        "@sonantica/shared": "workspace:*"
+    },
+    "devDependencies": {
+        "typescript": "^5.3.3",
+        "tsup": "^8.0.1"
+    }
+}

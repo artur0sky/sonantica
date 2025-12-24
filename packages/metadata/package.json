@@ -19,7 +19,8 @@
         "clean": "rimraf dist"
     },
     "dependencies": {
-        "@sonantica/shared": "workspace:*"
+        "@sonantica/shared": "workspace:*",
+        "@sonantica/lyrics": "workspace:*"
     },
     "devDependencies": {
         "tsup": "^8.0.0",

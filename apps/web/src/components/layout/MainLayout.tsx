@@ -16,6 +16,7 @@ import {
 import { Header } from "./Header";
 import { LeftSidebar } from "./LeftSidebar";
 import { RightSidebar } from "./RightSidebar";
+import { LyricsSidebar } from "./LyricsSidebar";
 import { useWaveformLoader } from "../../features/player/hooks/useWaveformLoader";
 import { PlaybackPersistence } from "../../features/player/components/PlaybackPersistence";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
@@ -33,18 +34,21 @@ export function MainLayout({ children }: MainLayoutProps) {
   const {
     isLeftSidebarOpen,
     isRightSidebarOpen,
+    lyricsOpen,
     isPlayerExpanded,
     isMetadataPanelOpen,
     toggleMetadataPanel,
     leftSidebarWidth,
     rightSidebarWidth,
+    lyricsSidebarWidth,
     setLeftSidebarWidth,
     setRightSidebarWidth,
+    setLyricsSidebarWidth,
   } = useUIStore();
 
-  const isResizing = useRef<"left" | "right" | null>(null);
+  const isResizing = useRef<"left" | "right" | "lyrics" | null>(null);
 
-  const startResizing = useCallback((sidebar: "left" | "right") => {
+  const startResizing = useCallback((sidebar: "left" | "right" | "lyrics") => {
     isResizing.current = sidebar;
     document.body.classList.add("is-resizing");
     document.body.style.cursor = "col-resize";
@@ -78,9 +82,17 @@ export function MainLayout({ children }: MainLayoutProps) {
         } else {
           setRightSidebarWidth(320);
         }
+      } else if (isResizing.current === "lyrics") {
+        const newWidth = window.innerWidth - e.clientX;
+        // Snap logic: 80 (covers), 320 (standard)
+        if (newWidth < 160) {
+          setLyricsSidebarWidth(80);
+        } else {
+          setLyricsSidebarWidth(320);
+        }
       }
     },
-    [setLeftSidebarWidth, setRightSidebarWidth]
+    [setLeftSidebarWidth, setRightSidebarWidth, setLyricsSidebarWidth]
   );
 
   useEffect(() => {
@@ -143,6 +155,20 @@ export function MainLayout({ children }: MainLayoutProps) {
           </aside>
         )}
 
+        {/* Lyrics Sidebar (Desktop Only - Relative Position) */}
+        {!isMobile && lyricsOpen && currentTrack && (
+          <aside
+            style={{ width: lyricsSidebarWidth }}
+            className="bg-surface border-l border-border h-full flex-shrink-0 z-20 relative"
+          >
+            <div
+              className="absolute top-0 left-0 w-1 h-full cursor-col-resize hover:bg-accent/30 transition-colors z-30"
+              onMouseDown={() => startResizing("lyrics")}
+            />
+            <LyricsSidebar isCollapsed={lyricsSidebarWidth === 80} />
+          </aside>
+        )}
+
         {/* Metadata Panel (Overlay) */}
         <AnimatePresence>
           {isMetadataPanelOpen && currentTrack?.metadata && (
@@ -163,7 +189,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       {/* Mobile/Tablet Overlays (Fixed to absolute top) */}
       <AnimatePresence>
         {window.innerWidth < 1024 &&
-          (isLeftSidebarOpen || isRightSidebarOpen) && (
+          (isLeftSidebarOpen || isRightSidebarOpen || lyricsOpen) && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -172,6 +198,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                 if (isLeftSidebarOpen)
                   useUIStore.getState().toggleLeftSidebar();
                 if (isRightSidebarOpen) useUIStore.getState().toggleQueue();
+                if (lyricsOpen) useUIStore.getState().toggleLyrics();
               }}
               className="fixed inset-0 bg-black/60 z-[60] backdrop-blur-sm"
             />
@@ -204,6 +231,21 @@ export function MainLayout({ children }: MainLayoutProps) {
             className="fixed inset-y-0 right-0 w-[320px] bg-surface z-[70] shadow-2xl border-l border-border overflow-y-auto"
           >
             <RightSidebar isCollapsed={false} />
+          </motion.aside>
+        )}
+      </AnimatePresence>
+
+      {/* Mobile Lyrics Sidebar Overlay */}
+      <AnimatePresence>
+        {window.innerWidth < 1024 && lyricsOpen && currentTrack && (
+          <motion.aside
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            className="fixed inset-y-0 right-0 w-[320px] bg-surface z-[70] shadow-2xl border-l border-border overflow-y-auto"
+          >
+            <LyricsSidebar isCollapsed={false} />
           </motion.aside>
         )}
       </AnimatePresence>

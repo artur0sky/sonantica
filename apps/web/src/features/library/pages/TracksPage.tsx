@@ -213,14 +213,14 @@ export function TracksPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 pb-24 sm:pb-32">
-      {/* Header */}
+    <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 pb-24 sm:pb-32">
+      {/* Sticky Header */}
       <motion.div
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="mb-6 sm:mb-8"
+        className="sticky top-0 z-30 bg-bg/95 backdrop-blur-md border-b border-border/50 -mx-3 sm:-mx-4 md:-mx-6 px-3 sm:px-4 md:px-6 py-4 mb-6"
       >
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 sm:mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
               Tracks

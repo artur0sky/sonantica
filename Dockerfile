@@ -17,6 +17,7 @@ COPY packages/player-core/package.json ./packages/player-core/
 COPY packages/audio-analyzer/package.json ./packages/audio-analyzer/
 COPY packages/media-library/package.json ./packages/media-library/
 COPY packages/metadata/package.json ./packages/metadata/
+COPY packages/lyrics/package.json ./packages/lyrics/
 COPY packages/ui/package.json ./packages/ui/
 COPY apps/web/package.json ./apps/web/
 
@@ -29,11 +30,13 @@ COPY packages/player-core ./packages/player-core
 COPY packages/audio-analyzer ./packages/audio-analyzer
 COPY packages/media-library ./packages/media-library
 COPY packages/metadata ./packages/metadata
+COPY packages/lyrics ./packages/lyrics
 COPY packages/ui ./packages/ui
 COPY apps/web ./apps/web
 
 # Build packages (in dependency order)
 RUN pnpm --filter @sonantica/shared build
+RUN pnpm --filter @sonantica/lyrics build
 RUN pnpm --filter @sonantica/metadata build
 RUN pnpm --filter @sonantica/player-core build
 RUN pnpm --filter @sonantica/audio-analyzer build

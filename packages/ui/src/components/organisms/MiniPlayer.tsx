@@ -25,6 +25,7 @@ import {
   IconPlaylist,
   IconMusic,
   IconActivityHeartbeat,
+  IconMicrophone,
 } from "@tabler/icons-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -47,6 +48,7 @@ export function MiniPlayer() {
   const {
     togglePlayerExpanded,
     toggleQueue,
+    toggleLyrics,
     isVisualizationEnabled,
     toggleVisualization,
   } = useUIStore();
@@ -163,6 +165,15 @@ export function MiniPlayer() {
               aria-label="Next"
             >
               <IconPlayerSkipForward size={20} stroke={1.5} />
+            </motion.button>
+
+            <motion.button
+              onClick={toggleLyrics}
+              whileTap={{ scale: 0.9 }}
+              className="text-text-muted transition-colors p-2"
+              aria-label="Toggle lyrics"
+            >
+              <IconMicrophone size={20} stroke={1.5} />
             </motion.button>
 
             <motion.button
@@ -374,6 +385,16 @@ export function MiniPlayer() {
               title="Toggle Audio Visualization"
             >
               <IconActivityHeartbeat size={20} stroke={1.5} />
+            </motion.button>
+
+            <motion.button
+              onClick={toggleLyrics}
+              whileHover={{ scale: 1.1, color: "var(--color-accent)" }}
+              whileTap={{ scale: 0.9 }}
+              className="text-text-muted transition-colors hidden sm:flex items-center justify-center p-1.5"
+              aria-label="Toggle lyrics"
+            >
+              <IconMicrophone size={20} stroke={1.5} />
             </motion.button>
 
             <motion.button

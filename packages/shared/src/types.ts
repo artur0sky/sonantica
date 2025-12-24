@@ -35,6 +35,32 @@ export interface MediaSource {
 }
 
 /**
+ * Synchronized lyrics line
+ */
+export interface LyricsLine {
+  /** Time in milliseconds */
+  time: number;
+  /** Lyric text */
+  text: string;
+}
+
+/**
+ * Lyrics data structure
+ */
+export interface Lyrics {
+  /** Raw lyrics text (unsynchronized) */
+  text?: string;
+  /** Synchronized lyrics lines (LRC format) */
+  synced?: LyricsLine[];
+  /** Whether lyrics are synchronized */
+  isSynchronized: boolean;
+  /** Language code (ISO 639-1) */
+  language?: string;
+  /** Source of lyrics (embedded, external, user-provided) */
+  source?: 'embedded' | 'external' | 'user';
+}
+
+/**
  * Basic metadata for a media file
  */
 export interface MediaMetadata {
@@ -50,6 +76,7 @@ export interface MediaMetadata {
   bitrate?: number; // in kbps
   sampleRate?: number; // in Hz
   bitsPerSample?: number; // bit depth
+  lyrics?: Lyrics; // Embedded lyrics
 }
 
 /**
