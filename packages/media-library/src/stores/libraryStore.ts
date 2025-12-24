@@ -225,8 +225,6 @@ export const useLibraryStore = create<LibraryState>((set, get) => {
         await get()._updateLibrary(true);
       });
 
-      // Load cached library data via injected callback
-      let hasCache = false;
       try {
         const { onLoad } = get();
         if (onLoad) {
@@ -235,20 +233,10 @@ export const useLibraryStore = create<LibraryState>((set, get) => {
           if (cachedData && cachedData.tracks && cachedData.tracks.length > 0) {
             console.log('📚 Loading library from cache:', cachedData.tracks.length, 'tracks');
             library.restore(cachedData.tracks);
-            hasCache = true;
           }
         }
       } catch (error) {
         console.warn('Failed to load cached library:', error);
-      }
-
-      // Start background scan ONLY if no index exists
-      if (!hasCache) {
-        console.log('🚀 No library index found. Starting initial scan...');
-        // Default music paths - could be configurable later
-        get().scan(['/media/']);
-      } else {
-        console.log('✨ Library index loaded from cache. Background scan skipped.');
       }
     },
 

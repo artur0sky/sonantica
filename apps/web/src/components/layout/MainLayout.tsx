@@ -18,6 +18,7 @@ import { LeftSidebar } from "./LeftSidebar";
 import { RightSidebar } from "./RightSidebar";
 import { useWaveformLoader } from "../../features/player/hooks/useWaveformLoader";
 import { PlaybackPersistence } from "../../features/player/components/PlaybackPersistence";
+import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { useCallback, useRef, useEffect } from "react";
 
 interface MainLayoutProps {
@@ -95,6 +96,8 @@ export function MainLayout({ children }: MainLayoutProps) {
     };
   }, [handleResize, stopResizing]);
 
+  const isMobile = useMediaQuery("(max-width: 1023px)");
+
   return (
     <div className="h-screen flex flex-col bg-bg text-text overflow-hidden relative">
       {/* Persistence Layer */}
@@ -105,97 +108,40 @@ export function MainLayout({ children }: MainLayoutProps) {
 
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden relative">
-        {/* Mobile/Tablet Backdrop for Sidebars */}
-        <AnimatePresence>
-          {(isLeftSidebarOpen || isRightSidebarOpen) && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => {
-                if (isLeftSidebarOpen)
-                  useUIStore.getState().toggleLeftSidebar();
-                if (isRightSidebarOpen) useUIStore.getState().toggleQueue();
-              }}
-              className="fixed inset-0 bg-black/60 z-30 lg:hidden backdrop-blur-sm"
+        {/* Left Sidebar - Navigation (Desktop Only - Relative Position) */}
+        {!isMobile && isLeftSidebarOpen && (
+          <aside
+            style={{ width: leftSidebarWidth }}
+            className="bg-surface border-r border-border h-full flex-shrink-0 z-20 relative"
+          >
+            <LeftSidebar isCollapsed={leftSidebarWidth === 72} />
+            <div
+              className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-accent/30 transition-colors z-30"
+              onMouseDown={() => startResizing("left")}
             />
-          )}
-        </AnimatePresence>
-
-        {/* Left Sidebar - Navigation */}
-        <AnimatePresence mode="popLayout">
-          {isLeftSidebarOpen && (
-            <motion.aside
-              initial={{ x: -leftSidebarWidth, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: -leftSidebarWidth, opacity: 0 }}
-              transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              style={{
-                width: window.innerWidth < 1024 ? "280px" : leftSidebarWidth,
-              }}
-              className="bg-surface border-r border-border overflow-y-auto flex-shrink-0 z-40 relative
-                         fixed lg:relative inset-y-0 left-0 lg:z-20
-                         shadow-2xl lg:shadow-none"
-            >
-              <LeftSidebar
-                isCollapsed={
-                  leftSidebarWidth === 72 && window.innerWidth >= 1024
-                }
-              />
-
-              {/* Resize Handle - Desktop Only */}
-              <div
-                className="hidden lg:block absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-accent/30 transition-colors z-30"
-                onMouseDown={() => startResizing("left")}
-              />
-            </motion.aside>
-          )}
-        </AnimatePresence>
+          </aside>
+        )}
 
         {/* Center Content */}
-        <main
-          className="flex-1 overflow-y-auto relative z-10 transition-all duration-300
-                         w-full min-w-0"
-        >
+        <main className="flex-1 overflow-y-auto relative z-10 transition-all duration-300 w-full min-w-0">
           <AnimatePresence mode="wait">
             {isPlayerExpanded ? <ExpandedPlayer key="expanded" /> : children}
           </AnimatePresence>
         </main>
 
-        {/* Right Sidebar - Queue */}
-        <AnimatePresence mode="popLayout">
-          {isRightSidebarOpen && currentTrack && (
-            <motion.aside
-              initial={{
-                x: window.innerWidth < 1024 ? 320 : rightSidebarWidth,
-                opacity: 0,
-              }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{
-                x: window.innerWidth < 1024 ? 320 : rightSidebarWidth,
-                opacity: 0,
-              }}
-              transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              style={{
-                width: window.innerWidth < 1024 ? "320px" : rightSidebarWidth,
-              }}
-              className="bg-surface border-l border-border overflow-y-auto flex-shrink-0 z-40 relative
-                         fixed lg:relative inset-y-0 right-0 lg:z-20
-                         shadow-2xl lg:shadow-none"
-            >
-              {/* Resize Handle - Desktop Only */}
-              <div
-                className="hidden lg:block absolute top-0 left-0 w-1 h-full cursor-col-resize hover:bg-accent/30 transition-colors z-30"
-                onMouseDown={() => startResizing("right")}
-              />
-              <RightSidebar
-                isCollapsed={
-                  rightSidebarWidth === 80 && window.innerWidth >= 1024
-                }
-              />
-            </motion.aside>
-          )}
-        </AnimatePresence>
+        {/* Right Sidebar - Queue (Desktop Only - Relative Position) */}
+        {!isMobile && isRightSidebarOpen && currentTrack && (
+          <aside
+            style={{ width: rightSidebarWidth }}
+            className="bg-surface border-l border-border h-full flex-shrink-0 z-20 relative"
+          >
+            <div
+              className="absolute top-0 left-0 w-1 h-full cursor-col-resize hover:bg-accent/30 transition-colors z-30"
+              onMouseDown={() => startResizing("right")}
+            />
+            <RightSidebar isCollapsed={rightSidebarWidth === 80} />
+          </aside>
+        )}
 
         {/* Metadata Panel (Overlay) */}
         <AnimatePresence>
@@ -213,6 +159,54 @@ export function MainLayout({ children }: MainLayoutProps) {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Mobile/Tablet Overlays (Fixed to absolute top) */}
+      <AnimatePresence>
+        {window.innerWidth < 1024 &&
+          (isLeftSidebarOpen || isRightSidebarOpen) && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => {
+                if (isLeftSidebarOpen)
+                  useUIStore.getState().toggleLeftSidebar();
+                if (isRightSidebarOpen) useUIStore.getState().toggleQueue();
+              }}
+              className="fixed inset-0 bg-black/60 z-[60] backdrop-blur-sm"
+            />
+          )}
+      </AnimatePresence>
+
+      {/* Mobile Left Sidebar Overlay */}
+      <AnimatePresence>
+        {window.innerWidth < 1024 && isLeftSidebarOpen && (
+          <motion.aside
+            initial={{ x: "-100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "-100%" }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            className="fixed inset-y-0 left-0 w-[280px] bg-surface z-[70] shadow-2xl border-r border-border overflow-y-auto"
+          >
+            <LeftSidebar isCollapsed={false} />
+          </motion.aside>
+        )}
+      </AnimatePresence>
+
+      {/* Mobile Right Sidebar Overlay */}
+      <AnimatePresence>
+        {window.innerWidth < 1024 && isRightSidebarOpen && currentTrack && (
+          <motion.aside
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            className="fixed inset-y-0 right-0 w-[320px] bg-surface z-[70] shadow-2xl border-l border-border overflow-y-auto"
+          >
+            <RightSidebar isCollapsed={false} />
+          </motion.aside>
+        )}
+      </AnimatePresence>
 
       {/* Bottom Mini Player - Sticky */}
       <AnimatePresence mode="wait">

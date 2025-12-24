@@ -42,6 +42,7 @@ export class MediaLibrary implements IMediaLibrary {
   private lastScanPaths: Set<string> = new Set();
 
   private cancelScanFlag = false;
+  private currentScanPromise: Promise<void> | null = null;
 
   constructor() {
     console.log('📚 Sonántica Media Library initialized (Enhanced)');
@@ -73,50 +74,61 @@ export class MediaLibrary implements IMediaLibrary {
   /**
    * Scan for media files with change detection
    */
-  async scan(paths: string[]): Promise<void> {
-    this.cancelScanFlag = false;
-    this.scanProgress = {
-      status: 'scanning',
-      filesScanned: 0,
-      filesFound: 0,
-    };
-
-    this.emit(LIBRARY_EVENTS.SCAN_START, {});
-
-    try {
-      const scannedPaths = new Set<string>();
-
-      // Scan all paths
-      for (const path of paths) {
-        if (this.cancelScanFlag) break;
-        await this.scanPathRecursive(path, scannedPaths);
-      }
-
-      if (this.cancelScanFlag) {
-           console.log('🛑 Scan cancelled by user');
-           return;
-      }
-
-      // Remove tracks that no longer exist
-      this.removeOrphanedTracks(scannedPaths);
-
-      // Enrich tracks with album art if missing
-      this.enrichLibrary();
-
-      this.scanProgress.status = 'complete';
-      this.emit(LIBRARY_EVENTS.SCAN_COMPLETE, {
-        tracksFound: this.tracks.size,
-      });
-
-      this.emit(LIBRARY_EVENTS.LIBRARY_UPDATED, {});
-
-      console.log(`✅ Scan complete: ${this.tracks.size} tracks found`);
-    } catch (error) {
-      this.scanProgress.status = 'error';
-      this.scanProgress.error = error instanceof Error ? error.message : 'Unknown error';
-      this.emit(LIBRARY_EVENTS.SCAN_ERROR, { error });
-      throw error;
+   async scan(paths: string[]): Promise<void> {
+    if (this.currentScanPromise) {
+      console.log('⏳ MediaLibrary: Scan already in progress, queuing/returning current promise');
+      return this.currentScanPromise;
     }
+
+    this.currentScanPromise = (async () => {
+      this.cancelScanFlag = false;
+      this.scanProgress = {
+        status: 'scanning',
+        filesScanned: 0,
+        filesFound: 0,
+      };
+
+      this.emit(LIBRARY_EVENTS.SCAN_START, {});
+
+      try {
+        const scannedPaths = new Set<string>();
+
+        // Scan all paths
+        for (const path of paths) {
+          if (this.cancelScanFlag) break;
+          await this.scanPathRecursive(path, scannedPaths);
+        }
+
+        if (this.cancelScanFlag) {
+          console.log('🛑 Scan cancelled by user');
+          return;
+        }
+
+        // Remove tracks that no longer exist
+        this.removeOrphanedTracks(scannedPaths);
+
+        // Enrich tracks with album art if missing
+        this.enrichLibrary();
+
+        this.scanProgress.status = 'complete';
+        this.emit(LIBRARY_EVENTS.SCAN_COMPLETE, {
+          tracksFound: this.tracks.size,
+        });
+
+        this.emit(LIBRARY_EVENTS.LIBRARY_UPDATED, {});
+
+        console.log(`✅ Scan complete: ${this.tracks.size} tracks found`);
+      } catch (error) {
+        this.scanProgress.status = 'error';
+        this.scanProgress.error = error instanceof Error ? error.message : 'Unknown error';
+        this.emit(LIBRARY_EVENTS.SCAN_ERROR, { error });
+        throw error;
+      } finally {
+        this.currentScanPromise = null;
+      }
+    })();
+
+    return this.currentScanPromise;
   }
 
   /**
@@ -371,7 +383,7 @@ export class MediaLibrary implements IMediaLibrary {
     }
 
     return {
-      id: generateId(),
+      id: generateStableId(path),
       path,
       filename,
       mimeType: this.getMimeType(ext),
@@ -443,7 +455,13 @@ export class MediaLibrary implements IMediaLibrary {
   /**
    * Add track to library
    */
-  private addTrack(track: Track): void {
+   private addTrack(track: Track): void {
+    // Prevent duplicates: If this path already exists with a different ID, remove the old one first
+    const existingId = this.tracksByPath.get(track.path);
+    if (existingId && existingId !== track.id) {
+      this.tracks.delete(existingId);
+    }
+
     this.tracks.set(track.id, track);
     this.tracksByPath.set(track.path, track.id);
     this.scanProgress.filesScanned++;

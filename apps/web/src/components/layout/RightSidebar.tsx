@@ -293,12 +293,19 @@ export function RightSidebar({ isCollapsed }: RightSidebarProps) {
                   <QueueItem
                     key={track.id}
                     track={track}
+                    index={index}
                     isCollapsed={isCollapsed}
                     onPlay={async () => {
                       const queueStore = useQueueStore.getState();
                       queueStore.jumpTo(queueStore.currentIndex + index + 1);
                       await loadTrack(track);
                       await play();
+                    }}
+                    onRemove={() => {
+                      const queueStore = useQueueStore.getState();
+                      queueStore.removeFromQueue(
+                        queueStore.currentIndex + index + 1
+                      );
                     }}
                     getExtension={getExtension}
                     getBadgeClass={getBadgeClass}
@@ -319,7 +326,9 @@ export function RightSidebar({ isCollapsed }: RightSidebarProps) {
 
 interface QueueItemProps {
   track: any;
+  index: number;
   onPlay: () => void;
+  onRemove: () => void;
   getExtension: (url: string) => string;
   getBadgeClass: (ext: string) => string;
   isCollapsed?: boolean;
@@ -328,6 +337,7 @@ interface QueueItemProps {
 function QueueItem({
   track,
   onPlay,
+  onRemove,
   getExtension,
   getBadgeClass,
   isCollapsed,
@@ -335,6 +345,8 @@ function QueueItem({
   const dragControls = useDragControls();
   const ext = getExtension(track.url);
   const [isHovered, setIsHovered] = useState(false);
+  const [isRemoving, setIsRemoving] = useState(false);
+  const [dragProgress, setDragProgress] = useState(0); // 0 to 1
 
   return (
     <Reorder.Item
@@ -347,9 +359,26 @@ function QueueItem({
       exit="exit"
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => setIsHovered(false)}
+      onDrag={(_, info) => {
+        // Track X offset to detect swipe-to-delete
+        // Right sidebar is on the right, dragging LEFT (negative X) means dragging OUTSIDE
+        const threshold = -80;
+        const progress = Math.min(Math.max(info.offset.x / threshold, 0), 1);
+        setDragProgress(progress);
+        setIsRemoving(info.offset.x < threshold);
+      }}
+      onDragEnd={(_, info) => {
+        if (info.offset.x < -80) {
+          onRemove();
+        }
+        setDragProgress(0);
+        setIsRemoving(false);
+      }}
       whileDrag={{
-        scale: 1.02,
-        backgroundColor: "rgba(255, 255, 255, 0.08)",
+        scale: isRemoving ? 0.95 : 1.02,
+        backgroundColor: isRemoving
+          ? "rgba(239, 68, 68, 0.2)"
+          : "rgba(255, 255, 255, 0.08)",
         boxShadow:
           "0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
         zIndex: 50,
@@ -362,15 +391,42 @@ function QueueItem({
           : "p-2 rounded-xl border border-transparent hover:border-white/10 hover:bg-white/5 gap-2"
       )}
     >
-      {/* Drag Handle */}
+      {/* Drag Handle - Larger touch target */}
       {!isCollapsed && (
         <div
           onPointerDown={(e) => dragControls.start(e)}
-          className="w-5 h-10 flex items-center justify-center text-text-muted/20 group-hover:text-text-muted/60 cursor-grab active:cursor-grabbing transition-colors"
+          className="w-8 h-12 -ml-2 flex items-center justify-center text-text-muted/20 group-hover:text-text-muted/60 cursor-grab active:cursor-grabbing transition-colors touch-none"
         >
-          <IconGripVertical size={16} stroke={1.5} />
+          <IconGripVertical size={18} stroke={1.5} />
         </div>
       )}
+
+      {/* Removal Visual Cue (Trash Icon Overlay) */}
+      <AnimatePresence>
+        {dragProgress > 0.2 && (
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: dragProgress, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            className={cn(
+              "absolute inset-y-0 right-0 w-20 flex items-center justify-center rounded-r-xl transition-colors",
+              isRemoving
+                ? "bg-red-500/40 text-white"
+                : "bg-red-500/10 text-red-500"
+            )}
+          >
+            <motion.div
+              animate={{
+                scale: isRemoving ? 1.2 : 1,
+                rotate: isRemoving ? [0, -10, 10, 0] : 0,
+              }}
+              transition={{ repeat: isRemoving ? Infinity : 0, duration: 0.3 }}
+            >
+              <IconTrash size={20} stroke={2} />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div
         className={cn(
