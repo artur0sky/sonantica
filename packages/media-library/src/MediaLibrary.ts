@@ -322,6 +322,7 @@ export class MediaLibrary implements IMediaLibrary {
     let coverArt: string | undefined;
     let genre: string | string[] | undefined;
     let albumArtist: string | undefined;
+    let duration: number | undefined;
 
     if (parts.length >= 3) {
       artist = parts[parts.length - 3];
@@ -369,7 +370,9 @@ export class MediaLibrary implements IMediaLibrary {
         if (extractedMetadata.trackNumber) trackNumber = extractedMetadata.trackNumber;
         if (extractedMetadata.coverArt) coverArt = extractedMetadata.coverArt;
         if (extractedMetadata.genre) genre = extractedMetadata.genre;
-        if (extractedMetadata.albumArtist) albumArtist = extractedMetadata.albumArtist;
+        if (extractedMetadata.albumArtist)
+          albumArtist = extractedMetadata.albumArtist;
+        if (extractedMetadata.duration) duration = extractedMetadata.duration;
         
         console.log(`📊 Metadata extracted for ${filename}:`, {
           title,
@@ -397,6 +400,7 @@ export class MediaLibrary implements IMediaLibrary {
         coverArt,
         genre,
         albumArtist,
+        duration,
       },
       addedAt: new Date(),
       lastModified: mtime ? new Date(mtime) : new Date(),

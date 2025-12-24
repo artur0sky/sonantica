@@ -13,7 +13,7 @@ import { motion } from "framer-motion";
 import { cn } from "@sonantica/shared";
 import { usePlayerStore } from "@sonantica/player-core";
 import { useLibraryStore } from "@sonantica/media-library";
-import { PlaybackState, formatArtists } from "@sonantica/shared";
+import { PlaybackState, formatArtists, formatTime } from "@sonantica/shared";
 import { useEffect } from "react";
 
 interface TrackItemProps {
@@ -134,8 +134,7 @@ export function TrackItem({ track, onClick }: TrackItemProps) {
       {/* Duration (if available) - Optional */}
       {track.metadata?.duration && (
         <div className="text-sm text-text-muted font-mono variant-numeric-tabular">
-          {Math.floor(track.metadata.duration / 60)}:
-          {(track.metadata.duration % 60).toString().padStart(2, "0")}
+          {formatTime(track.metadata.duration)}
         </div>
       )}
     </motion.div>
