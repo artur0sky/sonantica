@@ -22,6 +22,9 @@ export interface QueueState {
   // Repeat state
   repeatMode: RepeatMode;
   
+  // Internal
+  _hasRestored: boolean;
+  
   // Actions
   setQueue: (tracks: MediaSource[], startIndex?: number) => void;
   addToQueue: (tracks: MediaSource | MediaSource[]) => void;
@@ -40,11 +43,44 @@ export interface QueueState {
   toggleRepeat: () => void;
   
   // Getters
-  getCurrentTrack: () => MediaSource | null;
-  getNextTrack: () => MediaSource | null;
-  getPreviousTrack: () => MediaSource | null;
   getRemainingTracks: () => MediaSource[];
   reorderUpcoming: (newUpcoming: MediaSource[]) => void;
+  
+  // Persistence callbacks
+  onSave?: (data: { 
+    queue: MediaSource[]; 
+    currentIndex: number; 
+    isShuffled: boolean;
+    originalQueue: MediaSource[];
+    repeatMode: RepeatMode;
+  }) => Promise<void>;
+  onLoad?: () => Promise<{ 
+    queue: MediaSource[]; 
+    currentIndex: number; 
+    isShuffled: boolean;
+    originalQueue: MediaSource[];
+    repeatMode: RepeatMode;
+  } | null>;
+  
+  // Callback setters
+  setOnSave: (callback: (data: { 
+    queue: MediaSource[]; 
+    currentIndex: number; 
+    isShuffled: boolean;
+    originalQueue: MediaSource[];
+    repeatMode: RepeatMode;
+  }) => Promise<void>) => void;
+  setOnLoad: (callback: () => Promise<{ 
+    queue: MediaSource[]; 
+    currentIndex: number; 
+    isShuffled: boolean;
+    originalQueue: MediaSource[];
+    repeatMode: RepeatMode;
+  } | null>) => void;
+  
+  // Internal
+  _initialize: () => void;
+  restore: () => Promise<void>;
 }
 
 /**
@@ -66,6 +102,7 @@ export const useQueueStore = create<QueueState>((set, get) => ({
   originalQueue: [],
   isShuffled: false,
   repeatMode: 'off',
+  _hasRestored: false,
 
   setQueue: (tracks: MediaSource[], startIndex = 0) => {
     set({
@@ -73,7 +110,10 @@ export const useQueueStore = create<QueueState>((set, get) => ({
       originalQueue: tracks,
       currentIndex: startIndex,
       isShuffled: false,
+      _hasRestored: true, // New interaction overrides restoration
     });
+    
+    (get() as any)._save();
   },
 
   addToQueue: (tracks: MediaSource | MediaSource[]) => {
@@ -82,6 +122,7 @@ export const useQueueStore = create<QueueState>((set, get) => ({
       queue: [...state.queue, ...tracksArray],
       originalQueue: [...state.originalQueue, ...tracksArray],
     }));
+    (get() as any)._save();
   },
 
   removeFromQueue: (index: number) => {
@@ -97,6 +138,7 @@ export const useQueueStore = create<QueueState>((set, get) => ({
         currentIndex: newIndex,
       };
     });
+    (get() as any)._save();
   },
 
   clearQueue: () => {
@@ -106,6 +148,7 @@ export const useQueueStore = create<QueueState>((set, get) => ({
       currentIndex: -1,
       isShuffled: false,
     });
+    (get() as any)._save();
   },
 
   next: () => {
@@ -120,13 +163,16 @@ export const useQueueStore = create<QueueState>((set, get) => ({
     if (state.currentIndex < state.queue.length - 1) {
       const newIndex = state.currentIndex + 1;
       set({ currentIndex: newIndex });
+      (get() as any)._save();
       return state.queue[newIndex];
     }
     
     // At end of queue
     if (state.repeatMode === 'all' && state.queue.length > 0) {
       // Loop back to start
-      set({ currentIndex: 0 });
+      const newIndex = 0;
+      set({ currentIndex: newIndex });
+      (get() as any)._save();
       return state.queue[0];
     }
     
@@ -138,6 +184,7 @@ export const useQueueStore = create<QueueState>((set, get) => ({
     if (state.currentIndex > 0) {
       const newIndex = state.currentIndex - 1;
       set({ currentIndex: newIndex });
+      (get() as any)._save();
       return state.queue[newIndex];
     }
     return null;
@@ -147,6 +194,7 @@ export const useQueueStore = create<QueueState>((set, get) => ({
     const state = get();
     if (index >= 0 && index < state.queue.length) {
       set({ currentIndex: index });
+      (get() as any)._save();
     }
   },
 
@@ -180,6 +228,7 @@ export const useQueueStore = create<QueueState>((set, get) => ({
         isShuffled: true,
       });
     }
+    (get() as any)._save();
   },
 
   toggleRepeat: () => {
@@ -189,6 +238,7 @@ export const useQueueStore = create<QueueState>((set, get) => ({
       const nextIndex = (currentIndex + 1) % modes.length;
       return { repeatMode: modes[nextIndex] };
     });
+    (get() as any)._save();
   },
 
   getCurrentTrack: () => {
@@ -218,5 +268,65 @@ export const useQueueStore = create<QueueState>((set, get) => ({
         queue: [...before, ...newUpcoming],
       };
     });
+    (get() as any)._save();
   },
+
+  setOnSave: (callback: any) => set({ onSave: callback }),
+  setOnLoad: (callback: any) => {
+    set({ onLoad: callback });
+    // Auto-trigger restore when callback is set
+    (get() as any).restore();
+  },
+  _initialize: () => {
+    // Basic setup if any
+  },
+
+  _save: () => {
+    const { onSave, queue, currentIndex, isShuffled, originalQueue, repeatMode, _hasRestored } = get();
+    if (onSave && _hasRestored) {
+      // console.log('💾 [QueueStore] Auto-saving queue state');
+      onSave({ queue, currentIndex, isShuffled, originalQueue, repeatMode });
+    }
+  },
+
+  restore: async () => {
+    // Restore from cache
+    try {
+      const { onLoad } = get();
+      if (!onLoad) {
+        set({ _hasRestored: true });
+        return;
+      }
+
+      console.log('🔄 [QueueStore] Starting restoration...');
+      const cached = await onLoad();
+      
+      if (cached && cached.queue && Array.isArray(cached.queue)) {
+        console.log(`✅ [QueueStore] Restored ${cached.queue.length} tracks. Index: ${cached.currentIndex}`);
+        set({
+          queue: cached.queue,
+          originalQueue: cached.originalQueue || cached.queue,
+          currentIndex: cached.currentIndex ?? -1,
+          isShuffled: cached.isShuffled ?? false,
+          repeatMode: cached.repeatMode ?? 'off',
+          _hasRestored: true
+        });
+      } else {
+        console.log('ℹ️ [QueueStore] No valid cached queue found');
+        set({ _hasRestored: true });
+      }
+    } catch (error) {
+      console.warn('❌ [QueueStore] Restoration failed:', error);
+      set({ _hasRestored: true });
+    }
+  }
 }));
+
+export interface QueueStoreInternal extends QueueState {
+    _save: () => void;
+}
+
+
+// Initialize on store creation
+useQueueStore.getState()._initialize();
+

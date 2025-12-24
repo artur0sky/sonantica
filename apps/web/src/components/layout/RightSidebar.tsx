@@ -21,6 +21,7 @@ import {
 import type { Variants } from "framer-motion";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { usePlayerStore, useQueueStore } from "@sonantica/player-core";
+import { useLibraryStore } from "@sonantica/media-library";
 import { useUIStore } from "@sonantica/ui";
 import { Button, Badge } from "@sonantica/ui";
 import { formatArtists, formatTime, cn } from "@sonantica/shared";
@@ -53,9 +54,16 @@ export function RightSidebar({ isCollapsed }: RightSidebarProps) {
   const currentTrack = usePlayerStore((s) => s.currentTrack);
   const { loadTrack, play } = usePlayerStore();
   const { toggleQueue } = useUIStore();
-  const { getRemainingTracks, clearQueue, reorderUpcoming } = useQueueStore();
+  const {
+    getRemainingTracks,
+    clearQueue,
+    reorderUpcoming,
+    queue: fullQueue,
+    currentIndex,
+  } = useQueueStore();
+  const libraryTracks = useLibraryStore((s) => s.tracks);
 
-  const queue = getRemainingTracks();
+  const upcomingQueue = getRemainingTracks();
 
   // Infinite Scroll State
   const [displayedCount, setDisplayedCount] = useState(50);
@@ -65,7 +73,9 @@ export function RightSidebar({ isCollapsed }: RightSidebarProps) {
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting) {
-          setDisplayedCount((prev) => Math.min(prev + 50, queue.length));
+          setDisplayedCount((prev) =>
+            Math.min(prev + 50, upcomingQueue.length)
+          );
         }
       },
       { threshold: 0.1, rootMargin: "100px" }
@@ -76,16 +86,16 @@ export function RightSidebar({ isCollapsed }: RightSidebarProps) {
     }
 
     return () => observer.disconnect();
-  }, [queue.length]);
+  }, [upcomingQueue.length]);
 
   const visibleQueue = useMemo(
-    () => queue.slice(0, displayedCount),
-    [queue, displayedCount]
+    () => upcomingQueue.slice(0, displayedCount),
+    [upcomingQueue, displayedCount]
   );
 
   const handleReorder = (newVisibleQueue: any[]) => {
     // Merge reordered visible tracks with the rest of the upcoming tracks
-    const remaining = queue.slice(displayedCount);
+    const remaining = upcomingQueue.slice(displayedCount);
     reorderUpcoming([...newVisibleQueue, ...remaining]);
   };
 
@@ -127,14 +137,21 @@ export function RightSidebar({ isCollapsed }: RightSidebarProps) {
         )}
       >
         {!isCollapsed && (
-          <h2 className="text-lg font-semibold truncate tracking-tight">
-            Queue
-          </h2>
+          <div className="flex flex-col">
+            <h2 className="text-lg font-semibold truncate tracking-tight">
+              Queue
+            </h2>
+            {fullQueue.length > 0 && (
+              <span className="text-[10px] text-text-muted font-mono uppercase tracking-wider">
+                {currentIndex + 1} / {fullQueue.length} tracks
+              </span>
+            )}
+          </div>
         )}
         <div
           className={cn("flex items-center gap-2", isCollapsed && "flex-col")}
         >
-          {queue.length > 0 && (
+          {upcomingQueue.length > 0 && (
             <Button
               variant="ghost"
               size="sm"
@@ -203,23 +220,30 @@ export function RightSidebar({ isCollapsed }: RightSidebarProps) {
                         : "w-12 h-12 bg-surface border border-border"
                     )}
                   >
-                    {currentTrack.metadata?.coverArt ? (
-                      <img
-                        src={currentTrack.metadata.coverArt}
-                        alt="Cover"
-                        className="w-full h-full object-cover select-none pointer-events-none"
-                        draggable="false"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <IconMusic
-                          size={20}
-                          className="text-text-muted/30"
-                          stroke={1.5}
+                    {/* Re-hydrate coverArt from library if missing in thinned persistence */}
+                    {(() => {
+                      const coverArt =
+                        currentTrack.metadata?.coverArt ||
+                        libraryTracks.find((t) => t.id === currentTrack.id)
+                          ?.metadata?.coverArt;
+
+                      return coverArt ? (
+                        <img
+                          src={coverArt}
+                          alt="Cover"
+                          className="w-full h-full object-cover select-none pointer-events-none"
+                          draggable="false"
                         />
-                      </div>
-                    )}
-                    <div className="absolute inset-0 bg-accent/10 animate-pulse" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <IconMusic
+                            size={20}
+                            className="text-text-muted/30"
+                            stroke={1.5}
+                          />
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {!isCollapsed && (
@@ -247,7 +271,7 @@ export function RightSidebar({ isCollapsed }: RightSidebarProps) {
           )}
 
           <AnimatePresence mode="popLayout">
-            {queue.length === 0 ? (
+            {upcomingQueue.length === 0 ? (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -265,7 +289,7 @@ export function RightSidebar({ isCollapsed }: RightSidebarProps) {
                 onReorder={handleReorder}
                 className="space-y-1.5"
               >
-                {visibleQueue.map((track, index) => (
+                {visibleQueue.map((track: any, index: number) => (
                   <QueueItem
                     key={track.id}
                     track={track}
@@ -281,7 +305,7 @@ export function RightSidebar({ isCollapsed }: RightSidebarProps) {
                   />
                 ))}
                 {/* Sentinel */}
-                {displayedCount < queue.length && (
+                {displayedCount < upcomingQueue.length && (
                   <div ref={observerTarget} className="py-2 h-4" />
                 )}
               </Reorder.Group>
@@ -358,18 +382,31 @@ function QueueItem({
         onClick={onPlay}
         onPointerDown={(e) => isCollapsed && dragControls.start(e)}
       >
-        {track.metadata?.coverArt ? (
-          <img
-            src={track.metadata.coverArt}
-            alt="Cover"
-            className="w-full h-full object-cover transition-transform group-hover:scale-110 select-none pointer-events-none"
-            draggable="false"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <IconMusic size={16} className="text-text-muted/30" stroke={1.5} />
-          </div>
-        )}
+        {/* Re-hydrate coverArt from library store */}
+        {(() => {
+          // Optimization: This lookup happens per visible item
+          const libraryTracks = useLibraryStore.getState().tracks;
+          const coverArt =
+            track.metadata?.coverArt ||
+            libraryTracks.find((t) => t.id === track.id)?.metadata?.coverArt;
+
+          return coverArt ? (
+            <img
+              src={coverArt}
+              alt="Cover"
+              className="w-full h-full object-cover transition-transform group-hover:scale-110 select-none pointer-events-none"
+              draggable="false"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <IconMusic
+                size={16}
+                className="text-text-muted/30"
+                stroke={1.5}
+              />
+            </div>
+          );
+        })()}
         {/* Play Icon on Hover */}
         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity cursor-pointer">
           <IconPlayerPlay size={18} className="text-white fill-current" />

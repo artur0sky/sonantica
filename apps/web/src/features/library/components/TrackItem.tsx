@@ -12,6 +12,7 @@ import {
 import { motion } from "framer-motion";
 import { cn } from "@sonantica/shared";
 import { usePlayerStore } from "@sonantica/player-core";
+import { useLibraryStore } from "@sonantica/media-library";
 import { PlaybackState, formatArtists } from "@sonantica/shared";
 
 interface TrackItemProps {
@@ -47,17 +48,28 @@ export function TrackItem({ track, onClick }: TrackItemProps) {
       {/* Album Art / Icon */}
       <div className="w-12 h-12 flex-shrink-0 relative rounded-md overflow-hidden bg-surface-elevated border border-border">
         {/* Cover Art or Music Icon */}
-        {track.metadata?.coverArt ? (
-          <img
-            src={track.metadata.coverArt}
-            alt="Cover"
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <IconMusic size={20} className="text-text-muted/30" stroke={1.5} />
-          </div>
-        )}
+        {(() => {
+          const libraryTracks = useLibraryStore.getState().tracks;
+          const coverArt =
+            track.metadata?.coverArt ||
+            libraryTracks.find((t) => t.id === track.id)?.metadata?.coverArt;
+
+          return coverArt ? (
+            <img
+              src={coverArt}
+              alt="Cover"
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <IconMusic
+                size={20}
+                className="text-text-muted/30"
+                stroke={1.5}
+              />
+            </div>
+          );
+        })()}
 
         {/* Play/Pause Overlay (Hover) */}
         <div

@@ -24,9 +24,10 @@ export interface PlayerState {
   volume: number;
   muted: boolean;
   
-  // Callbacks (injected from app layer)
   onNext?: () => MediaSource | null;
   onPrevious?: () => MediaSource | null;
+  onSave?: (data: { currentTrack: MediaSource | null; currentTime: number; volume: number }) => Promise<void>;
+  onLoad?: () => Promise<{ currentTrack: MediaSource | null; currentTime: number; volume: number } | null>;
   
   // Actions
   loadTrack: (source: MediaSource) => Promise<void>;
@@ -41,15 +42,18 @@ export interface PlayerState {
   next: () => Promise<void>;
   previous: () => Promise<void>;
   
-  // Callback setters
   setOnNext: (callback: () => MediaSource | null) => void;
   setOnPrevious: (callback: () => MediaSource | null) => void;
+  setOnSave: (callback: (data: { currentTrack: MediaSource | null; currentTime: number; volume: number }) => Promise<void>) => void;
+  setOnLoad: (callback: () => Promise<{ currentTrack: MediaSource | null; currentTime: number; volume: number } | null>) => void;
   
   // Audio element accessor (for analyzer)
   getAudioElement: () => HTMLAudioElement | null;
   
   // Internal
+  _hasRestored: boolean;
   _initialize: () => void;
+  restore: () => Promise<void>;
 }
 
 export const usePlayerStore = create<PlayerState>((set, get) => {
@@ -64,6 +68,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     buffered: 0,
     volume: 0.7,
     muted: false,
+    _hasRestored: false,
     onNext: undefined,
     onPrevious: undefined,
 
@@ -97,7 +102,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
         }
         
         await player.load(enhancedSource);
-        set({ currentTrack: enhancedSource });
+        set({ currentTrack: enhancedSource, _hasRestored: true });
       } catch (error) {
         console.error('Failed to load track:', error);
         set({ state: PlaybackState.ERROR });
@@ -172,8 +177,17 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     setOnPrevious: (callback: () => MediaSource | null) => {
       set({ onPrevious: callback });
     },
+    
+    setOnSave: (callback: (data: { currentTrack: MediaSource | null; currentTime: number; volume: number }) => Promise<void>) => {
+      set({ onSave: callback });
+    },
 
-    getAudioElement: () => {
+    setOnLoad: (callback: () => Promise<{ currentTrack: MediaSource | null; currentTime: number; volume: number } | null>) => {
+      set({ onLoad: callback });
+      // Auto-trigger restore when callback is set
+      get().restore();
+    },
+      getAudioElement: () => {
       return player.getAudioElement();
     },
 
@@ -187,6 +201,13 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       // Subscribe to player events
       player.on(PLAYER_EVENTS.STATE_CHANGE, (event: any) => {
         set({ state: event.data.newState });
+        
+        // Save state immediately on pause or stop
+        const { currentTrack, currentTime, volume, onSave, _hasRestored } = get();
+        if (_hasRestored && onSave && (event.data.newState === PlaybackState.PAUSED || event.data.newState === PlaybackState.STOPPED)) {
+          // console.log('💾 Saving state on:', event.data.newState);
+          onSave({ currentTrack, currentTime, volume });
+        }
       });
 
       player.on(PLAYER_EVENTS.TIME_UPDATE, (event: any) => {
@@ -208,9 +229,50 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
         await get().next();
       });
 
+      // Periodic persistence (every 5 seconds)
+      setInterval(() => {
+        const { currentTrack, currentTime, volume, onSave, state, _hasRestored } = get();
+        if (_hasRestored && onSave && (state === PlaybackState.PLAYING || state === PlaybackState.PAUSED)) {
+          onSave({ currentTrack, currentTime, volume });
+        }
+      }, 5000);
+
       // Set initial volume
       player.setVolume(0.7);
     },
+
+    restore: async () => {
+      try {
+        const { onLoad } = get();
+        if (!onLoad) {
+          set({ _hasRestored: true });
+          return;
+        }
+
+        const cached = await onLoad();
+        if (cached && cached.currentTrack) {
+          console.log('🔄 [PlayerStore] Restoring session:', cached.currentTrack.metadata?.title);
+          
+          // Use loadTrack but we'll seek after
+          await get().loadTrack(cached.currentTrack);
+          
+          // Force seek after load
+          if (cached.currentTime > 0) {
+            player.seek(cached.currentTime);
+            set({ currentTime: cached.currentTime });
+          }
+          
+          if (cached.volume !== undefined) {
+            get().setVolume(cached.volume);
+          }
+        }
+        set({ _hasRestored: true });
+      } catch (error) {
+        console.warn('❌ [PlayerStore] Restoration failed:', error);
+        set({ _hasRestored: true });
+      }
+    },
+
   };
 });
 

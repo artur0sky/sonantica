@@ -17,6 +17,7 @@ import { Header } from "./Header";
 import { LeftSidebar } from "./LeftSidebar";
 import { RightSidebar } from "./RightSidebar";
 import { useWaveformLoader } from "../../features/player/hooks/useWaveformLoader";
+import { PlaybackPersistence } from "../../features/player/components/PlaybackPersistence";
 import { useCallback, useRef, useEffect } from "react";
 
 interface MainLayoutProps {
@@ -96,6 +97,9 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   return (
     <div className="h-screen flex flex-col bg-bg text-text overflow-hidden relative">
+      {/* Persistence Layer */}
+      <PlaybackPersistence />
+
       {/* Header */}
       <Header />
 

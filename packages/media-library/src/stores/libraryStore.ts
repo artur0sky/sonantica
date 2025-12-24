@@ -195,12 +195,23 @@ export const useLibraryStore = create<LibraryState>((set, get) => {
 
       // Real-time updates for new tracks found during scan
       let updateTimeout: ReturnType<typeof setTimeout> | null = null;
+      let tracksSinceLastSave = 0;
+
       library.on(LIBRARY_EVENTS.TRACK_ADDED, (data: any) => {
+        tracksSinceLastSave++;
+        
         if (!updateTimeout) {
           updateTimeout = setTimeout(() => {
-            get()._updateLibrary(false);
+            // Persist periodically during scan (every 15 tracks) 
+            // to ensure progress is saved for large libraries
+            const shouldPersist = tracksSinceLastSave >= 15;
+            if (shouldPersist) {
+              tracksSinceLastSave = 0;
+            }
+            
+            get()._updateLibrary(shouldPersist);
             updateTimeout = null;
-          }, 200); // Batched UI update for faster feedback
+          }, 500); // Batched UI update
         }
       });
 
