@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@sonantica/audio-analyzer": "workspace:*",
+    "@sonantica/dsp": "workspace:*",
     "@sonantica/lyrics": "workspace:*",
     "@sonantica/media-library": "workspace:*",
     "@sonantica/metadata": "workspace:*",
