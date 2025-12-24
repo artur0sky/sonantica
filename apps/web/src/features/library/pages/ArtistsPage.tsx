@@ -8,6 +8,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { useLibraryStore } from "@sonantica/media-library";
 import { ArtistCard } from "../components/ArtistCard";
 import { IconMicrophone, IconSearch } from "@tabler/icons-react";
+import { AlphabetNavigator } from "@sonantica/ui";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 
@@ -65,6 +66,21 @@ export function ArtistsPage() {
     setLocation(`/artist/${artist.id}`);
   };
 
+  const handleLetterClick = (index: number) => {
+    // 1. Ensure the item is within displayedCount
+    if (index >= displayedCount) {
+      setDisplayedCount(index + ITEMS_PER_PAGE);
+    }
+
+    // 2. Schedule scroll after render
+    setTimeout(() => {
+      const element = document.getElementById(`artist-${index}`);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }, 100);
+  };
+
   return (
     <div className="max-w-6xl mx-auto p-6 pb-32">
       {/* Header */}
@@ -119,12 +135,13 @@ export function ArtistsPage() {
             animate="visible"
             className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"
           >
-            {visibleArtists.map((artist: any) => (
-              <ArtistCard
-                key={artist.id}
-                artist={artist}
-                onClick={() => handleArtistClick(artist)}
-              />
+            {visibleArtists.map((artist: any, index: number) => (
+              <div key={artist.id} id={`artist-${index}`}>
+                <ArtistCard
+                  artist={artist}
+                  onClick={() => handleArtistClick(artist)}
+                />
+              </div>
             ))}
 
             {/* Sentinel - placed outside grid or spanning full width if possible, 
@@ -145,6 +162,13 @@ export function ArtistsPage() {
         >
           Loading more artists...
         </div>
+      )}
+      {/* Navigator */}
+      {filteredArtists.length > 50 && (
+        <AlphabetNavigator
+          items={filteredArtists}
+          onLetterClick={handleLetterClick}
+        />
       )}
     </div>
   );

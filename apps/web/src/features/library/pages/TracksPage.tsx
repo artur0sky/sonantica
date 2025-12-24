@@ -19,6 +19,7 @@ import {
   IconSortDescending,
   IconPlayerStop,
 } from "@tabler/icons-react";
+import { AlphabetNavigator } from "@sonantica/ui";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   playFromContext,
@@ -166,6 +167,19 @@ export function TracksPage() {
     } catch (error) {
       console.error("Failed to play track:", error);
     }
+  };
+
+  const handleLetterClick = (index: number) => {
+    if (index >= displayedCount) {
+      setDisplayedCount(index + ITEMS_PER_PAGE);
+    }
+
+    setTimeout(() => {
+      const element = document.getElementById(`track-${index}`);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }, 100);
   };
 
   const handlePlayAll = async () => {
@@ -360,11 +374,12 @@ export function TracksPage() {
             className="space-y-1"
           >
             {visibleTracks.map((track: any, index: number) => (
-              <TrackItem
-                key={track.id}
-                track={track}
-                onClick={() => handleTrackClick(track, index)}
-              />
+              <div key={track.id} id={`track-${index}`}>
+                <TrackItem
+                  track={track}
+                  onClick={() => handleTrackClick(track, index)}
+                />
+              </div>
             ))}
 
             {/* Sentinel for Infinite Scroll */}
@@ -383,6 +398,26 @@ export function TracksPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Alphabet Navigator */}
+      {sortedTracks.length > 50 &&
+        (sortField === "title" ||
+          sortField === "artist" ||
+          sortField === "album") && (
+          <AlphabetNavigator
+            items={sortedTracks.map((t) => ({
+              name:
+                sortField === "title"
+                  ? t.metadata?.title || t.filename
+                  : sortField === "artist"
+                  ? (Array.isArray(t.metadata?.artist)
+                      ? t.metadata.artist[0]
+                      : t.metadata?.artist) || "Unknown Artist"
+                  : t.metadata?.album || "Unknown Album",
+            }))}
+            onLetterClick={handleLetterClick}
+          />
+        )}
     </div>
   );
 }

@@ -8,6 +8,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { useLibraryStore } from "@sonantica/media-library";
 import { AlbumCard } from "../components/AlbumCard";
 import { IconDisc, IconSearch } from "@tabler/icons-react";
+import { AlphabetNavigator } from "@sonantica/ui";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 
@@ -65,6 +66,19 @@ export function AlbumsPage() {
     setLocation(`/album/${album.id}`);
   };
 
+  const handleLetterClick = (index: number) => {
+    if (index >= displayedCount) {
+      setDisplayedCount(index + ITEMS_PER_PAGE);
+    }
+
+    setTimeout(() => {
+      const element = document.getElementById(`album-${index}`);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }, 100);
+  };
+
   return (
     <div className="max-w-6xl mx-auto p-6 pb-32">
       {/* Header */}
@@ -119,12 +133,13 @@ export function AlbumsPage() {
             animate="visible"
             className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"
           >
-            {visibleAlbums.map((album: any) => (
-              <AlbumCard
-                key={album.id}
-                album={album}
-                onClick={() => handleAlbumClick(album)}
-              />
+            {visibleAlbums.map((album: any, index: number) => (
+              <div key={album.id} id={`album-${index}`}>
+                <AlbumCard
+                  album={album}
+                  onClick={() => handleAlbumClick(album)}
+                />
+              </div>
             ))}
           </motion.div>
         )}
@@ -138,6 +153,13 @@ export function AlbumsPage() {
         >
           Loading more albums...
         </div>
+      )}
+      {/* Navigator */}
+      {filteredAlbums.length > 50 && (
+        <AlphabetNavigator
+          items={filteredAlbums}
+          onLetterClick={handleLetterClick}
+        />
       )}
     </div>
   );
