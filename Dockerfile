@@ -14,6 +14,7 @@ WORKDIR /app
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc tsconfig.base.json ./
 COPY packages/shared/package.json ./packages/shared/
 COPY packages/player-core/package.json ./packages/player-core/
+COPY packages/dsp/package.json ./packages/dsp/
 COPY packages/audio-analyzer/package.json ./packages/audio-analyzer/
 COPY packages/media-library/package.json ./packages/media-library/
 COPY packages/metadata/package.json ./packages/metadata/
@@ -27,6 +28,7 @@ RUN pnpm install --frozen-lockfile
 # Copy source code
 COPY packages/shared ./packages/shared
 COPY packages/player-core ./packages/player-core
+COPY packages/dsp ./packages/dsp
 COPY packages/audio-analyzer ./packages/audio-analyzer
 COPY packages/media-library ./packages/media-library
 COPY packages/metadata ./packages/metadata
@@ -39,6 +41,7 @@ RUN pnpm --filter @sonantica/shared build
 RUN pnpm --filter @sonantica/lyrics build
 RUN pnpm --filter @sonantica/metadata build
 RUN pnpm --filter @sonantica/player-core build
+RUN pnpm --filter @sonantica/dsp build
 RUN pnpm --filter @sonantica/audio-analyzer build
 RUN pnpm --filter @sonantica/media-library build
 RUN pnpm --filter @sonantica/ui build

@@ -11,6 +11,7 @@ export interface UIState {
   isPlayerExpanded: boolean;
   isQueueOpen: boolean;
   lyricsOpen: boolean;
+  eqOpen: boolean;
   isVisualizationEnabled: boolean;
   
   // Sidebar state
@@ -22,11 +23,13 @@ export interface UIState {
   leftSidebarWidth: number;
   rightSidebarWidth: number;
   lyricsSidebarWidth: number;
+  eqSidebarWidth: number;
   
   // Actions
   togglePlayerExpanded: () => void;
   toggleQueue: () => void;
   toggleLyrics: () => void;
+  toggleEQ: () => void;
   toggleVisualization: () => void;
   toggleLeftSidebar: () => void;
   toggleRightSidebar: () => void;
@@ -34,17 +37,20 @@ export interface UIState {
   setPlayerExpanded: (expanded: boolean) => void;
   setQueueOpen: (open: boolean) => void;
   setLyricsOpen: (open: boolean) => void;
+  setEQOpen: (open: boolean) => void;
   setMetadataPanelOpen: (open: boolean) => void;
   setVisualizationEnabled: (enabled: boolean) => void;
   setLeftSidebarWidth: (width: number) => void;
   setRightSidebarWidth: (width: number) => void;
   setLyricsSidebarWidth: (width: number) => void;
+  setEQSidebarWidth: (width: number) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
   isPlayerExpanded: false,
   isQueueOpen: false,
   lyricsOpen: false,
+  eqOpen: false,
   isVisualizationEnabled: false,
   isLeftSidebarOpen: true,
   isRightSidebarOpen: false,
@@ -52,6 +58,7 @@ export const useUIStore = create<UIState>((set) => ({
   leftSidebarWidth: 280,
   rightSidebarWidth: 320,
   lyricsSidebarWidth: 320,
+  eqSidebarWidth: 320,
 
   togglePlayerExpanded: () => {
     set((state) => ({ isPlayerExpanded: !state.isPlayerExpanded }));
@@ -66,6 +73,10 @@ export const useUIStore = create<UIState>((set) => ({
 
   toggleLyrics: () => {
     set((state) => ({ lyricsOpen: !state.lyricsOpen }));
+  },
+
+  toggleEQ: () => {
+    set((state) => ({ eqOpen: !state.eqOpen }));
   },
 
   toggleVisualization: () => {
@@ -99,6 +110,10 @@ export const useUIStore = create<UIState>((set) => ({
     set({ lyricsOpen: open });
   },
 
+  setEQOpen: (open: boolean) => {
+    set({ eqOpen: open });
+  },
+
   setMetadataPanelOpen: (open: boolean) => {
     set({ isMetadataPanelOpen: open });
   },
@@ -117,5 +132,9 @@ export const useUIStore = create<UIState>((set) => ({
 
   setLyricsSidebarWidth: (width: number) => {
     set({ lyricsSidebarWidth: width });
+  },
+
+  setEQSidebarWidth: (width: number) => {
+    set({ eqSidebarWidth: width });
   },
 }));

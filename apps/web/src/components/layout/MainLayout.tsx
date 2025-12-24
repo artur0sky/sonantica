@@ -17,6 +17,7 @@ import { Header } from "./Header";
 import { LeftSidebar } from "./LeftSidebar";
 import { RightSidebar } from "./RightSidebar";
 import { LyricsSidebar } from "./LyricsSidebar";
+import { EQSidebar } from "./EQSidebar";
 import { useWaveformLoader } from "../../features/player/hooks/useWaveformLoader";
 import { PlaybackPersistence } from "../../features/player/components/PlaybackPersistence";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
@@ -43,25 +44,31 @@ export function MainLayout({ children }: MainLayoutProps) {
     isLeftSidebarOpen,
     isRightSidebarOpen,
     lyricsOpen,
+    eqOpen,
     isPlayerExpanded,
     isMetadataPanelOpen,
     toggleMetadataPanel,
     leftSidebarWidth,
     rightSidebarWidth,
     lyricsSidebarWidth,
+    eqSidebarWidth,
     setLeftSidebarWidth,
     setRightSidebarWidth,
     setLyricsSidebarWidth,
+    setEQSidebarWidth,
   } = useUIStore();
 
-  const isResizing = useRef<"left" | "right" | "lyrics" | null>(null);
+  const isResizing = useRef<"left" | "right" | "lyrics" | "eq" | null>(null);
 
-  const startResizing = useCallback((sidebar: "left" | "right" | "lyrics") => {
-    isResizing.current = sidebar;
-    document.body.classList.add("is-resizing");
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-  }, []);
+  const startResizing = useCallback(
+    (sidebar: "left" | "right" | "lyrics" | "eq") => {
+      isResizing.current = sidebar;
+      document.body.classList.add("is-resizing");
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+    },
+    []
+  );
 
   const stopResizing = useCallback(() => {
     isResizing.current = null;
@@ -98,9 +105,22 @@ export function MainLayout({ children }: MainLayoutProps) {
         } else {
           setLyricsSidebarWidth(320);
         }
+      } else if (isResizing.current === "eq") {
+        const newWidth = window.innerWidth - e.clientX;
+        // Snap logic: 80 (covers), 320 (standard)
+        if (newWidth < 160) {
+          setEQSidebarWidth(80);
+        } else {
+          setEQSidebarWidth(Math.min(newWidth, 800));
+        }
       }
     },
-    [setLeftSidebarWidth, setRightSidebarWidth, setLyricsSidebarWidth]
+    [
+      setLeftSidebarWidth,
+      setRightSidebarWidth,
+      setLyricsSidebarWidth,
+      setEQSidebarWidth,
+    ]
   );
 
   useEffect(() => {
@@ -177,6 +197,20 @@ export function MainLayout({ children }: MainLayoutProps) {
           </aside>
         )}
 
+        {/* EQ Sidebar (Desktop Only - Relative Position) */}
+        {!isMobile && eqOpen && currentTrack && (
+          <aside
+            style={{ width: eqSidebarWidth }}
+            className="bg-surface border-l border-border h-full flex-shrink-0 z-20 relative"
+          >
+            <div
+              className="absolute top-0 left-0 w-1 h-full cursor-col-resize hover:bg-accent/30 transition-colors z-30"
+              onMouseDown={() => startResizing("eq")}
+            />
+            <EQSidebar isCollapsed={eqSidebarWidth === 80} />
+          </aside>
+        )}
+
         {/* Metadata Panel (Overlay) */}
         <AnimatePresence>
           {isMetadataPanelOpen && currentTrack?.metadata && (
@@ -197,7 +231,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       {/* Mobile/Tablet Overlays (Fixed to absolute top) */}
       <AnimatePresence>
         {window.innerWidth < 1024 &&
-          (isLeftSidebarOpen || isRightSidebarOpen || lyricsOpen) && (
+          (isLeftSidebarOpen || isRightSidebarOpen || lyricsOpen || eqOpen) && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -207,6 +241,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                   useUIStore.getState().toggleLeftSidebar();
                 if (isRightSidebarOpen) useUIStore.getState().toggleQueue();
                 if (lyricsOpen) useUIStore.getState().toggleLyrics();
+                if (eqOpen) useUIStore.getState().toggleEQ();
               }}
               className="fixed inset-0 bg-black/60 z-[60] backdrop-blur-sm"
             />
@@ -254,6 +289,21 @@ export function MainLayout({ children }: MainLayoutProps) {
             className="fixed inset-y-0 right-0 w-[320px] bg-surface z-[70] shadow-2xl border-l border-border overflow-y-auto"
           >
             <LyricsSidebar isCollapsed={false} />
+          </motion.aside>
+        )}
+      </AnimatePresence>
+
+      {/* Mobile EQ Sidebar Overlay */}
+      <AnimatePresence>
+        {window.innerWidth < 1024 && eqOpen && currentTrack && (
+          <motion.aside
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            className="fixed inset-y-0 right-0 w-[320px] bg-surface z-[70] shadow-2xl border-l border-border overflow-y-auto"
+          >
+            <EQSidebar isCollapsed={false} />
           </motion.aside>
         )}
       </AnimatePresence>

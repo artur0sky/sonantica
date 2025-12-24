@@ -10,6 +10,7 @@ import { Route, Switch } from "wouter";
 import { MainLayout } from "./components/layout/MainLayout";
 import { PWAUpdatePrompt } from "./components/PWAUpdatePrompt";
 import { IconLoader } from "@tabler/icons-react";
+import { useDSPIntegration } from "./hooks/useDSPIntegration";
 
 // Lazy load pages
 const TracksPage = lazy(() =>
@@ -45,6 +46,8 @@ const PageLoader = () => (
 );
 
 function App() {
+  useDSPIntegration();
+
   return (
     <>
       <MainLayout>
