@@ -20,6 +20,7 @@ interface LibraryState {
   stats: LibraryStats;
   scanning: boolean;
   scanProgress: number;
+  initialized: boolean;
   
   // Filters
   searchQuery: string;
@@ -116,6 +117,8 @@ export const useLibraryStore = create<LibraryState>((set, get) => {
       set({ onLoad: callback });
     },
 
+    initialized: false,
+
     getFilteredArtists: () => {
       const { artists, searchQuery } = get();
       if (!searchQuery) return artists;
@@ -178,6 +181,9 @@ export const useLibraryStore = create<LibraryState>((set, get) => {
     },
 
     _initialize: async () => {
+      if (get().initialized) return;
+      set({ initialized: true });
+
       // Subscribe to library events
       library.on(LIBRARY_EVENTS.SCAN_START, () => {
         set({ scanning: true, scanProgress: 0 });
@@ -279,5 +285,5 @@ export const useLibraryStore = create<LibraryState>((set, get) => {
   };
 });
 
-// Initialize on store creation
-useLibraryStore.getState()._initialize();
+// Note: initialization is now handled by the app layer (e.g. PlaybackPersistence)
+// to ensure persistence callbacks are set before initialization.

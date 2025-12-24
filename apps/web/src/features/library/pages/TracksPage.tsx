@@ -197,16 +197,18 @@ export function TracksPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-6 pb-32">
+    <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 pb-24 sm:pb-32">
       {/* Header */}
       <motion.div
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="mb-8"
+        className="mb-6 sm:mb-8"
       >
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4 sm:mb-6">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Tracks</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+              Tracks
+            </h1>
             <AnimatePresence>
               {stats.totalTracks > 0 && (
                 <motion.p
@@ -221,14 +223,14 @@ export function TracksPage() {
             </AnimatePresence>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             {/* Sort Controls */}
             {sortedTracks.length > 0 && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-1 sm:flex-initial">
                 <select
                   value={sortField}
                   onChange={(e) => setSortField(e.target.value as SortField)}
-                  className="px-3 py-2 bg-surface-elevated border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent/50"
+                  className="flex-1 sm:flex-initial px-2 sm:px-3 py-2 bg-surface-elevated border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent/50"
                 >
                   <option value="title">Title</option>
                   <option value="artist">Artist</option>
@@ -244,7 +246,7 @@ export function TracksPage() {
                   }
                   variant="ghost"
                   size="sm"
-                  className="flex items-center gap-1"
+                  className="flex items-center gap-1 flex-shrink-0"
                 >
                   {sortOrder === "asc" ? (
                     <IconSortAscending size={18} />
@@ -261,19 +263,19 @@ export function TracksPage() {
                 <Button
                   onClick={handlePlayAll}
                   variant="secondary"
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 flex-1 sm:flex-initial justify-center"
                 >
                   <IconPlayerPlay size={18} />
-                  Play All
+                  <span className="hidden sm:inline">Play All</span>
                 </Button>
 
                 <Button
                   onClick={handleShuffle}
                   variant="secondary"
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 flex-1 sm:flex-initial justify-center"
                 >
                   <IconArrowsShuffle size={18} />
-                  Shuffle
+                  <span className="hidden sm:inline">Shuffle</span>
                 </Button>
               </>
             )}
@@ -281,7 +283,7 @@ export function TracksPage() {
             <Button
               onClick={scanning ? () => scan([], true) : handleScan}
               variant={scanning ? "danger" : "primary"}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 flex-1 sm:flex-initial justify-center"
             >
               <motion.div
                 animate={scanning ? { rotate: 0 } : { rotate: 0 }}
@@ -297,7 +299,9 @@ export function TracksPage() {
                   <IconRefresh size={18} />
                 )}
               </motion.div>
-              {scanning ? "" : "Scan Library"}
+              <span className="hidden sm:inline">
+                {scanning ? "" : "Scan Library"}
+              </span>
             </Button>
           </div>
         </div>
@@ -311,18 +315,20 @@ export function TracksPage() {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className="text-center py-24 bg-surface/50 border border-border/50 rounded-2xl border-dashed"
+            className="text-center py-16 sm:py-24 bg-surface/50 border border-border/50 rounded-2xl border-dashed"
           >
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.2, type: "spring" }}
-              className="inline-flex items-center justify-center p-6 bg-surface-elevated rounded-full mb-6 text-accent"
+              className="inline-flex items-center justify-center p-4 sm:p-6 bg-surface-elevated rounded-full mb-4 sm:mb-6 text-accent"
             >
-              <IconMusic size={48} stroke={1.5} />
+              <IconMusic size={40} stroke={1.5} className="sm:w-12 sm:h-12" />
             </motion.div>
-            <h2 className="text-xl font-semibold mb-2">No music found</h2>
-            <p className="text-text-muted mb-8 max-w-md mx-auto">
+            <h2 className="text-lg sm:text-xl font-semibold mb-2 px-4">
+              No music found
+            </h2>
+            <p className="text-sm sm:text-base text-text-muted mb-6 sm:mb-8 max-w-md mx-auto px-4">
               Your library is empty. Click "Scan Library" to index your music
               files from the media folder.
             </p>
@@ -335,10 +341,13 @@ export function TracksPage() {
             key="no-results"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-center py-20"
+            className="text-center py-16 sm:py-20"
           >
-            <IconSearch size={48} className="mx-auto text-text-muted/30 mb-4" />
-            <p className="text-text-muted">
+            <IconSearch
+              size={40}
+              className="mx-auto text-text-muted/30 mb-4 sm:w-12 sm:h-12"
+            />
+            <p className="text-sm sm:text-base text-text-muted px-4">
               No tracks found matching "{searchQuery}"
             </p>
           </motion.div>
@@ -362,13 +371,13 @@ export function TracksPage() {
             {displayedCount < sortedTracks.length && (
               <div
                 ref={observerTarget}
-                className="py-8 text-center text-text-muted/50 text-sm"
+                className="py-6 sm:py-8 text-center text-text-muted/50 text-xs sm:text-sm"
               >
                 Loading more tracks...
               </div>
             )}
 
-            <div className="py-4 text-center text-xs text-text-muted/30">
+            <div className="py-3 sm:py-4 text-center text-xs text-text-muted/30">
               Showing {visibleTracks.length} of {sortedTracks.length} tracks
             </div>
           </motion.div>

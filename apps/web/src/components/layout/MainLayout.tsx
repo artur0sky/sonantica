@@ -105,21 +105,47 @@ export function MainLayout({ children }: MainLayoutProps) {
 
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden relative">
+        {/* Mobile/Tablet Backdrop for Sidebars */}
+        <AnimatePresence>
+          {(isLeftSidebarOpen || isRightSidebarOpen) && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => {
+                if (isLeftSidebarOpen)
+                  useUIStore.getState().toggleLeftSidebar();
+                if (isRightSidebarOpen) useUIStore.getState().toggleQueue();
+              }}
+              className="fixed inset-0 bg-black/60 z-30 lg:hidden backdrop-blur-sm"
+            />
+          )}
+        </AnimatePresence>
+
         {/* Left Sidebar - Navigation */}
         <AnimatePresence mode="popLayout">
           {isLeftSidebarOpen && (
             <motion.aside
               initial={{ x: -leftSidebarWidth, opacity: 0 }}
-              animate={{ x: 0, opacity: 1, width: leftSidebarWidth }}
+              animate={{ x: 0, opacity: 1 }}
               exit={{ x: -leftSidebarWidth, opacity: 0 }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="bg-surface border-r border-border overflow-y-auto flex-shrink-0 z-20 relative"
+              style={{
+                width: window.innerWidth < 1024 ? "280px" : leftSidebarWidth,
+              }}
+              className="bg-surface border-r border-border overflow-y-auto flex-shrink-0 z-40 relative
+                         fixed lg:relative inset-y-0 left-0 lg:z-20
+                         shadow-2xl lg:shadow-none"
             >
-              <LeftSidebar isCollapsed={leftSidebarWidth === 72} />
+              <LeftSidebar
+                isCollapsed={
+                  leftSidebarWidth === 72 && window.innerWidth >= 1024
+                }
+              />
 
-              {/* Resize Handle */}
+              {/* Resize Handle - Desktop Only */}
               <div
-                className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-accent/30 transition-colors z-30"
+                className="hidden lg:block absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-accent/30 transition-colors z-30"
                 onMouseDown={() => startResizing("left")}
               />
             </motion.aside>
@@ -127,7 +153,10 @@ export function MainLayout({ children }: MainLayoutProps) {
         </AnimatePresence>
 
         {/* Center Content */}
-        <main className="flex-1 overflow-y-auto relative z-10 transition-all duration-300">
+        <main
+          className="flex-1 overflow-y-auto relative z-10 transition-all duration-300
+                         w-full min-w-0"
+        >
           <AnimatePresence mode="wait">
             {isPlayerExpanded ? <ExpandedPlayer key="expanded" /> : children}
           </AnimatePresence>
@@ -137,18 +166,33 @@ export function MainLayout({ children }: MainLayoutProps) {
         <AnimatePresence mode="popLayout">
           {isRightSidebarOpen && currentTrack && (
             <motion.aside
-              initial={{ x: rightSidebarWidth, opacity: 0 }}
-              animate={{ x: 0, opacity: 1, width: rightSidebarWidth }}
-              exit={{ x: rightSidebarWidth, opacity: 0 }}
+              initial={{
+                x: window.innerWidth < 1024 ? 320 : rightSidebarWidth,
+                opacity: 0,
+              }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{
+                x: window.innerWidth < 1024 ? 320 : rightSidebarWidth,
+                opacity: 0,
+              }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="bg-surface border-l border-border overflow-y-auto flex-shrink-0 z-20 relative"
+              style={{
+                width: window.innerWidth < 1024 ? "320px" : rightSidebarWidth,
+              }}
+              className="bg-surface border-l border-border overflow-y-auto flex-shrink-0 z-40 relative
+                         fixed lg:relative inset-y-0 right-0 lg:z-20
+                         shadow-2xl lg:shadow-none"
             >
-              {/* Resize Handle */}
+              {/* Resize Handle - Desktop Only */}
               <div
-                className="absolute top-0 left-0 w-1 h-full cursor-col-resize hover:bg-accent/30 transition-colors z-30"
+                className="hidden lg:block absolute top-0 left-0 w-1 h-full cursor-col-resize hover:bg-accent/30 transition-colors z-30"
                 onMouseDown={() => startResizing("right")}
               />
-              <RightSidebar isCollapsed={rightSidebarWidth === 80} />
+              <RightSidebar
+                isCollapsed={
+                  rightSidebarWidth === 80 && window.innerWidth >= 1024
+                }
+              />
             </motion.aside>
           )}
         </AnimatePresence>
