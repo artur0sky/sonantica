@@ -9,6 +9,7 @@ import { useLibraryStore } from "@sonantica/media-library";
 import { ArtistCard } from "../components/ArtistCard";
 import { IconMicrophone, IconSearch } from "@tabler/icons-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useLocation } from "wouter";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -25,6 +26,7 @@ const ITEMS_PER_PAGE = 20; // 20 grid items per page
 export function ArtistsPage() {
   const { stats, searchQuery, selectArtist, getFilteredArtists } =
     useLibraryStore();
+  const [, setLocation] = useLocation();
 
   const filteredArtists = getFilteredArtists();
 
@@ -62,7 +64,7 @@ export function ArtistsPage() {
 
   const handleArtistClick = (artist: any) => {
     selectArtist(artist);
-    // TODO: Navigate to artist detail view or show albums
+    setLocation(`/artist/${artist.id}`);
   };
 
   return (

@@ -86,6 +86,9 @@ export class MediaLibrary implements IMediaLibrary {
       // Remove tracks that no longer exist
       this.removeOrphanedTracks(scannedPaths);
 
+      // Enrich tracks with album art if missing
+      this.enrichLibrary();
+
       this.scanProgress.status = 'complete';
       this.emit(LIBRARY_EVENTS.SCAN_COMPLETE, {
         tracksFound: this.tracks.size,
@@ -100,6 +103,25 @@ export class MediaLibrary implements IMediaLibrary {
       this.emit(LIBRARY_EVENTS.SCAN_ERROR, { error });
       throw error;
     }
+  }
+
+  /**
+   * Enrich tracks with album art if missing
+   */
+  private enrichLibrary(): void {
+    const albums = this.getAlbums();
+    
+    for (const album of albums) {
+      if (album.coverArt) {
+        for (const track of album.tracks) {
+          if (!track.metadata.coverArt) {
+            track.metadata.coverArt = album.coverArt;
+          }
+        }
+      }
+    }
+    
+    console.log(`✨ Library enriched with album metadata`);
   }
 
   /**
@@ -553,6 +575,7 @@ export class MediaLibrary implements IMediaLibrary {
             id: generateId(),
             name: albumName,
             artist: artistName,
+            artistId: artistsMap.get(artistName)!.id,
             year: track.metadata.year,
             coverArt: track.metadata.coverArt,
             tracks: [],

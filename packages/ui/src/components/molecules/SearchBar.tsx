@@ -34,7 +34,7 @@ export function SearchBar({ onResultSelect, className }: GlobalSearchBarProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const { tracks } = useLibraryStore();
+  const { tracks, albums, artists } = useLibraryStore();
 
   // Search logic
   useEffect(() => {
@@ -74,50 +74,37 @@ export function SearchBar({ onResultSelect, className }: GlobalSearchBarProps) {
       }
     });
 
-    // Group by artists
-    const artistMap = new Map<string, any[]>();
-    tracks.forEach((track: any) => {
-      const artist = formatArtists(track.metadata?.artist);
-      if (artist.toLowerCase().includes(searchTerm)) {
-        if (!artistMap.has(artist)) {
-          artistMap.set(artist, []);
-        }
-        artistMap.get(artist)!.push(track);
+    // Search artists
+    artists.forEach((artist) => {
+      if (artist.name.toLowerCase().includes(searchTerm)) {
+        foundResults.push({
+          type: "artist",
+          id: artist.id,
+          title: artist.name,
+          subtitle: `${artist.trackCount} track${
+            artist.trackCount !== 1 ? "s" : ""
+          }`,
+          coverArt: artist.albums[0]?.coverArt,
+          data: artist,
+        });
       }
     });
 
-    artistMap.forEach((tracks, artist) => {
-      foundResults.push({
-        type: "artist",
-        id: artist,
-        title: artist,
-        subtitle: `${tracks.length} track${tracks.length > 1 ? "s" : ""}`,
-        coverArt: tracks[0]?.metadata?.coverArt,
-        data: tracks,
-      });
-    });
-
-    // Group by albums
-    const albumMap = new Map<string, any[]>();
-    tracks.forEach((track: any) => {
-      const album = track.metadata?.album;
-      if (album && album.toLowerCase().includes(searchTerm)) {
-        if (!albumMap.has(album)) {
-          albumMap.set(album, []);
-        }
-        albumMap.get(album)!.push(track);
+    // Search albums
+    albums.forEach((album) => {
+      if (
+        album.name.toLowerCase().includes(searchTerm) ||
+        album.artist.toLowerCase().includes(searchTerm)
+      ) {
+        foundResults.push({
+          type: "album",
+          id: album.id,
+          title: album.name,
+          subtitle: album.artist,
+          coverArt: album.coverArt,
+          data: album,
+        });
       }
-    });
-
-    albumMap.forEach((tracks, album) => {
-      foundResults.push({
-        type: "album",
-        id: album,
-        title: album,
-        subtitle: formatArtists(tracks[0]?.metadata?.artist),
-        coverArt: tracks[0]?.metadata?.coverArt,
-        data: tracks,
-      });
     });
 
     // Limit results

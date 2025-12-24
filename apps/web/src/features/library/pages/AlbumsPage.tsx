@@ -9,6 +9,7 @@ import { useLibraryStore } from "@sonantica/media-library";
 import { AlbumCard } from "../components/AlbumCard";
 import { IconDisc, IconSearch } from "@tabler/icons-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useLocation } from "wouter";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -25,6 +26,7 @@ const ITEMS_PER_PAGE = 20;
 export function AlbumsPage() {
   const { stats, searchQuery, selectAlbum, getFilteredAlbums } =
     useLibraryStore();
+  const [, setLocation] = useLocation();
 
   const filteredAlbums = getFilteredAlbums();
 
@@ -62,7 +64,7 @@ export function AlbumsPage() {
 
   const handleAlbumClick = (album: any) => {
     selectAlbum(album);
-    // TODO: Navigate to album detail view or show tracks
+    setLocation(`/album/${album.id}`);
   };
 
   return (

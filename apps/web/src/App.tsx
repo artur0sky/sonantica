@@ -26,6 +26,16 @@ const ArtistsPage = lazy(() =>
     default: m.ArtistsPage,
   }))
 );
+const AlbumDetailPage = lazy(() =>
+  import("./features/library/pages/AlbumDetailPage").then((m) => ({
+    default: m.AlbumDetailPage,
+  }))
+);
+const ArtistDetailPage = lazy(() =>
+  import("./features/library/pages/ArtistDetailPage").then((m) => ({
+    default: m.ArtistDetailPage,
+  }))
+);
 
 const PageLoader = () => (
   <div className="flex items-center justify-center min-h-[50vh] text-text-muted">
@@ -44,6 +54,10 @@ function App() {
           {/* Library views */}
           <Route path="/albums" component={AlbumsPage} />
           <Route path="/artists" component={ArtistsPage} />
+
+          {/* Detail views */}
+          <Route path="/album/:id" component={AlbumDetailPage} />
+          <Route path="/artist/:id" component={ArtistDetailPage} />
 
           {/* Playlists - Coming soon */}
           <Route path="/playlists">

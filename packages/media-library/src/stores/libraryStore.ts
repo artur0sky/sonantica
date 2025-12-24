@@ -45,6 +45,8 @@ interface LibraryState {
   getFilteredArtists: () => Artist[];
   getFilteredAlbums: () => Album[];
   getFilteredTracks: () => Track[];
+  getAlbumById: (id: string) => Album | undefined;
+  getArtistById: (id: string) => Artist | undefined;
   
   // Internal
   _initialize: () => void;
@@ -165,6 +167,14 @@ export const useLibraryStore = create<LibraryState>((set, get) => {
       }
       
       return filtered;
+    },
+
+    getAlbumById: (id: string) => {
+      return get().albums.find(a => a.id === id);
+    },
+
+    getArtistById: (id: string) => {
+      return get().artists.find(a => a.id === id);
     },
 
     _initialize: async () => {
