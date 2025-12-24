@@ -67,18 +67,20 @@ export function ArtistsPage() {
   };
 
   const handleLetterClick = (index: number) => {
-    // 1. Ensure the item is within displayedCount
+    // 1. Aggressively ensure enough items are rendered (add buffer for smooth scrolling)
     if (index >= displayedCount) {
-      setDisplayedCount(index + ITEMS_PER_PAGE);
+      setDisplayedCount(Math.min(index + 50, filteredArtists.length));
     }
 
-    // 2. Schedule scroll after render
-    setTimeout(() => {
-      const element = document.getElementById(`artist-${index}`);
-      if (element) {
-        element.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
-    }, 100);
+    // 2. Use requestAnimationFrame for smoother, faster rendering coordination
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const element = document.getElementById(`artist-${index}`);
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      });
+    });
   };
 
   return (

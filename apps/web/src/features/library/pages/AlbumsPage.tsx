@@ -68,15 +68,17 @@ export function AlbumsPage() {
 
   const handleLetterClick = (index: number) => {
     if (index >= displayedCount) {
-      setDisplayedCount(index + ITEMS_PER_PAGE);
+      setDisplayedCount(Math.min(index + 50, filteredAlbums.length));
     }
 
-    setTimeout(() => {
-      const element = document.getElementById(`album-${index}`);
-      if (element) {
-        element.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
-    }, 100);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const element = document.getElementById(`album-${index}`);
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      });
+    });
   };
 
   return (

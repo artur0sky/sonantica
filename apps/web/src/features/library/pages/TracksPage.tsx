@@ -171,15 +171,17 @@ export function TracksPage() {
 
   const handleLetterClick = (index: number) => {
     if (index >= displayedCount) {
-      setDisplayedCount(index + ITEMS_PER_PAGE);
+      setDisplayedCount(Math.min(index + 50, sortedTracks.length));
     }
 
-    setTimeout(() => {
-      const element = document.getElementById(`track-${index}`);
-      if (element) {
-        element.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
-    }, 100);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const element = document.getElementById(`track-${index}`);
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      });
+    });
   };
 
   const handlePlayAll = async () => {
