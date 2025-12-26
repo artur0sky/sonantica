@@ -13,6 +13,7 @@ export interface UIState {
   isQueueExpanded: boolean; // Controls if queue shows all tracks or just next one
   lyricsOpen: boolean;
   eqOpen: boolean;
+  recommendationsOpen: boolean;
   isVisualizationEnabled: boolean;
   
   // Sidebar state
@@ -25,6 +26,7 @@ export interface UIState {
   rightSidebarWidth: number;
   lyricsSidebarWidth: number;
   eqSidebarWidth: number;
+  recommendationsSidebarWidth: number;
   
   // Actions
   togglePlayerExpanded: () => void;
@@ -32,6 +34,7 @@ export interface UIState {
   toggleQueueExpanded: () => void;
   toggleLyrics: () => void;
   toggleEQ: () => void;
+  toggleRecommendations: () => void;
   toggleVisualization: () => void;
   toggleLeftSidebar: () => void;
   toggleRightSidebar: () => void;
@@ -41,12 +44,14 @@ export interface UIState {
   setQueueExpanded: (expanded: boolean) => void;
   setLyricsOpen: (open: boolean) => void;
   setEQOpen: (open: boolean) => void;
+  setRecommendationsOpen: (open: boolean) => void;
   setMetadataPanelOpen: (open: boolean) => void;
   setVisualizationEnabled: (enabled: boolean) => void;
   setLeftSidebarWidth: (width: number) => void;
   setRightSidebarWidth: (width: number) => void;
   setLyricsSidebarWidth: (width: number) => void;
   setEQSidebarWidth: (width: number) => void;
+  setRecommendationsSidebarWidth: (width: number) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -55,6 +60,7 @@ export const useUIStore = create<UIState>((set) => ({
   isQueueExpanded: false,
   lyricsOpen: false,
   eqOpen: false,
+  recommendationsOpen: false,
   isVisualizationEnabled: false,
   isLeftSidebarOpen: true,
   isRightSidebarOpen: false,
@@ -63,6 +69,7 @@ export const useUIStore = create<UIState>((set) => ({
   rightSidebarWidth: 320,
   lyricsSidebarWidth: 320,
   eqSidebarWidth: 320,
+  recommendationsSidebarWidth: 320,
 
   togglePlayerExpanded: () => {
     set((state) => ({ isPlayerExpanded: !state.isPlayerExpanded }));
@@ -85,6 +92,10 @@ export const useUIStore = create<UIState>((set) => ({
 
   toggleEQ: () => {
     set((state) => ({ eqOpen: !state.eqOpen }));
+  },
+
+  toggleRecommendations: () => {
+    set((state) => ({ recommendationsOpen: !state.recommendationsOpen }));
   },
 
   toggleVisualization: () => {
@@ -126,6 +137,10 @@ export const useUIStore = create<UIState>((set) => ({
     set({ eqOpen: open });
   },
 
+  setRecommendationsOpen: (open: boolean) => {
+    set({ recommendationsOpen: open });
+  },
+
   setMetadataPanelOpen: (open: boolean) => {
     set({ isMetadataPanelOpen: open });
   },
@@ -148,5 +163,9 @@ export const useUIStore = create<UIState>((set) => ({
 
   setEQSidebarWidth: (width: number) => {
     set({ eqSidebarWidth: width });
+  },
+
+  setRecommendationsSidebarWidth: (width: number) => {
+    set({ recommendationsSidebarWidth: width });
   },
 }));

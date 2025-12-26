@@ -11,6 +11,8 @@ import { AlbumCard } from "../components/AlbumCard";
 import { IconChevronLeft, IconUser } from "@tabler/icons-react";
 import { motion } from "framer-motion";
 import { Button } from "@sonantica/ui";
+import { useArtistSimilarArtists } from "@sonantica/recommendations";
+import { ArtistCard } from "../components/ArtistCard";
 
 export function ArtistDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -18,9 +20,15 @@ export function ArtistDetailPage() {
   const { getArtistById } = useLibraryStore();
 
   const artist = useMemo(
-    () => (id ? getArtistById(id) : null),
+    () => (id ? getArtistById(id) : null) ?? null,
     [id, getArtistById]
   );
+  
+  // Get similar artists
+  const similarArtists = useArtistSimilarArtists(artist, {
+    limit: 5,
+    minScore: 0.2, // Lower threshold to ensure we get results
+  });
 
   if (!artist) {
     return (
@@ -106,6 +114,22 @@ export function ArtistDetailPage() {
           />
         ))}
       </div>
+
+      {/* Similar Artists Section */}
+      {similarArtists.length > 0 && (
+        <div className="mt-12 pt-12 border-t border-border">
+          <h2 className="text-xl font-bold mb-6 text-text-muted">Similar Artists</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
+            {similarArtists.map((rec) => (
+              <ArtistCard
+                key={rec.item.id}
+                artist={rec.item}
+                onClick={() => setLocation(`/artist/${rec.item.id}`)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -15,6 +15,8 @@ import {
 } from "@tabler/icons-react";
 import { motion } from "framer-motion";
 import { Button } from "@sonantica/ui";
+import { useAlbumSimilarAlbums } from "@sonantica/recommendations";
+import { AlbumCard } from "../components/AlbumCard";
 import { playFromContext } from "../../../utils/playContext";
 
 export function AlbumDetailPage() {
@@ -23,9 +25,15 @@ export function AlbumDetailPage() {
   const { getAlbumById } = useLibraryStore();
 
   const album = useMemo(
-    () => (id ? getAlbumById(id) : null),
+    () => (id ? getAlbumById(id) : null) ?? null,
     [id, getAlbumById]
   );
+
+  // Get similar albums with a balanced diversity score
+  const similarAlbums = useAlbumSimilarAlbums(album, {
+    limit: 6,
+    minScore: 0.3,
+  });
 
   if (!album) {
     return (
@@ -153,6 +161,22 @@ export function AlbumDetailPage() {
           />
         ))}
       </div>
+      
+      {/* Similar Albums Section */}
+      {similarAlbums.length > 0 && (
+        <div className="mt-16 pt-12 border-t border-border">
+          <h2 className="text-xl font-bold mb-6 text-text-muted">You Might Also Like</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
+            {similarAlbums.map((rec) => (
+              <AlbumCard
+                key={rec.item.id}
+                album={rec.item}
+                onClick={() => setLocation(`/album/${rec.item.id}`)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

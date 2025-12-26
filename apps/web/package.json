@@ -19,6 +19,7 @@
     "@sonantica/media-library": "workspace:*",
     "@sonantica/metadata": "workspace:*",
     "@sonantica/player-core": "workspace:*",
+    "@sonantica/recommendations": "workspace:*",
     "@sonantica/shared": "workspace:*",
     "@sonantica/ui": "workspace:*",
     "@tabler/icons-react": "^3.29.0",

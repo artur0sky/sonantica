@@ -252,17 +252,7 @@ export function RightSidebar({ isCollapsed }: RightSidebarProps) {
             )}
           </AnimatePresence>
 
-          {/* Recommendations Section - Placeholder */}
-          {!isCollapsed && upcomingQueue.length > 0 && (
-            <div className="mt-6 pt-6 border-t border-border">
-              <h3 className="text-[10px] text-text-muted/70 font-bold mb-4 uppercase tracking-[0.2em]">
-                Recommended
-              </h3>
-              <p className="text-xs text-text-muted/50 text-center py-4">
-                Coming soon...
-              </p>
-            </div>
-          )}
+
         </div>
       </div>
     </SidebarContainer>
