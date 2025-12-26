@@ -319,6 +319,29 @@ Must:
 | Media keys | 📋 | 🟡 | Hardware integration |
 | Basic OS integration | 📋 | 🟡 | Windows features |
 
+### 12.5 Smart TV (Living Room)
+
+| Feature | Status | Priority | Notes |
+| :--- | :---: | :---: | :--- |
+| Leanback UI | 📋 | 🟡 | D-Pad/Remote navigation |
+| Immersive "Vinyl" Mode | 📋 | 🟡 | Focus on artwork & metadata |
+| High-Def Audio Output | 📋 | 🟠 | Passthrough/HDMI ARC |
+
+### 12.6 Automotive (On the Move)
+
+| Feature | Status | Priority | Notes |
+| :--- | :---: | :---: | :--- |
+| Android Auto | 📋 | 🟠 | Standard media service |
+| CarPlay | 📋 | 🟠 | CPApplicationDelegate |
+| Distraction-free UI | 📋 | 🔴 | Safety-first design |
+
+### 12.7 Wearables (Wrist)
+
+| Feature | Status | Priority | Notes |
+| :--- | :---: | :---: | :--- |
+| Companion Remote | 📋 | 🟡 | Control phone playback |
+| Offline Playback | 📋 | ⚪ | Standalone (Phase 6) |
+
 ---
 
 ## 13. Implementation Phases
@@ -380,6 +403,16 @@ Must:
 | Differentiators | ✅ | 🟡 | - | Waveform, lyrics, spectrum |
 | Mobile apps (Android/iOS) | 🚧 | 🟠 | - | Native wrappers |
 | Windows Store | 📋 | 🟡 | - | Desktop distribution |
+
+### Phase 6 – Ecosystem Expansion
+**Target:** Ubiquitous listening experience (Living Room, Car, Wrist)
+
+| Feature | Status | Priority | Owner | Notes |
+| :--- | :---: | :---: | :--- | :--- |
+| Smart TV App | 📋 | 🟡 | - | Android TV / Tizen |
+| Automotive Integration | 📋 | 🟠 | - | Android Auto / CarPlay |
+| Wearable Companion | 📋 | 🟡 | - | WatchOS / WearOS |
+| Cast Protocol | 📋 | 🟡 | - | Chromecast / AirPlay |
 
 ---
 
@@ -525,11 +558,12 @@ If not, it is postponed or discarded.
 5. Accessibility improvements
 
 ### Long-term (6+ Sprints)
-1. Cloud sync (optional)
-2. Community theme marketplace
-3. Advanced DSP features
-4. Windows Store deployment
-5. Cross-platform optimization
+1. Automotive integration (Android Auto/CarPlay)
+2. Smart TV Experience
+3. Cloud sync (optional)
+4. Community theme marketplace
+5. Advanced DSP features
+6. Cross-platform optimization
 
 ---
 
