@@ -19,6 +19,7 @@ import { LeftSidebar } from "./LeftSidebar";
 import { RightSidebar } from "./RightSidebar";
 import { LyricsSidebar } from "./LyricsSidebar";
 import { EQSidebar } from "./EQSidebar";
+import { RecommendationsSidebar } from "./RecommendationsSidebar";
 import { useWaveformLoader } from "../../features/player/hooks/useWaveformLoader";
 import { PlaybackPersistence } from "../../features/player/components/PlaybackPersistence";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
@@ -53,6 +54,8 @@ export function MainLayout({ children }: MainLayoutProps) {
     rightSidebarWidth,
     lyricsSidebarWidth,
     eqSidebarWidth,
+    recommendationsOpen,
+    recommendationsSidebarWidth,
   } = useUIStore();
 
   const { startResizing } = useSidebarResize();
@@ -136,6 +139,21 @@ export function MainLayout({ children }: MainLayoutProps) {
           </aside>
         )}
 
+        {/* Recommendations Sidebar (Desktop Only - Relative Position) */}
+        {!isMobile && recommendationsOpen && currentTrack && (
+          <aside
+            style={{ width: recommendationsSidebarWidth }}
+            className="bg-surface border-l border-border h-full flex-shrink-0 z-20 relative"
+          >
+            <SidebarResizer
+              orientation="vertical"
+              onMouseDown={() => startResizing("recommendations")}
+              className="left-0"
+            />
+            <RecommendationsSidebar />
+          </aside>
+        )}
+
         {/* Metadata Panel (Overlay) */}
         <AnimatePresence>
           {isMetadataPanelOpen && currentTrack?.metadata && (
@@ -167,6 +185,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                 if (isRightSidebarOpen) useUIStore.getState().toggleQueue();
                 if (lyricsOpen) useUIStore.getState().toggleLyrics();
                 if (eqOpen) useUIStore.getState().toggleEQ();
+                if (recommendationsOpen) useUIStore.getState().toggleRecommendations();
               }}
               className="fixed inset-0 bg-black/60 z-[60] backdrop-blur-sm"
             />
@@ -229,6 +248,21 @@ export function MainLayout({ children }: MainLayoutProps) {
             className="fixed inset-y-0 right-0 w-[320px] bg-surface z-[70] shadow-2xl border-l border-border overflow-y-auto"
           >
             <EQSidebar isCollapsed={false} />
+          </motion.aside>
+        )}
+      </AnimatePresence>
+
+      {/* Mobile Recommendations Sidebar Overlay */}
+      <AnimatePresence>
+        {window.innerWidth < 1024 && recommendationsOpen && currentTrack && (
+          <motion.aside
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            className="fixed inset-y-0 right-0 w-[320px] bg-surface z-[70] shadow-2xl border-l border-border overflow-y-auto"
+          >
+            <RecommendationsSidebar />
           </motion.aside>
         )}
       </AnimatePresence>

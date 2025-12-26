@@ -28,6 +28,9 @@ importers:
       '@sonantica/player-core':
         specifier: workspace:*
         version: link:../../packages/player-core
+      '@sonantica/recommendations':
+        specifier: workspace:*
+        version: link:../../packages/recommendations
       '@sonantica/shared':
         specifier: workspace:*
         version: link:../../packages/shared

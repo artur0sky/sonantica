@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useUIStore } from "@sonantica/ui";
 
-type SidebarType = "left" | "right" | "lyrics" | "eq";
+type SidebarType = "left" | "right" | "lyrics" | "eq" | "recommendations";
 
 // Define allowed widths for each sidebar
 const SIDEBAR_WIDTHS = {
@@ -9,6 +9,7 @@ const SIDEBAR_WIDTHS = {
   right: [80, 320], // XS (Covers), SM (Standard)
   lyrics: [320, 480, 600], // SM, MD, LG
   eq: [80, 320, 500], // XS (Mini), SM (List), MD (Graphic)
+  recommendations: [320, 480], // Standard, Wide
 };
 
 // Helper: Snap value to closest number in array
@@ -35,6 +36,7 @@ export function useSidebarResize() {
     setRightSidebarWidth,
     setLyricsSidebarWidth,
     setEQSidebarWidth,
+    setRecommendationsSidebarWidth,
     leftSidebarWidth,
     rightSidebarWidth,
     lyricsSidebarWidth,
@@ -92,6 +94,10 @@ export function useSidebarResize() {
           newWidth = window.innerWidth - e.clientX;
           snapPoints = SIDEBAR_WIDTHS.eq;
           setWidth = setEQSidebarWidth;
+        } else if (isResizing.current === "recommendations") {
+          newWidth = window.innerWidth - e.clientX;
+          snapPoints = SIDEBAR_WIDTHS.recommendations;
+          setWidth = setRecommendationsSidebarWidth;
         }
 
         // Apply snapping logic
@@ -104,6 +110,7 @@ export function useSidebarResize() {
       setRightSidebarWidth,
       setLyricsSidebarWidth,
       setEQSidebarWidth,
+      setRecommendationsSidebarWidth,
     ]
   );
 
