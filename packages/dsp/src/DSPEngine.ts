@@ -16,7 +16,10 @@ import type {
   IAudioMetrics,
 } from './contracts';
 import { EQBandType, VocalMode } from './contracts';
-import { BUILTIN_PRESETS, getPresetById } from './presets';
+import { dbToGain } from './utils/audioUtils';
+import { VocalProcessor } from './processors/VocalProcessor';
+import { EQProcessor } from './processors/EQProcessor';
+import { PresetManager } from './managers/PresetManager';
 
 /**
  * DSP Engine Implementation
@@ -36,9 +39,13 @@ export class DSPEngine implements IDSPEngine {
   private masterGainNode: GainNode | null = null;
   private onPlayHandler: (() => void) | null = null;
   
+  // Sub-processors
+  private vocalProcessor: VocalProcessor;
+  private eqProcessor: EQProcessor;
+  private presetManager: PresetManager;
+
   // State
   private config: IDSPConfig;
-  private customPresets: IEQPreset[] = [];
   private isInitialized = false;
   private currentAudioElement: HTMLAudioElement | null = null;
 
@@ -47,6 +54,10 @@ export class DSPEngine implements IDSPEngine {
   private metricsInterval: number | null = null;
 
   constructor() {
+    this.vocalProcessor = new VocalProcessor();
+    this.eqProcessor = new EQProcessor();
+    this.presetManager = new PresetManager();
+
     // Initialize with flat/disabled config
     this.config = {
       enabled: false,
@@ -104,7 +115,7 @@ export class DSPEngine implements IDSPEngine {
 
       // Create preamp gain node
       this.preampNode = this.audioContext.createGain();
-      this.preampNode.gain.value = this.dbToGain(this.config.preamp);
+      this.preampNode.gain.value = dbToGain(this.config.preamp);
       
       // Create master gain node
       this.masterGainNode = this.audioContext.createGain();
@@ -131,8 +142,8 @@ export class DSPEngine implements IDSPEngine {
       return;
     }
 
-    // Find preset (check both built-in and custom)
-    const preset = this.getPresets().find(p => p.id === presetId);
+    // Find preset
+    const preset = this.presetManager.getPresetById(presetId);
     
     if (!preset) {
       console.error(`Preset not found: ${presetId}`);
@@ -214,7 +225,7 @@ export class DSPEngine implements IDSPEngine {
     const now = this.audioContext!.currentTime;
     this.preampNode.gain.setValueAtTime(this.preampNode.gain.value, now);
     this.preampNode.gain.linearRampToValueAtTime(
-      this.dbToGain(clampedGain),
+      dbToGain(clampedGain),
       now + 0.05
     );
 
@@ -295,54 +306,31 @@ export class DSPEngine implements IDSPEngine {
    * Get all available presets
    */
   getPresets(): IEQPreset[] {
-    return [...BUILTIN_PRESETS, ...this.customPresets];
+    return this.presetManager.getAllPresets();
   }
 
   /**
    * Save a custom preset
    */
   savePreset(preset: Omit<IEQPreset, 'id' | 'isBuiltIn'>): string {
-    const id = `custom-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
-    const newPreset: IEQPreset = {
-      ...preset,
-      id,
-      isBuiltIn: false,
-    };
-
-    this.customPresets.push(newPreset);
-    
-    console.log(`💾 Saved custom preset: ${preset.name}`);
-    return id;
+    return this.presetManager.savePreset(preset);
   }
 
   /**
    * Delete a custom preset
    */
   deletePreset(presetId: string): void {
-    const index = this.customPresets.findIndex(p => p.id === presetId);
-    
-    if (index === -1) {
-      console.error(`Cannot delete: preset not found or is built-in`);
-      return;
-    }
-
-    const deleted = this.customPresets.splice(index, 1)[0];
-    
-    // If this was the active preset, reset
-    if (this.config.currentPreset === presetId) {
+    const deleted = this.presetManager.deletePreset(presetId);
+    if (deleted && this.config.currentPreset === presetId) {
       this.reset();
     }
-
-    console.log(`🗑️  Deleted custom preset: ${deleted.name}`);
   }
 
   /**
    * Restore custom presets from storage
    */
   restoreCustomPresets(presets: IEQPreset[]): void {
-    this.customPresets = [...presets];
-    console.log(`♻️  Restored ${presets.length} custom presets`);
+    this.presetManager.restoreCustomPresets(presets);
   }
 
   /**
@@ -397,6 +385,8 @@ export class DSPEngine implements IDSPEngine {
     // Disconnect all nodes
     this.eqNodes.forEach(node => node.disconnect());
     this.eqNodes = [];
+    this.vocalNodes.forEach(node => node.disconnect());
+    this.vocalNodes = [];
 
     if (this.sourceNode) {
       this.sourceNode.disconnect();
@@ -442,7 +432,7 @@ export class DSPEngine implements IDSPEngine {
     }
 
     if (this.config.currentPreset) {
-      const preset = getPresetById(this.config.currentPreset);
+      const preset = this.presetManager.getPresetById(this.config.currentPreset);
       return preset ? preset.bands : [];
     }
 
@@ -469,7 +459,7 @@ export class DSPEngine implements IDSPEngine {
 
     const bands = this.getCurrentBands();
 
-    if (!this.config.enabled || bands.length === 0) {
+    if (!this.config.enabled || (bands.length === 0 && this.config.vocalMode === VocalMode.NORMAL)) {
       this.bypassChain();
       return;
     }
@@ -478,35 +468,20 @@ export class DSPEngine implements IDSPEngine {
     let previousNode: AudioNode = this.sourceNode;
 
     // 1. Vocal Processing Stage
-    if (this.config.vocalMode !== VocalMode.NORMAL) {
-      previousNode = this.buildVocalStage(previousNode);
-    }
+    previousNode = this.vocalProcessor.buildVocalStage(
+      this.audioContext,
+      previousNode,
+      this.config.vocalMode
+    );
+    this.vocalNodes = this.vocalProcessor.getCreatedNodes();
 
     // 2. EQ Stage
-
-    for (const band of bands) {
-      if (!band.enabled) continue;
-
-      const filter = this.audioContext.createBiquadFilter();
-      
-      // Configure filter
-      filter.type = this.mapBandTypeToFilterType(band.type);
-      filter.frequency.value = band.frequency;
-      filter.Q.value = band.q;
-      
-      // Gain only applies to peaking, lowshelf, and highshelf
-      if (band.type === EQBandType.PEAKING || 
-          band.type === EQBandType.LOWSHELF || 
-          band.type === EQBandType.HIGHSHELF) {
-        filter.gain.value = band.gain;
-      }
-
-      // Connect to chain
-      previousNode.connect(filter);
-      previousNode = filter;
-      
-      this.eqNodes.push(filter);
-    }
+    previousNode = this.eqProcessor.buildEQChain(
+      this.audioContext,
+      previousNode,
+      bands
+    );
+    this.eqNodes = this.eqProcessor.getCreatedNodes();
 
     // Connect to preamp
     previousNode.connect(this.preampNode);
@@ -531,6 +506,7 @@ export class DSPEngine implements IDSPEngine {
 
     // Disconnect everything
     this.eqNodes.forEach(node => node.disconnect());
+    this.vocalNodes.forEach(node => node.disconnect());
     this.sourceNode.disconnect();
     this.preampNode.disconnect();
     this.analyzerNode.disconnect();
@@ -541,116 +517,5 @@ export class DSPEngine implements IDSPEngine {
     this.preampNode.connect(this.analyzerNode);
     this.analyzerNode.connect(this.masterGainNode);
     this.masterGainNode.connect(this.audioContext.destination);
-  }
-
-  /**
-   * Map EQBandType to BiquadFilterType
-   */
-  private mapBandTypeToFilterType(type: EQBandType): BiquadFilterType {
-    switch (type) {
-      case EQBandType.LOWSHELF:
-        return 'lowshelf';
-      case EQBandType.HIGHSHELF:
-        return 'highshelf';
-      case EQBandType.PEAKING:
-        return 'peaking';
-      case EQBandType.LOWPASS:
-        return 'lowpass';
-      case EQBandType.HIGHPASS:
-        return 'highpass';
-      case EQBandType.NOTCH:
-        return 'notch';
-      case EQBandType.ALLPASS:
-        return 'allpass';
-      default:
-        return 'peaking';
-    }
-  }
-
-  /**
-   * Convert dB to linear gain
-   */
-  private dbToGain(db: number): number {
-    return Math.pow(10, db / 20);
-  }
-
-  /**
-   * Build the vocal processing stage
-   */
-  private buildVocalStage(inputNode: AudioNode): AudioNode {
-    if (!this.audioContext) return inputNode;
-
-    const splitter = this.audioContext.createChannelSplitter(2);
-    const merger = this.audioContext.createChannelMerger(2);
-    
-    this.vocalNodes.push(splitter, merger);
-    inputNode.connect(splitter);
-
-    if (this.config.vocalMode === VocalMode.KARAOKE) {
-      // KARAOKE: Remove Center (Mid) by using Side signal (L-R)
-      // L_out = L - R
-      // R_out = R - L
-      
-      const lPos = this.audioContext.createGain();
-      const rNeg = this.audioContext.createGain();
-      const rPos = this.audioContext.createGain();
-      const lNeg = this.audioContext.createGain();
-      
-      lPos.gain.value = 1;
-      rNeg.gain.value = -1;
-      rPos.gain.value = 1;
-      lNeg.gain.value = -1;
-      
-      this.vocalNodes.push(lPos, rNeg, rPos, lNeg);
-      
-      // Creating L - R for Left Output
-      splitter.connect(lPos, 0); // L -> lPos
-      splitter.connect(rNeg, 1); // R -> rNeg
-      lPos.connect(merger, 0, 0);
-      rNeg.connect(merger, 0, 0);
-      
-      // Creating R - L for Right Output
-      splitter.connect(rPos, 1); // R -> rPos
-      splitter.connect(lNeg, 0); // L -> lNeg
-      rPos.connect(merger, 0, 1);
-      lNeg.connect(merger, 0, 1);
-      
-      return merger;
-
-    } else if (this.config.vocalMode === VocalMode.MUSICIAN) {
-      // MUSICIAN: Isolate Center (Mid) = (L+R)/2 + Bandpass
-      
-      const sumGain = this.audioContext.createGain();
-      sumGain.gain.value = 0.5; // Average L+R
-      
-      // Bandpass to focus on vocal range (approx 300Hz - 3400Hz)
-      // Using 1kHz Center with wide Q
-      const bandpass = this.audioContext.createBiquadFilter();
-      bandpass.type = 'bandpass';
-      bandpass.frequency.value = 1000;
-      bandpass.Q.value = 0.5; 
-
-      // Highpass to remove low rumble
-      const highpass = this.audioContext.createBiquadFilter();
-      highpass.type = 'highpass';
-      highpass.frequency.value = 200;
-
-      this.vocalNodes.push(sumGain, bandpass, highpass);
-      
-      // Mix L and R into sumGain
-      splitter.connect(sumGain, 0);
-      splitter.connect(sumGain, 1);
-      
-      sumGain.connect(highpass);
-      highpass.connect(bandpass);
-      
-      // Output Mono to both channels
-      bandpass.connect(merger, 0, 0);
-      bandpass.connect(merger, 0, 1);
-      
-      return merger;
-    }
-    
-    return inputNode;
   }
 }
