@@ -11,7 +11,7 @@ RUN corepack enable && corepack prepare pnpm@8.15.0 --activate
 WORKDIR /app
 
 # Copy package files
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc tsconfig.base.json ./
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc tsconfig.base.json tsconfig.json ./
 COPY packages/shared/package.json ./packages/shared/
 COPY packages/player-core/package.json ./packages/player-core/
 COPY packages/dsp/package.json ./packages/dsp/
@@ -20,6 +20,7 @@ COPY packages/media-library/package.json ./packages/media-library/
 COPY packages/metadata/package.json ./packages/metadata/
 COPY packages/lyrics/package.json ./packages/lyrics/
 COPY packages/ui/package.json ./packages/ui/
+COPY packages/recommendations/package.json ./packages/recommendations/
 COPY apps/web/package.json ./apps/web/
 
 # Install dependencies
@@ -34,6 +35,7 @@ COPY packages/media-library ./packages/media-library
 COPY packages/metadata ./packages/metadata
 COPY packages/lyrics ./packages/lyrics
 COPY packages/ui ./packages/ui
+COPY packages/recommendations ./packages/recommendations
 COPY apps/web ./apps/web
 
 # Build packages (in dependency order)
@@ -44,6 +46,7 @@ RUN pnpm --filter @sonantica/player-core build
 RUN pnpm --filter @sonantica/dsp build
 RUN pnpm --filter @sonantica/audio-analyzer build
 RUN pnpm --filter @sonantica/media-library build
+RUN pnpm --filter @sonantica/recommendations build
 RUN pnpm --filter @sonantica/ui build
 RUN pnpm --filter @sonantica/web build
 
