@@ -8,6 +8,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import type { IDSPConfig, IEQPreset, IEQBand, IAudioMetrics } from '../contracts';
+import { VocalMode } from '../contracts';
 import { DSPEngine } from '../DSPEngine';
 import { BUILTIN_PRESETS } from '../presets';
 
@@ -45,6 +46,7 @@ export interface DSPState {
   deletePreset: (presetId: string) => void;
   updateMetrics: () => void;
   setMasterVolume: (volume: number) => void;
+  setVocalMode: (mode: VocalMode) => void;
   dispose: () => void;
 }
 
@@ -64,6 +66,7 @@ export const useDSPStore = create<DSPState>()(
         replayGainPreamp: 0,
         crossfeedEnabled: false,
         crossfeedStrength: 0.5,
+        vocalMode: VocalMode.NORMAL,
       },
       presets: BUILTIN_PRESETS,
       customPresets: [],
@@ -104,6 +107,11 @@ export const useDSPStore = create<DSPState>()(
       // We don't overwrite config here to preserve user settings
       presets: engine.getPresets(),
     });
+
+    // 4. Set Vocal Mode
+    if (config.vocalMode) {
+        engine.setVocalMode(config.vocalMode);
+    }
   },
 
   /**
@@ -306,6 +314,24 @@ export const useDSPStore = create<DSPState>()(
     const { engine } = get();
     if (engine) {
       engine.setMasterVolume(volume);
+    }
+  },
+
+  /**
+   * Set vocal processing mode
+   */
+  setVocalMode: (mode: VocalMode) => {
+    const { engine } = get();
+
+    set(state => ({
+      config: {
+        ...state.config,
+        vocalMode: mode
+      }
+    }));
+
+    if (engine) {
+      engine.setVocalMode(mode);
     }
   },
 

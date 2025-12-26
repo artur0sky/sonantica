@@ -56,6 +56,15 @@ export interface IEQPreset {
 }
 
 /**
+ * Vocal Processing Mode
+ */
+export enum VocalMode {
+  NORMAL = 'normal',
+  KARAOKE = 'karaoke',   // Remove vocals (Side channel only)
+  MUSICIAN = 'musician', // Isolate vocals (Center channel + Bandpass)
+}
+
+/**
  * DSP Chain Configuration
  */
 export interface IDSPConfig {
@@ -75,6 +84,8 @@ export interface IDSPConfig {
   crossfeedEnabled: boolean;
   /** Crossfeed strength (0-1) */
   crossfeedStrength: number;
+  /** Vocal processing mode */
+  vocalMode: VocalMode;
 }
 
 /**
@@ -116,6 +127,12 @@ export interface IDSPEngine {
    * @param gainDb - Gain in dB (-20 to +20)
    */
   setPreamp(gainDb: number): void;
+
+  /**
+   * Set vocal processing mode
+   * @param mode - The vocal mode (normal, karaoke, musician)
+   */
+  setVocalMode(mode: VocalMode): void;
 
   /**
    * Enable or disable DSP processing

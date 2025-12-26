@@ -13,6 +13,7 @@ import type { Variants } from "framer-motion";
 
 import { Button, Badge, SidebarContainer, EQSlider } from "@sonantica/ui";
 import { useEQSidebarLogic } from "../../hooks/useEQSidebarLogic";
+import { VocalModeControl } from "../dsp/VocalModeControl";
 
 const itemVariants: Variants = {
   hidden: { x: 20, opacity: 0 },
@@ -251,6 +252,15 @@ export function EQSidebar({ isCollapsed }: EQSidebarProps) {
             <span>0</span>
             <span>+20</span>
           </div>
+        </motion.div>
+
+        {/* Vocal Mode Control */}
+        <motion.div
+            variants={itemVariants}
+            initial="hidden"
+            animate="visible"
+        >
+            <VocalModeControl />
         </motion.div>
 
         {/* ReplayGain / Normalization (Placeholder/Manual) */}

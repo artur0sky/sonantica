@@ -28,8 +28,10 @@ export function useDSPIntegration() {
   const dspDispose = useDSPStore((state: DSPState) => state.dispose);
   const isInitialized = useDSPStore((state: DSPState) => state.isInitialized);
   const setMasterVolume = useDSPStore((state: DSPState) => state.setMasterVolume);
+
   
   const initAttempted = useRef(false);
+
 
   useEffect(() => {
     // Only attempt initialization once

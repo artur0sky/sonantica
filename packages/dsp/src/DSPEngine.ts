@@ -15,7 +15,7 @@ import type {
   IEQPreset,
   IAudioMetrics,
 } from './contracts';
-import { EQBandType } from './contracts';
+import { EQBandType, VocalMode } from './contracts';
 import { BUILTIN_PRESETS, getPresetById } from './presets';
 
 /**
@@ -31,6 +31,7 @@ export class DSPEngine implements IDSPEngine {
   private audioContext: AudioContext | null = null;
   private sourceNode: MediaElementAudioSourceNode | null = null;
   private eqNodes: BiquadFilterNode[] = [];
+  private vocalNodes: AudioNode[] = [];
   private preampNode: GainNode | null = null;
   private masterGainNode: GainNode | null = null;
   private onPlayHandler: (() => void) | null = null;
@@ -56,6 +57,7 @@ export class DSPEngine implements IDSPEngine {
       replayGainPreamp: 0,
       crossfeedEnabled: false,
       crossfeedStrength: 0.5,
+      vocalMode: VocalMode.NORMAL,
     };
 
     console.log('🎛️  Sonántica DSP Engine initialized');
@@ -217,6 +219,23 @@ export class DSPEngine implements IDSPEngine {
     );
 
     console.log(`🔊 Preamp: ${clampedGain.toFixed(1)} dB`);
+  }
+
+  /**
+   * Set vocal processing mode
+   */
+  setVocalMode(mode: VocalMode): void {
+    if (!this.isInitialized) {
+      this.config.vocalMode = mode;
+      return;
+    }
+
+    if (this.config.vocalMode === mode) return;
+
+    this.config.vocalMode = mode;
+    console.log(`🎤 Vocal Mode: ${mode}`);
+    
+    this.rebuildEQChain();
   }
 
   /**
@@ -441,6 +460,9 @@ export class DSPEngine implements IDSPEngine {
     // Disconnect old nodes
     this.eqNodes.forEach(node => node.disconnect());
     this.eqNodes = [];
+    this.vocalNodes.forEach(node => node.disconnect());
+    this.vocalNodes = [];
+    
     this.sourceNode.disconnect();
     this.analyzerNode.disconnect();
     this.masterGainNode.disconnect();
@@ -454,6 +476,13 @@ export class DSPEngine implements IDSPEngine {
 
     // Create new EQ nodes
     let previousNode: AudioNode = this.sourceNode;
+
+    // 1. Vocal Processing Stage
+    if (this.config.vocalMode !== VocalMode.NORMAL) {
+      previousNode = this.buildVocalStage(previousNode);
+    }
+
+    // 2. EQ Stage
 
     for (const band of bands) {
       if (!band.enabled) continue;
@@ -543,5 +572,85 @@ export class DSPEngine implements IDSPEngine {
    */
   private dbToGain(db: number): number {
     return Math.pow(10, db / 20);
+  }
+
+  /**
+   * Build the vocal processing stage
+   */
+  private buildVocalStage(inputNode: AudioNode): AudioNode {
+    if (!this.audioContext) return inputNode;
+
+    const splitter = this.audioContext.createChannelSplitter(2);
+    const merger = this.audioContext.createChannelMerger(2);
+    
+    this.vocalNodes.push(splitter, merger);
+    inputNode.connect(splitter);
+
+    if (this.config.vocalMode === VocalMode.KARAOKE) {
+      // KARAOKE: Remove Center (Mid) by using Side signal (L-R)
+      // L_out = L - R
+      // R_out = R - L
+      
+      const lPos = this.audioContext.createGain();
+      const rNeg = this.audioContext.createGain();
+      const rPos = this.audioContext.createGain();
+      const lNeg = this.audioContext.createGain();
+      
+      lPos.gain.value = 1;
+      rNeg.gain.value = -1;
+      rPos.gain.value = 1;
+      lNeg.gain.value = -1;
+      
+      this.vocalNodes.push(lPos, rNeg, rPos, lNeg);
+      
+      // Creating L - R for Left Output
+      splitter.connect(lPos, 0); // L -> lPos
+      splitter.connect(rNeg, 1); // R -> rNeg
+      lPos.connect(merger, 0, 0);
+      rNeg.connect(merger, 0, 0);
+      
+      // Creating R - L for Right Output
+      splitter.connect(rPos, 1); // R -> rPos
+      splitter.connect(lNeg, 0); // L -> lNeg
+      rPos.connect(merger, 0, 1);
+      lNeg.connect(merger, 0, 1);
+      
+      return merger;
+
+    } else if (this.config.vocalMode === VocalMode.MUSICIAN) {
+      // MUSICIAN: Isolate Center (Mid) = (L+R)/2 + Bandpass
+      
+      const sumGain = this.audioContext.createGain();
+      sumGain.gain.value = 0.5; // Average L+R
+      
+      // Bandpass to focus on vocal range (approx 300Hz - 3400Hz)
+      // Using 1kHz Center with wide Q
+      const bandpass = this.audioContext.createBiquadFilter();
+      bandpass.type = 'bandpass';
+      bandpass.frequency.value = 1000;
+      bandpass.Q.value = 0.5; 
+
+      // Highpass to remove low rumble
+      const highpass = this.audioContext.createBiquadFilter();
+      highpass.type = 'highpass';
+      highpass.frequency.value = 200;
+
+      this.vocalNodes.push(sumGain, bandpass, highpass);
+      
+      // Mix L and R into sumGain
+      splitter.connect(sumGain, 0);
+      splitter.connect(sumGain, 1);
+      
+      sumGain.connect(highpass);
+      highpass.connect(bandpass);
+      
+      // Output Mono to both channels
+      bandpass.connect(merger, 0, 0);
+      bandpass.connect(merger, 0, 1);
+      
+      return merger;
+    }
+    
+    return inputNode;
   }
 }
