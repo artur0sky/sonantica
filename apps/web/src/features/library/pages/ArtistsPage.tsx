@@ -7,13 +7,13 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useLibraryStore } from "@sonantica/media-library";
 import { ArtistCard } from "../components/ArtistCard";
+import { IconMicrophone, IconSearch } from "@tabler/icons-react";
 import {
-  IconMicrophone,
-  IconSearch,
-  IconSortAscending,
-  IconSortDescending,
-} from "@tabler/icons-react";
-import { AlphabetNavigator, Button } from "@sonantica/ui";
+  AlphabetNavigator,
+  PageHeader,
+  SortControl,
+  EmptyState,
+} from "@sonantica/ui";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 
@@ -125,83 +125,46 @@ export function ArtistsPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-6 pb-32">
-      {/* Sticky Header */}
-      <motion.div
-        initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        className="sticky top-0 z-30 bg-bg/95 backdrop-blur-md border-b border-border/50 -mx-6 px-6 py-4 mb-6"
-      >
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Artists</h1>
-            {stats.totalArtists > 0 && (
-              <p className="text-sm text-text-muted mt-1">
-                {stats.totalArtists} artist{stats.totalArtists !== 1 ? "s" : ""}{" "}
-                in library
-              </p>
-            )}
-          </div>
-
-          {/* Sort Controls */}
-          {sortedArtists.length > 0 && (
-            <div className="flex items-center gap-2">
-              <select
-                value={sortField}
-                onChange={(e) => setSortField(e.target.value as SortField)}
-                className="px-3 py-2 bg-surface-elevated border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent/50"
-              >
-                <option value="name">Name</option>
-                <option value="trackCount">Track Count</option>
-              </select>
-
-              <Button
-                onClick={() =>
-                  setSortOrder(sortOrder === "asc" ? "desc" : "asc")
-                }
-                variant="ghost"
-                size="sm"
-                className="flex items-center gap-1"
-              >
-                {sortOrder === "asc" ? (
-                  <IconSortAscending size={18} />
-                ) : (
-                  <IconSortDescending size={18} />
-                )}
-              </Button>
-            </div>
-          )}
-        </div>
-      </motion.div>
+      <PageHeader
+        title="Artists"
+        subtitle={
+          stats.totalArtists > 0 &&
+          `${stats.totalArtists} artist${
+            stats.totalArtists !== 1 ? "s" : ""
+          } in library`
+        }
+        actions={
+          sortedArtists.length > 0 && (
+            <SortControl
+              value={sortField}
+              options={[
+                { value: "name", label: "Name" },
+                { value: "trackCount", label: "Track Count" },
+              ]}
+              onValueChange={(val) => setSortField(val as SortField)}
+              direction={sortOrder}
+              onDirectionChange={setSortOrder}
+            />
+          )
+        }
+      />
 
       {/* Content */}
       <AnimatePresence mode="wait">
         {sortedArtists.length === 0 ? (
-          <motion.div
-            key="empty"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center py-20"
-          >
-            {searchQuery ? (
-              <>
-                <IconSearch
-                  size={48}
-                  className="mx-auto text-text-muted/30 mb-4"
-                />
-                <p className="text-text-muted">
-                  No artists found matching "{searchQuery}"
-                </p>
-              </>
-            ) : (
-              <>
-                <IconMicrophone
-                  size={48}
-                  className="mx-auto text-text-muted/30 mb-4"
-                />
-                <p className="text-text-muted">No artists in library</p>
-              </>
-            )}
-          </motion.div>
+          searchQuery ? (
+            <EmptyState
+              icon={IconSearch}
+              title="No results found"
+              description={`No artists found matching "${searchQuery}"`}
+            />
+          ) : (
+            <EmptyState
+              icon={IconMicrophone}
+              title="Library Empty"
+              description="No artists in your library."
+            />
+          )
         ) : (
           <motion.div
             key="list"
@@ -218,13 +181,6 @@ export function ArtistsPage() {
                 />
               </div>
             ))}
-
-            {/* Sentinel - placed outside grid or spanning full width if possible, 
-                but simple div at end of map works too if layout permits, 
-                or better: just append it after the map inside the grid for simplicity if it doesn't break layout too much,
-                OR strictly speaking, observer needs to be reachable. 
-                For a grid, it's safer to put it after the grid.
-            */}
           </motion.div>
         )}
       </AnimatePresence>

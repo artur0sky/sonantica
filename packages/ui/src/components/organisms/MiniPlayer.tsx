@@ -8,7 +8,13 @@
 import { usePlayerStore, useQueueStore } from "@sonantica/player-core";
 import { useUIStore } from "../../stores/uiStore";
 import { useAnalyzerStore, useWaveformStore } from "@sonantica/audio-analyzer";
-import { ShuffleButton, RepeatButton } from "../atoms";
+import {
+  ShuffleButton,
+  RepeatButton,
+  PlayButton,
+  SkipButton,
+  ActionIconButton,
+} from "../atoms";
 import {
   EnhancedVolumeControl,
   WaveformScrubber,
@@ -18,17 +24,13 @@ import {
 import { formatTime, PlaybackState, formatArtists } from "@sonantica/shared";
 import { cn } from "../../utils";
 import {
-  IconPlayerSkipBack,
-  IconPlayerPlay,
-  IconPlayerPause,
-  IconPlayerSkipForward,
-  IconPlaylist,
   IconMusic,
   IconActivityHeartbeat,
   IconMicrophone,
   IconAdjustmentsHorizontal,
+  IconPlaylist,
 } from "@tabler/icons-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 
 export function MiniPlayer() {
   const {
@@ -43,7 +45,6 @@ export function MiniPlayer() {
     previous,
     volume,
     setVolume,
-    getAudioElement,
   } = usePlayerStore();
 
   const {
@@ -74,7 +75,6 @@ export function MiniPlayer() {
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
       className="border-t border-border"
     >
-      {/* Progress Bar */}
       {/* Progress Bar with Waveform */}
       <WaveformScrubber
         trackId={currentTrack.id}
@@ -85,14 +85,12 @@ export function MiniPlayer() {
         className="absolute -top-1 left-0 right-0 z-10"
       />
 
-      {/* Spacer to preserve layout if needed, though scrubber is absolute top-aligned */}
-
       {/* Real-time Visualization Background */}
       <BackgroundSpectrum
-        bands={bands ?? undefined} // TODO: Connect to analyzer store
+        bands={bands ?? undefined}
         enabled={isVisualizationEnabled}
         className="absolute inset-0 z-0 opacity-20 pointer-events-none"
-        height={64} // Matches approximate height of player
+        height={64}
       />
 
       {/* Player Controls - Responsive Layout */}
@@ -134,67 +132,35 @@ export function MiniPlayer() {
 
           {/* Mobile Controls */}
           <div className="flex items-center gap-1 flex-shrink-0">
-            <motion.button
-              onClick={previous}
-              whileTap={{ scale: 0.9 }}
-              className="text-text-muted transition-colors p-2"
-              aria-label="Previous"
-            >
-              <IconPlayerSkipBack size={20} stroke={1.5} />
-            </motion.button>
+            <SkipButton direction="prev" onClick={previous} size={20} />
 
-            <motion.button
+            <PlayButton
+              isPlaying={isPlaying}
               onClick={isPlaying ? pause : play}
-              whileTap={{ scale: 0.95 }}
-              className="w-9 h-9 rounded-full flex items-center justify-center text-white bg-accent"
-              aria-label={isPlaying ? "Pause" : "Play"}
-            >
-              {isPlaying ? (
-                <IconPlayerPause
-                  size={18}
-                  className="fill-current"
-                  stroke={0}
-                />
-              ) : (
-                <IconPlayerPlay size={18} className="fill-current" stroke={0} />
-              )}
-            </motion.button>
+              size="sm"
+              className="w-9 h-9"
+            />
 
-            <motion.button
-              onClick={next}
-              whileTap={{ scale: 0.9 }}
-              className="text-text-muted transition-colors p-2"
-              aria-label="Next"
-            >
-              <IconPlayerSkipForward size={20} stroke={1.5} />
-            </motion.button>
+            <SkipButton direction="next" onClick={next} size={20} />
 
-            <motion.button
+            <ActionIconButton
+              icon={IconAdjustmentsHorizontal}
               onClick={toggleEQ}
-              whileTap={{ scale: 0.9 }}
-              className="text-text-muted transition-colors p-2"
-              aria-label="Toggle equalizer"
-            >
-              <IconAdjustmentsHorizontal size={20} stroke={1.5} />
-            </motion.button>
-
-            <motion.button
+              title="EQ"
+              size={20}
+            />
+            <ActionIconButton
+              icon={IconMicrophone}
               onClick={toggleLyrics}
-              whileTap={{ scale: 0.9 }}
-              className="text-text-muted transition-colors p-2"
-              aria-label="Toggle lyrics"
-            >
-              <IconMicrophone size={20} stroke={1.5} />
-            </motion.button>
-
-            <motion.button
+              title="Lyrics"
+              size={20}
+            />
+            <ActionIconButton
+              icon={IconPlaylist}
               onClick={toggleQueue}
-              whileTap={{ scale: 0.9 }}
-              className="text-text-muted transition-colors p-2"
-              aria-label="Toggle queue"
-            >
-              <IconPlaylist size={20} stroke={1.5} />
-            </motion.button>
+              title="Queue"
+              size={20}
+            />
           </div>
         </div>
 
@@ -299,60 +265,26 @@ export function MiniPlayer() {
               />
             </div>
 
-            <motion.button
+            <SkipButton
+              direction="prev"
               onClick={previous}
-              whileHover={{ scale: 1.1, color: "var(--color-text)" }}
-              whileTap={{ scale: 0.9 }}
-              className="text-text-muted transition-colors p-1.5"
-              aria-label="Previous"
-            >
-              <IconPlayerSkipBack size={20} stroke={1.5} />
-            </motion.button>
+              size={20}
+              className="p-1.5"
+            />
 
-            <motion.button
+            <PlayButton
+              isPlaying={isPlaying}
               onClick={isPlaying ? pause : play}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className={cn(
-                "w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center text-white shadow-lg",
-                "bg-accent hover:bg-accent-hover"
-              )}
-              aria-label={isPlaying ? "Pause" : "Play"}
-            >
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={isPlaying ? "pause" : "play"}
-                  initial={{ scale: 0.5, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.5, opacity: 0 }}
-                  transition={{ duration: 0.1 }}
-                >
-                  {isPlaying ? (
-                    <IconPlayerPause
-                      size={20}
-                      className="fill-current"
-                      stroke={0}
-                    />
-                  ) : (
-                    <IconPlayerPlay
-                      size={20}
-                      className="fill-current"
-                      stroke={0}
-                    />
-                  )}
-                </motion.div>
-              </AnimatePresence>
-            </motion.button>
+              size="md"
+              className="w-9 h-9 md:w-10 md:h-10"
+            />
 
-            <motion.button
+            <SkipButton
+              direction="next"
               onClick={next}
-              whileHover={{ scale: 1.1, color: "var(--color-text)" }}
-              whileTap={{ scale: 0.9 }}
-              className="text-text-muted transition-colors p-1.5"
-              aria-label="Next"
-            >
-              <IconPlayerSkipForward size={20} stroke={1.5} />
-            </motion.button>
+              size={20}
+              className="p-1.5"
+            />
 
             <div className="hidden lg:flex items-center">
               <ShuffleButton
@@ -379,54 +311,38 @@ export function MiniPlayer() {
               />
             </div>
 
-            <motion.button
+            <ActionIconButton
+              icon={IconActivityHeartbeat}
               onClick={toggleVisualization}
-              whileHover={{
-                scale: 1.1,
-                color: isVisualizationEnabled
-                  ? "var(--color-accent-hover)"
-                  : "var(--color-text)",
-              }}
-              whileTap={{ scale: 0.9 }}
-              className={cn(
-                "transition-colors hidden md:flex items-center justify-center p-1.5",
-                isVisualizationEnabled ? "text-accent" : "text-text-muted"
-              )}
-              aria-label="Toggle visualization"
-              title="Toggle Audio Visualization"
-            >
-              <IconActivityHeartbeat size={20} stroke={1.5} />
-            </motion.button>
+              isActive={isVisualizationEnabled}
+              title="Toggle Visualization"
+              className="hidden md:flex p-1.5"
+              size={20}
+            />
 
-            <motion.button
+            <ActionIconButton
+              icon={IconAdjustmentsHorizontal}
               onClick={toggleEQ}
-              whileHover={{ scale: 1.1, color: "var(--color-accent)" }}
-              whileTap={{ scale: 0.9 }}
-              className="text-text-muted transition-colors hidden sm:flex items-center justify-center p-1.5"
-              aria-label="Toggle equalizer"
-            >
-              <IconAdjustmentsHorizontal size={20} stroke={1.5} />
-            </motion.button>
+              title="Toggle EQ"
+              className="hidden sm:flex p-1.5"
+              size={20}
+            />
 
-            <motion.button
+            <ActionIconButton
+              icon={IconMicrophone}
               onClick={toggleLyrics}
-              whileHover={{ scale: 1.1, color: "var(--color-accent)" }}
-              whileTap={{ scale: 0.9 }}
-              className="text-text-muted transition-colors hidden sm:flex items-center justify-center p-1.5"
-              aria-label="Toggle lyrics"
-            >
-              <IconMicrophone size={20} stroke={1.5} />
-            </motion.button>
+              title="Toggle Lyrics"
+              className="hidden sm:flex p-1.5"
+              size={20}
+            />
 
-            <motion.button
+            <ActionIconButton
+              icon={IconPlaylist}
               onClick={toggleQueue}
-              whileHover={{ scale: 1.1, color: "var(--color-accent)" }}
-              whileTap={{ scale: 0.9 }}
-              className="text-text-muted transition-colors hidden sm:flex items-center justify-center p-1.5"
-              aria-label="Toggle queue"
-            >
-              <IconPlaylist size={20} stroke={1.5} />
-            </motion.button>
+              title="Toggle Queue"
+              className="hidden sm:flex p-1.5"
+              size={20}
+            />
           </div>
         </div>
       </div>

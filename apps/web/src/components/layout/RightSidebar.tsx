@@ -6,7 +6,6 @@
  */
 
 import {
-  IconX,
   IconTrash,
   IconMusic,
   IconGripVertical,
@@ -19,12 +18,11 @@ import {
   useDragControls,
 } from "framer-motion";
 import type { Variants } from "framer-motion";
-import { useState, useRef, useEffect, useMemo } from "react";
-import { usePlayerStore, useQueueStore } from "@sonantica/player-core";
+import { useState, useEffect } from "react";
 import { useLibraryStore } from "@sonantica/media-library";
-import { useUIStore } from "@sonantica/ui";
-import { Button, Badge } from "@sonantica/ui";
+import { Button, Badge, SidebarContainer } from "@sonantica/ui";
 import { formatArtists, formatTime, cn } from "@sonantica/shared";
+import { useQueueLogic } from "../../hooks/useQueueLogic";
 
 const itemVariants: Variants = {
   hidden: { x: 20, opacity: 0 },
@@ -51,137 +49,54 @@ interface RightSidebarProps {
 }
 
 export function RightSidebar({ isCollapsed }: RightSidebarProps) {
-  const currentTrack = usePlayerStore((s) => s.currentTrack);
-  const { loadTrack, play } = usePlayerStore();
-  const { toggleQueue } = useUIStore();
   const {
-    getRemainingTracks,
-    clearQueue,
-    reorderUpcoming,
-    queue: fullQueue,
+    currentTrack,
+    toggleQueue,
+    fullQueue,
     currentIndex,
-  } = useQueueStore();
-  const libraryTracks = useLibraryStore((s) => s.tracks);
-
-  const upcomingQueue = getRemainingTracks();
-
-  // Infinite Scroll State
-  const [displayedCount, setDisplayedCount] = useState(50);
-  const observerTarget = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          setDisplayedCount((prev) =>
-            Math.min(prev + 50, upcomingQueue.length)
-          );
-        }
-      },
-      { threshold: 0.1, rootMargin: "100px" }
-    );
-
-    if (observerTarget.current) {
-      observer.observe(observerTarget.current);
-    }
-
-    return () => observer.disconnect();
-  }, [upcomingQueue.length]);
-
-  const visibleQueue = useMemo(
-    () => upcomingQueue.slice(0, displayedCount),
-    [upcomingQueue, displayedCount]
-  );
-
-  const handleReorder = (newVisibleQueue: any[]) => {
-    // Merge reordered visible tracks with the rest of the upcoming tracks
-    const remaining = upcomingQueue.slice(displayedCount);
-    reorderUpcoming([...newVisibleQueue, ...remaining]);
-  };
-
-  const getExtension = (url: string): string => {
-    try {
-      const filename = url.split("/").pop() || "";
-      const parts = filename.split(".");
-      if (parts.length > 1) {
-        const ext = parts.pop();
-        return ext ? ext.toUpperCase() : "AUDIO";
-      }
-      return "AUDIO";
-    } catch {
-      return "AUDIO";
-    }
-  };
-
-  const getBadgeClass = (ext: string) => {
-    if (ext === "FLAC")
-      return "bg-[#C0C0C0] text-black border-none ring-1 ring-white/20 shadow-[0_0_10px_rgba(192,192,192,0.3)]";
-    if (ext === "WAV")
-      return "bg-[#FFD700] text-black border-none ring-1 ring-white/20 shadow-[0_0_10px_rgba(255,215,0,0.3)]";
-    return "";
-  };
+    upcomingQueue,
+    libraryTracks,
+    displayedCount,
+    observerTarget,
+    visibleQueue,
+    handleReorder,
+    getExtension,
+    getBadgeClass,
+    clearQueue,
+    handlePlay,
+    handleRemove,
+  } = useQueueLogic();
 
   return (
-    <motion.div
-      initial={{ x: 300, opacity: 0 }}
-      animate={{ x: 0, opacity: 1 }}
-      exit={{ x: 300, opacity: 0 }}
-      transition={{ type: "spring", damping: 20 }}
-      className="flex flex-col h-full overflow-hidden"
+    <SidebarContainer
+      title="Queue"
+      isCollapsed={isCollapsed}
+      onClose={toggleQueue}
+      headerActions={
+        !isCollapsed &&
+        upcomingQueue.length > 0 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={clearQueue}
+            className="p-2"
+            title="Clear Queue"
+          >
+            <IconTrash size={18} stroke={1.5} />
+            <span className="ml-1">Clear</span>
+          </Button>
+        )
+      }
     >
-      {/* Header */}
-      <div
-        className={cn(
-          "p-4 border-b border-border flex items-center justify-between transition-all",
-          isCollapsed && "flex-col gap-4 px-2"
-        )}
-      >
-        {!isCollapsed && (
-          <div className="flex flex-col">
-            <h2 className="text-lg font-semibold truncate tracking-tight">
-              Queue
-            </h2>
-            {fullQueue.length > 0 && (
-              <span className="text-[10px] text-text-muted font-mono uppercase tracking-wider">
-                {currentIndex + 1} / {fullQueue.length} tracks
-              </span>
-            )}
+      <div className="flex flex-col h-full">
+        {!isCollapsed && fullQueue.length > 0 && (
+          <div className="px-1 mb-4">
+            <span className="text-[10px] text-text-muted font-mono uppercase tracking-wider">
+              {currentIndex + 1} / {fullQueue.length} tracks
+            </span>
           </div>
         )}
-        <div
-          className={cn("flex items-center gap-2", isCollapsed && "flex-col")}
-        >
-          {upcomingQueue.length > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={clearQueue}
-              className={cn(isCollapsed && "p-2")}
-              title="Clear Queue"
-            >
-              <IconTrash size={18} stroke={1.5} />
-              {!isCollapsed && <span className="ml-1">Clear</span>}
-            </Button>
-          )}
-          <motion.button
-            onClick={toggleQueue}
-            whileHover={{ scale: 1.1, rotate: 90 }}
-            whileTap={{ scale: 0.9 }}
-            className="text-text-muted hover:text-text p-1 transition-fast"
-            aria-label="Close queue"
-          >
-            <IconX size={20} stroke={1.5} />
-          </motion.button>
-        </div>
-      </div>
 
-      {/* Content */}
-      <div
-        className={cn(
-          "flex-1 overflow-y-auto custom-scrollbar transition-all",
-          isCollapsed ? "p-2" : "p-4 lg:p-3"
-        )}
-      >
         {/* Now Playing */}
         <AnimatePresence mode="wait">
           {currentTrack && (
@@ -295,18 +210,8 @@ export function RightSidebar({ isCollapsed }: RightSidebarProps) {
                     track={track}
                     index={index}
                     isCollapsed={isCollapsed}
-                    onPlay={async () => {
-                      const queueStore = useQueueStore.getState();
-                      queueStore.jumpTo(queueStore.currentIndex + index + 1);
-                      await loadTrack(track);
-                      await play();
-                    }}
-                    onRemove={() => {
-                      const queueStore = useQueueStore.getState();
-                      queueStore.removeFromQueue(
-                        queueStore.currentIndex + index + 1
-                      );
-                    }}
+                    onPlay={() => handlePlay(track, index)}
+                    onRemove={() => handleRemove(index)}
                     getExtension={getExtension}
                     getBadgeClass={getBadgeClass}
                   />
@@ -320,7 +225,7 @@ export function RightSidebar({ isCollapsed }: RightSidebarProps) {
           </AnimatePresence>
         </div>
       </div>
-    </motion.div>
+    </SidebarContainer>
   );
 }
 
