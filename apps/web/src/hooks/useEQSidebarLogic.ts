@@ -61,6 +61,24 @@ export function useEQSidebarLogic() {
     reset,
     handlePresetChange,
     handleBandChange,
-    handlePreampChange
+    handlePreampChange,
+    handleBandReset: (bandId: string) => {
+      // Logic: If on a preset, reset to that preset's original value.
+      // If on 'custom' or otherwise, reset to 0.
+      
+      let targetGain = 0;
+      
+      if (config.currentPreset && config.currentPreset !== "custom") {
+         const originalPreset = presets.find((p: any) => p.id === config.currentPreset);
+         if (originalPreset) {
+             const originalBand = originalPreset.bands.find((b: { id: string; }) => b.id === bandId);
+             if (originalBand) {
+                 targetGain = originalBand.gain;
+             }
+         }
+      }
+
+      updateBand(bandId, { gain: targetGain });
+    }
   };
 }

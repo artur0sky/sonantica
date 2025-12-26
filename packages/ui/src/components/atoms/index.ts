@@ -8,6 +8,7 @@ export { Button } from './Button';
 export { Input } from './Input';
 export { Badge } from './Badge';
 export { Slider } from './Slider';
+export { EQSlider } from './EQSlider';
 export { RepeatButton } from './RepeatButton';
 export { SpectrumVisualizer } from './SpectrumVisualizer';
 export { AlphabetNavigator } from './AlphabetNavigator';

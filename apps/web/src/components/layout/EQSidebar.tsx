@@ -11,7 +11,7 @@ import { IconWaveSquare, IconRefresh } from "@tabler/icons-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Variants } from "framer-motion";
 
-import { Button, Badge, SidebarContainer } from "@sonantica/ui";
+import { Button, Badge, SidebarContainer, EQSlider } from "@sonantica/ui";
 import { useEQSidebarLogic } from "../../hooks/useEQSidebarLogic";
 
 const itemVariants: Variants = {
@@ -53,6 +53,7 @@ export function EQSidebar({ isCollapsed }: EQSidebarProps) {
     handlePresetChange,
     handleBandChange,
     handlePreampChange,
+    handleBandReset,
   } = useEQSidebarLogic();
 
   if (!eqOpen) return null;
@@ -63,7 +64,7 @@ export function EQSidebar({ isCollapsed }: EQSidebarProps) {
       isCollapsed={isCollapsed}
       onClose={toggleEQ}
       headerActions={
-        isInitialized && (
+        !isCollapsed && isInitialized && (
           <Badge
             variant={config.enabled ? "accent" : "default"}
             className="text-[10px] px-2 py-0.5"
@@ -80,7 +81,85 @@ export function EQSidebar({ isCollapsed }: EQSidebarProps) {
         )
       }
     >
-      <div className="space-y-5">
+      {isCollapsed ? (
+        /* XS VIEW (Collapsed) - width ~80px */
+        <div className="flex flex-col items-center h-full gap-4 pt-2 pb-4">
+          
+          {/* DSP Toggle (Vertical/Compact) */}
+          <div className="flex flex-col items-center gap-1">
+             <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={config.enabled}
+                onChange={(e) => setEnabled(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-9 h-5 bg-surface border-2 border-border peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-accent peer-checked:border-accent"></div>
+            </label>
+            <span className="text-[9px] font-mono text-text-muted opacity-80 uppercase tracking-widest">{config.enabled ? "ON" : "OFF"}</span>
+          </div>
+          
+          {/* Preset Selector (Compact) */}
+          <div className="relative w-full px-2">
+             <select
+               className="w-full h-8 bg-surface-elevated border border-border rounded text-[10px] text-center appearance-none cursor-pointer focus:border-accent focus:ring-1 focus:ring-accent truncated"
+               value={config.currentPreset || "custom"}
+               onChange={(e) => handlePresetChange(e.target.value)}
+               disabled={!config.enabled}
+               title="Change Preset"
+             >
+               <option value="custom">Custom</option>
+               {presets.map((preset: any) => (
+                 <option key={preset.id} value={preset.id}>
+                   {preset.name}
+                 </option>
+               ))}
+             </select>
+             {/* Tiny indicator to show it's a dropdown */}
+             <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-50">
+               <svg width="6" height="4" viewBox="0 0 6 4" fill="none"><path d="M3 4L0 0H6L3 4Z" fill="currentColor"/></svg>
+             </div>
+          </div>
+
+          <div className="w-full h-[1px] bg-border my-1"></div>
+
+          {/* Vertical Preamp Slider taking most space */}
+          <div className="flex-1 flex flex-col items-center justify-center w-full min-h-0 relative">
+             <span className="text-[9px] text-text-muted font-mono mb-2">PRE</span>
+             <EQSlider
+                orientation="vertical"
+                min={-20}
+                max={20}
+                step={0.5}
+                value={config.preamp}
+                trackLength="100%"
+                onChange={(e) => handlePreampChange(parseFloat(e.target.value))}
+                onDoubleClick={() => handlePreampChange(0)}
+                disabled={!config.enabled}
+                title={`Preamp: ${config.preamp}dB`}
+                className="flex-1 py-4"
+              />
+             <span className="text-[9px] text-accent font-mono mt-2">{config.preamp > 0 ? `+${config.preamp}` : config.preamp}</span>
+          </div>
+
+          <div className="w-full h-[1px] bg-border my-1"></div>
+
+          {/* Reset Button (Small) */}
+          <Button
+             variant="ghost"
+             size="sm"
+             onClick={() => reset()}
+             disabled={!config.enabled}
+             className="w-10 h-10 p-0 rounded-full text-red-500 hover:bg-red-500/10"
+             title="Reset to Flat"
+          >
+            <IconRefresh size={18} stroke={1.5} />
+          </Button>
+
+        </div>
+      ) : (
+        /* STANDARD VIEW (Expanded) */
+        <div className="space-y-5">
         {/* Enable/Disable Toggle */}
         <motion.div
           variants={itemVariants}
@@ -214,67 +293,58 @@ export function EQSidebar({ isCollapsed }: EQSidebarProps) {
 
               {eqSidebarWidth >= 480 ? (
                 /* EXPANDED: Vertical Sliders (Graphic EQ Style) */
-                <div className="flex justify-between items-end h-64 p-4 bg-surface-elevated rounded-xl border border-border overflow-x-auto gap-2">
-                  {currentBands.map((band) => (
-                    <div
-                      key={band.id}
-                      className="flex flex-col items-center h-full gap-2 min-w-[32px]"
-                    >
-                      {/* Gain Value */}
-                      <span className="text-[10px] font-mono text-accent h-4">
-                        {band.gain > 0
-                          ? `+${Math.round(band.gain)}`
-                          : Math.round(band.gain)}
-                      </span>
+                <div className="relative h-64 p-4 bg-surface-elevated rounded-xl border border-border">
+                  {/* Grid Lines/Axis */}
+                  <div className="absolute inset-0 p-4 pointer-events-none flex flex-col justify-between text-[9px] text-text-muted/30 font-mono select-none">
+                     <div className="w-full border-t border-border/30 flex items-center"><span className="-mt-3">+12dB</span></div>
+                     <div className="w-full border-t border-dashed border-border/20"></div>
+                     <div className="w-full border-t border-accent/20 flex items-center"><span className="-mt-3 text-accent/50">0dB</span></div>
+                     <div className="w-full border-t border-dashed border-border/20"></div>
+                     <div className="w-full border-t border-border/30 flex items-center"><span className="-mt-3">-12dB</span></div>
+                  </div>
 
-                      {/* Vertical Slider */}
-                      <div className="relative flex-1 w-8 flex items-center justify-center bg-surface-elevated/50 rounded-full py-2">
-                        {/* Central axis line */}
-                        <div className="absolute top-2 bottom-2 w-[1px] bg-border z-0"></div>
+                  {/* Sliders Container */}
+                  <div className="relative h-full flex justify-between items-end z-10 mx-6">
+                    {currentBands.map((band) => (
+                      <div
+                        key={band.id}
+                        className="flex flex-col items-center h-full justify-between pb-1 gap-1 min-w-[32px] group"
+                      >
+                        {/* Gain Value (Hidden by default, shown on hover/active) */}
+                        <span className={`text-[9px] font-mono transition-opacity ${band.gain === 0 ? 'opacity-0 group-hover:opacity-100' : 'opacity-100 text-accent'}`}>
+                           {band.gain > 0 ? `+${Math.round(band.gain)}` : Math.round(band.gain)}
+                        </span>
 
-                        <input
-                          type="range"
-                          className="absolute h-full w-full rotate-270 appearance-none bg-transparent cursor-pointer z-10
-                                [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:border-[1px] [&::-webkit-slider-thumb]:border-surface
-                                [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:rounded-full"
-                          style={{
-                            width: "256px", // Fixed width needed when rotated to match container height approx
-                            height: "8px",
-                            borderRadius: "4px",
-                            position: "absolute",
-                            left: "50%",
-                            top: "50%",
-                            transform: "translate(-50%, -50%) rotate(-90deg)", // Explicit transform for better control
-                            background: `linear-gradient(to right, var(--color-accent, #818cf8) 0%, var(--color-accent, #818cf8) ${
-                              ((band.gain + 12) / 24) * 100
-                            }%, var(--color-surface-elevated, #3f3f46) ${
-                              ((band.gain + 12) / 24) * 100
-                            }%, var(--color-surface-elevated, #3f3f46) 100%)`,
-                          }}
-                          min="-12"
-                          max="12"
-                          step="0.5"
-                          value={band.gain}
-                          onChange={(e) =>
-                            handleBandChange(
-                              band.id,
-                              "gain",
-                              parseFloat(e.target.value)
-                            )
-                          }
-                          title={`${band.frequency}Hz: ${band.gain}dB`}
-                        />
-                        {/* Fill bar simulated? Hard with rotated input. Rely on thumb position. */}
+                        <div className="flex-1 flex items-center justify-center py-2 h-full"> 
+                            <EQSlider
+                              orientation="vertical"
+                              min={-12}
+                              max={12}
+                              step={0.5}
+                              value={band.gain}
+                              trackLength="160px"
+                              onChange={(e) =>
+                                handleBandChange(
+                                  band.id,
+                                  "gain",
+                                  parseFloat(e.target.value)
+                                )
+                              }
+                              onDoubleClick={() => handleBandReset(band.id)}
+                              title={`${band.frequency}Hz: ${band.gain}dB`}
+                              className="h-full"
+                            />
+                        </div>
+
+                        {/* Frequency Label */}
+                        <span className="text-[9px] text-text-muted font-mono whitespace-nowrap">
+                          {band.frequency >= 1000
+                            ? `${(band.frequency / 1000).toFixed(1)}k`
+                            : `${band.frequency}`}
+                        </span>
                       </div>
-
-                      {/* Frequency Label */}
-                      <span className="text-[9px] text-text-muted font-mono transform -rotate-45 origin-top-left mt-2 whitespace-nowrap">
-                        {band.frequency >= 1000
-                          ? `${(band.frequency / 1000).toFixed(1)}k`
-                          : `${band.frequency}`}
-                      </span>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               ) : (
                 /* COMPACT: Horizontal Sliders (List Style) */
@@ -293,12 +363,10 @@ export function EQSidebar({ isCollapsed }: EQSidebarProps) {
                             ? `${(band.frequency / 1000).toFixed(1)}kHz`
                             : `${band.frequency}Hz`}
                         </span>
-                        <input
-                          type="range"
-                          className="flex-1 mx-3 h-1.5 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:hover:scale-110 transition-all [&::-moz-range-thumb]:bg-white"
-                          min="-12"
-                          max="12"
-                          step="0.5"
+                        <EQSlider
+                          min={-12}
+                          max={12}
+                          step={0.5}
                           value={band.gain}
                           onChange={(e) =>
                             handleBandChange(
@@ -307,13 +375,8 @@ export function EQSidebar({ isCollapsed }: EQSidebarProps) {
                               parseFloat(e.target.value)
                             )
                           }
-                          style={{
-                            background: `linear-gradient(to right, var(--color-accent, #818cf8) 0%, var(--color-accent, #818cf8) ${
-                              ((band.gain + 12) / 24) * 100
-                            }%, var(--color-surface-elevated, #3f3f46) ${
-                              ((band.gain + 12) / 24) * 100
-                            }%, var(--color-surface-elevated, #3f3f46) 100%)`,
-                          }}
+                          onDoubleClick={() => handleBandReset(band.id)}
+                          className="flex-1 mx-3"
                         />
                         <span className="text-xs font-mono text-accent w-10 text-right">
                           {band.gain > 0
@@ -341,6 +404,7 @@ export function EQSidebar({ isCollapsed }: EQSidebarProps) {
           Reset to Flat
         </Button>
       </div>
+      )}
     </SidebarContainer>
   );
 }
