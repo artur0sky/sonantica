@@ -22,9 +22,12 @@ import { useDSPStore, type DSPState } from '@sonantica/dsp';
  */
 export function useDSPIntegration() {
   const getAudioElement = usePlayerStore(state => state.getAudioElement);
+  const volume = usePlayerStore(state => state.volume);
+  
   const dspInitialize = useDSPStore((state: DSPState) => state.initialize);
   const dspDispose = useDSPStore((state: DSPState) => state.dispose);
   const isInitialized = useDSPStore((state: DSPState) => state.isInitialized);
+  const setMasterVolume = useDSPStore((state: DSPState) => state.setMasterVolume);
   
   const initAttempted = useRef(false);
 
@@ -42,13 +45,22 @@ export function useDSPIntegration() {
       dspInitialize(audioElement)
         .then(() => {
           console.log('🎛️  DSP integrated with player');
+          // Sync initial volume
+          setMasterVolume(usePlayerStore.getState().volume);
         })
         .catch((error: unknown) => {
           console.error('❌ Failed to initialize DSP:', error);
           initAttempted.current = false; // Allow retry
         });
     }
-  }, [getAudioElement, dspInitialize, isInitialized]);
+  }, [getAudioElement, dspInitialize, isInitialized, setMasterVolume]);
+
+  // Sync volume
+  useEffect(() => {
+    if (isInitialized) {
+      setMasterVolume(volume);
+    }
+  }, [volume, isInitialized, setMasterVolume]);
 
   // Cleanup on unmount
   useEffect(() => {

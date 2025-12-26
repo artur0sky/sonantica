@@ -157,6 +157,12 @@ export interface IDSPEngine {
   restoreCustomPresets(presets: IEQPreset[]): void;
 
   /**
+   * Set master volume (0.0 to 1.0)
+   * Essential when MediaElementAudioSourceNode ignores the wrapper's volume.
+   */
+  setMasterVolume(volume: number): void;
+
+  /**
    * Cleanup and disconnect all nodes
    */
   dispose(): void;

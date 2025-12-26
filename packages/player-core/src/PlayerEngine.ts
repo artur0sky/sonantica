@@ -46,6 +46,12 @@ export class PlayerEngine implements IPlayerEngine {
   constructor() {
     console.log('🎵 Sonántica Player Core initialized');
     console.log('   "Every file has an intention."');
+    
+    // Initialize single audio element instance
+    this.audio = new Audio();
+    
+    // Attach persistent listeners
+    this.attachAudioListeners();
   }
 
   /**
@@ -55,28 +61,43 @@ export class PlayerEngine implements IPlayerEngine {
     try {
       this.setState(PlaybackState.LOADING);
 
-      // Clean up previous audio element (but keep listeners!)
-      if (this.audio) {
-        this.cleanupAudio();
+      if (!this.audio) {
+        // Should theoretically not happen if initialized in constructor
+        this.audio = new Audio();
+        this.attachAudioListeners();
       }
 
-      // Create new audio element
-      this.audio = new Audio(source.url);
+      // Reset specific properties but keep the element
+      this.audio.pause();
+      this.audio.src = source.url;
       this.audio.volume = this.volume;
       this.audio.muted = this.isMuted;
+      this.audio.load();
 
-      // Attach event listeners
-      this.attachAudioListeners();
-
-      // Wait for metadata to load
+      // Wait for metadata
       await new Promise<void>((resolve, reject) => {
         if (!this.audio) {
           reject(new Error('Audio element not initialized'));
           return;
         }
 
-        this.audio.addEventListener('loadedmetadata', () => resolve(), { once: true });
-        this.audio.addEventListener('error', () => reject(new Error('Failed to load audio')), { once: true });
+        const onLoaded = () => {
+          cleanup();
+          resolve();
+        };
+
+        const onError = () => {
+          cleanup();
+          reject(new Error('Failed to load audio'));
+        };
+
+        const cleanup = () => {
+          this.audio?.removeEventListener('loadedmetadata', onLoaded);
+          this.audio?.removeEventListener('error', onError);
+        };
+
+        this.audio.addEventListener('loadedmetadata', onLoaded, { once: true });
+        this.audio.addEventListener('error', onError, { once: true });
       });
 
       this.setState(PlaybackState.STOPPED);
@@ -210,10 +231,11 @@ export class PlayerEngine implements IPlayerEngine {
    * Cleanup audio element only (keeps event listeners)
    */
   private cleanupAudio(): void {
+    // Deprecated: No-op or reused logic if needed, but we are reusing the element now.
+    // Kept for structure if needed, but logic moved to dispose or load.
     if (this.audio) {
-      this.audio.pause();
-      this.audio.src = '';
-      this.audio = null;
+        this.audio.pause();
+        this.audio.src = '';
     }
   }
 
@@ -228,7 +250,11 @@ export class PlayerEngine implements IPlayerEngine {
    * Full cleanup (including listeners)
    */
   dispose(): void {
-    this.cleanupAudio();
+    if (this.audio) {
+        this.audio.pause();
+        this.audio.src = '';
+        this.audio = null;
+    }
     this.listeners.clear();
     this.setState(PlaybackState.IDLE);
     console.log('🧹 Player disposed');

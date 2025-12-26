@@ -44,6 +44,7 @@ export interface DSPState {
   savePreset: (preset: Omit<IEQPreset, 'id' | 'isBuiltIn'>) => string;
   deletePreset: (presetId: string) => void;
   updateMetrics: () => void;
+  setMasterVolume: (volume: number) => void;
   dispose: () => void;
 }
 
@@ -296,6 +297,16 @@ export const useDSPStore = create<DSPState>()(
     const metrics = engine.getMetrics();
     
     set({ metrics });
+  },
+
+  /**
+   * Set master volume
+   */
+  setMasterVolume: (volume: number) => {
+    const { engine } = get();
+    if (engine) {
+      engine.setMasterVolume(volume);
+    }
   },
 
   /**

@@ -22,7 +22,7 @@ import { BUILTIN_PRESETS, getPresetById } from './presets';
  * DSP Engine Implementation
  * 
  * Architecture:
- * AudioElement → MediaElementSource → [EQ Bands] → Preamp → Destination
+ * AudioElement → MediaElementSource → [EQ Bands] → Preamp → Analyzer → MasterGain → Destination
  * 
  * All processing is done in the frequency domain using BiquadFilterNodes.
  */
@@ -32,6 +32,8 @@ export class DSPEngine implements IDSPEngine {
   private sourceNode: MediaElementAudioSourceNode | null = null;
   private eqNodes: BiquadFilterNode[] = [];
   private preampNode: GainNode | null = null;
+  private masterGainNode: GainNode | null = null;
+  private onPlayHandler: (() => void) | null = null;
   
   // State
   private config: IDSPConfig;
@@ -73,8 +75,22 @@ export class DSPEngine implements IDSPEngine {
       this.currentAudioElement = audioElement;
 
       // Create AudioContext (user gesture required in some browsers)
+      // We don't call resume() immediately here to avoid warnings if no gesture is active.
+      // Instead we rely on the play handler.
       this.audioContext = new AudioContext();
-      this.audioContext.resume();
+
+      // Setup Play Handler to resume AudioContext on user gesture
+      this.onPlayHandler = () => {
+        if (this.audioContext && this.audioContext.state === 'suspended') {
+          this.audioContext.resume().then(() => {
+            console.log('▶️  AudioContext resumed successfully');
+          }).catch(err => {
+            console.warn('⚠️ Could not resume AudioContext:', err);
+          });
+        }
+      };
+      
+      this.currentAudioElement.addEventListener('play', this.onPlayHandler);
 
       // Create source node from audio element
       this.sourceNode = this.audioContext.createMediaElementSource(audioElement);
@@ -87,6 +103,10 @@ export class DSPEngine implements IDSPEngine {
       // Create preamp gain node
       this.preampNode = this.audioContext.createGain();
       this.preampNode.gain.value = this.dbToGain(this.config.preamp);
+      
+      // Create master gain node
+      this.masterGainNode = this.audioContext.createGain();
+      this.masterGainNode.gain.value = 1.0;
 
       // Build the initial chain
       this.rebuildEQChain();
@@ -197,6 +217,21 @@ export class DSPEngine implements IDSPEngine {
     );
 
     console.log(`🔊 Preamp: ${clampedGain.toFixed(1)} dB`);
+  }
+
+  /**
+   * Set master volume
+   */
+  setMasterVolume(volume: number): void {
+    if (!this.masterGainNode || !this.audioContext) {
+      return;
+    }
+    
+    // Smooth transition
+    const now = this.audioContext.currentTime;
+    this.masterGainNode.gain.cancelScheduledValues(now);
+    this.masterGainNode.gain.setValueAtTime(this.masterGainNode.gain.value, now);
+    this.masterGainNode.gain.linearRampToValueAtTime(clamp(volume, 0, 1), now + 0.1);
   }
 
   /**
@@ -327,12 +362,17 @@ export class DSPEngine implements IDSPEngine {
   }
 
   /**
-   * Cleanup and disconnect all nodes
+   * Dispose
    */
   dispose(): void {
     if (this.metricsInterval) {
       clearInterval(this.metricsInterval);
       this.metricsInterval = null;
+    }
+
+    if (this.currentAudioElement && this.onPlayHandler) {
+      this.currentAudioElement.removeEventListener('play', this.onPlayHandler);
+      this.onPlayHandler = null;
     }
 
     // Disconnect all nodes
@@ -352,6 +392,11 @@ export class DSPEngine implements IDSPEngine {
     if (this.analyzerNode) {
       this.analyzerNode.disconnect();
       this.analyzerNode = null;
+    }
+    
+    if (this.masterGainNode) {
+      this.masterGainNode.disconnect();
+      this.masterGainNode = null;
     }
 
     if (this.audioContext) {
@@ -389,7 +434,7 @@ export class DSPEngine implements IDSPEngine {
    * Rebuild the entire EQ chain
    */
   private rebuildEQChain(): void {
-    if (!this.audioContext || !this.sourceNode || !this.preampNode) {
+    if (!this.audioContext || !this.sourceNode || !this.preampNode || !this.analyzerNode || !this.masterGainNode) {
       return;
     }
 
@@ -397,6 +442,8 @@ export class DSPEngine implements IDSPEngine {
     this.eqNodes.forEach(node => node.disconnect());
     this.eqNodes = [];
     this.sourceNode.disconnect();
+    this.analyzerNode.disconnect();
+    this.masterGainNode.disconnect();
 
     const bands = this.getCurrentBands();
 
@@ -436,17 +483,20 @@ export class DSPEngine implements IDSPEngine {
     previousNode.connect(this.preampNode);
     
     // Connect preamp to analyzer
-    this.preampNode.connect(this.analyzerNode!);
+    this.preampNode.connect(this.analyzerNode);
     
-    // Connect analyzer to destination
-    this.analyzerNode!.connect(this.audioContext.destination);
+    // Connect analyzer to master gain
+    this.analyzerNode.connect(this.masterGainNode);
+
+    // Connect master gain to destination
+    this.masterGainNode.connect(this.audioContext.destination);
   }
 
   /**
    * Bypass the EQ chain (direct connection)
    */
   private bypassChain(): void {
-    if (!this.audioContext || !this.sourceNode || !this.preampNode || !this.analyzerNode) {
+    if (!this.audioContext || !this.sourceNode || !this.preampNode || !this.analyzerNode || !this.masterGainNode) {
       return;
     }
 
@@ -455,11 +505,13 @@ export class DSPEngine implements IDSPEngine {
     this.sourceNode.disconnect();
     this.preampNode.disconnect();
     this.analyzerNode.disconnect();
+    this.masterGainNode.disconnect();
 
     // Direct connection
     this.sourceNode.connect(this.preampNode);
     this.preampNode.connect(this.analyzerNode);
-    this.analyzerNode.connect(this.audioContext.destination);
+    this.analyzerNode.connect(this.masterGainNode);
+    this.masterGainNode.connect(this.audioContext.destination);
   }
 
   /**
