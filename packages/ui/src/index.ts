@@ -12,6 +12,10 @@ export * from './components/molecules';
 
 export * from "./components/organisms";
 
+// Context Menu
+export { ContextMenu, useContextMenu } from './components/ContextMenu';
+export type { ContextMenuItem } from './components/ContextMenu';
+
 // Stores
 export { useUIStore } from './stores/uiStore';
 export type { UIState } from './stores/uiStore';

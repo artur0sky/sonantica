@@ -8,13 +8,17 @@ import {
   IconPlayerPlay,
   IconPlayerPause,
   IconMusic,
+  IconPlaylistAdd,
+  IconPlayerSkipForward,
+  IconInfoCircle,
 } from "@tabler/icons-react";
 import { motion } from "framer-motion";
 import { cn } from "@sonantica/shared";
-import { usePlayerStore } from "@sonantica/player-core";
+import { usePlayerStore, useQueueStore } from "@sonantica/player-core";
 import { useLibraryStore } from "@sonantica/media-library";
 import { PlaybackState, formatArtists, formatTime } from "@sonantica/shared";
 import { useEffect } from "react";
+import { ContextMenu, useContextMenu, type ContextMenuItem } from "@sonantica/ui";
 
 interface TrackItemProps {
   track: any;
@@ -23,10 +27,45 @@ interface TrackItemProps {
 
 export function TrackItem({ track, onClick }: TrackItemProps) {
   const { currentTrack, state } = usePlayerStore();
+  const { addToQueue, playNext } = useQueueStore();
 
   const isCurrentTrack = currentTrack?.id === track.id;
   const isPlaying = isCurrentTrack && state === PlaybackState.PLAYING;
   const hydrateTrack = useLibraryStore((s) => s.hydrateTrack);
+
+  // Context menu state
+  const contextMenu = useContextMenu();
+
+  // Context menu items
+  const menuItems: ContextMenuItem[] = [
+    {
+      id: 'play-next',
+      label: 'Play Next',
+      icon: <IconPlayerSkipForward size={18} stroke={1.5} />,
+      onClick: () => playNext(track),
+    },
+    {
+      id: 'add-to-queue',
+      label: 'Add to Queue',
+      icon: <IconPlaylistAdd size={18} stroke={1.5} />,
+      onClick: () => addToQueue(track),
+    },
+    {
+      id: 'divider-1',
+      label: '',
+      divider: true,
+      onClick: () => {},
+    },
+    {
+      id: 'info',
+      label: 'Track Info',
+      icon: <IconInfoCircle size={18} stroke={1.5} />,
+      onClick: () => {
+        // TODO: Open track info modal
+        console.log('Track info:', track);
+      },
+    },
+  ];
 
   // Lazy hydration on appearance
   useEffect(() => {
@@ -39,24 +78,31 @@ export function TrackItem({ track, onClick }: TrackItemProps) {
   }, [track.id, track.metadata?.coverArt, hydrateTrack]);
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      whileHover={{
-        scale: 1.01,
-        backgroundColor: "var(--color-surface-elevated)",
-        transition: { duration: 0.1 },
-      }}
-      whileTap={{ scale: 0.99 }}
-      onClick={onClick}
-      className={cn(
-        "flex items-center gap-4 p-3 rounded-lg cursor-pointer transition-colors group border border-transparent",
-        isCurrentTrack
-          ? "bg-surface-elevated border-accent/20"
-          : "hover:bg-surface-elevated/50"
-      )}
-    >
+    <>
+      <motion.div
+        layout
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        whileHover={{
+          scale: 1.01,
+          backgroundColor: "var(--color-surface-elevated)",
+          transition: { duration: 0.1 },
+        }}
+        whileTap={{ scale: 0.99 }}
+        onClick={onClick}
+        onContextMenu={contextMenu.handleContextMenu}
+        onTouchStart={contextMenu.handleLongPressStart}
+        onTouchEnd={contextMenu.handleLongPressEnd}
+        onMouseDown={contextMenu.handleLongPressStart}
+        onMouseUp={contextMenu.handleLongPressEnd}
+        onMouseLeave={contextMenu.handleLongPressEnd}
+        className={cn(
+          "flex items-center gap-4 p-3 rounded-lg cursor-pointer transition-colors group border border-transparent",
+          isCurrentTrack
+            ? "bg-surface-elevated border-accent/20"
+            : "hover:bg-surface-elevated/50"
+        )}
+      >
       {/* Album Art / Icon */}
       <div className="w-12 h-12 flex-shrink-0 relative rounded-md overflow-hidden bg-surface-elevated border border-border">
         {/* Cover Art or Music Icon */}
@@ -138,5 +184,14 @@ export function TrackItem({ track, onClick }: TrackItemProps) {
         </div>
       )}
     </motion.div>
+
+    {/* Context Menu */}
+    <ContextMenu
+      items={menuItems}
+      isOpen={contextMenu.isOpen}
+      position={contextMenu.position}
+      onClose={contextMenu.close}
+    />
+  </>
   );
 }

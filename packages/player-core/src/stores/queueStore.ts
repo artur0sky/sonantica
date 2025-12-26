@@ -28,6 +28,7 @@ export interface QueueState {
   // Actions
   setQueue: (tracks: MediaSource[], startIndex?: number) => void;
   addToQueue: (tracks: MediaSource | MediaSource[]) => void;
+  playNext: (tracks: MediaSource | MediaSource[]) => void;
   removeFromQueue: (index: number) => void;
   clearQueue: () => void;
   
@@ -122,6 +123,28 @@ export const useQueueStore = create<QueueState>((set, get) => ({
       queue: [...state.queue, ...tracksArray],
       originalQueue: [...state.originalQueue, ...tracksArray],
     }));
+    (get() as any)._save();
+  },
+
+  playNext: (tracks: MediaSource | MediaSource[]) => {
+    const tracksArray = Array.isArray(tracks) ? tracks : [tracks];
+    set((state) => {
+      const insertIndex = state.currentIndex + 1;
+      const newQueue = [
+        ...state.queue.slice(0, insertIndex),
+        ...tracksArray,
+        ...state.queue.slice(insertIndex),
+      ];
+      const newOriginalQueue = [
+        ...state.originalQueue.slice(0, insertIndex),
+        ...tracksArray,
+        ...state.originalQueue.slice(insertIndex),
+      ];
+      return {
+        queue: newQueue,
+        originalQueue: newOriginalQueue,
+      };
+    });
     (get() as any)._save();
   },
 

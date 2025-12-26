@@ -10,6 +10,8 @@ import {
   IconMusic,
   IconGripVertical,
   IconPlayerPlay,
+  IconChevronDown,
+  IconChevronUp,
 } from "@tabler/icons-react";
 import {
   motion,
@@ -20,7 +22,7 @@ import {
 import type { Variants } from "framer-motion";
 import { useState, useEffect } from "react";
 import { useLibraryStore } from "@sonantica/media-library";
-import { Button, Badge, SidebarContainer } from "@sonantica/ui";
+import { Button, Badge, SidebarContainer, useUIStore } from "@sonantica/ui";
 import { formatArtists, formatTime, cn } from "@sonantica/shared";
 import { useQueueLogic } from "../../hooks/useQueueLogic";
 
@@ -66,6 +68,13 @@ export function RightSidebar({ isCollapsed }: RightSidebarProps) {
     handlePlay,
     handleRemove,
   } = useQueueLogic();
+
+  // Queue expansion state
+  const isQueueExpanded = useUIStore((s) => s.isQueueExpanded);
+  const toggleQueueExpanded = useUIStore((s) => s.toggleQueueExpanded);
+
+  // Show only next track when not expanded
+  const displayQueue = isQueueExpanded ? visibleQueue : visibleQueue.slice(0, 1);
 
   return (
     <SidebarContainer
@@ -178,11 +187,28 @@ export function RightSidebar({ isCollapsed }: RightSidebarProps) {
         </AnimatePresence>
 
         {/* Queue List */}
-        <div className="relative">
+        <div className="relative flex-1 overflow-hidden flex flex-col">
           {!isCollapsed && (
-            <h3 className="text-[10px] text-text-muted/70 font-bold mb-4 uppercase tracking-[0.2em]">
-              Next Up
-            </h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-[10px] text-text-muted/70 font-bold uppercase tracking-[0.2em]">
+                Next Up
+              </h3>
+              {upcomingQueue.length > 1 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={toggleQueueExpanded}
+                  className="p-1 h-auto"
+                  title={isQueueExpanded ? "Show less" : "Show all"}
+                >
+                  {isQueueExpanded ? (
+                    <IconChevronUp size={16} stroke={1.5} />
+                  ) : (
+                    <IconChevronDown size={16} stroke={1.5} />
+                  )}
+                </Button>
+              )}
+            </div>
           )}
 
           <AnimatePresence mode="popLayout">
@@ -198,31 +224,45 @@ export function RightSidebar({ isCollapsed }: RightSidebarProps) {
                 </p>
               </motion.div>
             ) : (
-              <Reorder.Group
-                axis="y"
-                values={visibleQueue}
-                onReorder={handleReorder}
-                className="space-y-1.5"
-              >
-                {visibleQueue.map((track: any, index: number) => (
-                  <QueueItem
-                    key={track.id}
-                    track={track}
-                    index={index}
-                    isCollapsed={isCollapsed}
-                    onPlay={() => handlePlay(track, index)}
-                    onRemove={() => handleRemove(index)}
-                    getExtension={getExtension}
-                    getBadgeClass={getBadgeClass}
-                  />
-                ))}
-                {/* Sentinel */}
-                {displayedCount < upcomingQueue.length && (
-                  <div ref={observerTarget} className="py-2 h-4" />
-                )}
-              </Reorder.Group>
+              <div className="flex-1 overflow-y-auto">
+                <Reorder.Group
+                  axis="y"
+                  values={displayQueue}
+                  onReorder={handleReorder}
+                  className="space-y-1.5"
+                >
+                  {displayQueue.map((track: any, index: number) => (
+                    <QueueItem
+                      key={track.id}
+                      track={track}
+                      index={index}
+                      isCollapsed={isCollapsed}
+                      onPlay={() => handlePlay(track, index)}
+                      onRemove={() => handleRemove(index)}
+                      getExtension={getExtension}
+                      getBadgeClass={getBadgeClass}
+                    />
+                  ))}
+                  {/* Sentinel for infinite scroll - only show when expanded */}
+                  {isQueueExpanded && displayedCount < upcomingQueue.length && (
+                    <div ref={observerTarget} className="py-2 h-4" />
+                  )}
+                </Reorder.Group>
+              </div>
             )}
           </AnimatePresence>
+
+          {/* Recommendations Section - Placeholder */}
+          {!isCollapsed && upcomingQueue.length > 0 && (
+            <div className="mt-6 pt-6 border-t border-border">
+              <h3 className="text-[10px] text-text-muted/70 font-bold mb-4 uppercase tracking-[0.2em]">
+                Recommended
+              </h3>
+              <p className="text-xs text-text-muted/50 text-center py-4">
+                Coming soon...
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </SidebarContainer>

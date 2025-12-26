@@ -10,6 +10,7 @@ export interface UIState {
   // Player UI state
   isPlayerExpanded: boolean;
   isQueueOpen: boolean;
+  isQueueExpanded: boolean; // Controls if queue shows all tracks or just next one
   lyricsOpen: boolean;
   eqOpen: boolean;
   isVisualizationEnabled: boolean;
@@ -28,6 +29,7 @@ export interface UIState {
   // Actions
   togglePlayerExpanded: () => void;
   toggleQueue: () => void;
+  toggleQueueExpanded: () => void;
   toggleLyrics: () => void;
   toggleEQ: () => void;
   toggleVisualization: () => void;
@@ -36,6 +38,7 @@ export interface UIState {
   toggleMetadataPanel: () => void;
   setPlayerExpanded: (expanded: boolean) => void;
   setQueueOpen: (open: boolean) => void;
+  setQueueExpanded: (expanded: boolean) => void;
   setLyricsOpen: (open: boolean) => void;
   setEQOpen: (open: boolean) => void;
   setMetadataPanelOpen: (open: boolean) => void;
@@ -49,6 +52,7 @@ export interface UIState {
 export const useUIStore = create<UIState>((set) => ({
   isPlayerExpanded: false,
   isQueueOpen: false,
+  isQueueExpanded: false,
   lyricsOpen: false,
   eqOpen: false,
   isVisualizationEnabled: false,
@@ -69,6 +73,10 @@ export const useUIStore = create<UIState>((set) => ({
       isQueueOpen: !state.isQueueOpen,
       isRightSidebarOpen: !state.isQueueOpen, // Sync with sidebar
     }));
+  },
+
+  toggleQueueExpanded: () => {
+    set((state) => ({ isQueueExpanded: !state.isQueueExpanded }));
   },
 
   toggleLyrics: () => {
@@ -104,6 +112,10 @@ export const useUIStore = create<UIState>((set) => ({
       isQueueOpen: open,
       isRightSidebarOpen: open,
     });
+  },
+
+  setQueueExpanded: (expanded: boolean) => {
+    set({ isQueueExpanded: expanded });
   },
 
   setLyricsOpen: (open: boolean) => {
