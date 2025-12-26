@@ -29,6 +29,7 @@ import {
   IconMicrophone,
   IconAdjustmentsHorizontal,
   IconPlaylist,
+  IconSparkles,
 } from "@tabler/icons-react";
 import { motion } from "framer-motion";
 
@@ -52,6 +53,7 @@ export function MiniPlayer() {
     toggleQueue,
     toggleLyrics,
     toggleEQ,
+    toggleRecommendations,
     isVisualizationEnabled,
     toggleVisualization,
   } = useUIStore();
@@ -159,6 +161,12 @@ export function MiniPlayer() {
               icon={IconPlaylist}
               onClick={toggleQueue}
               title="Queue"
+              size={20}
+            />
+            <ActionIconButton
+              icon={IconSparkles}
+              onClick={toggleRecommendations}
+              title="Recommendations"
               size={20}
             />
           </div>
@@ -340,6 +348,14 @@ export function MiniPlayer() {
               icon={IconPlaylist}
               onClick={toggleQueue}
               title="Toggle Queue"
+              className="hidden sm:flex p-1.5"
+              size={20}
+            />
+
+            <ActionIconButton
+              icon={IconSparkles}
+              onClick={toggleRecommendations}
+              title="Toggle Recommendations"
               className="hidden sm:flex p-1.5"
               size={20}
             />
