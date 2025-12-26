@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { IconPlayerSkipBack, IconPlayerSkipForward } from "@tabler/icons-react";
 import { cn } from "../../utils";
+import { buttonAnimations } from "../../utils/animations";
 
 interface SkipButtonProps {
   direction: "prev" | "next";
@@ -24,8 +25,8 @@ export function SkipButton({
     <motion.button
       onClick={onClick}
       disabled={disabled}
-      whileHover={{ scale: 1.1, color: "var(--color-text)" }}
-      whileTap={{ scale: 0.9 }}
+      whileHover={buttonAnimations.hover}
+      whileTap={buttonAnimations.tap}
       className={cn(
         "text-text-muted transition-colors p-2 disabled:opacity-50 disabled:cursor-not-allowed",
         className

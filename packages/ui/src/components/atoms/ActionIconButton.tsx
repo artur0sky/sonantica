@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { cn } from "../../utils";
+import { buttonAnimations } from "../../utils/animations";
 
 interface ActionIconButtonProps {
   icon: React.ElementType;
@@ -22,10 +23,10 @@ export function ActionIconButton({
     <motion.button
       onClick={onClick}
       whileHover={{
-        scale: 1.1,
+        ...buttonAnimations.hover,
         color: isActive ? "var(--color-accent-hover)" : "var(--color-text)",
       }}
-      whileTap={{ scale: 0.9 }}
+      whileTap={buttonAnimations.tap}
       className={cn(
         "transition-colors flex items-center justify-center p-2 rounded-full",
         isActive

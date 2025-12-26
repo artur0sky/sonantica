@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { IconPlayerPlay, IconPlayerPause } from "@tabler/icons-react";
 import { cn } from "../../utils";
+import { buttonAnimations } from "../../utils/animations";
 
 interface PlayButtonProps {
   isPlaying: boolean;
@@ -30,8 +31,8 @@ export function PlayButton({
   return (
     <motion.button
       onClick={onClick}
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
+      whileHover={buttonAnimations.hover}
+      whileTap={buttonAnimations.tap}
       className={cn(
         "rounded-full flex items-center justify-center text-white shadow-lg bg-accent hover:bg-accent-hover transition-colors",
         sizeClasses[size],
@@ -42,10 +43,10 @@ export function PlayButton({
       <AnimatePresence mode="wait">
         <motion.div
           key={isPlaying ? "pause" : "play"}
-          initial={{ scale: 0.5, opacity: 0 }}
+          initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.5, opacity: 0 }}
-          transition={{ duration: 0.1 }}
+          exit={{ scale: 0.8, opacity: 0 }}
+          transition={{ duration: 0.15 }}
         >
           {isPlaying ? (
             <IconPlayerPause
