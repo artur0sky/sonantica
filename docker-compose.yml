@@ -22,7 +22,6 @@ services:
       # Media files - Mount your music library here
       # Example: ./media or /path/to/your/music
       - ${MEDIA_PATH:-./media}:/media:ro
-      - F:\Music:/media:ro
       # Buckets - For cloud storage mounts or additional libraries
       # Example: ./buckets or /mnt/s3-music
       - ${BUCKETS_PATH:-./buckets}:/buckets:ro
@@ -67,11 +66,15 @@ services:
       - ./pnpm-lock.yaml:/app/pnpm-lock.yaml:ro
       - ./.npmrc:/app/.npmrc:ro
 
-      # Media volumes (same as production)
+      # Media files - Mount your music library here
+      # Example: ./media or /path/to/your/music
       - ${MEDIA_PATH:-./media}:/media:ro
+      # Buckets - For cloud storage mounts or additional libraries
+      # Example: ./buckets or /mnt/s3-music
       - ${BUCKETS_PATH:-./buckets}:/buckets:ro
+
+      # Config - User preferences, playlists, settings
       - ${CONFIG_PATH:-./config}:/config:rw
-      - F:\Music:/media:ro
 
       # Node modules - use named volume for better performance
       - node_modules:/app/node_modules
