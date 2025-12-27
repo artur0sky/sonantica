@@ -2,12 +2,19 @@
  * Utility functions for Sonántica
  * 
  * "Adjust. Listen. Decide."
+ * 
+ * Security: Hardened against massive inputs and low entropy.
  */
+
+// Max safe limits
+const MAX_TIME_SECONDS = 3600 * 24; // 24 hours max for display
+const MAX_STRING_LENGTH = 1000;
 
 /**
  * Clamps a value between min and max
  */
 export function clamp(value: number, min: number, max: number): number {
+  if (typeof value !== 'number' || isNaN(value)) return min;
   return Math.min(Math.max(value, min), max);
 }
 
@@ -15,8 +22,13 @@ export function clamp(value: number, min: number, max: number): number {
  * Formats seconds to MM:SS or HH:MM:SS
  */
 export function formatTime(seconds: number): string {
-  if (!isFinite(seconds) || seconds < 0) {
+  if (!Number.isFinite(seconds) || seconds < 0) {
     return '0:00';
+  }
+
+  // Cap at 24 hours to prevent formatting attacks or UI breaks
+  if (seconds > MAX_TIME_SECONDS) {
+      seconds = MAX_TIME_SECONDS;
   }
 
   const hours = Math.floor(seconds / 3600);
@@ -34,6 +46,8 @@ export function formatTime(seconds: number): string {
  * Checks if a MIME type is supported
  */
 export function isSupportedFormat(mimeType: string): boolean {
+  if (!mimeType || typeof mimeType !== 'string' || mimeType.length > 100) return false;
+
   const SUPPORTED_FORMATS = [
     'audio/flac',
     'audio/x-flac',
@@ -54,8 +68,13 @@ export function isSupportedFormat(mimeType: string): boolean {
 
 /**
  * Generates a unique ID
+ * Uses crypto.getRandomValues if available for better entropy
  */
 export function generateId(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      return crypto.randomUUID();
+  }
+  // Fallback
   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 }
 
@@ -63,9 +82,14 @@ export function generateId(): string {
  * Generates a stable ID from a string (hash)
  */
 export function generateStableId(input: string): string {
+  if (!input || typeof input !== 'string') return 'id-0';
+  
+  // Truncate input for performance on huge strings
+  const safeInput = input.length > MAX_STRING_LENGTH ? input.slice(0, MAX_STRING_LENGTH) : input;
+
   let hash = 0;
-  for (let i = 0; i < input.length; i++) {
-    const char = input.charCodeAt(i);
+  for (let i = 0; i < safeInput.length; i++) {
+    const char = safeInput.charCodeAt(i);
     hash = (hash << 5) - hash + char;
     hash |= 0; // Convert to 32bit integer
   }
