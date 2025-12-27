@@ -23,6 +23,14 @@ Following the **User Autonomy** value, this package provides the tools for users
 - **LibraryStore**: A Zustand store for real-time UI synchronization.
 - **Contracts**: Explicit interfaces for all library operations.
 
+## 🛡️ Security & Reliability
+
+Indexing user files requires trust and rigorous safety standards:
+- **Path Traversal Protection**: Strict validation prevents access to files outside explicitly allowed directories (`../` attacks).
+- **Recursion Limits**: Enforced depth limits prevent stack overflow crashes on deeply nested or circular directory structures.
+- **ReDoS Prevention**: Search inputs and regex patterns are sanitized to prevent Regular Expression Denial of Service.
+- **Resource Limits**: Caps on files per directory and HTML parse sizes ensure stability even with massive libraries.
+
 ## 🚀 Usage
 
 ```typescript

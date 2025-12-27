@@ -42,6 +42,14 @@ sonantica/
 3.  **Communication is by contract.**
 4.  **The core runs without a UI.**
 
+### 🛡️ Security First
+
+We treat security not as an afterthought, but as a core quality attribute. Our packages undergo rigorous auditing to ensure:
+- **Memory Safety**: Protection against buffer overflows and integer exploits in low-level parsers.
+- **Input Sanitization**: Strict validation at all system boundaries (URLs, file paths, parameters).
+- **Resilience**: Comprehensive error boundaries and DoS protection (resource limits, timeouts).
+- **Transparency**: Security decisions and validations are explicit and documented.
+
 ## 🚀 Quick Start
 
 ### Prerequisites

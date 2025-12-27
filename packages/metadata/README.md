@@ -22,6 +22,14 @@ We believe in **Technical Transparency**. This package doesn't invent metadata; 
 - **Zero External Dependencies**: Focused, lightweight binary parsing.
 - **Browser & Node compatible**: Optimized for range fetching.
 
+## 🛡️ Security & Reliability
+
+Parsing external binary data represents a significant attack surface. We handle it with "Wise Craftsman" precision:
+- **Buffer Overflow Protection**: Rigorous bounds checking on all array buffers and offsets during ID3 and FLAC parsing.
+- **Integer Overflow Prevention**: Safe arithmetic for all frame sizes and synchsafe integer calculations.
+- **DoS Safeguards**: Limits on frame counts, block sizes, and loop iterations to prevent memory exhaustion attacks.
+- **Robustness**: Infinite loops and zero-byte reads are strictly prevented through validation layers.
+
 ## 🛠️ Usage
 
 ```typescript

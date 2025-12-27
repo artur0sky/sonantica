@@ -27,6 +27,14 @@ Following the **"Fidelity should not be imposed, it should be offered"** princip
 - **DSP Store**: Zustand-based state management for reactive UI integration.
 - **Audio Metrics**: Real-time RMS, peak levels, and spectrum data.
 
+## 🛡️ Security & Reliability
+
+Signal processing must be both powerful and safe:
+- **Parameter Validation**: All EQ bands, gain values, and Q-factors are clamped to safe ranges to prevent hazardous audio glitches.
+- **Resource Limits**: Strict caps on the number of EQ bands and active nodes to prevent AudioContext overloads.
+- **Graceful Failure**: The engine detects node disconnection or initialization failures and manages state to prevent use-after-free errors.
+- **Input Sanitization**: All numeric inputs are checked against NaN/Infinity to ensure mathematical stability.
+
 ## 🛠️ Usage
 
 ```typescript

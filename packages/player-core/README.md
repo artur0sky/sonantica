@@ -16,6 +16,14 @@ The Player Core follows the **Non-negotiable Principle**: It must be able to run
 - **Event-Driven**: Complete observer pattern implementation for time updates, state changes, and errors.
 - **Queue Logic**: Integrated queue management with shuffle and repeat support.
 
+## 🛡️ Security & Reliability
+
+The core engine is hardened to ensure continuous, safe playback:
+- **Strict Input Validation**: All media sources and URLs are sanitized to prevent injection attacks and type confusion.
+- **Resource Protection**: Enforced limits on event listeners and resource allocation to prevent exhaustion (DoS).
+- **Error Boundaries**: Comprehensive exception handling ensures the player degrades gracefully rather than crashing.
+- **Memory Safety**: Proper cleanup and disposal routines prevent memory leaks during long listening sessions.
+
 ## 🛠️ Usage
 
 ```typescript
