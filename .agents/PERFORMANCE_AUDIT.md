@@ -169,6 +169,8 @@
 | 2025-12-27 | `ui` | ✅ TrackCard memoization | React.memo + useCallback → Prevents re-renders in lists |
 | 2025-12-27 | `ui` | ✅ SpectrumVisualizer optimization | Context reuse + memo → 60fps rendering |
 | 2025-12-27 | `web` | ✅ Virtual scrolling (TracksPage) | @tanstack/react-virtual → 90% DOM reduction for >100 tracks |
+| 2025-12-27 | `ui` | ✅ Lazy images + LRU cache | react-lazy-load-image + LRU(200) → 30-50% memory reduction |
+| 2025-12-27 | `web` | ✅ Code splitting (Sidebars) | Lazy load EQ/Lyrics/Recommendations → 30-40% bundle reduction |
 
 ---
 

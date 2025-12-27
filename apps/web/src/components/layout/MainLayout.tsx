@@ -3,9 +3,12 @@
  *
  * SoundCloud-inspired layout with dual sidebars and sticky player.
  * Following Sonántica's minimalist philosophy.
+ * 
+ * PERFORMANCE: Code splitting for heavy features (EQ, Recommendations, Lyrics)
  */
 
 import { AnimatePresence, motion } from "framer-motion";
+import { Suspense, lazy } from "react";
 import { usePlayerStore } from "@sonantica/player-core";
 import {
   useUIStore,
@@ -17,15 +20,26 @@ import {
 import { Header } from "./Header";
 import { LeftSidebar } from "./LeftSidebar";
 import { RightSidebar } from "./RightSidebar";
-import { LyricsSidebar } from "./LyricsSidebar";
-import { EQSidebar } from "./EQSidebar";
-import { RecommendationsSidebar } from "./RecommendationsSidebar";
+import { IconLoader } from "@tabler/icons-react";
+
+// PERFORMANCE: Lazy load heavy sidebars (code splitting)
+const LyricsSidebar = lazy(() => import("./LyricsSidebar").then(m => ({ default: m.LyricsSidebar })));
+const EQSidebar = lazy(() => import("./EQSidebar").then(m => ({ default: m.EQSidebar })));
+const RecommendationsSidebar = lazy(() => import("./RecommendationsSidebar").then(m => ({ default: m.RecommendationsSidebar })));
+
 import { useWaveformLoader } from "../../features/player/hooks/useWaveformLoader";
 import { PlaybackPersistence } from "../../features/player/components/PlaybackPersistence";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { useMediaSession } from "../../hooks/useMediaSession";
 import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
 import { useSidebarResize } from "../../hooks/useSidebarResize"; // New Hook
+
+// Sidebar loading fallback
+const SidebarLoader = () => (
+  <div className="flex items-center justify-center h-full text-text-muted">
+    <IconLoader className="animate-spin" size={24} />
+  </div>
+);
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -120,7 +134,9 @@ export function MainLayout({ children }: MainLayoutProps) {
               onMouseDown={() => startResizing("lyrics")}
               className="left-0"
             />
-            <LyricsSidebar isCollapsed={lyricsSidebarWidth === 80} />
+            <Suspense fallback={<SidebarLoader />}>
+              <LyricsSidebar isCollapsed={lyricsSidebarWidth === 80} />
+            </Suspense>
           </aside>
         )}
 
@@ -135,7 +151,9 @@ export function MainLayout({ children }: MainLayoutProps) {
               onMouseDown={() => startResizing("eq")}
               className="left-0"
             />
-            <EQSidebar isCollapsed={eqSidebarWidth === 80} />
+            <Suspense fallback={<SidebarLoader />}>
+              <EQSidebar isCollapsed={eqSidebarWidth === 80} />
+            </Suspense>
           </aside>
         )}
 
@@ -150,7 +168,9 @@ export function MainLayout({ children }: MainLayoutProps) {
               onMouseDown={() => startResizing("recommendations")}
               className="left-0"
             />
-            <RecommendationsSidebar />
+            <Suspense fallback={<SidebarLoader />}>
+              <RecommendationsSidebar />
+            </Suspense>
           </aside>
         )}
 
@@ -232,7 +252,9 @@ export function MainLayout({ children }: MainLayoutProps) {
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
             className="fixed inset-y-0 right-0 w-[320px] bg-surface z-[70] shadow-2xl border-l border-border overflow-y-auto"
           >
-            <LyricsSidebar isCollapsed={false} />
+            <Suspense fallback={<SidebarLoader />}>
+              <LyricsSidebar isCollapsed={false} />
+            </Suspense>
           </motion.aside>
         )}
       </AnimatePresence>
@@ -247,7 +269,9 @@ export function MainLayout({ children }: MainLayoutProps) {
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
             className="fixed inset-y-0 right-0 w-[320px] bg-surface z-[70] shadow-2xl border-l border-border overflow-y-auto"
           >
-            <EQSidebar isCollapsed={false} />
+            <Suspense fallback={<SidebarLoader />}>
+              <EQSidebar isCollapsed={false} />
+            </Suspense>
           </motion.aside>
         )}
       </AnimatePresence>
@@ -262,7 +286,9 @@ export function MainLayout({ children }: MainLayoutProps) {
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
             className="fixed inset-y-0 right-0 w-[320px] bg-surface z-[70] shadow-2xl border-l border-border overflow-y-auto"
           >
-            <RecommendationsSidebar />
+            <Suspense fallback={<SidebarLoader />}>
+              <RecommendationsSidebar />
+            </Suspense>
           </motion.aside>
         )}
       </AnimatePresence>
