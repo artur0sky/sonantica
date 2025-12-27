@@ -168,6 +168,14 @@ Follows Sonántica's clean architecture:
 - Time-of-day awareness
 - Listening history analysis
 
+## 🛡️ Security & Reliability
+
+Algorithmic complexity is managed to ensure the UI stays responsive:
+- **Time Budgeting**: Recommendation calculations are hard-capped at 200ms to prevent main-thread freezing.
+- **Recursion Limits**: Diversity algorithms have strict iteration limits to prevent infinite loops.
+- **Input Constraints**: String and array inputs for similarity pointers are truncated to safe lengths (1000 chars / 100 items).
+- **Graceful Partial Results**: If constraints are hit, the engine returns the best-effort result instead of failing.
+
 > "Adjust. Listen. Decide."
 
 ---

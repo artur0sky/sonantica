@@ -40,6 +40,14 @@ const bands = useAnalyzerStore(s => s.spectrum.bands);
 - **Decoupled**: Analyzes any `HTMLAudioElement` without knowledge of its source.
 - **Modular**: The analysis logic is separated from the visualization components in `@sonantica/ui`.
 
+## 🛡️ Security & Reliability
+
+Real-time analysis of potentially massive audio buffers handles memory with care:
+- **Buffer Validation**: Input ArrayBuffers are checked against a 50MB limit to prevent browser crashes.
+- **Resource Management**: AudioContexts used for offline analysis are wrapped in strict try-finally blocks to guarantee closure.
+- **Config Safety**: Smoothing constants and FFT sizes are validated against safe ranges to prevent Web Audio API errors.
+- **Performance Guards**: Analysis loops have sample count limits to prevent UI freezing on main thread.
+
 > "The anatomy of a wave."
 
 ---

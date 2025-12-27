@@ -46,6 +46,14 @@ const currentLine = LRCParser.getCurrentLine(lines, currentTimeMs);
 | **Vorbis** | LYRICS / SYNCEDLYRICS | ✅ | ✅ |
 | **LRC** | Embedded or External | ✅ | — |
 
+## 🛡️ Security & Reliability
+
+Parsing external text files and regex operations carries risks. We mitigate them with strict bounds:
+- **ReDoS Protection**: Timestamp parsing regexes are strictly bounded and state-managed to prevent catastrophic backtracking.
+- **Resource Limits**: Max LRC size (1MB) and line count (5000) caps prevent memory exhaustion from malicious files.
+- **Input Sanitization**: Control characters and null bytes are stripped during parsing and serialization.
+- **Loop Guards**: Synchronization logic includes iteration limits to prevent infinite loops during merge operations.
+
 > "Every word has its moment."
 
 ---

@@ -35,6 +35,15 @@ const currentState = PlaybackState.PLAYING;
 
 > "A common pulse for every signal."
 
+## 🛡️ Security & Reliability
+
+Even utility functions must be safe:
+- **Storage Quotas**: Storage helpers handle `QuotaExceededError` gracefully and validate store names against an allowlist.
+- **Input Truncation**: String formatters (time, artists) enforce max lengths to prevent UI overflow or allocation attacks.
+- **Safe Randomness**: ID generation uses `crypto.randomUUID()` instead of `Math.random()` where possible.
+
+> "Foundations must be stronger than what they support."
+
 ---
 
 Made with ❤ and **Jazz**.
