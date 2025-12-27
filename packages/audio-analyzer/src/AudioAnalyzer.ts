@@ -93,6 +93,13 @@ export class AudioAnalyzer implements IAudioAnalyzer {
   private frequencyData: Uint8Array<ArrayBuffer> | null = null;
   private timeDomainData: Uint8Array<ArrayBuffer> | null = null;
 
+  // PERFORMANCE: Throttling cache to prevent excessive FFT calls
+  private lastSpectrumTime: number = 0;
+  private lastWaveformTime: number = 0;
+  private cachedSpectrum: SpectrumData | null = null;
+  private cachedWaveform: WaveformData | null = null;
+  private throttleMs: number = 16; // 60fps default (can be increased when hidden)
+
   constructor(config?: Partial<AnalyzerConfig>) {
     if (config) {
       try {
@@ -220,10 +227,17 @@ export class AudioAnalyzer implements IAudioAnalyzer {
 
   /**
    * Get current spectrum data
+   * PERFORMANCE: Throttled to prevent excessive FFT calculations
    */
   getSpectrum(): SpectrumData {
     if (this.isDisposed || !this.analyserNode || !this.frequencyData) {
       return this.getEmptySpectrum();
+    }
+
+    // THROTTLE: Return cached data if within throttle window
+    const now = Date.now();
+    if (this.cachedSpectrum && (now - this.lastSpectrumTime) < this.throttleMs) {
+      return this.cachedSpectrum;
     }
 
     try {
@@ -239,12 +253,18 @@ export class AudioAnalyzer implements IAudioAnalyzer {
         // Calculate RMS level
         const rmsLevel = this.calculateRMS(this.frequencyData);
 
-        return {
-            timestamp: Date.now(),
+        const spectrum = {
+            timestamp: now,
             bands,
             peakFrequency,
             rmsLevel,
         };
+
+        // Cache result
+        this.cachedSpectrum = spectrum;
+        this.lastSpectrumTime = now;
+
+        return spectrum;
     } catch (e) {
         console.warn('Error getting spectrum:', e);
         return this.getEmptySpectrum();
@@ -253,10 +273,17 @@ export class AudioAnalyzer implements IAudioAnalyzer {
 
   /**
    * Get current waveform data
+   * PERFORMANCE: Throttled to prevent excessive calculations
    */
   getWaveform(): WaveformData {
     if (this.isDisposed || !this.analyserNode || !this.timeDomainData) {
       return this.getEmptyWaveform();
+    }
+
+    // THROTTLE: Return cached data if within throttle window
+    const now = Date.now();
+    if (this.cachedWaveform && (now - this.lastWaveformTime) < this.throttleMs) {
+      return this.cachedWaveform;
     }
 
     try {
@@ -280,12 +307,18 @@ export class AudioAnalyzer implements IAudioAnalyzer {
 
         const rms = Math.sqrt(sumSquares / samples.length);
 
-        return {
-        timestamp: Date.now(),
+        const waveform = {
+        timestamp: now,
         samples,
         peak,
         rms,
         };
+
+        // Cache result
+        this.cachedWaveform = waveform;
+        this.lastWaveformTime = now;
+
+        return waveform;
     } catch (e) {
         console.warn('Error getting waveform:', e);
         return this.getEmptyWaveform();
@@ -356,6 +389,27 @@ export class AudioAnalyzer implements IAudioAnalyzer {
    */
   isConnected(): boolean {
     return this.connected;
+  }
+
+  /**
+   * Set analysis throttle (useful for visibility optimization)
+   * @param ms - Milliseconds between analysis updates (16ms = 60fps, 100ms = 10fps)
+   * 
+   * PERFORMANCE TIP: Increase throttle when visualizer is hidden
+   * Example: setThrottle(100) when hidden, setThrottle(16) when visible
+   */
+  setThrottle(ms: number): void {
+    if (typeof ms !== 'number' || ms < 0) {
+      console.warn('Invalid throttle value, must be positive number');
+      return;
+    }
+    
+    // Clamp between 0 (no throttle) and 1000ms (1fps)
+    this.throttleMs = Math.min(Math.max(ms, 0), 1000);
+    
+    // Clear cache when changing throttle to force fresh data
+    this.cachedSpectrum = null;
+    this.cachedWaveform = null;
   }
 
   /**
