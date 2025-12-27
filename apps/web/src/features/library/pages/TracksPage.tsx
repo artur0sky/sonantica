@@ -3,9 +3,12 @@
  *
  * Main library view showing all tracks.
  * Default landing page.
+ * 
+ * PERFORMANCE: Uses virtual scrolling for large libraries (>1000 tracks)
  */
 
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useMemo } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { Button } from "@sonantica/ui";
 import { useLibraryStore } from "@sonantica/media-library";
 import { TrackItem } from "../components/TrackItem";
@@ -37,7 +40,8 @@ const containerVariants = {
   },
 };
 
-const ITEMS_PER_PAGE = 50;
+// PERFORMANCE: Virtual scrolling threshold
+const VIRTUAL_SCROLL_THRESHOLD = 100;
 
 type SortField = "title" | "artist" | "album" | "year" | "duration" | "genre";
 type SortOrder = "asc" | "desc";
@@ -112,37 +116,17 @@ export function TracksPage() {
     return tracks;
   }, [filteredTracks, sortField, sortOrder]);
 
-  // Infinite Scroll State
-  const [displayedCount, setDisplayedCount] = useState(ITEMS_PER_PAGE);
-  const observerTarget = useRef<HTMLDivElement>(null);
+  // PERFORMANCE: Virtual scrolling for large lists
+  const parentRef = useRef<HTMLDivElement>(null);
+  const useVirtualScroll = sortedTracks.length > VIRTUAL_SCROLL_THRESHOLD;
 
-  useEffect(() => {
-    setDisplayedCount(ITEMS_PER_PAGE);
-  }, [searchQuery, sortField, sortOrder]); // Reset on search or sort change
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          setDisplayedCount((prev) =>
-            Math.min(prev + ITEMS_PER_PAGE, filteredTracks.length)
-          );
-        }
-      },
-      { threshold: 0.1, rootMargin: "100px" }
-    );
-
-    if (observerTarget.current) {
-      observer.observe(observerTarget.current);
-    }
-
-    return () => observer.disconnect();
-  }, [sortedTracks.length]);
-
-  const visibleTracks = useMemo(
-    () => sortedTracks.slice(0, displayedCount),
-    [sortedTracks, displayedCount]
-  );
+  const virtualizer = useVirtualizer({
+    count: sortedTracks.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 76, // Estimated height of TrackItem
+    overscan: 5, // Render 5 extra items above/below viewport
+    enabled: useVirtualScroll,
+  });
 
   const handleScan = async () => {
     try {
@@ -170,18 +154,14 @@ export function TracksPage() {
   };
 
   const handleLetterClick = (index: number) => {
-    if (index >= displayedCount) {
-      setDisplayedCount(Math.min(index + 50, sortedTracks.length));
+    if (useVirtualScroll) {
+      virtualizer.scrollToIndex(index, { align: "center", behavior: "smooth" });
+    } else {
+      const element = document.getElementById(`track-${index}`);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
     }
-
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        const element = document.getElementById(`track-${index}`);
-        if (element) {
-          element.scrollIntoView({ behavior: "smooth", block: "center" });
-        }
-      });
-    });
   };
 
   const handlePlayAll = async () => {
@@ -234,6 +214,11 @@ export function TracksPage() {
                 >
                   {stats.totalTracks} track{stats.totalTracks !== 1 ? "s" : ""}{" "}
                   in library
+                  {useVirtualScroll && (
+                    <span className="ml-2 text-xs text-accent">
+                      (Virtual Scrolling Active)
+                    </span>
+                  )}
                 </motion.p>
               )}
             </AnimatePresence>
@@ -367,7 +352,49 @@ export function TracksPage() {
               No tracks found matching "{searchQuery}"
             </p>
           </motion.div>
+        ) : useVirtualScroll ? (
+          // PERFORMANCE: Virtual scrolling for large lists
+          <div
+            ref={parentRef}
+            className="h-[calc(100vh-300px)] overflow-auto"
+            style={{ contain: "strict" }}
+          >
+            <div
+              style={{
+                height: `${virtualizer.getTotalSize()}px`,
+                width: "100%",
+                position: "relative",
+              }}
+            >
+              {virtualizer.getVirtualItems().map((virtualItem) => {
+                const track = sortedTracks[virtualItem.index];
+                return (
+                  <div
+                    key={virtualItem.key}
+                    data-index={virtualItem.index}
+                    ref={virtualizer.measureElement}
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "100%",
+                      transform: `translateY(${virtualItem.start}px)`,
+                    }}
+                  >
+                    <TrackItem
+                      track={track}
+                      onClick={() => handleTrackClick(track, virtualItem.index)}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+            <div className="py-3 sm:py-4 text-center text-xs text-text-muted/30">
+              Showing {sortedTracks.length} tracks (Virtual Scrolling)
+            </div>
+          </div>
         ) : (
+          // Standard rendering for small lists
           <motion.div
             key="list"
             variants={containerVariants}
@@ -375,7 +402,7 @@ export function TracksPage() {
             animate="visible"
             className="space-y-1"
           >
-            {visibleTracks.map((track: any, index: number) => (
+            {sortedTracks.map((track: any, index: number) => (
               <div key={track.id} id={`track-${index}`}>
                 <TrackItem
                   track={track}
@@ -384,18 +411,8 @@ export function TracksPage() {
               </div>
             ))}
 
-            {/* Sentinel for Infinite Scroll */}
-            {displayedCount < sortedTracks.length && (
-              <div
-                ref={observerTarget}
-                className="py-6 sm:py-8 text-center text-text-muted/50 text-xs sm:text-sm"
-              >
-                Loading more tracks...
-              </div>
-            )}
-
             <div className="py-3 sm:py-4 text-center text-xs text-text-muted/30">
-              Showing {visibleTracks.length} of {sortedTracks.length} tracks
+              Showing {sortedTracks.length} tracks
             </div>
           </motion.div>
         )}

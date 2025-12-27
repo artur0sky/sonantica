@@ -40,6 +40,9 @@ importers:
       '@tabler/icons-react':
         specifier: ^3.29.0
         version: 3.36.0(react@19.2.3)
+      '@tanstack/react-virtual':
+        specifier: ^3.13.13
+        version: 3.13.13(react-dom@19.2.3)(react@19.2.3)
       framer-motion:
         specifier: ^12.0.3
         version: 12.23.26(react-dom@19.2.3)(react@19.2.3)
@@ -2278,6 +2281,21 @@ packages:
       tailwindcss: 4.1.18
       vite: 7.3.0(@types/node@24.10.4)
     dev: true
+
+  /@tanstack/react-virtual@3.13.13(react-dom@19.2.3)(react@19.2.3):
+    resolution: {integrity: sha512-4o6oPMDvQv+9gMi8rE6gWmsOjtUZUYIJHv7EB+GblyYdi8U6OqLl8rhHWIUZSL1dUU2dPwTdTgybCKf9EjIrQg==}
+    peerDependencies:
+      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+      react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+    dependencies:
+      '@tanstack/virtual-core': 3.13.13
+      react: 19.2.3
+      react-dom: 19.2.3(react@19.2.3)
+    dev: false
+
+  /@tanstack/virtual-core@3.13.13:
+    resolution: {integrity: sha512-uQFoSdKKf5S8k51W5t7b2qpfkyIbdHMzAn+AMQvHPxKUPeo1SsGaA4JRISQT87jm28b7z8OEqPcg1IOZagQHcA==}
+    dev: false
 
   /@types/babel__core@7.20.5:
     resolution: {integrity: sha512-qoQprZvz5wQFJwMDqeseRXWv3rqMvhgpbXFfVyWhbx9X47POIA6i/+dXefEmZKoAgOaTdaIgNSMqMIU61yRyzA==}

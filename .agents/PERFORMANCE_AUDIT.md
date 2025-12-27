@@ -168,6 +168,7 @@
 | 2025-12-27 | `metadata` | ✅ Batched extraction | Process 5 files, yield → UI responsive during library scan |
 | 2025-12-27 | `ui` | ✅ TrackCard memoization | React.memo + useCallback → Prevents re-renders in lists |
 | 2025-12-27 | `ui` | ✅ SpectrumVisualizer optimization | Context reuse + memo → 60fps rendering |
+| 2025-12-27 | `web` | ✅ Virtual scrolling (TracksPage) | @tanstack/react-virtual → 90% DOM reduction for >100 tracks |
 
 ---
 
