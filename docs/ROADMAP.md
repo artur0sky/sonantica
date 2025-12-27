@@ -350,6 +350,46 @@ Must:
 | Tab Audio Capture | 📋 | 🟡 | `chrome.tabCapture` integration |
 | Floating Mini-Player | 📋 | ⚪ | Control Sonántica from any tab |
 
+### 12.9 Linux Desktop
+
+| Feature | Status | Priority | Notes |
+| :--- | :---: | :---: | :--- |
+| **Flatpak / Flathub** | 📋 | 🟠 | Primary distribution |
+| Snap Store | 📋 | 🟡 | Canonical support |
+| AppImage | 📋 | 🟡 | Universal portable |
+| PipeWire Integration | 📋 | 🟠 | Low latency audio |
+
+### 12.10 macOS Desktop
+
+| Feature | Status | Priority | Notes |
+| :--- | :---: | :---: | :--- |
+| **Apple Silicon (Native)** | 📋 | 🟠 | M1/M2/M3 Optimization |
+| Touch Bar Controls | 📋 | ⚪ | Contextual controls |
+| CoreAudio Exclusive | 📋 | 🟡 | Bit-perfect output |
+
+### 12.11 Headless / Embedded (Audiophile Server)
+
+| Feature | Status | Priority | Notes |
+| :--- | :---: | :---: | :--- |
+| **No-UI Core** | 📋 | 🟡 | Daemon mode for Raspberry Pi |
+| Remote Control API | 📋 | 🟡 | Control via Phone/Web |
+| Docker Container | 📋 | 🟡 | Easy deployment |
+
+### 12.12 Game Consoles
+
+| Feature | Status | Priority | Notes |
+| :--- | :---: | :---: | :--- |
+| Xbox UWP | 📋 | ⚪ | Background music support |
+| PlayStation Web Player | 📋 | ⚪ | Optimized web view |
+
+### 12.13 Integrations
+
+| Feature | Status | Priority | Notes |
+| :--- | :---: | :---: | :--- |
+| **OBS Studio Dock** | 📋 | 🟡 | For streamers |
+| **Home Assistant** | 📋 | 🟡 | Media Player Entity |
+| Discord Rich Presence | 📋 | ⚪ | "Now Playing" status |
+
 ---
 
 ## 13. Implementation Phases
@@ -411,6 +451,8 @@ Must:
 | Differentiators | ✅ | 🟡 | - | Waveform, lyrics, spectrum |
 | Mobile apps (Android/iOS) | 🚧 | 🟠 | - | Native wrappers |
 | Windows Store | 📋 | 🟡 | - | Desktop distribution |
+| **Linux Desktop** | 📋 | 🟠 | - | Flatpak / Snap / AppImage |
+| **macOS Desktop** | 📋 | 🟠 | - | Apple Silicon Native |
 
 ### Phase 6 – Ecosystem Expansion
 **Target:** Ubiquitous listening experience (Living Room, Car, Wrist)
@@ -421,6 +463,9 @@ Must:
 | Automotive Integration | 📋 | 🟠 | - | Android Auto / CarPlay |
 | Wearable Companion | 📋 | 🟡 | - | WatchOS / WearOS |
 | Cast Protocol | 📋 | 🟡 | - | Chromecast / AirPlay |
+| **Headless / IoT** | 📋 | 🟡 | - | Raspberry Pi / Home Assistant |
+| **Integrations** | 📋 | 🟡 | - | OBS / Discord |
+| **Game Consoles** | 📋 | ⚪ | - | Xbox / PlayStation |
 
 ---
 
