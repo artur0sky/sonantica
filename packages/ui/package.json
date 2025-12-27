@@ -21,8 +21,8 @@
         "clean": "rimraf dist"
     },
     "peerDependencies": {
-        "@tabler/icons-react": "^3.29.0",
-        "framer-motion": "^12.0.0",
+        "@tabler/icons-react": "3.36.0",
+        "framer-motion": "12.23.26",
         "react": "19.2.3",
         "react-dom": "19.2.3"
     },
@@ -34,18 +34,18 @@
         "clsx": "^2.1.1",
         "react-lazy-load-image-component": "^1.6.3",
         "tailwind-merge": "^2.6.0",
-        "zustand": "^5.0.2"
+        "zustand": "5.0.9"
     },
     "devDependencies": {
-        "@tabler/icons-react": "^3.29.0",
+        "@tabler/icons-react": "3.36.0",
         "@types/react": "19.2.3",
         "@types/react-dom": "19.2.3",
         "@types/react-lazy-load-image-component": "^1.6.5",
         "autoprefixer": "^10.4.20",
         "postcss": "^8.4.49",
-        "tailwindcss": "^3.4.17",
-        "tsup": "^8.3.5",
-        "typescript": "^5.7.2"
+        "tailwindcss": "4.0.0",
+        "tsup": "8.5.1",
+        "typescript": "5.9.3"
     },
     "keywords": [
         "sonantica",
