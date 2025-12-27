@@ -174,8 +174,8 @@ export function MiniPlayer() {
 
         {/* Desktop/Tablet Layout: 5 Sections */}
         <div className="hidden sm:flex items-center w-full">
-          {/* Section 1: Track Info (Left - 1/5) */}
-          <div className="w-1/5 min-w-0">
+          {/* Section 1: Track Info (Left - Flexible) */}
+          <div className="flex-1 min-w-0 basis-1/4">
             <motion.button
               onClick={togglePlayerExpanded}
               drag="x"
@@ -260,11 +260,10 @@ export function MiniPlayer() {
             </motion.button>
           </div>
 
-          {/* Section 2: Left-Center (Empty - 1/5) */}
-          <div className="w-1/5 hidden lg:flex items-center justify-center" />
 
-          {/* Section 3: Center Playback Controls (1/5) */}
-          <div className="w-1/5 flex items-center justify-center gap-1 md:gap-2">
+
+          {/* Section 2: Center Playback Controls (Fixed Width) */}
+          <div className="flex-none flex items-center justify-center gap-1 md:gap-2 mx-4">
             <div className="hidden lg:flex items-center">
               <RepeatButton
                 size={18}
@@ -303,11 +302,10 @@ export function MiniPlayer() {
             </div>
           </div>
 
-          {/* Section 4: Right-Center (Empty - 1/5) */}
-          <div className="w-1/5 hidden lg:flex items-center justify-center" />
 
-          {/* Section 5: Right Controls (1/5) */}
-          <div className="w-1/5 flex items-center justify-end gap-2 md:gap-3 px-2">
+
+          {/* Section 3: Right Controls (Right - Flexible) */}
+          <div className="flex-1 min-w-0 basis-1/4 flex items-center justify-end gap-2 md:gap-3 px-2">
             <div className="text-xs text-text-muted tabular-nums hidden md:flex items-center font-mono h-10">
               {formatTime(currentTime)} / {formatTime(duration)}
             </div>
