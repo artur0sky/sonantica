@@ -5,6 +5,8 @@
  * Handles missing metadata gracefully - uses available fields without discrimination.
  * 
  * "Every file has an intention" - even with incomplete metadata.
+ * 
+ * Security: Hardened against ReDoS and resource exhaustion.
  */
 
 import type { Track } from '@sonantica/media-library';
@@ -22,11 +24,20 @@ export const DEFAULT_WEIGHTS: Required<SimilarityWeights> = {
   key: 0.05,
 };
 
+// Security Constants
+const MAX_STRING_LENGTH = 1000;
+const MAX_ARRAY_LENGTH = 100;
+
 /**
  * Normalize artist name for comparison
  */
 function normalizeString(str: string | undefined): string {
   if (!str) return '';
+  if (typeof str !== 'string') return '';
+  
+  // Truncate
+  if (str.length > MAX_STRING_LENGTH) str = str.slice(0, MAX_STRING_LENGTH);
+
   return str
     .toLowerCase()
     .trim()
@@ -40,20 +51,29 @@ function normalizeString(str: string | undefined): string {
  */
 function toArray(value: string | string[] | undefined): string[] {
   if (!value) return [];
-  return Array.isArray(value) ? value : [value];
+  if (Array.isArray(value)) {
+    return value.slice(0, MAX_ARRAY_LENGTH).filter(v => typeof v === 'string');
+  }
+  if (typeof value === 'string') {
+    return [value];
+  }
+  return [];
 }
 
 /**
  * Calculate Jaccard similarity between two sets
  */
 function jaccardSimilarity(set1: string[], set2: string[]): number {
+  if (!Array.isArray(set1) || !Array.isArray(set2)) return 0;
   if (set1.length === 0 || set2.length === 0) return 0;
   
-  const normalized1 = set1.map(normalizeString);
-  const normalized2 = set2.map(normalizeString);
+  // Limit processing
+  const s1 = set1.slice(0, MAX_ARRAY_LENGTH).map(normalizeString);
+  const s2 = set2.slice(0, MAX_ARRAY_LENGTH).map(normalizeString);
   
-  const intersection = normalized1.filter(item => normalized2.includes(item)).length;
-  const union = new Set([...normalized1, ...normalized2]).size;
+  const intersection = s1.filter(item => s2.includes(item)).length;
+  // Use simple Set for union
+  const union = new Set([...s1, ...s2]).size;
   
   return union > 0 ? intersection / union : 0;
 }
@@ -62,12 +82,15 @@ function jaccardSimilarity(set1: string[], set2: string[]): number {
  * Calculate artist similarity
  */
 export function calculateArtistSimilarity(track1: Track, track2: Track): number {
-  const artists1 = toArray(track1.metadata?.artist);
-  const artists2 = toArray(track2.metadata?.artist);
+  if (!track1?.metadata || !track2?.metadata) return 0;
+
+  const artists1 = toArray(track1.metadata.artist);
+  const artists2 = toArray(track2.metadata.artist);
   
   if (artists1.length === 0 || artists2.length === 0) return 0;
   
   // Exact match bonus
+  // O(N*M) but N,M are small (max 100)
   const exactMatch = artists1.some(a1 => 
     artists2.some(a2 => normalizeString(a1) === normalizeString(a2))
   );
@@ -114,8 +137,11 @@ export function calculateYearSimilarity(track1: Track, track2: Track): number {
   const year1 = track1.metadata?.year;
   const year2 = track2.metadata?.year;
   
-  if (!year1 || !year2) return 0;
+  if (typeof year1 !== 'number' || typeof year2 !== 'number') return 0;
   
+  // Sanity check year
+  if (year1 < 1000 || year1 > 3000 || year2 < 1000 || year2 > 3000) return 0;
+
   const diff = Math.abs(year1 - year2);
   
   // Same year = 1.0
@@ -136,6 +162,8 @@ export function calculateTrackSimilarity(
   track2: Track,
   weights: SimilarityWeights = DEFAULT_WEIGHTS
 ): number {
+  if (!track1 || !track2) return 0;
+
   const mergedWeights = { ...DEFAULT_WEIGHTS, ...weights };
   
   // Calculate individual similarities
@@ -177,41 +205,49 @@ export function calculateTrackSimilarity(
     0
   );
   
-  return weightedSum / totalWeight;
+  return totalWeight > 0 ? weightedSum / totalWeight : 0;
 }
 
 /**
  * Get reasons why two tracks are similar
  */
 export function getSimilarityReasons(track1: Track, track2: Track): Array<{ type: 'artist' | 'album' | 'genre' | 'year' | 'tempo' | 'key' | 'mood'; weight: number; description: string }> {
+  if (!track1 || !track2) return [];
+
   const reasons: Array<{ type: 'artist' | 'album' | 'genre' | 'year' | 'tempo' | 'key' | 'mood'; weight: number; description: string }> = [];
   
   const artistScore = calculateArtistSimilarity(track1, track2);
   if (artistScore > 0.5) {
     const artists = toArray(track1.metadata?.artist);
+    
+    // Sanitize output description
+    const safeDesc = artists.join(', ').slice(0, 100);
+
     reasons.push({
       type: 'artist',
       weight: artistScore,
-      description: `Same artist${artists.length > 1 ? 's' : ''}: ${artists.join(', ')}`,
+      description: `Same artist${artists.length > 1 ? 's' : ''}: ${safeDesc}`,
     });
   }
   
   const albumScore = calculateAlbumSimilarity(track1, track2);
   if (albumScore > 0.5) {
+     const safeAlbum = (track1.metadata?.album || 'Unknown').slice(0, 100);
     reasons.push({
       type: 'album',
       weight: albumScore,
-      description: `From album: ${track1.metadata?.album}`,
+      description: `From album: ${safeAlbum}`,
     });
   }
   
   const genreScore = calculateGenreSimilarity(track1, track2);
   if (genreScore > 0.3) {
     const genres = toArray(track1.metadata?.genre);
+    const safeGenres = genres.join(', ').slice(0, 100);
     reasons.push({
       type: 'genre',
       weight: genreScore,
-      description: `Similar genre: ${genres.join(', ')}`,
+      description: `Similar genre: ${safeGenres}`,
     });
   }
   
