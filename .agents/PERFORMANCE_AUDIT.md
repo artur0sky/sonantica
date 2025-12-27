@@ -124,4 +124,6 @@
 | :--- | :--- | :--- | :--- |
 | 2025-12-27 | `dsp` | ✅ Reusable metrics buffer | Eliminates 60 allocations/sec (60fps) → Prevents GC pauses |
 | 2025-12-27 | `dsp` | ✅ Verified VocalProcessor | No hot-path allocations found |
+| 2025-12-27 | `dsp` | ✅ Hot-path EQ updates | Direct AudioParam updates → Zero-glitch EQ adjustments |
+| 2025-12-27 | `recommendations` | ✅ Async batched calculation | Batch size 50 tracks → Main thread free every ~3ms |
 

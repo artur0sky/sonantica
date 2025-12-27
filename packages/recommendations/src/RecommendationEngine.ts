@@ -152,6 +152,86 @@ export class MetadataRecommendationStrategy implements IRecommendationStrategy {
   }
 
   /**
+   * ASYNC VERSION: Get recommendations without blocking the main thread
+   * Uses batching to yield control periodically - React Native/Expo compatible
+   */
+  async getRecommendationsAsync(
+    context: RecommendationContext,
+    library: Track[],
+    options: RecommendationOptions = {}
+  ): Promise<Recommendation<Track>[]> {
+    try {
+        const safeOptions = RecommendationSecurityValidator.validateOptions(options);
+        const {
+        limit = 10,
+        minScore = 0.3,
+        weights,
+        diversity = 0.0,
+        } = safeOptions;
+
+        const safeLibrary = RecommendationSecurityValidator.validateLibrary(library);
+
+        // Get reference tracks based on context
+        const referenceTracks = this.getReferenceTracks(context, safeLibrary);
+        if (!referenceTracks || referenceTracks.length === 0) return [];
+        
+        const limitedRefs = referenceTracks.slice(0, 5);
+        const scored: Array<{ track: Track; score: number }> = [];
+
+        // PERFORMANCE: Process in batches to avoid blocking
+        const BATCH_SIZE = 50; // Process 50 tracks at a time
+        
+        for (let i = 0; i < safeLibrary.length; i += BATCH_SIZE) {
+            const batch = safeLibrary.slice(i, i + BATCH_SIZE);
+            
+            for (const candidate of batch) {
+                // Skip if it's one of the reference tracks
+                if (limitedRefs.some(ref => ref.id === candidate.id)) {
+                    continue;
+                }
+
+                // Calculate average similarity to all reference tracks
+                const similarities = limitedRefs.map(ref =>
+                    this.calculateSimilarity(ref, candidate, weights as typeof DEFAULT_WEIGHTS)
+                );
+                const avgScore = similarities.reduce((a, b) => a + b, 0) / similarities.length;
+
+                if (avgScore >= (minScore || 0.3)) {
+                    scored.push({ track: candidate, score: avgScore });
+                }
+            }
+
+            // Yield to main thread after each batch (React Native compatible)
+            if (i + BATCH_SIZE < safeLibrary.length) {
+                await new Promise(resolve => setTimeout(resolve, 0));
+            }
+        }
+
+        // Sort by score (descending)
+        scored.sort((a, b) => b.score - a.score);
+
+        // Apply diversity if requested
+        let selected: Array<{ track: Track; score: number }> = [];
+        
+        if (diversity > 0) {
+            selected = this.applyDiversity(scored, diversity, limit!);
+        } else {
+            selected = scored.slice(0, limit);
+        }
+
+        // Convert to Recommendation objects with reasons
+        return selected.map(({ track, score }) => ({
+        item: track,
+        score,
+        reasons: getSimilarityReasons(limitedRefs[0], track),
+        }));
+    } catch (error) {
+        console.error('Error getting recommendations:', error);
+        return [];
+    }
+  }
+
+  /**
    * Get reference tracks based on context
    */
   private getReferenceTracks(context: RecommendationContext, library: Track[]): Track[] {
@@ -280,6 +360,26 @@ export class RecommendationEngine {
     options?: RecommendationOptions
   ): Recommendation<Track>[] {
     if (!library || !Array.isArray(library)) return [];
+    return this.strategy.getRecommendations(context, library, options);
+  }
+
+  /**
+   * ASYNC VERSION: Get track recommendations without blocking UI
+   * Recommended for React Native and large libraries (>1000 tracks)
+   */
+  async getTrackRecommendationsAsync(
+    context: RecommendationContext,
+    library: Track[],
+    options?: RecommendationOptions
+  ): Promise<Recommendation<Track>[]> {
+    if (!library || !Array.isArray(library)) return [];
+    
+    // Check if strategy supports async (our MetadataRecommendationStrategy does)
+    if ('getRecommendationsAsync' in this.strategy && typeof (this.strategy as any).getRecommendationsAsync === 'function') {
+      return await (this.strategy as any).getRecommendationsAsync(context, library, options);
+    }
+    
+    // Fallback to sync version (shouldn't happen with our default strategy)
     return this.strategy.getRecommendations(context, library, options);
   }
 
