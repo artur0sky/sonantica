@@ -342,6 +342,14 @@ Must:
 | Companion Remote | 📋 | 🟡 | Control phone playback |
 | Offline Playback | 📋 | ⚪ | Standalone (Phase 6) |
 
+### 12.8 Browser Extension (Universal DSP)
+
+| Feature | Status | Priority | Notes |
+| :--- | :---: | :---: | :--- |
+| **Global DSP Injection** | 📋 | 🟡 | Apply EQ/DSP to any website |
+| Tab Audio Capture | 📋 | 🟡 | `chrome.tabCapture` integration |
+| Floating Mini-Player | 📋 | ⚪ | Control Sonántica from any tab |
+
 ---
 
 ## 13. Implementation Phases
