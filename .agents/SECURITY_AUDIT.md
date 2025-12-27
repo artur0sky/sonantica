@@ -20,7 +20,7 @@
 |---------|--------|----------|----------------------|---------------|
 | `player-core` | ✅ **COMPLETED** | 🔴 Critical | 7 | 7 |
 | `metadata` | ✅ **COMPLETED** | 🔴 High | 9 | 9 |
-| `media-library` | 📋 Pending | 🟠 High | - | - |
+| `media-library` | ✅ **COMPLETED** | 🟠 High | 8 | 8 |
 | `dsp` | 📋 Pending | 🟠 High | - | - |
 | `lyrics` | 📋 Pending | 🟡 Medium | - | - |
 | `audio-analyzer` | 📋 Pending | 🟡 Medium | - | - |
@@ -273,7 +273,137 @@ if (offset + 10 + frameSize > view.byteLength) break;
 
 ---
 
-## Next Package: `media-library`
+## Package 3: `media-library` ✅
+
+**Audit Date:** 2025-12-27  
+**Files Audited:** 2 (LibraryScanner.ts, QueryEngine.ts)  
+**Severity:** High (file system access, HTML parsing, user input filtering)
+
+### Vulnerabilities Found
+
+#### 🚨 CRITICAL: Path Traversal Attack
+**File:** `LibraryScanner.ts:39, 75, 102, 130, 137`  
+**Issue:** No validation on paths and filenames, allowing "../" sequences  
+**Risk:** Attacker could access files outside allowed directories  
+**Fix:** Implemented path validation with traversal detection
+
+```typescript
+// BEFORE (VULNERABLE)
+const fullPath = `${basePath}${filename}`;
+await this.scanPathRecursive(`${basePath}${href}`, ...);
+
+// AFTER (SECURE)
+LibraryScannerSecurityValidator.validatePath(path);
+LibraryScannerSecurityValidator.validateFilename(filename);
+if (path.includes('..')) throw new Error('Path traversal detected');
+```
+
+#### 🚨 CRITICAL: Infinite Recursion DoS
+**File:** `LibraryScanner.ts:33, 102, 130`  
+**Issue:** No recursion depth limit on directory scanning  
+**Risk:** Malicious directory structure could cause stack overflow  
+**Fix:** Added `MAX_RECURSION_DEPTH = 50` limit with tracking
+
+#### ⚠️ HIGH: ReDoS (Regular Expression DoS)
+**File:** `LibraryScanner.ts:116`  
+**Issue:** Unsafe regex `/href="([^"]+)"/g` on untrusted HTML  
+**Risk:** Malicious HTML could cause catastrophic backtracking  
+**Fix:** Limited regex to `/href="([^"]{1,2048})"/g` and capped matches
+
+#### ⚠️ HIGH: Missing Fetch Timeout
+**File:** `LibraryScanner.ts:39`  
+**Issue:** fetch() without timeout could hang indefinitely  
+**Risk:** Resource exhaustion on slow/malicious servers  
+**Fix:** Added `AbortController` with 30-second timeout
+
+#### ⚠️ HIGH: Unbounded HTML Parsing
+**File:** `LibraryScanner.ts:110`  
+**Issue:** No size limit on HTML response  
+**Risk:** Memory exhaustion via huge HTML files  
+**Fix:** Added `MAX_HTML_SIZE = 10MB` validation
+
+#### ⚠️ HIGH: Injection via Filter Strings
+**File:** `QueryEngine.ts:14, 25, 30`  
+**Issue:** User filter strings used directly in comparisons without sanitization  
+**Risk:** Null byte injection, control character injection  
+**Fix:** Added string sanitization removing control characters
+
+#### ⚠️ MEDIUM: Missing Input Validation
+**Files:** Both files  
+**Issue:** No type checking on external data (JSON responses, filter objects)  
+**Risk:** Type confusion, null pointer dereference  
+**Fix:** Comprehensive type validation with try-catch
+
+#### ⚠️ MEDIUM: Resource Exhaustion via Large Directories
+**File:** `LibraryScanner.ts:71, 119`  
+**Issue:** No limit on files per directory  
+**Risk:** DoS via directories with millions of files  
+**Fix:** Added `MAX_FILES_PER_DIRECTORY = 10000` limit
+
+### Security Enhancements Applied
+
+1. **Path Traversal Prevention**
+   - Path validation with protocol whitelist
+   - Filename validation (no path separators)
+   - ".." sequence detection
+   - Null byte prevention
+   - Max path length: 4096 characters
+   - Max filename length: 255 characters
+
+2. **Recursion Protection**
+   - Max recursion depth: 50 levels
+   - Depth tracking per scan
+   - Graceful error on depth exceeded
+
+3. **DoS Protection**
+   - Fetch timeout: 30 seconds
+   - Max HTML size: 10MB
+   - Max files per directory: 10000
+   - ReDoS-safe regex with length limits
+   - Max tracks in query: 100000
+
+4. **Input Sanitization**
+   - Filter string validation (max 256 chars)
+   - Null byte removal
+   - Control character removal
+   - Type checking on all inputs
+
+5. **Error Handling**
+   - Try-catch in all methods
+   - Graceful degradation
+   - Continue on individual file errors
+   - Comprehensive error logging
+
+### Code Quality Improvements
+
+- ✅ Created `LibraryScannerSecurityValidator` class
+- ✅ Created `QuerySecurityValidator` class
+- ✅ Added recursion depth tracking
+- ✅ Separated validation logic
+- ✅ Type-safe array operations
+- ✅ Safe string comparisons
+- ✅ No functionality lost
+- ✅ Backward compatible API
+
+### Testing Recommendations
+
+```typescript
+// Test cases to add:
+1. Path traversal attempts (../, ..\, %2e%2e/)
+2. Infinite recursion (circular symlinks)
+3. Huge HTML files (>10MB)
+4. ReDoS attack patterns
+5. Null byte injection in paths
+6. Control characters in filters
+7. Malformed JSON responses
+8. Timeout scenarios
+9. Directories with 10000+ files
+10. Invalid filter objects
+```
+
+---
+
+## Next Package: `dsp`
 
 **Priority:** 🔴 High  
 **Reason:** Parses external file data (ID3 tags, FLAC metadata)  
