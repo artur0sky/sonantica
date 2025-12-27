@@ -56,6 +56,10 @@ Parsing external text files and regex operations carries risks. We mitigate them
 
 > "Every word has its moment."
 
+## 📄 License
+
+Licensed under the **Apache License, Version 2.0**.
+
 ---
 
 Made with ❤ and **Ballads**.

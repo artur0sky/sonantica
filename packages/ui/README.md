@@ -55,6 +55,10 @@ All components use CSS Custom Properties for easy extensibility per the **User A
 
 > "The silence between the notes, visualized."
 
+## 📄 License
+
+Licensed under the **Apache License, Version 2.0**.
+
 ---
 
 Made with ❤ and **Orchestral**.

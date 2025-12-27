@@ -44,6 +44,10 @@ Even utility functions must be safe:
 
 > "Foundations must be stronger than what they support."
 
+## 📄 License
+
+Licensed under the **Apache License, Version 2.0**.
+
 ---
 
 Made with ❤ and **Jazz**.

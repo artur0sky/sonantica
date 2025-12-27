@@ -84,6 +84,10 @@ applyCustomEQ(customBands);
 
 > "Adjust. Listen. Decide."
 
+## 📄 License
+
+Licensed under the **Apache License, Version 2.0**.
+
 ---
 
 Made with ❤ and **Kawaii Metal**.

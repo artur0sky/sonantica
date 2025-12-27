@@ -52,6 +52,10 @@ This package handles:
 
 > "Rhythm is the architecture of time."
 
+## 📄 License
+
+Licensed under the **Apache License, Version 2.0**.
+
 ---
 
 Made with ❤ and **Metalcore**.

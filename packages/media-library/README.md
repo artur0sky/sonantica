@@ -52,6 +52,10 @@ const artists = useLibraryStore.getState().artists;
 
 > "Remembering every vibration."
 
+## 📄 License
+
+Licensed under the **Apache License, Version 2.0**.
+
 ---
 
 Made with ❤ and **Classical Orchestral**.

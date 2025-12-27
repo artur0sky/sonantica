@@ -50,6 +50,10 @@ console.log(trackInfo.title, trackInfo.artist);
 
 > "The truth hidden in the headers."
 
+## 📄 License
+
+Licensed under the **Apache License, Version 2.0**.
+
 ---
 
 Made with ❤ and **Grunge**.

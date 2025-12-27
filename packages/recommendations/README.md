@@ -178,6 +178,10 @@ Algorithmic complexity is managed to ensure the UI stays responsive:
 
 > "Adjust. Listen. Decide."
 
+## 📄 License
+
+Licensed under the **Apache License, Version 2.0**.
+
 ---
 
 Made with ❤ and **Post-Rock**.

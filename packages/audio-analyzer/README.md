@@ -50,6 +50,10 @@ Real-time analysis of potentially massive audio buffers handles memory with care
 
 > "The anatomy of a wave."
 
+## 📄 License
+
+Licensed under the **Apache License, Version 2.0**.
+
 ---
 
 Made with ❤ and **Dubstep**.
