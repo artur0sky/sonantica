@@ -174,3 +174,52 @@ export async function extractMetadata(url: string): Promise<Partial<MediaMetadat
     return {};
   }
 }
+
+/**
+ * PERFORMANCE: Extract metadata from multiple files with batching
+ * Yields to main thread between batches to prevent UI freezing
+ * 
+ * @param urls - Array of file URLs
+ * @param batchSize - Number of files to process before yielding (default: 5)
+ * @param onProgress - Optional callback for progress updates
+ * @returns Array of metadata objects (same order as input URLs)
+ * 
+ * Example:
+ * const results = await extractMetadataBatch(fileUrls, 5, (current, total) => {
+ *   console.log(`Processing ${current}/${total}`);
+ * });
+ */
+export async function extractMetadataBatch(
+  urls: string[],
+  batchSize: number = 5,
+  onProgress?: (current: number, total: number) => void
+): Promise<Array<Partial<MediaMetadata>>> {
+  const results: Array<Partial<MediaMetadata>> = [];
+  const total = urls.length;
+
+  for (let i = 0; i < urls.length; i += batchSize) {
+    const batch = urls.slice(i, i + batchSize);
+    
+    // Process batch in parallel (up to batchSize concurrent requests)
+    const batchResults = await Promise.all(
+      batch.map(url => extractMetadata(url).catch(err => {
+        console.warn(`Failed to extract metadata for ${url}:`, err);
+        return {}; // Return empty metadata on error
+      }))
+    );
+    
+    results.push(...batchResults);
+
+    // Report progress
+    if (onProgress) {
+      onProgress(Math.min(i + batchSize, total), total);
+    }
+
+    // Yield to main thread between batches (React Native compatible)
+    if (i + batchSize < urls.length) {
+      await new Promise(resolve => setTimeout(resolve, 0));
+    }
+  }
+
+  return results;
+}

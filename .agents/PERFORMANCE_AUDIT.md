@@ -161,4 +161,5 @@
 | 2025-12-27 | `dsp` | ✅ Hot-path EQ updates | Direct AudioParam updates → Zero-glitch EQ adjustments |
 | 2025-12-27 | `recommendations` | ✅ Async batched calculation | Batch size 50 tracks → Main thread free every ~3ms |
 | 2025-12-27 | `audio-analyzer` | ✅ Intelligent throttling | Cache + visibility-aware → Reduces FFT calls by 60-90% |
+| 2025-12-27 | `metadata` | ✅ Batched extraction | Process 5 files, yield → UI responsive during library scan |
 
