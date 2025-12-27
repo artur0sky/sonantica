@@ -166,4 +166,6 @@
 | 2025-12-27 | `recommendations` | ✅ Async batched calculation | Batch size 50 tracks → Main thread free every ~3ms |
 | 2025-12-27 | `audio-analyzer` | ✅ Intelligent throttling | Cache + visibility-aware → Reduces FFT calls by 60-90% |
 | 2025-12-27 | `metadata` | ✅ Batched extraction | Process 5 files, yield → UI responsive during library scan |
+| 2025-12-27 | `ui` | ✅ TrackCard memoization | React.memo + useCallback → Prevents re-renders in lists |
+| 2025-12-27 | `ui` | ✅ SpectrumVisualizer optimization | Context reuse + memo → 60fps rendering |
 

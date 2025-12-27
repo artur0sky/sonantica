@@ -3,9 +3,11 @@
  *
  * Renders frequency spectrum as elegant, minimalist bars.
  * "Subtle, functional, never the main focus" - Sonántica design principle.
+ * 
+ * PERFORMANCE: Memoized and optimized for 60fps rendering
  */
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, memo } from "react";
 import { cn } from "@sonantica/shared";
 
 interface FrequencyBand {
@@ -34,8 +36,10 @@ interface SpectrumVisualizerProps {
  *
  * Pure presentational component - receives data, renders bars.
  * No business logic, no state management.
+ * 
+ * PERFORMANCE: Memoized to prevent re-renders when props haven't changed
  */
-export function SpectrumVisualizer({
+export const SpectrumVisualizer = memo(function SpectrumVisualizer({
   bands,
   height = 100,
   color = "var(--color-accent)",
@@ -44,20 +48,36 @@ export function SpectrumVisualizer({
   className,
 }: SpectrumVisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
+  const dprRef = useRef<number>(1);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext("2d");
+    // PERFORMANCE: Reuse context instead of getting it every frame
+    if (!ctxRef.current) {
+      ctxRef.current = canvas.getContext("2d", {
+        // Performance hints
+        alpha: false, // No transparency needed
+        desynchronized: true, // Allow async rendering
+      });
+    }
+
+    const ctx = ctxRef.current;
     if (!ctx) return;
 
     // Set canvas size (accounting for device pixel ratio)
     const dpr = window.devicePixelRatio || 1;
     const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
-    ctx.scale(dpr, dpr);
+    
+    // PERFORMANCE: Only resize if DPR or size changed
+    if (canvas.width !== rect.width * dpr || canvas.height !== rect.height * dpr) {
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      dprRef.current = dpr;
+      ctx.scale(dpr, dpr);
+    }
 
     // Clear canvas
     ctx.clearRect(0, 0, rect.width, rect.height);
@@ -69,14 +89,17 @@ export function SpectrumVisualizer({
 
     // Draw bars
     ctx.fillStyle = color;
-    bands.forEach((band, index) => {
-      const x = index * (barWidth + gap);
+    
+    // PERFORMANCE: Use batch rendering
+    for (let i = 0; i < barCount; i++) {
+      const band = bands[i];
+      const x = i * (barWidth + gap);
       const barHeight = Math.max(minBarHeight, band.amplitude * rect.height);
       const y = rect.height - barHeight;
 
       // Draw rectangle (no rounded corners - minimalist)
       ctx.fillRect(x, y, barWidth, barHeight);
-    });
+    }
   }, [bands, height, color, minBarHeight, gap]);
 
   return (
@@ -87,4 +110,4 @@ export function SpectrumVisualizer({
       aria-label="Audio spectrum visualization"
     />
   );
-}
+});

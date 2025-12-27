@@ -3,11 +3,13 @@
  *
  * Unified, reusable track display component.
  * Used in Queue, Track Lists, Search Results, etc.
- * Adapts behavior based on context (draggable, selectable, etc.)
+ * Adapts behavior based on context (draggable, selectable, etc.
+ * 
+ * PERFORMANCE: Memoized to prevent unnecessary re-renders in lists
  */
 
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useState, useCallback, useMemo, memo } from "react";
 import { cn } from "../../utils";
 import { formatTime } from "@sonantica/shared";
 import { formatArtists } from "@sonantica/shared";
@@ -44,7 +46,27 @@ interface TrackCardProps {
   className?: string;
 }
 
-export function TrackCard({
+// PERFORMANCE: Helper functions moved outside component to prevent recreation
+const getExtension = (url: string) => {
+  const parts = url.split(".");
+  return parts[parts.length - 1]?.toUpperCase() || "MP3";
+};
+
+const getBadgeClass = (ext: string) => {
+  const lossless = ["FLAC", "WAV", "ALAC", "APE", "DSD"];
+  const highQuality = ["OGG", "OPUS", "M4A", "AAC"];
+
+  if (lossless.includes(ext)) {
+    return "bg-accent/20 text-accent border-accent/30";
+  }
+  if (highQuality.includes(ext)) {
+    return "bg-success/20 text-success border-success/30";
+  }
+  return "bg-text-muted/10 text-text-muted border-text-muted/20";
+};
+
+// PERFORMANCE: Memoized component to prevent re-renders when props don't change
+export const TrackCard = memo(function TrackCard({
   track,
   onPlay,
   isDraggable = false,
@@ -62,33 +84,32 @@ export function TrackCard({
   const [isHovered, setIsHovered] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
 
-  const getExtension = (url: string) => {
-    const parts = url.split(".");
-    return parts[parts.length - 1]?.toUpperCase() || "MP3";
-  };
+  // PERFORMANCE: Memoize expensive calculations
+  const ext = useMemo(() => getExtension(track.url), [track.url]);
+  const badgeClass = useMemo(() => getBadgeClass(ext), [ext]);
 
-  const getBadgeClass = (ext: string) => {
-    const lossless = ["FLAC", "WAV", "ALAC", "APE", "DSD"];
-    const highQuality = ["OGG", "OPUS", "M4A", "AAC"];
+  // PERFORMANCE: Memoize callbacks to prevent child re-renders
+  const handleHoverStart = useCallback(() => setIsHovered(true), []);
+  const handleHoverEnd = useCallback(() => setIsHovered(false), []);
+  
+  const handleFavoriteToggle = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsFavorite(prev => !prev);
+  }, []);
 
-    if (lossless.includes(ext)) {
-      return "bg-accent/20 text-accent border-accent/30";
+  const handleDragStart = useCallback((e: React.PointerEvent) => {
+    if (dragControls) {
+      dragControls.start(e);
     }
-    if (highQuality.includes(ext)) {
-      return "bg-success/20 text-success border-success/30";
-    }
-    return "bg-text-muted/10 text-text-muted border-text-muted/20";
-  };
-
-  const ext = getExtension(track.url);
+  }, [dragControls]);
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      onHoverStart={() => setIsHovered(true)}
-      onHoverEnd={() => setIsHovered(false)}
+      onHoverStart={handleHoverStart}
+      onHoverEnd={handleHoverEnd}
       className={cn(
         "group relative flex items-center gap-3 px-3 py-2 transition-all select-none",
         "hover:bg-white/[0.02]",
@@ -100,7 +121,7 @@ export function TrackCard({
       {/* Drag Handle (Queue only) */}
       {isDraggable && dragControls && (
         <div
-          onPointerDown={(e) => dragControls.start(e)}
+          onPointerDown={handleDragStart}
           className="w-5 h-10 flex items-center justify-center text-text-muted/20 group-hover:text-text-muted/60 cursor-grab active:cursor-grabbing transition-colors"
         >
           <IconGripVertical size={16} stroke={1.5} />
@@ -184,10 +205,7 @@ export function TrackCard({
       {showRating && (
         <div className="flex items-center gap-1">
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsFavorite(!isFavorite);
-            }}
+            onClick={handleFavoriteToggle}
             className="text-text-muted/40 hover:text-error transition-colors"
           >
             {isFavorite ? (
@@ -217,7 +235,7 @@ export function TrackCard({
             variant="custom"
             className={cn(
               "text-[8px] px-1.5 py-0.5 transition-all",
-              getBadgeClass(ext),
+              badgeClass,
               !["FLAC", "WAV"].includes(ext) && !isHovered && "opacity-0"
             )}
           >
@@ -238,4 +256,4 @@ export function TrackCard({
       )}
     </motion.div>
   );
-}
+});
