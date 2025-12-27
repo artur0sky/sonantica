@@ -50,3 +50,6 @@ export const PLAYER_EVENTS = {
   LOADED: 'player:loaded',
   ENDED: 'player:ended',
 } as const;
+
+// Re-export animation constants
+export * from './constants/animations';

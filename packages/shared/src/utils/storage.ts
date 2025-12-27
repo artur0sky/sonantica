@@ -219,3 +219,90 @@ export async function clearStorage(storeName: string): Promise<void> {
     throw error;
   }
 }
+
+/**
+ * PERFORMANCE: Batch write multiple items to IndexedDB
+ * 
+ * Much faster than individual writes for bulk operations.
+ * Uses a single transaction for all writes.
+ * 
+ * @param storeName - Store to write to
+ * @param items - Array of {key, data} pairs to write
+ * @param onProgress - Optional progress callback
+ * @returns Promise that resolves when all items are written
+ * 
+ * Example:
+ * await saveBatchToStorage('library', [
+ *   { key: 'track1', data: track1 },
+ *   { key: 'track2', data: track2 },
+ * ], (current, total) => console.log(`${current}/${total}`));
+ */
+export async function saveBatchToStorage<T>(
+  storeName: string,
+  items: Array<{ key: string; data: T }>,
+  onProgress?: (current: number, total: number) => void
+): Promise<void> {
+  if (items.length === 0) return;
+
+  try {
+    StorageSecurityValidator.validateStoreName(storeName);
+
+    // Validate all items before starting transaction
+    for (const item of items) {
+      StorageSecurityValidator.validateData(item.data);
+    }
+
+    const db = await openDB();
+    
+    return new Promise((resolve, reject) => {
+      try {
+        // Single transaction for all writes (MUCH faster)
+        const transaction = db.transaction(storeName, 'readwrite');
+        const store = transaction.objectStore(storeName);
+        
+        let completed = 0;
+
+        // Queue all writes in the transaction
+        for (const item of items) {
+          const request = store.put(item.data, item.key);
+          
+          request.onsuccess = () => {
+            completed++;
+            if (onProgress) {
+              onProgress(completed, items.length);
+            }
+          };
+
+          request.onerror = () => {
+            console.error(`Failed to write item ${item.key}:`, request.error);
+            // Continue with other items even if one fails
+          };
+        }
+
+        transaction.oncomplete = () => {
+          db.close();
+          resolve();
+        };
+        
+        transaction.onerror = (event) => {
+          db.close();
+          const error = transaction.error || (event.target as IDBRequest).error;
+          
+          if (error && error.name === 'QuotaExceededError') {
+            console.error('Storage quota exceeded during batch write!');
+          }
+          
+          reject(error);
+        };
+
+      } catch (txError) {
+        db.close();
+        reject(txError);
+      }
+    });
+
+  } catch (error) {
+    console.error(`Failed to batch save to storage (${storeName}):`, error);
+    throw error;
+  }
+}
