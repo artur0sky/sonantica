@@ -17,7 +17,7 @@ import { FLACParser } from './parsers/FLACParser';
 /**
  * Security constants
  */
-const MAX_FETCH_SIZE = 16 * 1024 * 1024; // 16MB max for HQ artwork
+const MAX_FETCH_SIZE = 64 * 1024 * 1024; // 64MB max for HQ artwork and large FLAC files
 const MIN_FETCH_SIZE = 128 * 1024; // 128KB minimum
 const FETCH_TIMEOUT_MS = 30000; // 30 seconds
 const ALLOWED_PROTOCOLS = ['http:', 'https:', 'blob:'];
