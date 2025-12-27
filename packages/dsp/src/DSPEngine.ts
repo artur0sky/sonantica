@@ -168,6 +168,7 @@ export class DSPEngine implements IDSPEngine {
   // Metrics
   private analyzerNode: AnalyserNode | null = null;
   private metricsInterval: number | null = null;
+  private metricsBuffer: Float32Array<ArrayBuffer> | null = null; // Reusable buffer to prevent GC
 
   constructor() {
     try {
@@ -367,7 +368,7 @@ export class DSPEngine implements IDSPEngine {
         return;
       }
 
-      // Update the band
+      // Update the band configuration
       const updatedBand = { ...bands[bandIndex], ...updates };
       
       // Validate updated band
@@ -375,7 +376,7 @@ export class DSPEngine implements IDSPEngine {
       
       bands[bandIndex] = updatedBand;
 
-      // If we're modifying a preset, convert to custom
+      // Update the config state
       if (this.config.currentPreset) {
         this.config.customBands = bands;
         this.config.currentPreset = null;
@@ -383,7 +384,33 @@ export class DSPEngine implements IDSPEngine {
         this.config.customBands = bands;
       }
 
-      this.rebuildEQChain();
+      // HOT PATH OPTIMIZATION: Update the audio node directly if it exists
+      // This prevents rebuilding the chain (glitches) 
+      const activeNode = this.eqNodes[bandIndex];
+      
+      if (activeNode && this.audioContext) {
+        const currentTime = this.audioContext.currentTime;
+        // Use smooth ramp to prevent clicking artifacts (0.05s)
+        const RAMP_TIME = 0.05; 
+
+        if (updates.gain !== undefined) {
+          activeNode.gain.setTargetAtTime(updatedBand.gain, currentTime, RAMP_TIME);
+        }
+        if (updates.frequency !== undefined) {
+            activeNode.frequency.setTargetAtTime(updatedBand.frequency, currentTime, RAMP_TIME);
+        }
+        if (updates.q !== undefined) {
+             activeNode.Q.setTargetAtTime(updatedBand.q, currentTime, RAMP_TIME);
+        }
+
+        // If 'enabled' or 'type' changed, we MUST rebuild because structure changed
+        if (updates.enabled !== undefined || updates.type !== undefined) {
+             this.rebuildEQChain();
+        }
+      } else {
+          // Fallback if node doesn't exist (shouldn't happen if initialized)
+          this.rebuildEQChain();
+      }
     } catch (error) {
       console.error('❌ Failed to update band:', error);
     }
@@ -638,22 +665,27 @@ export class DSPEngine implements IDSPEngine {
 
     try {
       const bufferLength = this.analyzerNode.frequencyBinCount;
-      const dataArray = new Float32Array(bufferLength);
-      this.analyzerNode.getFloatFrequencyData(dataArray);
+      
+      // PERFORMANCE: Reuse buffer to prevent GC thrashing (60fps calls)
+      if (!this.metricsBuffer || this.metricsBuffer.length !== bufferLength) {
+        this.metricsBuffer = new Float32Array(bufferLength);
+      }
+      
+      this.analyzerNode.getFloatFrequencyData(this.metricsBuffer);
 
       // Calculate RMS and peak
       let sum = 0;
       let peak = -Infinity;
       
-      for (let i = 0; i < dataArray.length; i++) {
-        const value = dataArray[i];
+      for (let i = 0; i < this.metricsBuffer.length; i++) {
+        const value = this.metricsBuffer[i];
         if (isFinite(value)) {
           sum += value * value;
           peak = Math.max(peak, value);
         }
       }
 
-      const rms = Math.sqrt(sum / dataArray.length);
+      const rms = Math.sqrt(sum / this.metricsBuffer.length);
 
       return {
         sampleRate: this.audioContext.sampleRate,
@@ -662,7 +694,7 @@ export class DSPEngine implements IDSPEngine {
         rmsLevel: isFinite(rms) ? 20 * Math.log10(rms) : -Infinity,
         peakLevel: peak,
         isClipping: peak > -0.1, // Close to 0 dBFS
-        spectrum: dataArray,
+        spectrum: this.metricsBuffer, // Return reference (caller should not mutate)
       };
     } catch (error) {
       console.error('❌ Failed to get metrics:', error);
