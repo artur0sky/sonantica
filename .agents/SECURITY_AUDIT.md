@@ -22,7 +22,7 @@
 | `metadata` | ✅ **COMPLETED** | 🔴 High | 9 | 9 |
 | `media-library` | ✅ **COMPLETED** | 🟠 High | 8 | 8 |
 | `dsp` | ✅ **COMPLETED** | 🟠 High | 6 | 6 |
-| `lyrics` | 📋 Pending | 🟡 Medium | - | - |
+| `lyrics` | ✅ **COMPLETED** | 🟡 Medium | 5 | 5 |
 | `audio-analyzer` | 📋 Pending | 🟡 Medium | - | - |
 | `recommendations` | 📋 Pending | 🟡 Medium | - | - |
 | `shared` | 📋 Pending | 🟡 Medium | - | - |
@@ -556,7 +556,94 @@ DSPSecurityValidator.validateEQBand(band);
 
 ---
 
-## Next Package: `lyrics`
+## Package 5: `lyrics` ✅
+
+**Audit Date:** 2025-12-27
+**Files Audited:** 3 (LyricsExtractor.ts, LRCParser.ts, LyricsSynchronizer.ts)
+**Severity:** Medium (input parsing, regex operations)
+
+### Vulnerabilities Found
+
+#### ⚠️ HIGH: ReDoS (Regular Expression Denial of Service)
+**File:** `LRCParser.ts:33`, `LRCParser.ts:98`
+**Issue:** Unsafe regex and unbounded while loops scanning text for timestamps
+**Risk:** Crafted input strings could cause catastrophic backtracking or hangs
+**Fix:** Bounded line length, restricted regex patterns, and added loop iteration limits
+
+```typescript
+// BEFORE
+const timestampRegex = /\[(\d{2,}):(\d{2})(?:\.(\d{3}))?\]/g;
+while ((match = timestampRegex.exec(line)) !== null) { ... }
+
+// AFTER
+// Limit regex state reset, bounded execution per line
+while ((match = timestampRegex.exec(line)) !== null) {
+  timestampCount++;
+  if (timestampCount > MAX_TIMESTAMPS_PER_LINE) break; 
+  ...
+}
+```
+
+#### ⚠️ HIGH: Resource Exhaustion (Memory)
+**File:** `LyricsExtractor.ts`, `LyricsSynchronizer.ts`
+**Issue:** No limits on input text size or array lengths
+**Risk:** Processing extremely large files could crash the application (OOM)
+**Fix:** Added `MAX_LYRICS_LENGTH` (100KB), `MAX_LINES` (5000), `MAX_LRC_SIZE` (1MB)
+
+#### ⚠️ MEDIUM: Type Confusion
+**File:** `LyricsExtractor.ts`
+**Issue:** `tags` input was typed as `any` and properties accessed unsafely
+**Risk:** Unexpected input types could cause runtime errors
+**Fix:** Added explicit validtion `validateTags(tags)` and safe property access
+
+#### ⚠️ MEDIUM: Infinite Loops in Synchronization
+**File:** `LyricsSynchronizer.ts`
+**Issue:** `merge` function logic relied on array indices without total bounds
+**Risk:** Potential infinite loop if index logic fails
+**Fix:** Added extensive `MAX_LOOPS` guard in merge logic
+
+#### ⚠️ LOW: Input Sanitization
+**File:** `LRCParser.ts`
+**Issue:** Outputting raw text back to LRC format without cleaning
+**Risk:** Control characters in output
+**Fix:** Stripped control characters and null bytes during serialization
+
+### Security Enhancements Applied
+
+1.  **Regex Safety**
+    *   Bounded line length processing
+    *   Iteration limits on regex matches
+
+2.  **Resource Limits**
+    *   Max LRC size: 1MB
+    *   Max Lyrics text: 100KB
+    *   Max Lines: 5000
+    *   Max Timestamps per line: 10
+
+3.  **Input Validation**
+    *   Strict type checking for `tags` object
+    *   Safe parsing of numbers (timestamps, durations)
+    *   Sanitization of text strings (control chars removal)
+
+4.  **Error Handling**
+    *   Try-catch blocks around all parsing logic
+    *   Graceful fallbacks (empty arrays/strings instead of crashing)
+
+### Testing Recommendations
+
+```typescript
+// Test cases to add:
+1. ReDoS payload for timestamp regex
+2. LRC file > 5MB
+3. Lyrics with > 10,000 lines
+4. Invalid/Malformed ID3 tags
+5. Negative timestamps or > 24 hours
+6. Circular references in tag objects
+```
+
+---
+
+## Next Package: `audio-analyzer`
 
 **Priority:** 🔴 High  
 **Reason:** Parses external file data (ID3 tags, FLAC metadata)  
