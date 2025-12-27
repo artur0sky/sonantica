@@ -24,6 +24,33 @@ The core engine is hardened to ensure continuous, safe playback:
 - **Error Boundaries**: Comprehensive exception handling ensures the player degrades gracefully rather than crashing.
 - **Memory Safety**: Proper cleanup and disposal routines prevent memory leaks during long listening sessions.
 
+## ⚡ Performance Specifications
+
+The core engine is engineered for **asynchronous isolation** to ensure audio priority.
+
+### UI-Independent Operation
+**Philosophy:** Playback must continue even if the UI freezes.
+
+```typescript
+// State updates are decoupled from the render loop
+engine.on('timeupdate', (time) => {
+  // Low-frequency updates for UI
+  throttle(updateUI, 250);
+});
+```
+
+**Optimizations:**
+- **Asynchronous State**: Audio thread (Web Audio) runs independently of main thread.
+- **Throttled Events**: High-frequency audio events are throttled for UI consumption.
+- **Lazy Metadata**: Metadata extracted only when needed for the active track.
+
+**Impact:**
+- Glitch-free audio even during heavy UI rendering.
+- Reduced main thread contention.
+- Instant response to play/pause controls.
+
+> "The beat waits for no one."
+
 ## 🛠️ Usage
 
 ```typescript

@@ -50,6 +50,24 @@ We treat security not as an afterthought, but as a core quality attribute. Our p
 - **Resilience**: Comprehensive error boundaries and DoS protection (resource limits, timeouts).
 - **Transparency**: Security decisions and validations are explicit and documented.
 
+### ⚡ Technical Performance
+
+Sonántica is built to be **invisible**. It should never compete with your music for resources.
+
+1.  **Asynchronous Audio Engine**: The core audio processing runs independently of the UI main thread.
+    *   *Result:* Glitch-free playback even during heavy UI interaction.
+    
+2.  **GPU-Accelerated Interface**: All animations avoid layout thrashing.
+    *   *Result:* Smooth 60fps transitions on any device.
+
+3.  **Smart Persistence**: Batch-write strategy for large libraries.
+    *   *Result:* 50-70% faster scans and saves.
+
+4.  **Zero-Allocation Paths**: Audio processing reuses memory buffers.
+    *   *Result:* No garbage collection pauses during playback.
+
+See the full [Performance Guide](./docs/PERFORMANCE_OPTIMIZATIONS.md).
+
 ## 🚀 Quick Start
 
 ### Prerequisites

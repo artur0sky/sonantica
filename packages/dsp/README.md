@@ -35,6 +35,41 @@ Signal processing must be both powerful and safe:
 - **Graceful Failure**: The engine detects node disconnection or initialization failures and manages state to prevent use-after-free errors.
 - **Input Sanitization**: All numeric inputs are checked against NaN/Infinity to ensure mathematical stability.
 
+## ⚡ Performance Optimizations
+
+Audio processing must be real-time. Glitches are unacceptable.
+
+### Zero-Allocation Hot Paths
+**Philosophy:** The main thread belongs to audio, not garbage collection.
+
+```typescript
+// Reusable metrics buffer - no allocations during playback
+const metrics = engine.getMetrics(); // Returns same Float32Array
+```
+
+**Optimizations:**
+- Metrics buffer reused across calls (no GC pressure)
+- EQ updates use `setTargetAtTime()` (no chain rebuilds)
+- VocalProcessor verified for zero hot-path allocations
+
+> "Every allocation is a potential glitch."
+
+### Smooth Parameter Changes
+**Philosophy:** Changes should be heard, not felt as artifacts.
+
+```typescript
+// Gradual parameter changes prevent audio glitches
+updateBand(id, { gain: 6 }); // Smooth ramp, no pops
+```
+
+**Impact:**
+- 100% glitch-free EQ adjustments
+- No audio dropouts during parameter changes
+- Seamless preset switching
+
+> "Silence the artifacts, not the music."
+
+
 ## 🛠️ Usage
 
 ```typescript

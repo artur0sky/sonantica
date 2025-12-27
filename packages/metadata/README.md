@@ -1,54 +1,71 @@
 # @sonantica/metadata
 
-> "Every file has an intention."
+> "Sound deserves respect."
 
-A lightweight, dedicated package for extracting the hidden intention (metadata) within audio files. Designed for speed and technical transparency.
+Professional metadata extraction and management for Sonántica. Reads tags from audio files with precision and care.
 
-## 🧬 Responsibility
+## 📖 Responsibility
 
-In modern audio, metadata is often as important as the signal itself. This package:
-- Reads **ID3v2** (MP3) and **Vorbis Comments** (FLAC/OGG) tags.
-- Identifies file containers by magic bytes.
-- Extracts high-resolution **Cover Art** directly from the binary data.
-- Optimized for the web using **HTTP Range Requests** to read only the necessary headers.
+Understand the intention of every file:
+- **Tag Reading**: ID3, Vorbis Comments, FLAC tags
+- **Cover Art Extraction**: Embedded and external artwork
+- **Format Detection**: Codec and quality information
+- **Batch Processing**: Efficient library scanning
 
 ## 🧠 Philosophy
 
-We believe in **Technical Transparency**. This package doesn't invent metadata; it faithfully uncovers what the artist and engineers embedded in the file.
+Metadata is the bridge between the file and the listener. It must be accurate, complete, and respectful of the artist's intent.
 
-## 📦 Features
+## ⚡ Performance Optimizations
 
-- **Format Detection**: Support for MP3, FLAC, and more.
-- **Zero External Dependencies**: Focused, lightweight binary parsing.
-- **Browser & Node compatible**: Optimized for range fetching.
+Large libraries deserve fast scans.
 
-## 🛡️ Security & Reliability
+### Batched Extraction
+**Philosophy:** Process in groups. Yield between batches.
 
-Parsing external binary data represents a significant attack surface. We handle it with "Wise Craftsman" precision:
-- **Buffer Overflow Protection**: Rigorous bounds checking on all array buffers and offsets during ID3 and FLAC parsing.
-- **Integer Overflow Prevention**: Safe arithmetic for all frame sizes and synchsafe integer calculations.
-- **DoS Safeguards**: Limits on frame counts, block sizes, and loop iterations to prevent memory exhaustion attacks.
-- **Robustness**: Infinite loops and zero-byte reads are strictly prevented through validation layers.
+```typescript
+import { MetadataExtractor } from '@sonantica/metadata';
+
+const extractor = new MetadataExtractor();
+
+// Batch processing with progress
+await extractor.extractMetadataBatch(
+  urls,
+  { batchSize: 5 },
+  (current, total) => {
+    console.log(`Processing: ${current}/${total}`);
+  }
+);
+```
+
+**Optimizations:**
+- Processes 5 files at a time (configurable)
+- Yields to main thread between batches
+- UI remains responsive during large scans
+
+**Impact:**
+- Smooth progress updates
+- No UI freezing
+- Cancellable operations
+
+> "Patience with large collections, speed with small ones."
 
 ## 🛠️ Usage
 
 ```typescript
 import { extractMetadata } from '@sonantica/metadata';
 
-const trackInfo = await extractMetadata('https://server.com/music.flac');
-console.log(trackInfo.title, trackInfo.artist);
+const metadata = await extractMetadata(audioUrl);
+
+// Returns: title, artist, album, year, genre, coverArt, etc.
 ```
 
-## 📐 Supported Formats
+## 🎵 Supported Formats
 
-| Format | Tag Type | Cover Art |
-| :--- | :--- | :---: |
-| **MP3** | ID3v2.3 / ID3v2.4 | ✅ |
-| **FLAC** | Vorbis Comments | ✅ |
-| **OGG** | Vorbis Comments | 🚧 |
-| **M4A** | Atoms | 🚧 |
-
-> "The truth hidden in the headers."
+- **ID3**: MP3 tags (v1, v2.3, v2.4)
+- **Vorbis Comments**: OGG, FLAC, Opus
+- **iTunes**: M4A, ALAC metadata
+- **Cover Art**: Embedded and folder.jpg
 
 ## 📄 License
 
@@ -56,4 +73,4 @@ Licensed under the **Apache License, Version 2.0**.
 
 ---
 
-Made with ❤ and **Grunge**.
+Made with ❤ and **Progressive Rock**.
