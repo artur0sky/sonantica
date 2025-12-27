@@ -10,7 +10,7 @@
 
 import { motion } from "framer-motion";
 import { useState, useCallback, useMemo, memo } from "react";
-import { cn } from "../../utils";
+import { cn, gpuAnimations } from "@sonantica/shared";
 import { formatTime } from "@sonantica/shared";
 import { formatArtists } from "@sonantica/shared";
 import {
@@ -105,9 +105,8 @@ export const TrackCard = memo(function TrackCard({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.95 }}
+      // PERFORMANCE: GPU-accelerated animations from shared constants
+      {...gpuAnimations.listItem}
       onHoverStart={handleHoverStart}
       onHoverEnd={handleHoverEnd}
       className={cn(

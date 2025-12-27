@@ -4,10 +4,11 @@
  * Grid item for album view
  */
 
-import { IconDisc, IconPlaylistAdd, IconPlayerSkipForward, IconArrowsShuffle } from '@tabler/icons-react';
+import { IconPlaylistAdd, IconPlayerSkipForward, IconArrowsShuffle } from '@tabler/icons-react';
 import { motion } from 'framer-motion';
-import { ContextMenu, useContextMenu, type ContextMenuItem } from '@sonantica/ui';
+import { ContextMenu, useContextMenu, LazyAlbumArt, type ContextMenuItem } from '@sonantica/ui';
 import { useQueueStore } from '@sonantica/player-core';
+import { gpuAnimations } from '@sonantica/shared';
 
 interface AlbumCardProps {
   album: any;
@@ -55,10 +56,9 @@ export function AlbumCard({ album, onClick }: AlbumCardProps) {
     <>
       <motion.div
         layout
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        whileHover={{ y: -8, scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
+        {...gpuAnimations.scaleIn}
+        whileHover={{ transform: "translateY(-8px) scale(1.02)" }}
+        whileTap={{ transform: "scale(0.98)" }}
         onClick={onClick}
         onContextMenu={contextMenu.handleContextMenu}
         onTouchStart={contextMenu.handleLongPressStart}
@@ -68,15 +68,14 @@ export function AlbumCard({ album, onClick }: AlbumCardProps) {
         onMouseLeave={contextMenu.handleLongPressEnd}
         className="group cursor-pointer p-4 bg-surface hover:bg-surface-elevated rounded-xl transition-colors border border-transparent hover:border-border"
       >
-        {/* Album Art */}
+        {/* Album Art - PERFORMANCE: Lazy loaded with LRU cache */}
         <div className="aspect-square bg-surface-elevated rounded-lg mb-4 flex items-center justify-center shadow-lg relative overflow-hidden">
-          {album.coverArt ? (
-            <img src={album.coverArt} alt={album.name} className="w-full h-full object-cover" />
-          ) : (
-            <div className="text-text-muted/20 group-hover:text-accent/50 transition-colors">
-              <IconDisc size={64} stroke={1} />
-            </div>
-          )}
+          <LazyAlbumArt
+            src={album.coverArt}
+            alt={album.name}
+            className="w-full h-full rounded-lg"
+            iconSize={64}
+          />
           
           {/* Hover Overlay */}
           <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity" />

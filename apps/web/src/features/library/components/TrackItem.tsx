@@ -7,7 +7,6 @@
 import {
   IconPlayerPlay,
   IconPlayerPause,
-  IconMusic,
   IconPlaylistAdd,
   IconPlayerSkipForward,
   IconInfoCircle,
@@ -18,7 +17,7 @@ import { usePlayerStore, useQueueStore } from "@sonantica/player-core";
 import { useLibraryStore } from "@sonantica/media-library";
 import { PlaybackState, formatArtists, formatTime } from "@sonantica/shared";
 import { useEffect } from "react";
-import { ContextMenu, useContextMenu, type ContextMenuItem } from "@sonantica/ui";
+import { ContextMenu, useContextMenu, LazyAlbumArt, type ContextMenuItem } from "@sonantica/ui";
 
 interface TrackItemProps {
   track: any;
@@ -105,29 +104,13 @@ export function TrackItem({ track, onClick }: TrackItemProps) {
       >
       {/* Album Art / Icon */}
       <div className="w-12 h-12 flex-shrink-0 relative rounded-md overflow-hidden bg-surface-elevated border border-border">
-        {/* Cover Art or Music Icon */}
-        {(() => {
-          const libraryTracks = useLibraryStore.getState().tracks;
-          const coverArt =
-            track.metadata?.coverArt ||
-            libraryTracks.find((t) => t.id === track.id)?.metadata?.coverArt;
-
-          return coverArt ? (
-            <img
-              src={coverArt}
-              alt="Cover"
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <IconMusic
-                size={20}
-                className="text-text-muted/30"
-                stroke={1.5}
-              />
-            </div>
-          );
-        })()}
+        {/* PERFORMANCE: Lazy-loaded album art with LRU cache */}
+        <LazyAlbumArt
+          src={track.metadata?.coverArt}
+          alt="Album Art"
+          className="w-full h-full rounded-md"
+          iconSize={20}
+        />
 
         {/* Play/Pause Overlay (Hover) */}
         <div

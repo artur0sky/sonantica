@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { ReactNode } from "react";
-import { cn } from "../../utils";
+import { cn, gpuAnimations } from "@sonantica/shared";
 
 interface EmptyStateProps {
   icon?: React.ElementType;
@@ -19,8 +19,7 @@ export function EmptyState({
 }: EmptyStateProps) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
+      {...gpuAnimations.fadeInUp}
       className={cn(
         "flex flex-col items-center justify-center text-center py-20 px-4",
         className

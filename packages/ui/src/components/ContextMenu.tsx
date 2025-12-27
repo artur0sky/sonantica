@@ -7,7 +7,7 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
-import { cn } from '@sonantica/shared';
+import { cn, gpuAnimations } from '@sonantica/shared';
 
 export interface ContextMenuItem {
   id: string;
@@ -85,10 +85,7 @@ export function ContextMenu({ items, isOpen, position, onClose }: ContextMenuPro
       {isOpen && (
         <motion.div
           ref={menuRef}
-          initial={{ opacity: 0, scale: 0.95, y: -10 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: -10 }}
-          transition={{ duration: 0.15, ease: 'easeOut' }}
+          {...gpuAnimations.modal}
           style={{
             position: 'fixed',
             left: adjustedPosition.x,
