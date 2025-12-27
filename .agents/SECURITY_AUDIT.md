@@ -19,7 +19,7 @@
 | Package | Status | Priority | Vulnerabilities Found | Fixes Applied |
 |---------|--------|----------|----------------------|---------------|
 | `player-core` | ✅ **COMPLETED** | 🔴 Critical | 7 | 7 |
-| `metadata` | 📋 Pending | 🔴 High | - | - |
+| `metadata` | ✅ **COMPLETED** | 🔴 High | 9 | 9 |
 | `media-library` | 📋 Pending | 🟠 High | - | - |
 | `dsp` | 📋 Pending | 🟠 High | - | - |
 | `lyrics` | 📋 Pending | 🟡 Medium | - | - |
@@ -140,7 +140,140 @@ this.audio.src = source.url; // Now validated
 
 ---
 
-## Next Package: `metadata`
+## Package 2: `metadata` ✅
+
+**Audit Date:** 2025-12-27  
+**Files Audited:** 3 (MetadataExtractor.ts, ID3v2Parser.ts, FLACParser.ts)  
+**Severity:** High (parses external file data - major attack vector)
+
+### Vulnerabilities Found
+
+#### 🚨 CRITICAL: Buffer Overflow in Tag Parsing
+**Files:** `ID3v2Parser.ts`, `FLACParser.ts`  
+**Issue:** No bounds checking on array/buffer access, unsafe offset calculations  
+**Risk:** Malformed audio files could cause buffer overflows, crash, or arbitrary code execution  
+**Fix:** Implemented comprehensive bounds checking with `SecurityValidator` classes
+
+```typescript
+// BEFORE (VULNERABLE)
+const frameSize = view.getUint8(offset + 4) << 24 | ...;
+const frameData = new Uint8Array(view.buffer, offset + 10, frameSize);
+
+// AFTER (SECURE)
+ID3v2SecurityValidator.validateOffset(offset + 3, view, context);
+ID3v2SecurityValidator.validateFrameSize(frameSize, context);
+if (offset + 10 + frameSize > view.byteLength) break;
+```
+
+#### 🚨 CRITICAL: Integer Overflow in Size Calculations
+**Files:** `ID3v2Parser.ts:24-29`, `FLACParser.ts:28-31`  
+**Issue:** Synchsafe integer and block size calculations without overflow protection  
+**Risk:** Malicious files could cause integer overflow leading to incorrect memory allocation  
+**Fix:** Added validation for synchsafe integers and safe arithmetic
+
+#### ⚠️ HIGH: DoS via Large File Fetch
+**File:** `MetadataExtractor.ts:27`  
+**Issue:** Fetches up to 16MB without size validation or timeout  
+**Risk:** Attacker could exhaust memory/bandwidth with huge files  
+**Fix:** Added `MAX_FETCH_SIZE` limit, timeout protection, and content-length validation
+
+#### ⚠️ HIGH: Missing Input Validation
+**Files:** All parsers  
+**Issue:** No validation of URL, DataView, or response objects  
+**Risk:** Type confusion, null pointer dereference  
+**Fix:** Created `MetadataSecurityValidator` with comprehensive input validation
+
+#### ⚠️ HIGH: Unbounded Loop in Frame Parsing
+**Files:** `ID3v2Parser.ts:43`, `FLACParser.ts:22`  
+**Issue:** While loops without iteration limits  
+**Risk:** Infinite loop DoS on malformed files  
+**Fix:** Added `MAX_FRAMES` (1000) and `MAX_BLOCKS` (128) limits
+
+#### ⚠️ MEDIUM: Unsafe String Parsing
+**Files:** `ID3v2Parser.ts:132-148`, `FLACParser.ts:148-195`  
+**Issue:** APIC/PICTURE extraction with unbounded null-terminator search  
+**Risk:** Infinite loop on malformed MIME type or description  
+**Fix:** Added iteration limits (256 bytes) and proper bounds checking
+
+#### ⚠️ MEDIUM: Missing Error Boundaries
+**Files:** All parsers  
+**Issue:** Parsing errors could propagate and crash the app  
+**Risk:** Denial of service  
+**Fix:** Wrapped all parsing logic in try-catch with graceful degradation
+
+#### ⚠️ MEDIUM: No Timeout on Fetch
+**File:** `MetadataExtractor.ts:27`  
+**Issue:** fetch() could hang indefinitely  
+**Risk:** Resource exhaustion  
+**Fix:** Added `AbortController` with 30-second timeout
+
+#### ⚠️ LOW: Missing Frame ID Validation
+**File:** `ID3v2Parser.ts:46-50`  
+**Issue:** Frame IDs not validated for valid characters  
+**Risk:** Processing of malformed frames  
+**Fix:** Added `isValidFrameId()` with regex validation `/^[A-Z0-9]{4}$/`
+
+### Security Enhancements Applied
+
+1. **Buffer Overflow Prevention**
+   - Bounds checking on all array access
+   - Offset validation before reads
+   - Size validation before allocation
+
+2. **Integer Overflow Protection**
+   - Synchsafe integer validation (MSB must be 0)
+   - Block size limits (16MB max)
+   - Frame size limits (10MB max)
+   - Comment length limits (1MB max)
+
+3. **DoS Protection**
+   - Frame count limit: 1000
+   - Block count limit: 128
+   - Comment count limit: 1000
+   - Fetch timeout: 30 seconds
+   - Max fetch size: 16MB
+
+4. **Input Validation**
+   - URL protocol whitelist
+   - DataView size validation
+   - Response status validation
+   - Content-Length validation
+
+5. **Error Handling**
+   - Try-catch in all parsing methods
+   - Graceful degradation on errors
+   - Partial metadata return on failure
+   - Comprehensive error logging
+
+### Code Quality Improvements
+
+- ✅ Created dedicated security validator classes
+- ✅ Separated parsing logic into smaller methods
+- ✅ Added JSDoc comments for all methods
+- ✅ Consistent error message format
+- ✅ Safe arithmetic operations
+- ✅ No functionality lost
+- ✅ Backward compatible API
+
+### Testing Recommendations
+
+```typescript
+// Test cases to add:
+1. Malformed ID3v2 tags (invalid synchsafe integers)
+2. Oversized frames (>10MB)
+3. Infinite loop scenarios (no null terminators)
+4. Buffer overflow attempts (offset beyond bounds)
+5. Integer overflow in size calculations
+6. Huge file fetch (>16MB)
+7. Timeout scenarios (slow network)
+8. Malformed FLAC blocks
+9. Invalid Vorbis comments
+10. Corrupted picture data
+```
+
+---
+
+## Next Package: `media-library`
 
 **Priority:** 🔴 High  
 **Reason:** Parses external file data (ID3 tags, FLAC metadata)  
