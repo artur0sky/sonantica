@@ -22,3 +22,4 @@ export * from './ScanButton';
 export * from './ShuffleButton';
 export { LazyAlbumArt } from './LazyAlbumArt';
 export { AddFolderButton } from './AddFolderButton';
+export { Switch } from './Switch';
