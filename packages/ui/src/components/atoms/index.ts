@@ -18,6 +18,7 @@ export * from './PlayButton';
 export * from './SkipButton';
 export * from './ActionIconButton';
 export * from './UserButton';
+export * from './ScanButton';
 export * from './ShuffleButton';
 export { LazyAlbumArt } from './LazyAlbumArt';
 export { AddFolderButton } from './AddFolderButton';

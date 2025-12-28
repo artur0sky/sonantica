@@ -18,6 +18,11 @@ const config: CapacitorConfig = {
       style: 'dark',
       backgroundColor: '#0a0a0a',
     },
+    Filesystem: {
+      // Request permissions on app start for better UX
+      // Android: READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE
+      // iOS: Photo Library access
+    },
   },
 };
 

@@ -11,7 +11,7 @@ import {
   FolderList,
   AddFolderButton,
   Tabs,
-  Button,
+  ScanButton,
   type Tab,
 } from "@sonantica/ui";
 import { FolderManager } from "@sonantica/media-library";
@@ -24,8 +24,6 @@ import {
   IconSettings,
   IconPalette,
   IconInfoCircle,
-  IconRefresh,
-  IconX,
 } from "@tabler/icons-react";
 
 // Initialize folder manager (singleton pattern)
@@ -189,6 +187,20 @@ export function SettingsPage() {
     }
   };
 
+  const handleScanSelected = async (folderIds: string[]) => {
+    if (!library || scanning) return;
+
+    try {
+      const selectedFolders = folderManager
+        .getFolders()
+        .filter((f) => folderIds.includes(f.id));
+      const paths = selectedFolders.map((f) => f.path);
+      await library.scan(paths);
+    } catch (err) {
+      console.error("Scan selected failed", err);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -223,6 +235,7 @@ export function SettingsPage() {
                 onEditFolder={handleEditFolder}
                 onScanFolder={handleScanFolder}
                 onScanAll={handleScanAll}
+                onScanSelected={handleScanSelected}
                 folderManager={folderManager}
               />
             )}
@@ -250,6 +263,7 @@ interface LibraryTabProps {
   onEditFolder: (folderId: string) => void;
   onScanFolder: (folderId: string) => void;
   onScanAll: () => void;
+  onScanSelected: (folderIds: string[]) => void;
   folderManager: FolderManager;
 }
 
@@ -263,13 +277,14 @@ function LibraryTab({
   onEditFolder,
   onScanFolder,
   onScanAll,
+  onScanSelected,
   folderManager,
 }: LibraryTabProps) {
   return (
     <div className="space-y-8">
       {/* Music Folders Section */}
       <section>
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mb-4">
           <div>
             <h2 className="text-xl font-semibold text-text mb-1">
               Music Folders
@@ -278,17 +293,15 @@ function LibraryTab({
               Select folders to include in your library
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
+          <div className="flex items-center gap-2 flex-wrap">
+            <ScanButton
               onClick={onScanAll}
-              variant={scanning ? "danger" : "secondary"}
+              scanning={scanning}
               size="sm"
               disabled={!scanning && folders.length === 0}
-              className="flex items-center gap-2"
-            >
-              {scanning ? <IconX size={16} /> : <IconRefresh size={16} />}
-              {scanning ? "Cancel Scan" : "Scan All"}
-            </Button>
+              label="Analizar todo"
+              scanningLabel="Cancelar"
+            />
             <AddFolderButton onClick={onAddFolder} />
           </div>
         </div>
@@ -307,6 +320,7 @@ function LibraryTab({
             onRemove={onRemoveFolder}
             onEdit={onEditFolder}
             onScan={onScanFolder}
+            onScanSelected={onScanSelected}
           />
         )}
       </section>
@@ -317,7 +331,7 @@ function LibraryTab({
           Library Settings
         </h2>
 
-        <div className="space-y-4 bg-surface border border-border rounded-lg p-4">
+        <div className="space-y-4 bg-surface border border-border rounded-lg p-3 sm:p-4">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-base font-medium text-text">
@@ -374,7 +388,7 @@ function LibraryTab({
           <h2 className="text-xl font-semibold text-text mb-4">
             Library Statistics
           </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
             <div className="bg-surface border border-border rounded-lg p-4">
               <div className="text-2xl font-bold text-text">
                 {folders.length}

@@ -3,7 +3,7 @@ import { IconUser } from "@tabler/icons-react";
 import { cn } from "../../utils";
 
 interface UserButtonProps {
-  onClick?: () => void;
+  onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
   className?: string;
   image?: string;
 }
