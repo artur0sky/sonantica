@@ -1,0 +1,42 @@
+{
+    "name": "@sonantica/mobile",
+    "private": true,
+    "version": "0.1.0",
+    "description": "Sonántica Mobile App - Capacitor wrapper for Android/iOS",
+    "type": "module",
+    "main": "./src/index.ts",
+    "exports": {
+        ".": "./src/index.ts",
+        "./capacitor-hooks": "./src/capacitor-hooks.ts"
+    },
+    "scripts": {
+        "dev": "pnpm --filter @sonantica/web dev",
+        "build": "pnpm --filter @sonantica/web build && pnpm cap:sync",
+        "cap:init": "cap init",
+        "cap:sync": "cap sync",
+        "cap:open:android": "cap open android",
+        "cap:open:ios": "cap open ios",
+        "cap:run:android": "cap run android",
+        "cap:run:ios": "cap run ios",
+        "android": "pnpm build && pnpm cap:run:android",
+        "ios": "pnpm build && pnpm cap:run:ios",
+        "build:apk": "pnpm build && cd android && .\\gradlew assembleDebug",
+        "build:apk:release": "pnpm build && cd android && .\\gradlew assembleRelease",
+        "install:apk": "adb install android/app/build/outputs/apk/debug/app-debug.apk",
+        "clean:android": "cd android && .\\gradlew clean"
+    },
+    "dependencies": {
+        "@capacitor/android": "6.2.0",
+        "@capacitor/app": "6.0.1",
+        "@capacitor/core": "6.2.0",
+        "@capacitor/filesystem": "6.0.1",
+        "@capacitor/haptics": "6.0.1",
+        "@capacitor/ios": "6.2.0",
+        "@capacitor/keyboard": "6.0.2",
+        "@capacitor/splash-screen": "6.0.2",
+        "@capacitor/status-bar": "6.0.1"
+    },
+    "devDependencies": {
+        "@capacitor/cli": "6.2.0"
+    }
+}
