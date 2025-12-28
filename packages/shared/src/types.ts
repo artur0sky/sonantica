@@ -98,3 +98,6 @@ export interface PlayerEvent {
   timestamp: number;
   data?: unknown;
 }
+
+// Library Configuration
+export * from './types/library-config';

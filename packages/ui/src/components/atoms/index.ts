@@ -20,3 +20,4 @@ export * from './ActionIconButton';
 export * from './UserButton';
 export * from './ShuffleButton';
 export { LazyAlbumArt } from './LazyAlbumArt';
+export { AddFolderButton } from './AddFolderButton';

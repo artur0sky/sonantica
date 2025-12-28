@@ -38,6 +38,11 @@ const ArtistDetailPage = lazy(() =>
     default: m.ArtistDetailPage,
   }))
 );
+const SettingsPage = lazy(() =>
+  import("./features/library/pages/SettingsPage").then((m) => ({
+    default: m.SettingsPage,
+  }))
+);
 
 const PageLoader = () => (
   <div className="flex items-center justify-center min-h-[50vh] text-text-muted">
@@ -63,6 +68,9 @@ function App() {
             {/* Detail views */}
             <Route path="/album/:id" component={AlbumDetailPage} />
             <Route path="/artist/:id" component={ArtistDetailPage} />
+
+            {/* Settings */}
+            <Route path="/settings" component={SettingsPage} />
 
             {/* Playlists - Coming soon */}
             <Route path="/playlists">
