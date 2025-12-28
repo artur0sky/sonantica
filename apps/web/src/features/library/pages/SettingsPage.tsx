@@ -201,6 +201,25 @@ export function SettingsPage() {
     }
   };
 
+  const handleClearLibrary = async () => {
+    const confirmed = confirm(
+      "¿Estás seguro de que quieres eliminar todos los registros de pistas analizadas? Esta acción no se puede deshacer.\n\nLas carpetas configuradas y los archivos en tu disco permanecerán intactos."
+    );
+
+    if (!confirmed) return;
+
+    try {
+      const clearLibrary = useLibraryStore.getState().clearLibrary;
+      await clearLibrary();
+      alert(
+        "Biblioteca limpiada exitosamente. Puedes volver a analizar tus carpetas cuando quieras."
+      );
+    } catch (err) {
+      console.error("Clear library failed", err);
+      alert("Error al limpiar la biblioteca. Por favor, intenta de nuevo.");
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -236,6 +255,7 @@ export function SettingsPage() {
                 onScanFolder={handleScanFolder}
                 onScanAll={handleScanAll}
                 onScanSelected={handleScanSelected}
+                onClearLibrary={handleClearLibrary}
                 folderManager={folderManager}
               />
             )}
@@ -264,6 +284,7 @@ interface LibraryTabProps {
   onScanFolder: (folderId: string) => void;
   onScanAll: () => void;
   onScanSelected: (folderIds: string[]) => void;
+  onClearLibrary: () => void;
   folderManager: FolderManager;
 }
 
@@ -278,6 +299,7 @@ function LibraryTab({
   onScanFolder,
   onScanAll,
   onScanSelected,
+  onClearLibrary,
   folderManager,
 }: LibraryTabProps) {
   return (
@@ -297,7 +319,7 @@ function LibraryTab({
             <ScanButton
               onClick={onScanAll}
               scanning={scanning}
-              size="sm"
+              size="md"
               disabled={!scanning && folders.length === 0}
               label="Analizar todo"
               scanningLabel="Cancelar"
@@ -379,6 +401,22 @@ function LibraryTab({
               </div>
             </label>
           </div>
+        </div>
+
+        {/* Danger Zone */}
+        <div className="mt-6 pt-6 border-t border-error/20">
+          <h3 className="text-base font-medium text-error mb-2">
+            Zona de peligro
+          </h3>
+          <p className="text-sm text-text-muted mb-4">
+            Estas acciones son irreversibles. Procede con precaución.
+          </p>
+          <button
+            onClick={onClearLibrary}
+            className="px-4 py-2 bg-error/10 text-error border border-error/30 rounded-md hover:bg-error/20 transition-colors text-sm font-medium"
+          >
+            Eliminar todos los registros de pistas
+          </button>
         </div>
       </section>
 

@@ -33,6 +33,7 @@ interface LibraryState {
   
   // Actions
   scan: (paths: string[], cancel?: boolean) => Promise<void>;
+  clearLibrary: () => Promise<void>;
   setSearchQuery: (query: string) => void;
   selectArtist: (artist: Artist | null) => void;
   selectAlbum: (album: Album | null) => void;
@@ -91,6 +92,49 @@ export const useLibraryStore = create<LibraryState>((set, get) => {
         throw error;
       } finally {
         if (!cancel) set({ scanning: false });
+      }
+    },
+
+    clearLibrary: async () => {
+      try {
+        // Clear library instance
+        library.clear();
+        
+        // Reset state
+        set({
+          artists: [],
+          albums: [],
+          tracks: [],
+          stats: {
+            totalTracks: 0,
+            totalArtists: 0,
+            totalAlbums: 0,
+            totalGenres: 0,
+            totalSize: 0,
+          },
+          selectedArtist: null,
+          selectedAlbum: null,
+          searchQuery: '',
+        });
+
+        // Clear persisted data
+        const { onSave } = get();
+        if (onSave) {
+          await onSave({
+            tracks: [],
+            stats: {
+              totalTracks: 0,
+              totalArtists: 0,
+              totalAlbums: 0,
+              totalGenres: 0,
+              totalSize: 0,
+            },
+          });
+          console.log('🗑️ Library cleared');
+        }
+      } catch (error) {
+        console.error('Failed to clear library:', error);
+        throw error;
       }
     },
 

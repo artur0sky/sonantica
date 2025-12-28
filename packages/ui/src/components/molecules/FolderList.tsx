@@ -198,14 +198,20 @@ function FolderItem({
         onToggleSelection(folder.id);
       },
     },
+    {
+      id: "divider-1",
+      label: "",
+      divider: true,
+      onClick: () => {},
+    },
+    {
+      id: "toggle",
+      label: folder.enabled ? "Desactivar" : "Activar",
+      icon: <IconPlayerPlay size={18} stroke={1.5} />,
+      onClick: () => onToggle?.(folder.id, !folder.enabled),
+    },
     ...(onEdit
       ? [
-          {
-            id: "divider-1",
-            label: "",
-            divider: true,
-            onClick: () => {},
-          },
           {
             id: "edit",
             label: "Editar",
@@ -216,6 +222,12 @@ function FolderItem({
       : []),
     ...(onRemove && !folder.isSystem
       ? [
+          {
+            id: "divider-2",
+            label: "",
+            divider: true,
+            onClick: () => {},
+          },
           {
             id: "remove",
             label: "Eliminar",
