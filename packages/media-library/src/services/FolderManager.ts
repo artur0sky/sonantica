@@ -86,7 +86,7 @@ export class FolderManager {
 
   private ensureSystemFolders() {
     const SYSTEM_FOLDERS = [
-        { path: '/media', name: 'Server Media', id: 'sys_media' }
+        { path: '/media/', name: 'Server Media', id: 'sys_media' }
     ];
 
     let changed = false;

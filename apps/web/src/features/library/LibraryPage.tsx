@@ -6,7 +6,7 @@
 
 import React from "react";
 import { Button } from "@sonantica/ui";
-import { useLibraryStore } from "@sonantica/media-library";
+import { useLibraryStore, FolderManager } from "@sonantica/media-library";
 import { usePlayerStore } from "@sonantica/player-core";
 import { TrackItem } from "./components/TrackItem";
 import { AlbumCard } from "./components/AlbumCard";
@@ -14,6 +14,24 @@ import { ArtistCard } from "./components/ArtistCard";
 import { cn } from "@sonantica/shared";
 
 type ViewMode = "artists" | "albums" | "tracks";
+
+// Initialize FolderManager for getting scan paths
+const folderManager = new FolderManager(
+  {
+    load: async () => {
+      const stored = localStorage.getItem("sonantica:library-config");
+      return stored ? JSON.parse(stored) : null;
+    },
+    save: async (config) => {
+      localStorage.setItem("sonantica:library-config", JSON.stringify(config));
+    },
+  },
+  {
+    validatePath: async () => ({ valid: true }),
+    pathExists: async () => true,
+    isDirectory: async () => true,
+  }
+);
 
 export function LibraryPage() {
   const {
@@ -37,7 +55,9 @@ export function LibraryPage() {
 
   const handleScan = async () => {
     try {
-      await scan(["/media/"]);
+      // Get scan paths from FolderManager instead of hardcoding
+      const paths = folderManager.getScanPaths();
+      await scan(paths);
     } catch (error) {
       console.error("Scan failed:", error);
     }
