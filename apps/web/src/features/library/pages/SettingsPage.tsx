@@ -11,6 +11,7 @@ import {
   FolderList,
   Tabs,
   ScanButton,
+  Switch,
   type Tab,
 } from "@sonantica/ui";
 import { FolderManager } from "@sonantica/media-library";
@@ -416,28 +417,19 @@ function LibraryTab({
                 Automatically scan library folders when the app starts
               </p>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={config?.autoScanOnStartup || false}
-                onChange={async (e) => {
-                  const newValue = e.target.checked;
-                  // Update local state immediately for UI responsiveness
-                  setConfig((prev) =>
-                    prev ? { ...prev, autoScanOnStartup: newValue } : prev
-                  );
-                  // Persist to storage
-                  await folderManager.updateSettings({
-                    autoScanOnStartup: newValue,
-                  });
-                  console.log("✅ Auto-scan setting updated:", newValue);
-                }}
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-surface-elevated rounded-full peer peer-checked:bg-accent transition-colors">
-                <div className="absolute top-0.5 left-0.5 bg-white w-5 h-5 rounded-full shadow transition-transform peer-checked:translate-x-5" />
-              </div>
-            </label>
+            <Switch
+              checked={config?.autoScanOnStartup || false}
+              onChange={async (checked) => {
+                setConfig((prev) =>
+                  prev ? { ...prev, autoScanOnStartup: checked } : prev
+                );
+                await folderManager.updateSettings({
+                  autoScanOnStartup: checked,
+                });
+                console.log("✅ Auto-scan setting updated:", checked);
+              }}
+              label="Auto-scan on startup"
+            />
           </div>
 
           <div className="flex items-center justify-between">
@@ -450,28 +442,19 @@ function LibraryTab({
                 intensive)
               </p>
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={config?.parallelScan || false}
-                onChange={async (e) => {
-                  const newValue = e.target.checked;
-                  // Update local state immediately for UI responsiveness
-                  setConfig((prev) =>
-                    prev ? { ...prev, parallelScan: newValue } : prev
-                  );
-                  // Persist to storage
-                  await folderManager.updateSettings({
-                    parallelScan: newValue,
-                  });
-                  console.log("✅ Parallel scan setting updated:", newValue);
-                }}
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-surface-elevated rounded-full peer peer-checked:bg-accent transition-colors">
-                <div className="absolute top-0.5 left-0.5 bg-white w-5 h-5 rounded-full shadow transition-transform peer-checked:translate-x-5" />
-              </div>
-            </label>
+            <Switch
+              checked={config?.parallelScan || false}
+              onChange={async (checked) => {
+                setConfig((prev) =>
+                  prev ? { ...prev, parallelScan: checked } : prev
+                );
+                await folderManager.updateSettings({
+                  parallelScan: checked,
+                });
+                console.log("✅ Parallel scan setting updated:", checked);
+              }}
+              label="Parallel scanning"
+            />
           </div>
 
           <div className="flex items-center justify-between opacity-50">
