@@ -25,8 +25,8 @@ export function ScanButton({
   variant = "secondary",
   size = "md",
   className,
-  label = "Analizar",
-  scanningLabel = "Cancelar",
+  label = "Scan",
+  scanningLabel = "Cancel",
   disabled,
   onClick,
 }: ScanButtonProps) {

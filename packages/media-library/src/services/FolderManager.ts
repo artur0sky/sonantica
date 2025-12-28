@@ -37,6 +37,7 @@ export interface IFolderValidator {
 const DEFAULT_CONFIG: LibraryConfig = {
   folders: [],
   autoScanOnStartup: false,
+  parallelScan: false, // Sequential by default for better stability
   watchForChanges: false,
   lastUpdated: new Date(),
 };
@@ -235,6 +236,7 @@ export class FolderManager {
    */
   async updateSettings(settings: {
     autoScanOnStartup?: boolean;
+    parallelScan?: boolean;
     watchForChanges?: boolean;
   }): Promise<void> {
     Object.assign(this.config, settings);

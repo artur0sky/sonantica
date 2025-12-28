@@ -83,7 +83,7 @@ export class MediaLibrary implements IMediaLibrary {
   /**
    * Scan for media files with change detection
    */
-   async scan(paths: string[]): Promise<void> {
+  async scan(paths: string[], parallel: boolean = false): Promise<void> {
     if (this.currentScanPromise) {
       console.log('⏳ MediaLibrary: Scan already in progress, queuing/returning current promise');
       return this.currentScanPromise;
@@ -123,7 +123,8 @@ export class MediaLibrary implements IMediaLibrary {
           }
         };
 
-        await this.libraryScanner.scanPaths(paths, scannedPaths, callbacks);
+        // Pass parallel parameter to scanner
+        await this.libraryScanner.scanPaths(paths, scannedPaths, callbacks, parallel);
 
         if (this.cancelScanFlag) {
           console.log('🛑 Scan cancelled by user');

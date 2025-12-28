@@ -4,12 +4,11 @@
  * "User autonomy" - Configure library sources and preferences.
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   PageHeader,
   EmptyState,
   FolderList,
-  AddFolderButton,
   Tabs,
   ScanButton,
   type Tab,
@@ -43,24 +42,57 @@ export function SettingsPage() {
   const [activeTab, setActiveTab] = useState("library");
   const [config, setConfig] = useState<LibraryConfig | null>(null);
   const [loading, setLoading] = useState(true);
+  const [scanningFolderId, setScanningFolderId] = useState<string | null>(null);
   const { library, scanning } = useLibraryStore();
+  const autoScanExecutedRef = useRef(false);
+  const configLoadedRef = useRef(false);
 
-  // Load configuration on mount
+  // Load configuration on mount (only once) - SYNCHRONOUSLY from localStorage first
   useEffect(() => {
+    if (configLoadedRef.current) return;
+
     const loadConfig = async () => {
       try {
+        // CRITICAL: Load from localStorage FIRST before any async operations
+        let initialConfig: LibraryConfig | null = null;
+        try {
+          const stored = localStorage.getItem("sonantica:library-config");
+          if (stored) {
+            initialConfig = JSON.parse(stored);
+            console.log("📂 Loaded config from localStorage:", {
+              autoScanOnStartup: initialConfig?.autoScanOnStartup,
+              parallelScan: initialConfig?.parallelScan,
+            });
+          }
+        } catch (e) {
+          console.error("Failed to load config from localStorage:", e);
+        }
+
+        // Now initialize FolderManager (which may add system folders)
         await folderManager.initialize();
         const currentConfig = folderManager.getConfig();
-        setConfig(currentConfig);
 
-        // Auto-scan on startup ONLY if enabled
-        if (currentConfig.autoScanOnStartup && library) {
-          const paths = folderManager.getScanPaths();
-          if (paths.length > 0) {
-            // Don't await here to not block UI
-            library.scan(paths).catch(console.error);
-          }
+        // If we had a stored config, merge the settings
+        if (initialConfig) {
+          currentConfig.autoScanOnStartup =
+            initialConfig.autoScanOnStartup ?? false;
+          currentConfig.parallelScan = initialConfig.parallelScan ?? false;
         }
+
+        setConfig(currentConfig);
+        configLoadedRef.current = true;
+
+        // Debug logging
+        console.log("🔍 Final config loaded:", {
+          autoScanOnStartup: currentConfig.autoScanOnStartup,
+          parallelScan: currentConfig.parallelScan,
+          type: typeof currentConfig.autoScanOnStartup,
+          foldersCount: currentConfig.folders.length,
+          folders: currentConfig.folders.map((f) => ({
+            path: f.path,
+            enabled: f.enabled,
+          })),
+        });
       } catch (error) {
         console.error("Failed to load configuration:", error);
       } finally {
@@ -72,56 +104,51 @@ export function SettingsPage() {
 
     // Subscribe to configuration changes
     const unsubscribe = folderManager.onChange((newConfig: LibraryConfig) => {
+      console.log("📢 Config changed:", newConfig);
       setConfig(newConfig);
     });
 
     return unsubscribe;
   }, []);
 
-  const handleAddFolder = async () => {
-    try {
-      // Use File System Access API to select folder
-      if (!("showDirectoryPicker" in window)) {
-        alert(
-          "Your browser does not support folder selection. Please use a modern browser like Chrome or Edge."
-        );
-        return;
-      }
-
-      const dirHandle = await (window as any).showDirectoryPicker({
-        mode: "read",
-      });
-
-      // Add folder to configuration
-      await folderManager.addFolder(dirHandle.name, {
-        name: dirHandle.name,
-        recursive: true,
-        enabled: true,
-      });
-
-      // Store the directory handle for future access
-      // Note: In production, you'd want to use IndexedDB to persist handles
-      console.log("Folder added:", dirHandle.name);
-
-      // Ask user to scan immediately
-      if (confirm("Folder added. Do you want to scan it now?")) {
-        // Logic handled by general scan
-        if (library) {
-          // We scan specifically this new folder?
-          // Currently backend scan takes a list of paths.
-          // But directory handle storage is tricky on web without mapped paths.
-          // For now, let's trigger a full scan of enabled paths which includes this one.
-          const paths = folderManager.getScanPaths();
-          await library.scan(paths);
-        }
-      }
-    } catch (error: any) {
-      if (error.name !== "AbortError") {
-        console.error("Failed to add folder:", error);
-        alert("Failed to add folder. Please try again.");
-      }
+  // Auto-scan effect (only when library is ready and config is loaded)
+  useEffect(() => {
+    if (
+      !library ||
+      !config ||
+      autoScanExecutedRef.current ||
+      !configLoadedRef.current
+    ) {
+      return;
     }
-  };
+
+    // Debug logging
+    console.log("🔍 Auto-scan check:", {
+      autoScanOnStartup: config.autoScanOnStartup,
+      type: typeof config.autoScanOnStartup,
+      hasLibrary: !!library,
+      foldersCount: config.folders.length,
+      alreadyExecuted: autoScanExecutedRef.current,
+    });
+
+    // Auto-scan on startup ONLY if explicitly enabled
+    if (config.autoScanOnStartup === true) {
+      const paths = folderManager.getScanPaths();
+      console.log("🚀 Auto-scan ENABLED - triggering with paths:", paths);
+      if (paths.length > 0) {
+        autoScanExecutedRef.current = true;
+        // Don't await here to not block UI
+        const scan = useLibraryStore.getState().scan;
+        scan(paths).catch(console.error);
+      }
+    } else {
+      console.log(
+        "⏸️ Auto-scan DISABLED - skipping (config.autoScanOnStartup =",
+        config.autoScanOnStartup,
+        ")"
+      );
+    }
+  }, [library, config]);
 
   const handleToggleFolder = async (folderId: string, enabled: boolean) => {
     try {
@@ -157,45 +184,66 @@ export function SettingsPage() {
     console.log("Edit folder:", folderId);
   };
 
+  const handleToggleRecursive = async (
+    folderId: string,
+    recursive: boolean
+  ) => {
+    try {
+      await folderManager.updateFolder(folderId, { recursive });
+    } catch (error) {
+      console.error("Failed to toggle recursive:", error);
+    }
+  };
+
   const handleScanFolder = async (folderId: string) => {
-    if (!library || scanning) return;
+    if (scanning) return;
 
     try {
       const folder = folderManager.getFolders().find((f) => f.id === folderId);
       if (folder) {
-        // Scan only this folder path
-        await library.scan([folder.path]);
+        setScanningFolderId(folderId);
+        // Scan only this folder path using store method
+        const scan = useLibraryStore.getState().scan;
+        await scan([folder.path]);
       }
     } catch (err) {
       console.error("Scan failed", err);
+    } finally {
+      setScanningFolderId(null);
     }
   };
 
   const handleScanAll = async () => {
-    if (!library) return;
+    const scan = useLibraryStore.getState().scan;
 
     if (scanning) {
-      library.cancelScan();
+      // Cancel ongoing scan
+      scan([], true);
       return;
     }
 
     try {
       const paths = folderManager.getScanPaths();
-      await library.scan(paths);
+      if (paths.length === 0) {
+        alert("No folders configured. Please add folders first.");
+        return;
+      }
+      await scan(paths);
     } catch (err) {
       console.error("Scan all failed", err);
     }
   };
 
   const handleScanSelected = async (folderIds: string[]) => {
-    if (!library || scanning) return;
+    if (scanning) return;
 
     try {
       const selectedFolders = folderManager
         .getFolders()
         .filter((f) => folderIds.includes(f.id));
       const paths = selectedFolders.map((f) => f.path);
-      await library.scan(paths);
+      const scan = useLibraryStore.getState().scan;
+      await scan(paths);
     } catch (err) {
       console.error("Scan selected failed", err);
     }
@@ -203,7 +251,7 @@ export function SettingsPage() {
 
   const handleClearLibrary = async () => {
     const confirmed = confirm(
-      "¿Estás seguro de que quieres eliminar todos los registros de pistas analizadas? Esta acción no se puede deshacer.\n\nLas carpetas configuradas y los archivos en tu disco permanecerán intactos."
+      "Are you sure you want to delete all scanned track records? This action cannot be undone.\n\nConfigured folders and files on your disk will remain intact."
     );
 
     if (!confirmed) return;
@@ -212,11 +260,11 @@ export function SettingsPage() {
       const clearLibrary = useLibraryStore.getState().clearLibrary;
       await clearLibrary();
       alert(
-        "Biblioteca limpiada exitosamente. Puedes volver a analizar tus carpetas cuando quieras."
+        "Library cleared successfully. You can re-scan your folders whenever you want."
       );
     } catch (err) {
       console.error("Clear library failed", err);
-      alert("Error al limpiar la biblioteca. Por favor, intenta de nuevo.");
+      alert("Error clearing library. Please try again.");
     }
   };
 
@@ -247,11 +295,13 @@ export function SettingsPage() {
               <LibraryTab
                 folders={folders}
                 config={config}
+                setConfig={setConfig}
                 scanning={scanning}
-                onAddFolder={handleAddFolder}
+                scanningFolderId={scanningFolderId}
                 onToggleFolder={handleToggleFolder}
                 onRemoveFolder={handleRemoveFolder}
                 onEditFolder={handleEditFolder}
+                onToggleRecursive={handleToggleRecursive}
                 onScanFolder={handleScanFolder}
                 onScanAll={handleScanAll}
                 onScanSelected={handleScanSelected}
@@ -276,11 +326,13 @@ export function SettingsPage() {
 interface LibraryTabProps {
   folders: any[];
   config: LibraryConfig | null;
+  setConfig: React.Dispatch<React.SetStateAction<LibraryConfig | null>>;
   scanning: boolean;
-  onAddFolder: () => void;
+  scanningFolderId: string | null;
   onToggleFolder: (folderId: string, enabled: boolean) => void;
   onRemoveFolder: (folderId: string) => void;
   onEditFolder: (folderId: string) => void;
+  onToggleRecursive: (folderId: string, recursive: boolean) => void;
   onScanFolder: (folderId: string) => void;
   onScanAll: () => void;
   onScanSelected: (folderIds: string[]) => void;
@@ -291,11 +343,13 @@ interface LibraryTabProps {
 function LibraryTab({
   folders,
   config,
+  setConfig,
   scanning,
-  onAddFolder,
+  scanningFolderId,
   onToggleFolder,
   onRemoveFolder,
   onEditFolder,
+  onToggleRecursive,
   onScanFolder,
   onScanAll,
   onScanSelected,
@@ -312,7 +366,7 @@ function LibraryTab({
               Music Folders
             </h2>
             <p className="text-sm text-text-muted">
-              Select folders to include in your library
+              Configured folders for your library
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
@@ -321,10 +375,7 @@ function LibraryTab({
               scanning={scanning}
               size="md"
               disabled={!scanning && folders.length === 0}
-              label="Analizar todo"
-              scanningLabel="Cancelar"
             />
-            <AddFolderButton onClick={onAddFolder} />
           </div>
         </div>
 
@@ -332,8 +383,7 @@ function LibraryTab({
           <EmptyState
             icon={IconFolder}
             title="No folders configured"
-            description="Add folders to build your music library. Sonántica will scan these locations for audio files."
-            action={<AddFolderButton onClick={onAddFolder} />}
+            description="The system folder /media will be available once mounted. Contact your administrator to configure additional folders."
           />
         ) : (
           <FolderList
@@ -343,6 +393,9 @@ function LibraryTab({
             onEdit={onEditFolder}
             onScan={onScanFolder}
             onScanSelected={onScanSelected}
+            onToggleRecursive={onToggleRecursive}
+            scanning={scanning}
+            scanningFolderId={scanningFolderId}
           />
         )}
       </section>
@@ -367,10 +420,51 @@ function LibraryTab({
               <input
                 type="checkbox"
                 checked={config?.autoScanOnStartup || false}
-                onChange={(e) => {
-                  folderManager.updateSettings({
-                    autoScanOnStartup: e.target.checked,
+                onChange={async (e) => {
+                  const newValue = e.target.checked;
+                  // Update local state immediately for UI responsiveness
+                  setConfig((prev) =>
+                    prev ? { ...prev, autoScanOnStartup: newValue } : prev
+                  );
+                  // Persist to storage
+                  await folderManager.updateSettings({
+                    autoScanOnStartup: newValue,
                   });
+                  console.log("✅ Auto-scan setting updated:", newValue);
+                }}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-surface-elevated rounded-full peer peer-checked:bg-accent transition-colors">
+                <div className="absolute top-0.5 left-0.5 bg-white w-5 h-5 rounded-full shadow transition-transform peer-checked:translate-x-5" />
+              </div>
+            </label>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-base font-medium text-text">
+                Parallel scanning
+              </h3>
+              <p className="text-sm text-text-muted">
+                Scan multiple folders simultaneously (faster but more resource
+                intensive)
+              </p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={config?.parallelScan || false}
+                onChange={async (e) => {
+                  const newValue = e.target.checked;
+                  // Update local state immediately for UI responsiveness
+                  setConfig((prev) =>
+                    prev ? { ...prev, parallelScan: newValue } : prev
+                  );
+                  // Persist to storage
+                  await folderManager.updateSettings({
+                    parallelScan: newValue,
+                  });
+                  console.log("✅ Parallel scan setting updated:", newValue);
                 }}
                 className="sr-only peer"
               />
@@ -405,17 +499,15 @@ function LibraryTab({
 
         {/* Danger Zone */}
         <div className="mt-6 pt-6 border-t border-error/20">
-          <h3 className="text-base font-medium text-error mb-2">
-            Zona de peligro
-          </h3>
+          <h3 className="text-base font-medium text-error mb-2">Danger Zone</h3>
           <p className="text-sm text-text-muted mb-4">
-            Estas acciones son irreversibles. Procede con precaución.
+            These actions are irreversible. Proceed with caution.
           </p>
           <button
             onClick={onClearLibrary}
             className="px-4 py-2 bg-error/10 text-error border border-error/30 rounded-md hover:bg-error/20 transition-colors text-sm font-medium"
           >
-            Eliminar todos los registros de pistas
+            Delete all track records
           </button>
         </div>
       </section>

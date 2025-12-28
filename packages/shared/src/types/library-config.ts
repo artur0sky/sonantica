@@ -46,6 +46,9 @@ export interface LibraryConfig {
   /** Auto-scan on startup */
   autoScanOnStartup: boolean;
   
+  /** Scan folders in parallel (faster but more resource intensive) */
+  parallelScan: boolean;
+  
   /** Watch folders for changes (future feature) */
   watchForChanges: boolean;
   

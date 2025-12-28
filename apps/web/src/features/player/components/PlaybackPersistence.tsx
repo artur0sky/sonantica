@@ -37,7 +37,7 @@ async function saveLibraryToDB(tracks: any[]) {
 
   // PERFORMANCE: Use batch writes for tracks (single transaction)
   const trackItems = [{ key: "all_tracks", data: minimalTracks }];
-  
+
   await saveBatchToStorage(
     STORES.LIBRARY,
     trackItems,
@@ -62,7 +62,9 @@ async function saveLibraryToDB(tracks: any[]) {
     );
   }
 
-  console.log(`✅ Saved ${tracks.length} tracks and ${artworkItems.length} artworks using batch writes`);
+  console.log(
+    `✅ Saved ${tracks.length} tracks and ${artworkItems.length} artworks using batch writes`
+  );
 }
 
 /**
@@ -77,7 +79,7 @@ async function loadLibraryFromDB(): Promise<any[]> {
     // Load artwork keys (we need to get all artwork to rebuild the map)
     // Note: loadFromStorage doesn't support getAll, so we'll keep artwork embedded for now
     // This is a trade-off: simpler code vs. slightly more storage
-    
+
     console.log(`📖 Loaded ${tracks.length} tracks from IndexedDB`);
     return tracks;
   } catch (e) {
@@ -213,12 +215,11 @@ export function PlaybackPersistence() {
         await initLibrary();
         isInitialized = true;
 
-        // After restoration, trigger a non-destructive scan to catch changes
-        // Use a small delay to not block the main UI thread immediately
-        setTimeout(() => {
-          console.log("🔍 [Persistence] Triggering background refresh scan...");
-          scan(["/media/"]);
-        }, 2000);
+        // NOTE: Auto-scan is now controlled by user settings in SettingsPage
+        // The user can enable "Auto-scan on startup" if they want automatic scanning
+        console.log(
+          "✅ [Persistence] Library store initialized. Auto-scan is controlled by user settings."
+        );
       }
     };
 

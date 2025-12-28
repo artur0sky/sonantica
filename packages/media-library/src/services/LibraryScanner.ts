@@ -152,8 +152,14 @@ export class LibraryScanner {
    * @param paths - Array of paths to scan
    * @param scannedPaths - Set to track scanned paths
    * @param callbacks - Callbacks for scan events
+   * @param parallel - Whether to scan paths in parallel (default: false)
    */
-  async scanPaths(paths: string[], scannedPaths: Set<string>, callbacks: ScannerCallbacks): Promise<void> {
+  async scanPaths(
+    paths: string[], 
+    scannedPaths: Set<string>, 
+    callbacks: ScannerCallbacks,
+    parallel: boolean = false
+  ): Promise<void> {
     try {
       // Validate input
       if (!Array.isArray(paths)) {
@@ -169,10 +175,68 @@ export class LibraryScanner {
         console.warn(`Large number of paths to scan: ${paths.length}`);
       }
 
-      for (const path of paths) {
+      if (parallel) {
+        console.log(`🚀 Parallel scan mode: ${paths.length} paths with max 3 concurrent`);
+        await this.scanPathsParallel(paths, scannedPaths, callbacks);
+      } else {
+        console.log(`📂 Sequential scan mode: ${paths.length} paths`);
+        await this.scanPathsSequential(paths, scannedPaths, callbacks);
+      }
+    } catch (error) {
+      console.error('Scan paths failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Scan paths sequentially (one at a time)
+   * @private
+   */
+  private async scanPathsSequential(
+    paths: string[], 
+    scannedPaths: Set<string>, 
+    callbacks: ScannerCallbacks
+  ): Promise<void> {
+    for (const path of paths) {
+      if (callbacks.shouldCancel()) {
+        console.log('Scan cancelled by user');
+        break;
+      }
+
+      try {
+        LibraryScannerSecurityValidator.validatePath(path);
+        this.recursionDepth = 0; // Reset depth for each root path
+        await this.scanPathRecursive(path, scannedPaths, callbacks);
+      } catch (error) {
+        console.error(`Failed to scan path ${path}:`, error);
+        // Continue with next path
+      }
+    }
+  }
+
+  /**
+   * Scan paths in parallel with concurrency limit
+   * @private
+   */
+  private async scanPathsParallel(
+    paths: string[], 
+    scannedPaths: Set<string>, 
+    callbacks: ScannerCallbacks
+  ): Promise<void> {
+    const MAX_CONCURRENT = 3; // Limit concurrent scans to prevent resource exhaustion
+    const results: Promise<void>[] = [];
+    
+    for (let i = 0; i < paths.length; i += MAX_CONCURRENT) {
+      if (callbacks.shouldCancel()) {
+        console.log('Scan cancelled by user');
+        break;
+      }
+
+      // Process batch of paths
+      const batch = paths.slice(i, i + MAX_CONCURRENT);
+      const batchPromises = batch.map(async (path) => {
         if (callbacks.shouldCancel()) {
-          console.log('Scan cancelled by user');
-          break;
+          return;
         }
 
         try {
@@ -183,10 +247,10 @@ export class LibraryScanner {
           console.error(`Failed to scan path ${path}:`, error);
           // Continue with next path
         }
-      }
-    } catch (error) {
-      console.error('Scan paths failed:', error);
-      throw error;
+      });
+
+      // Wait for current batch to complete before starting next batch
+      await Promise.all(batchPromises);
     }
   }
 

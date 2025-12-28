@@ -85,8 +85,21 @@ export const useLibraryStore = create<LibraryState>((set, get) => {
              return;
         }
         set({ scanning: true, scanProgress: 0 });
+        
+        // Get parallel scan setting from localStorage config
+        let parallel = false;
+        try {
+          const configStr = localStorage.getItem('sonantica:library-config');
+          if (configStr) {
+            const config = JSON.parse(configStr);
+            parallel = config.parallelScan || false;
+          }
+        } catch (e) {
+          console.warn('Failed to read parallelScan config:', e);
+        }
+        
         // MediaLibrary now handles change detection automatically
-        await library.scan(paths);
+        await library.scan(paths, parallel);
       } catch (error) {
         console.error('Scan failed:', error);
         throw error;

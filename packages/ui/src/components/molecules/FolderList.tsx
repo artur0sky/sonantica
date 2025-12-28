@@ -17,6 +17,9 @@ import {
   IconTrash,
   IconCheck,
   IconPlayerPlay,
+  IconPlayerPause,
+  IconFolderOpen,
+  IconFolder,
 } from "@tabler/icons-react";
 
 export interface FolderListProps {
@@ -26,6 +29,9 @@ export interface FolderListProps {
   onEdit?: (folderId: string) => void;
   onScan?: (folderId: string) => void;
   onScanSelected?: (folderIds: string[]) => void;
+  onToggleRecursive?: (folderId: string, recursive: boolean) => void;
+  scanning?: boolean;
+  scanningFolderId?: string | null;
   className?: string;
 }
 
@@ -39,6 +45,9 @@ export function FolderList({
   onEdit,
   onScan,
   onScanSelected,
+  onToggleRecursive,
+  scanning = false,
+  scanningFolderId = null,
   className,
 }: FolderListProps) {
   const [selectedFolders, setSelectedFolders] = useState<Set<string>>(
@@ -94,36 +103,36 @@ export function FolderList({
         >
           <div className="flex items-center gap-3">
             <span className="text-sm font-medium text-text">
-              {selectedFolders.size} seleccionado
-              {selectedFolders.size !== 1 ? "s" : ""}
+              {selectedFolders.size} selected
             </span>
             <button
               onClick={handleSelectAll}
               className="text-xs text-accent hover:underline"
             >
-              Seleccionar todo
+              Select all
             </button>
             <button
               onClick={handleDeselectAll}
               className="text-xs text-accent hover:underline"
             >
-              Deseleccionar todo
+              Deselect all
             </button>
           </div>
           <div className="flex items-center gap-2">
             {selectedFolders.size > 0 && onScanSelected && (
               <button
                 onClick={handleScanSelected}
-                className="px-3 py-1.5 text-sm bg-accent text-white rounded-md hover:bg-accent-hover transition-colors"
+                disabled={scanning}
+                className="px-3 py-1.5 text-sm bg-accent text-white rounded-md hover:bg-accent-hover transition-colors disabled:opacity-50"
               >
-                Analizar seleccionados
+                Scan selected
               </button>
             )}
             <button
               onClick={handleExitSelectionMode}
               className="px-3 py-1.5 text-sm bg-surface-elevated text-text rounded-md hover:bg-surface transition-colors"
             >
-              Cancelar
+              Cancel
             </button>
           </div>
         </motion.div>
@@ -138,10 +147,13 @@ export function FolderList({
             onRemove={onRemove}
             onEdit={onEdit}
             onScan={onScan}
+            onToggleRecursive={onToggleRecursive}
             selectionMode={selectionMode}
             isSelected={selectedFolders.has(folder.id)}
             onToggleSelection={handleToggleSelection}
             onEnterSelectionMode={() => setSelectionMode(true)}
+            scanning={scanning}
+            isScanning={scanningFolderId === folder.id}
           />
         ))}
       </AnimatePresence>
@@ -155,10 +167,13 @@ interface FolderItemProps {
   onRemove?: (folderId: string) => void;
   onEdit?: (folderId: string) => void;
   onScan?: (folderId: string) => void;
+  onToggleRecursive?: (folderId: string, recursive: boolean) => void;
   selectionMode: boolean;
   isSelected: boolean;
   onToggleSelection: (folderId: string) => void;
   onEnterSelectionMode: () => void;
+  scanning: boolean;
+  isScanning: boolean;
 }
 
 function FolderItem({
@@ -167,10 +182,13 @@ function FolderItem({
   onRemove,
   onEdit,
   onScan,
+  onToggleRecursive,
   selectionMode,
   isSelected,
   onToggleSelection,
   onEnterSelectionMode,
+  scanning,
+  isScanning,
 }: FolderItemProps) {
   const displayName =
     folder.name || folder.path.split(/[\\/]/).pop() || folder.path;
@@ -183,7 +201,7 @@ function FolderItem({
       ? [
           {
             id: "scan",
-            label: "Analizar",
+            label: "Scan",
             icon: <IconRefresh size={18} stroke={1.5} />,
             onClick: () => onScan(folder.id),
           },
@@ -191,7 +209,7 @@ function FolderItem({
       : []),
     {
       id: "select",
-      label: "Seleccionar",
+      label: "Select",
       icon: <IconCheck size={18} stroke={1.5} />,
       onClick: () => {
         onEnterSelectionMode();
@@ -206,15 +224,35 @@ function FolderItem({
     },
     {
       id: "toggle",
-      label: folder.enabled ? "Desactivar" : "Activar",
-      icon: <IconPlayerPlay size={18} stroke={1.5} />,
+      label: folder.enabled ? "Disable" : "Enable",
+      icon: folder.enabled ? (
+        <IconPlayerPause size={18} stroke={1.5} />
+      ) : (
+        <IconPlayerPlay size={18} stroke={1.5} />
+      ),
       onClick: () => onToggle?.(folder.id, !folder.enabled),
     },
+    ...(onToggleRecursive
+      ? [
+          {
+            id: "toggle-recursive",
+            label: folder.recursive
+              ? "Disable recursive scan"
+              : "Enable recursive scan",
+            icon: folder.recursive ? (
+              <IconFolder size={18} stroke={1.5} />
+            ) : (
+              <IconFolderOpen size={18} stroke={1.5} />
+            ),
+            onClick: () => onToggleRecursive(folder.id, !folder.recursive),
+          },
+        ]
+      : []),
     ...(onEdit
       ? [
           {
             id: "edit",
-            label: "Editar",
+            label: "Edit",
             icon: <IconEdit size={18} stroke={1.5} />,
             onClick: () => onEdit(folder.id),
           },
@@ -230,7 +268,7 @@ function FolderItem({
           },
           {
             id: "remove",
-            label: "Eliminar",
+            label: "Remove",
             icon: <IconTrash size={18} stroke={1.5} />,
             onClick: () => onRemove(folder.id),
             variant: "danger" as const,
@@ -263,7 +301,8 @@ function FolderItem({
           "hover:border-border-hover hover:bg-surface-elevated",
           !folder.enabled && "opacity-60",
           selectionMode && "select-none",
-          isSelected && "border-accent bg-accent/10"
+          isSelected && "border-accent bg-accent/10",
+          isScanning && "border-accent bg-accent/5"
         )}
       >
         {/* Selection Checkbox (visible in selection mode) */}
@@ -359,6 +398,12 @@ function FolderItem({
             {folder.recursive && (
               <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-surface-elevated text-text-muted rounded">
                 Recursive
+              </span>
+            )}
+            {isScanning && (
+              <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-accent/10 text-accent rounded border border-accent/20 animate-pulse">
+                <IconRefresh size={12} className="mr-1 animate-spin" />
+                Scanning...
               </span>
             )}
           </div>
