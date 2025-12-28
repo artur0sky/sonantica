@@ -16,3 +16,5 @@ export * from './EmptyState';
 export * from './PageHeader';
 export * from './SortControl';
 export { FolderList } from './FolderList';
+export * from './Tabs';
+export type { Tab } from './Tabs';

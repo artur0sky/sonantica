@@ -31,6 +31,9 @@ export interface MusicFolder {
   
   /** Number of tracks found in this folder */
   trackCount?: number;
+
+  /** Whether this is a system folder (cannot be deleted) */
+  isSystem?: boolean;
 }
 
 /**

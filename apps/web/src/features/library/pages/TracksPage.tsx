@@ -3,24 +3,23 @@
  *
  * Main library view showing all tracks.
  * Default landing page.
- * 
+ *
  * PERFORMANCE: Uses virtual scrolling for large libraries (>1000 tracks)
  */
 
 import { useState, useRef, useMemo } from "react";
+import { Link } from "wouter";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Button } from "@sonantica/ui";
 import { useLibraryStore } from "@sonantica/media-library";
 import { TrackItem } from "../components/TrackItem";
 import {
-  IconRefresh,
   IconMusic,
   IconSearch,
   IconPlayerPlay,
   IconArrowsShuffle,
   IconSortAscending,
   IconSortDescending,
-  IconPlayerStop,
 } from "@tabler/icons-react";
 import { AlphabetNavigator } from "@sonantica/ui";
 import { motion, AnimatePresence } from "framer-motion";
@@ -47,8 +46,7 @@ type SortField = "title" | "artist" | "album" | "year" | "duration" | "genre";
 type SortOrder = "asc" | "desc";
 
 export function TracksPage() {
-  const { stats, scanning, searchQuery, scan, getFilteredTracks } =
-    useLibraryStore();
+  const { stats, searchQuery, getFilteredTracks } = useLibraryStore();
 
   const [sortField, setSortField] = useState<SortField>("title");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
@@ -127,14 +125,6 @@ export function TracksPage() {
     overscan: 5, // Render 5 extra items above/below viewport
     enabled: useVirtualScroll,
   });
-
-  const handleScan = async () => {
-    try {
-      await scan(["/media/"]);
-    } catch (error) {
-      console.error("Scan failed:", error);
-    }
-  };
 
   const handleTrackClick = async (_track: any, index: number) => {
     try {
@@ -280,30 +270,6 @@ export function TracksPage() {
                 </Button>
               </>
             )}
-
-            <Button
-              onClick={scanning ? () => scan([], true) : handleScan}
-              variant={scanning ? "danger" : "primary"}
-              className="flex items-center gap-2 flex-1 sm:flex-initial justify-center"
-            >
-              <motion.div
-                animate={scanning ? { rotate: 0 } : { rotate: 0 }}
-                transition={
-                  scanning
-                    ? { duration: 1, repeat: Infinity, ease: "linear" }
-                    : {}
-                }
-              >
-                {scanning ? (
-                  <IconPlayerStop size={18} fill="white" />
-                ) : (
-                  <IconRefresh size={18} />
-                )}
-              </motion.div>
-              <span className="hidden sm:inline">
-                {scanning ? "" : "Scan Library"}
-              </span>
-            </Button>
           </div>
         </div>
       </motion.div>
@@ -330,12 +296,11 @@ export function TracksPage() {
               No music found
             </h2>
             <p className="text-sm sm:text-base text-text-muted mb-6 sm:mb-8 max-w-md mx-auto px-4">
-              Your library is empty. Click "Scan Library" to index your music
-              files from the media folder.
+              Your library is empty. Go to settings to add music folders.
             </p>
-            <Button onClick={handleScan} variant="primary" disabled={scanning}>
-              {scanning ? "Scanning..." : "Scan Library"}
-            </Button>
+            <Link href="/settings">
+              <Button variant="primary">Configure Library</Button>
+            </Link>
           </motion.div>
         ) : filteredTracks.length === 0 ? (
           <motion.div

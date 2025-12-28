@@ -15,6 +15,7 @@ export interface FolderListProps {
   onToggle?: (folderId: string, enabled: boolean) => void;
   onRemove?: (folderId: string) => void;
   onEdit?: (folderId: string) => void;
+  onScan?: (folderId: string) => void;
   className?: string;
 }
 
@@ -26,6 +27,7 @@ export function FolderList({
   onToggle,
   onRemove,
   onEdit,
+  onScan,
   className,
 }: FolderListProps) {
   if (folders.length === 0) {
@@ -42,6 +44,7 @@ export function FolderList({
             onToggle={onToggle}
             onRemove={onRemove}
             onEdit={onEdit}
+            onScan={onScan}
           />
         ))}
       </AnimatePresence>
@@ -54,9 +57,16 @@ interface FolderItemProps {
   onToggle?: (folderId: string, enabled: boolean) => void;
   onRemove?: (folderId: string) => void;
   onEdit?: (folderId: string) => void;
+  onScan?: (folderId: string) => void;
 }
 
-function FolderItem({ folder, onToggle, onRemove, onEdit }: FolderItemProps) {
+function FolderItem({
+  folder,
+  onToggle,
+  onRemove,
+  onEdit,
+  onScan,
+}: FolderItemProps) {
   const displayName =
     folder.name || folder.path.split(/[\\/]/).pop() || folder.path;
 
@@ -113,6 +123,11 @@ function FolderItem({ folder, onToggle, onRemove, onEdit }: FolderItemProps) {
           <h3 className="text-base font-medium text-text truncate">
             {displayName}
           </h3>
+          {folder.isSystem && (
+            <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-accent/10 text-accent rounded border border-accent/20">
+              System
+            </span>
+          )}
           {folder.recursive && (
             <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium bg-surface-elevated text-text-muted rounded">
               Recursive
@@ -141,6 +156,31 @@ function FolderItem({ folder, onToggle, onRemove, onEdit }: FolderItemProps) {
 
       {/* Actions */}
       <div className="flex gap-1 flex-shrink-0">
+        {onScan && folder.enabled && (
+          <button
+            onClick={() => onScan(folder.id)}
+            className={cn(
+              "p-2 rounded-md text-text-muted hover:text-accent hover:bg-surface-elevated",
+              "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            )}
+            title="Scan this folder"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M20 11A8.1 8.1 0 0 0 4.5 9M4 5v4h4" />
+              <path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4" />
+            </svg>
+          </button>
+        )}
+
         {onEdit && (
           <button
             onClick={() => onEdit(folder.id)}
@@ -164,11 +204,18 @@ function FolderItem({ folder, onToggle, onRemove, onEdit }: FolderItemProps) {
         {onRemove && (
           <button
             onClick={() => onRemove(folder.id)}
+            disabled={folder.isSystem}
             className={cn(
-              "p-2 rounded-md text-text-muted hover:text-error hover:bg-error/10",
-              "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error"
+              "p-2 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2",
+              folder.isSystem
+                ? "text-text-muted/30 cursor-not-allowed"
+                : "text-text-muted hover:text-error hover:bg-error/10 focus-visible:ring-error"
             )}
-            title="Remove folder"
+            title={
+              folder.isSystem
+                ? "System folders cannot be removed"
+                : "Remove folder"
+            }
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
               <path

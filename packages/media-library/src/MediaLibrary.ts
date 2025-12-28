@@ -130,8 +130,8 @@ export class MediaLibrary implements IMediaLibrary {
           return;
         }
 
-        // Remove tracks that no longer exist
-        this.removeOrphanedTracks(scannedPaths);
+        // Remove tracks that no longer exist (scoped to scanned paths)
+        this.removeOrphanedTracks(scannedPaths, paths);
 
         // Enrich tracks with album art if missing
         this.enrichLibrary();
@@ -177,13 +177,16 @@ export class MediaLibrary implements IMediaLibrary {
   }
 
   /**
-   * Remove tracks that no longer exist
+   * Remove tracks that no longer exist within the scanned roots
    */
-  private removeOrphanedTracks(scannedPaths: Set<string>): void {
+  private removeOrphanedTracks(scannedPaths: Set<string>, scannedRoots: string[]): void {
     const tracksToRemove: string[] = [];
 
     for (const [path, trackId] of this.tracksByPath.entries()) {
-      if (!scannedPaths.has(path)) {
+      // Only consider tracks that belong to one of the scanned roots
+      const belongsToScannedRoot = scannedRoots.some(root => path.startsWith(root));
+      
+      if (belongsToScannedRoot && !scannedPaths.has(path)) {
         tracksToRemove.push(trackId);
       }
     }

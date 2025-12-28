@@ -59,6 +59,9 @@ export class FolderManager {
   /**
    * Initialize and load configuration
    */
+  /**
+   * Initialize and load configuration
+   */
   async initialize(): Promise<void> {
     const loaded = await this.storage.load();
     if (loaded) {
@@ -73,6 +76,36 @@ export class FolderManager {
       console.log(`📂 Loaded ${this.config.folders.length} configured folders`);
     } else {
       console.log('📂 No folder configuration found, using defaults');
+      this.config = { ...DEFAULT_CONFIG };
+    }
+
+    // Ensure system folders exist
+    this.ensureSystemFolders();
+  }
+
+  private ensureSystemFolders() {
+    const SYSTEM_FOLDERS = [
+        { path: '/media', name: 'Server Media', id: 'sys_media' }
+    ];
+
+    let changed = false;
+    for (const sys of SYSTEM_FOLDERS) {
+        if (!this.config.folders.find(f => f.path === sys.path)) {
+            this.config.folders.push({
+                id: sys.id,
+                path: sys.path,
+                name: sys.name,
+                recursive: true,
+                enabled: true,
+                isSystem: true,
+                addedAt: new Date(),
+            });
+            changed = true;
+        }
+    }
+
+    if (changed) {
+        this.saveConfig();
     }
   }
 
@@ -113,6 +146,7 @@ export class FolderManager {
       name?: string;
       recursive?: boolean;
       enabled?: boolean;
+      isSystem?: boolean;
     } = {}
   ): Promise<MusicFolder> {
     // Validate path
@@ -134,6 +168,7 @@ export class FolderManager {
       name: options.name,
       recursive: options.recursive ?? true,
       enabled: options.enabled ?? true,
+      isSystem: options.isSystem,
       addedAt: new Date(),
     };
 
@@ -154,6 +189,10 @@ export class FolderManager {
     }
 
     const folder = this.config.folders[index];
+    if (folder.isSystem) {
+      throw new Error('Cannot remove system folder');
+    }
+
     this.config.folders.splice(index, 1);
     await this.saveConfig();
 
