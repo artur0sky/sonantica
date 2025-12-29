@@ -26,6 +26,7 @@ services:
       # Example: ./buckets or /mnt/s3-music
       - ${BUCKETS_PATH:-./buckets}:/buckets:ro
 
+      - F:\Music:/media:ro
       # Config - User preferences, playlists, settings
       - ${CONFIG_PATH:-./config}:/config:rw
     environment:
