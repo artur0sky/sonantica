@@ -8,7 +8,7 @@
 import { useMemo } from 'react';
 import { useLibraryStore } from '@sonantica/media-library';
 import { useQueueStore } from '@sonantica/player-core';
-import type { Track, Album, Artist } from '@sonantica/media-library';
+import type { Track, Album, Artist } from '@sonantica/shared';
 import { RecommendationEngine } from './RecommendationEngine';
 import type { Recommendation, RecommendationOptions, AlbumRecommendation, ArtistRecommendation } from './types';
 

@@ -9,7 +9,7 @@
  * Security: Hardened against ReDoS and resource exhaustion.
  */
 
-import type { Track } from '@sonantica/media-library';
+import type { Track } from '@sonantica/shared';
 import type { SimilarityWeights } from './types';
 
 /**

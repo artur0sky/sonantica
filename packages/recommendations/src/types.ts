@@ -5,7 +5,7 @@
  * "Sound is a form of language" - recommendations help discover that language.
  */
 
-import type { Track, Album, Artist } from '@sonantica/media-library';
+import type { Track, Album, Artist } from '@sonantica/shared';
 
 /**
  * Recommendation context - what to base recommendations on

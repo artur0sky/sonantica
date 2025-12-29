@@ -9,7 +9,7 @@
  * Security: Hardened against DoS via complexity, infinite loops, and resource exhaustion.
  */
 
-import type { Track, Album, Artist } from '@sonantica/media-library';
+import type { Track, Album, Artist } from '@sonantica/shared';
 import type {
   RecommendationContext,
   Recommendation,
