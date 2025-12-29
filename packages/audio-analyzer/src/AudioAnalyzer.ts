@@ -24,7 +24,7 @@ import type {
  */
 const MAX_FFT_SIZE = 32768;
 const MIN_FFT_SIZE = 32;
-const MAX_BUFFER_SIZE = 50 * 1024 * 1024; // 50MB max buffer for offline analysis
+const MAX_BUFFER_SIZE = 500 * 1024 * 1024; // 500MB max buffer for offline analysis (HQ FLAC support)
 const MAX_SAMPLES = 10000; // Max output samples for waveform
 
 /**
