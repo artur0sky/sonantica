@@ -17,7 +17,13 @@ import { usePlayerStore, useQueueStore } from "@sonantica/player-core";
 // useLibraryStore removed
 import { PlaybackState, formatArtists, formatTime } from "@sonantica/shared";
 import { useEffect } from "react";
-import { ContextMenu, useContextMenu, LazyAlbumArt, type ContextMenuItem } from "@sonantica/ui";
+import {
+  ContextMenu,
+  useContextMenu,
+  LazyAlbumArt,
+  type ContextMenuItem,
+} from "@sonantica/ui";
+import { trackToMediaSource } from "../../../utils/streamingUrl";
 
 interface TrackItemProps {
   track: any;
@@ -38,30 +44,30 @@ export function TrackItem({ track, onClick }: TrackItemProps) {
   // Context menu items
   const menuItems: ContextMenuItem[] = [
     {
-      id: 'play-next',
-      label: 'Play Next',
+      id: "play-next",
+      label: "Play Next",
       icon: <IconPlayerSkipForward size={18} stroke={1.5} />,
-      onClick: () => playNext(track),
+      onClick: () => playNext(trackToMediaSource(track)),
     },
     {
-      id: 'add-to-queue',
-      label: 'Add to Queue',
+      id: "add-to-queue",
+      label: "Add to Queue",
       icon: <IconPlaylistAdd size={18} stroke={1.5} />,
-      onClick: () => addToQueue(track),
+      onClick: () => addToQueue(trackToMediaSource(track)),
     },
     {
-      id: 'divider-1',
-      label: '',
+      id: "divider-1",
+      label: "",
       divider: true,
       onClick: () => {},
     },
     {
-      id: 'info',
-      label: 'Track Info',
+      id: "info",
+      label: "Track Info",
       icon: <IconInfoCircle size={18} stroke={1.5} />,
       onClick: () => {
         // TODO: Open track info modal
-        console.log('Track info:', track);
+        console.log("Track info:", track);
       },
     },
   ];
@@ -102,79 +108,79 @@ export function TrackItem({ track, onClick }: TrackItemProps) {
             : "hover:bg-surface-elevated/50"
         )}
       >
-      {/* Album Art / Icon */}
-      <div className="w-12 h-12 flex-shrink-0 relative rounded-md overflow-hidden bg-surface-elevated border border-border">
-        {/* PERFORMANCE: Lazy-loaded album art with LRU cache */}
-        <LazyAlbumArt
-          src={track.coverArt}
-          alt="Album Art"
-          className="w-full h-full rounded-md"
-          iconSize={20}
-        />
+        {/* Album Art / Icon */}
+        <div className="w-12 h-12 flex-shrink-0 relative rounded-md overflow-hidden bg-surface-elevated border border-border">
+          {/* PERFORMANCE: Lazy-loaded album art with LRU cache */}
+          <LazyAlbumArt
+            src={track.coverArt}
+            alt="Album Art"
+            className="w-full h-full rounded-md"
+            iconSize={20}
+          />
 
-        {/* Play/Pause Overlay (Hover) */}
-        <div
-          className={cn(
-            "absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center",
-            "transition-opacity duration-200",
-            "opacity-0 group-hover:opacity-100"
-          )}
-        >
-          {isPlaying ? (
-            <IconPlayerPause
-              size={24}
-              className="text-white fill-current drop-shadow-lg"
-            />
-          ) : (
-            <IconPlayerPlay
-              size={24}
-              className="text-white fill-current drop-shadow-lg"
-            />
+          {/* Play/Pause Overlay (Hover) */}
+          <div
+            className={cn(
+              "absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center",
+              "transition-opacity duration-200",
+              "opacity-0 group-hover:opacity-100"
+            )}
+          >
+            {isPlaying ? (
+              <IconPlayerPause
+                size={24}
+                className="text-white fill-current drop-shadow-lg"
+              />
+            ) : (
+              <IconPlayerPlay
+                size={24}
+                className="text-white fill-current drop-shadow-lg"
+              />
+            )}
+          </div>
+
+          {/* Current Track Indicator */}
+          {iscurrentTrack && (
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-accent" />
           )}
         </div>
 
-        {/* Current Track Indicator */}
-        {iscurrentTrack && (
-          <div className="absolute bottom-0 left-0 right-0 h-1 bg-accent" />
+        {/* Track Details */}
+        <div className="flex-1 min-w-0">
+          <div
+            className={cn(
+              "font-medium truncate transition-colors",
+              iscurrentTrack ? "text-accent" : "text-text"
+            )}
+          >
+            {track.title || track.filename}
+          </div>
+          <div className="text-sm text-text-muted truncate flex items-center gap-2">
+            <span>{formatArtists(track.artist)}</span>
+            {track.album && (
+              <>
+                <span className="opacity-40">•</span>
+                <span className="opacity-80">{track.album}</span>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Duration (if available) - Optional */}
+        {track.duration && (
+          <div className="text-sm text-text-muted font-mono variant-numeric-tabular">
+            {formatTime(track.duration)}
+          </div>
         )}
-      </div>
+      </motion.div>
 
-      {/* Track Details */}
-      <div className="flex-1 min-w-0">
-        <div
-          className={cn(
-            "font-medium truncate transition-colors",
-            iscurrentTrack ? "text-accent" : "text-text"
-          )}
-        >
-          {track.title || track.filename}
-        </div>
-        <div className="text-sm text-text-muted truncate flex items-center gap-2">
-          <span>{formatArtists(track.artist)}</span>
-          {track.album && (
-            <>
-              <span className="opacity-40">•</span>
-              <span className="opacity-80">{track.album}</span>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Duration (if available) - Optional */}
-      {track.duration && (
-        <div className="text-sm text-text-muted font-mono variant-numeric-tabular">
-          {formatTime(track.duration)}
-        </div>
-      )}
-    </motion.div>
-
-    {/* Context Menu */}
-    <ContextMenu
-      items={menuItems}
-      isOpen={contextMenu.isOpen}
-      position={contextMenu.position}
-      onClose={contextMenu.close}
-    />
-  </>
+      {/* Context Menu */}
+      <ContextMenu
+        items={menuItems}
+        isOpen={contextMenu.isOpen}
+        position={contextMenu.position}
+        onClose={contextMenu.close}
+      />
+    </>
   );
 }

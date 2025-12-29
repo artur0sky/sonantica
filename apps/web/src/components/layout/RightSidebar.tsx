@@ -74,7 +74,9 @@ export function RightSidebar({ isCollapsed }: RightSidebarProps) {
   const toggleQueueExpanded = useUIStore((s) => s.toggleQueueExpanded);
 
   // Show only next track when not expanded
-  const displayQueue = isQueueExpanded ? visibleQueue : visibleQueue.slice(0, 1);
+  const displayQueue = isQueueExpanded
+    ? visibleQueue
+    : visibleQueue.slice(0, 1);
 
   return (
     <SidebarContainer
@@ -251,8 +253,6 @@ export function RightSidebar({ isCollapsed }: RightSidebarProps) {
               </div>
             )}
           </AnimatePresence>
-
-
         </div>
       </div>
     </SidebarContainer>
@@ -278,22 +278,27 @@ function QueueItem({
   isCollapsed,
 }: QueueItemProps) {
   const dragControls = useDragControls();
-  const ext = getExtension(track.url);
+  const ext = getExtension(track.url || "");
   const [isHovered, setIsHovered] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
   const [dragProgress, setDragProgress] = useState(0); // 0 to 1
-  // hydrateTrack removed - no longer needed
+
+  // Normalize metadata access
+  const title = track.metadata?.title || track.title || "Unknown Title";
+  const artist = track.metadata?.artist || track.artist || "Unknown Artist";
+  const duration = track.metadata?.duration || track.duration || 0;
+  const bitrate = track.metadata?.bitrate || track.bitrate;
 
   // Lazy hydration on appearance
   useEffect(() => {
-    if (!track.coverArt) {
+    if (!track.metadata?.coverArt && !track.coverArt) {
       // Small timeout to avoid hammering the decoder if scrolling fast
       const timer = setTimeout(() => {
         // Auto-hydration removed
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [track.id, track.coverArt]);
+  }, [track.id, track.coverArt, track.metadata?.coverArt]);
 
   return (
     <Reorder.Item
@@ -390,6 +395,7 @@ function QueueItem({
           // Optimization: This lookup happens per visible item
           const libraryTracks = useLibraryStore.getState().tracks;
           const coverArt =
+            track.metadata?.coverArt ||
             track.coverArt ||
             libraryTracks.find((t) => t.id === track.id)?.coverArt;
 
@@ -419,12 +425,10 @@ function QueueItem({
       {!isCollapsed && (
         <div className="min-w-0 flex-1 cursor-pointer" onClick={onPlay}>
           <div className="font-medium truncate text-sm group-hover:text-accent transition-colors">
-            {track.title}
+            {title}
           </div>
           <div className="flex items-center gap-2 text-[10px] text-text-muted truncate">
-            <span className="truncate opacity-70">
-              {formatArtists(track.artist)}
-            </span>
+            <span className="truncate opacity-70">{formatArtists(artist)}</span>
 
             {/* Bitrate Badge (Compact) */}
             <motion.span
@@ -432,7 +436,7 @@ function QueueItem({
               whileHover={{ opacity: 1 }}
               className="hidden lg:group-hover:inline-flex items-center gap-1 text-[9px] text-accent font-mono bg-accent/10 px-1 py-0.5 rounded shadow-sm border border-accent/20"
             >
-              {track.bitrate || "1411"}k
+              {bitrate || "1411"}k
             </motion.span>
           </div>
         </div>
@@ -441,7 +445,7 @@ function QueueItem({
       {!isCollapsed && (
         <div className="flex flex-col items-end gap-1 min-w-fit pr-1">
           <span className="text-[10px] text-text-muted tabular-nums font-mono opacity-50 group-hover:opacity-100">
-            {formatTime(track.duration || 0)}
+            {formatTime(duration)}
           </span>
           <Badge
             variant="custom"
@@ -466,15 +470,15 @@ function QueueItem({
           className="absolute right-full mr-4 bg-surface-elevated border border-white/10 p-2.5 rounded-lg shadow-2xl z-[100] min-w-[150px] pointer-events-none"
         >
           <div className="font-semibold text-xs truncate max-w-[140px]">
-            {track.title}
+            {title}
           </div>
           <div className="text-[10px] text-text-muted truncate mb-1">
-            {formatArtists(track.artist)}
+            {formatArtists(artist)}
           </div>
           <div className="flex items-center justify-between mt-1 pt-1 border-t border-white/5">
             <span className="text-[9px] font-mono text-accent">{ext}</span>
             <span className="text-[9px] font-mono opacity-60">
-              {formatTime(track.duration || 0)}
+              {formatTime(duration)}
             </span>
           </div>
         </motion.div>

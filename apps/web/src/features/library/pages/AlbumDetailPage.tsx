@@ -6,7 +6,7 @@
 
 import { useMemo } from "react";
 import { useParams, useLocation } from "wouter";
-import { useLibraryStore, type Track } from "@sonantica/media-library";
+import { useLibraryStore } from "@sonantica/media-library";
 import { TrackItem } from "../components/TrackItem";
 import {
   IconChevronLeft,
@@ -18,7 +18,7 @@ import { Button } from "@sonantica/ui";
 import { useAlbumSimilarAlbums } from "@sonantica/recommendations";
 import { AlbumCard } from "../components/AlbumCard";
 import { playFromContext } from "../../../utils/playContext";
-import { buildStreamingUrl } from '../../../utils/streamingUrl';
+import { trackToMediaSource } from "../../../utils/streamingUrl";
 
 export function AlbumDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -63,18 +63,12 @@ export function AlbumDetailPage() {
   }
 
   const handlePlayAll = () => {
-    const tracksAsSources = albumTracks.map((t: Track) => ({
-      ...t,
-      url: buildStreamingUrl(t.serverId!, t.filePath!),
-    }));
+    const tracksAsSources = albumTracks.map(trackToMediaSource);
     playFromContext(tracksAsSources, 0);
   };
 
   const handleTrackClick = (index: number) => {
-    const tracksAsSources = albumTracks.map((t: Track) => ({
-      ...t,
-      url: buildStreamingUrl(t.serverId!, t.filePath!),
-    }));
+    const tracksAsSources = albumTracks.map(trackToMediaSource);
     playFromContext(tracksAsSources, index);
   };
 

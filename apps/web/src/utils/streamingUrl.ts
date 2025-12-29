@@ -50,3 +50,30 @@ export function buildTrackStreamingUrl(track: { serverId?: string; filePath?: st
   
   return buildStreamingUrl(track.serverId, track.filePath);
 }
+
+/**
+ * Convert Track to MediaSource with proper metadata structure
+ * This is the canonical way to convert library tracks to playable sources
+ */
+export function trackToMediaSource(track: any): any {
+  return {
+    id: track.id,
+    url: buildStreamingUrl(track.serverId!, track.filePath!),
+    metadata: {
+      title: track.title,
+      artist: track.artist,
+      album: track.album,
+      duration: track.duration,
+      coverArt: track.coverArt,
+      year: track.year,
+      trackNumber: track.trackNumber,
+      genre: track.genre,
+      albumArtist: track.albumArtist,
+      bitrate: track.format?.bitrate,
+      sampleRate: track.format?.sampleRate,
+      bitsPerSample: track.format?.bitsPerSample,
+      lyrics: track.lyrics,
+    },
+  };
+}
+

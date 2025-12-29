@@ -26,7 +26,7 @@ import {
   playAll,
   playAllShuffled,
 } from "../../../utils/playContext";
-import { buildStreamingUrl } from "../../../utils/streamingUrl";
+import { trackToMediaSource } from "../../../utils/streamingUrl";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -112,18 +112,7 @@ export function TracksPage() {
   const handleTrackClick = async (_track: any, index: number) => {
     try {
       // Create context from ALL sorted tracks (not just visible ones)
-      const mediaSources = sortedTracks.map((t) => ({
-        id: t.id,
-        url: buildStreamingUrl(t.serverId!, t.filePath!),
-        mimeType: "audio/mpeg", // TODO: Get from track format
-        metadata: {
-          title: t.title,
-          artist: t.artist,
-          album: t.album,
-          duration: t.duration,
-          coverArt: t.coverArt,
-        },
-      }));
+      const mediaSources = sortedTracks.map(trackToMediaSource);
 
       // Play from context with all tracks, starting at clicked track
       await playFromContext(mediaSources, index);
@@ -145,18 +134,7 @@ export function TracksPage() {
 
   const handlePlayAll = async () => {
     try {
-      const mediaSources = sortedTracks.map((t) => ({
-        id: t.id,
-        url: buildStreamingUrl(t.serverId!, t.filePath!),
-        mimeType: "audio/mpeg",
-        metadata: {
-          title: t.title,
-          artist: t.artist,
-          album: t.album,
-          duration: t.duration,
-          coverArt: t.coverArt,
-        },
-      }));
+      const mediaSources = sortedTracks.map(trackToMediaSource);
       await playAll(mediaSources);
     } catch (error) {
       console.error("Failed to play all:", error);
@@ -165,18 +143,7 @@ export function TracksPage() {
 
   const handleShuffle = async () => {
     try {
-      const mediaSources = sortedTracks.map((t) => ({
-        id: t.id,
-        url: buildStreamingUrl(t.serverId!, t.filePath!),
-        mimeType: "audio/mpeg",
-        metadata: {
-          title: t.title,
-          artist: t.artist,
-          album: t.album,
-          duration: t.duration,
-          coverArt: t.coverArt,
-        },
-      }));
+      const mediaSources = sortedTracks.map(trackToMediaSource);
       await playAllShuffled(mediaSources);
     } catch (error) {
       console.error("Failed to shuffle:", error);

@@ -2,7 +2,7 @@ import { useLocation } from "wouter";
 import { useUIStore } from "@sonantica/ui";
 import { useLibraryStore } from "@sonantica/media-library";
 import { usePlayerStore, useQueueStore } from "@sonantica/player-core";
-import { buildStreamingUrl } from "../utils/streamingUrl";
+import { trackToMediaSource } from "../utils/streamingUrl";
 
 export function useHeaderLogic() {
   const { toggleLeftSidebar } = useUIStore();
@@ -28,16 +28,13 @@ export function useHeaderLogic() {
           // Get tracks for this album from library
           const albumTracks = tracks.filter(t => t.album === album.title && t.artist === album.artist);
           const trackIndex = albumTracks.findIndex((t) => t.id === track.id);
-          const tracksAsSources = albumTracks.map((t) => ({
-            ...t,
-            url: buildStreamingUrl(t.serverId!, t.filePath!),
-          }));
+          const tracksAsSources = albumTracks.map(trackToMediaSource);
           setQueue(tracksAsSources, trackIndex >= 0 ? trackIndex : 0);
         } else {
-          setQueue([{ ...track, url: buildStreamingUrl(track.serverId!, track.filePath!) }], 0);
+          setQueue([trackToMediaSource(track)], 0);
         }
 
-        await loadTrack({ ...track, url: buildStreamingUrl(track.serverId!, track.filePath!) });
+        await loadTrack(trackToMediaSource(track));
         await play();
         break;
       }

@@ -17,7 +17,8 @@ import {
 } from "@tabler/icons-react";
 import { useQueueStore } from "@sonantica/player-core";
 import { AnimatePresence, motion } from "framer-motion";
-import type { MediaSource } from "@sonantica/shared";
+
+import { trackToMediaSource } from "../../utils/streamingUrl";
 
 export function RecommendationsSidebar() {
   const toggleRecommendations = useUIStore((s) => s.toggleRecommendations);
@@ -85,14 +86,7 @@ export function RecommendationsSidebar() {
                   <div className="relative group">
                     <TrackItem
                       track={rec.item}
-                      onClick={() =>
-                        playNext({
-                          ...rec.item,
-                          url: `/api/stream/${
-                            rec.item.serverId
-                          }/${encodeURIComponent(rec.item.filePath)}`,
-                        } as MediaSource)
-                      }
+                      onClick={() => playNext(trackToMediaSource(rec.item))}
                     />
                     {/* Reason badge */}
                     {rec.reasons.length > 0 && (
