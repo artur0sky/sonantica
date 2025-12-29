@@ -58,17 +58,50 @@ export class LibraryService extends EventEmitter {
   /**
    * Recursively scan a directory
    */
-  private async scanDirectory(dirPath: string): Promise<void> {
-    const entries = await fs.readdir(dirPath, { withFileTypes: true });
-
-    for (const entry of entries) {
-      const fullPath = path.join(dirPath, entry.name);
-
-      if (entry.isDirectory()) {
-        await this.scanDirectory(fullPath);
-      } else if (this.isAudioFile(entry.name)) {
-        await this.indexFile(fullPath);
+  private async scanDirectory(dirPath: string, visited: Set<string> = new Set()): Promise<void> {
+    try {
+      // Resolve real path to prevent infinite loops with circular symlinks
+      const realPath = await fs.realpath(dirPath);
+      if (visited.has(realPath)) {
+        return;
       }
+      visited.add(realPath);
+
+      const entries = await fs.readdir(dirPath, { withFileTypes: true });
+      const filePaths: string[] = [];
+
+      for (const entry of entries) {
+        const fullPath = path.join(dirPath, entry.name);
+
+        try {
+          // Check if it's a directory (follow symlinks)
+          let isDirectory = entry.isDirectory();
+          if (entry.isSymbolicLink()) {
+            const stats = await fs.stat(fullPath);
+            isDirectory = stats.isDirectory();
+          }
+
+          if (isDirectory) {
+            // Skip hidden directories (like .git)
+            if (entry.name.startsWith('.')) continue;
+            await this.scanDirectory(fullPath, visited);
+          } else if (this.isAudioFile(entry.name)) {
+            filePaths.push(fullPath);
+          }
+        } catch (error) {
+          console.warn(`⚠️ Failed to access: ${fullPath}`, error);
+        }
+      }
+
+      // Index audio files in this directory with limited concurrency
+      // We process batches to balance speed and memory/OS limits
+      const BATCH_SIZE = 10;
+      for (let i = 0; i < filePaths.length; i += BATCH_SIZE) {
+        const batch = filePaths.slice(i, i + BATCH_SIZE);
+        await Promise.all(batch.map(filePath => this.indexFile(filePath)));
+      }
+    } catch (error) {
+      console.error(`❌ Failed to scan directory: ${dirPath}`, error);
     }
   }
 
@@ -77,7 +110,10 @@ export class LibraryService extends EventEmitter {
    */
   private isAudioFile(filename: string): boolean {
     const ext = path.extname(filename).toLowerCase();
-    return ['.mp3', '.flac', '.m4a', '.aac', '.ogg', '.opus', '.wav'].includes(ext);
+    return [
+      '.mp3', '.flac', '.m4a', '.m4b', '.aac', '.ogg', '.opus', '.wav', 
+      '.aiff', '.aif', '.dsf', '.dff', '.ape', '.alac', '.wma'
+    ].includes(ext);
   }
 
   /**
