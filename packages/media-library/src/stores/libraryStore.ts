@@ -3,46 +3,50 @@
  * 
  * Manages media library state using Zustand.
  * Part of @sonantica/media-library package.
+ * 
+ * Architecture: Domain logic layer (no UI, no platform-specific code)
+ * Supports both local scanning and remote server data
  */
 
 import { create } from 'zustand';
-import { MediaLibrary, LIBRARY_EVENTS } from '../MediaLibrary';
-import type { Artist, Album, Track, LibraryStats } from '../types';
+import type { Track, Artist, Album } from '@sonantica/shared';
+
+export interface LibraryStats {
+  totalTracks: number;
+  totalArtists: number;
+  totalAlbums: number;
+  totalGenres: number;
+  totalSize: number;
+}
 
 interface LibraryState {
-  // Library instance
-  library: MediaLibrary;
-  
   // State
+  tracks: Track[];
   artists: Artist[];
   albums: Album[];
-  tracks: Track[];
   stats: LibraryStats;
-  scanning: boolean;
-  scanProgress: number;
-  initialized: boolean;
+  loading: boolean;
+  error: string | null;
   
   // Filters
   searchQuery: string;
   selectedArtist: Artist | null;
   selectedAlbum: Album | null;
   
-  // Persistence callbacks (injected from app layer)
-  onSave?: (data: { tracks: Track[]; stats: LibraryStats }) => Promise<void>;
-  onLoad?: () => Promise<{ tracks: Track[]; stats: LibraryStats } | null>;
-  
   // Actions
-  scan: (paths: string[], cancel?: boolean) => Promise<void>;
-  clearLibrary: () => Promise<void>;
+  loadFromServers: (tracks: Track[], artists: Artist[], albums: Album[]) => void;
+  setTracks: (tracks: Track[]) => void;
+  setArtists: (artists: Artist[]) => void;
+  setAlbums: (albums: Album[]) => void;
+  setLoading: (loading: boolean) => void;
+  setError: (error: string | null) => void;
+  clearLibrary: () => void;
+  
+  // Filters
   setSearchQuery: (query: string) => void;
   selectArtist: (artist: Artist | null) => void;
   selectAlbum: (album: Album | null) => void;
   clearSelection: () => void;
-  hydrateTrack: (id: string) => Promise<void>;
-  
-  // Callback setters
-  setOnSave: (callback: (data: { tracks: Track[]; stats: LibraryStats }) => Promise<void>) => void;
-  setOnLoad: (callback: () => Promise<{ tracks: Track[]; stats: LibraryStats } | null>) => void;
   
   // Getters
   getFilteredArtists: () => Artist[];
@@ -50,291 +54,185 @@ interface LibraryState {
   getFilteredTracks: () => Track[];
   getAlbumById: (id: string) => Album | undefined;
   getArtistById: (id: string) => Artist | undefined;
-  
-  // Internal
-  _initialize: () => void;
-  _updateLibrary: (persist?: boolean) => void;
+  getTrackById: (id: string) => Track | undefined;
 }
 
-export const useLibraryStore = create<LibraryState>((set, get) => {
-  const library = new MediaLibrary();
-
+const calculateStats = (tracks: Track[], artists: Artist[], albums: Album[]): LibraryStats => {
+  const genres = new Set(tracks.map(t => t.genre).filter(Boolean));
+  
   return {
-    library,
-    artists: [],
-    albums: [],
-    tracks: [],
-    stats: {
-      totalTracks: 0,
-      totalArtists: 0,
-      totalAlbums: 0,
-      totalGenres: 0,
-      totalSize: 0,
-    },
-    scanning: false,
-    scanProgress: 0,
-    searchQuery: '',
-    selectedArtist: null,
-    selectedAlbum: null,
-
-    scan: async (paths: string[], cancel: boolean = false) => {
-      try {
-        if (cancel) {
-             library.cancelScan();
-             set({ scanning: false });
-             return;
-        }
-        set({ scanning: true, scanProgress: 0 });
-        
-        // Get parallel scan setting from localStorage config
-        let parallel = false;
-        try {
-          const configStr = localStorage.getItem('sonantica:library-config');
-          if (configStr) {
-            const config = JSON.parse(configStr);
-            parallel = config.parallelScan || false;
-          }
-        } catch (e) {
-          console.warn('Failed to read parallelScan config:', e);
-        }
-        
-        // MediaLibrary now handles change detection automatically
-        await library.scan(paths, parallel);
-      } catch (error) {
-        console.error('Scan failed:', error);
-        throw error;
-      } finally {
-        if (!cancel) set({ scanning: false });
-      }
-    },
-
-    clearLibrary: async () => {
-      try {
-        // Clear library instance
-        library.clear();
-        
-        // Reset state
-        set({
-          artists: [],
-          albums: [],
-          tracks: [],
-          stats: {
-            totalTracks: 0,
-            totalArtists: 0,
-            totalAlbums: 0,
-            totalGenres: 0,
-            totalSize: 0,
-          },
-          selectedArtist: null,
-          selectedAlbum: null,
-          searchQuery: '',
-        });
-
-        // Clear persisted data
-        const { onSave } = get();
-        if (onSave) {
-          await onSave({
-            tracks: [],
-            stats: {
-              totalTracks: 0,
-              totalArtists: 0,
-              totalAlbums: 0,
-              totalGenres: 0,
-              totalSize: 0,
-            },
-          });
-          console.log('🗑️ Library cleared');
-        }
-      } catch (error) {
-        console.error('Failed to clear library:', error);
-        throw error;
-      }
-    },
-
-    setSearchQuery: (query: string) => {
-      set({ searchQuery: query });
-    },
-
-    selectArtist: (artist: Artist | null) => {
-      set({ selectedArtist: artist, selectedAlbum: null });
-    },
-
-    selectAlbum: (album: Album | null) => {
-      set({ selectedAlbum: album });
-    },
-
-    clearSelection: () => {
-      set({ selectedArtist: null, selectedAlbum: null, searchQuery: '' });
-    },
-
-    hydrateTrack: async (id: string) => {
-      await library.hydrateTrack(id);
-      // No need for set() here as library emits LIBRARY_UPDATED which triggers _updateLibrary
-    },
-
-    setOnSave: (callback: (data: { tracks: Track[]; stats: LibraryStats }) => Promise<void>) => {
-      set({ onSave: callback });
-    },
-
-    setOnLoad: (callback: () => Promise<{ tracks: Track[]; stats: LibraryStats } | null>) => {
-      set({ onLoad: callback });
-    },
-
-    initialized: false,
-
-    getFilteredArtists: () => {
-      const { artists, searchQuery } = get();
-      if (!searchQuery) return artists;
-      
-      const query = searchQuery.toLowerCase();
-      return artists.filter((a: Artist) =>
-        a.name.toLowerCase().includes(query)
-      );
-    },
-
-    getFilteredAlbums: () => {
-      const { albums, searchQuery } = get();
-      let filtered = albums;
-      
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        filtered = filtered.filter((a: Album) =>
-          a.name.toLowerCase().includes(query) ||
-          a.artist.toLowerCase().includes(query)
-        );
-      }
-      
-      return filtered;
-    },
-
-    getFilteredTracks: () => {
-      const { tracks, searchQuery } = get();
-      let filtered = tracks;
-      
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        filtered = filtered.filter((t: Track) => {
-          const titleMatch = t.metadata.title?.toLowerCase().includes(query);
-          const albumMatch = t.metadata.album?.toLowerCase().includes(query);
-          
-          // Handle artist as string or array
-          let artistMatch = false;
-          const artist = t.metadata.artist;
-          if (artist) {
-            if (Array.isArray(artist)) {
-              artistMatch = artist.some(a => a.toLowerCase().includes(query));
-            } else {
-              artistMatch = artist.toLowerCase().includes(query);
-            }
-          }
-          
-          return titleMatch || artistMatch || albumMatch;
-        });
-      }
-      
-      return filtered;
-    },
-
-    getAlbumById: (id: string) => {
-      return get().albums.find(a => a.id === id);
-    },
-
-    getArtistById: (id: string) => {
-      return get().artists.find(a => a.id === id);
-    },
-
-    _initialize: async () => {
-      if (get().initialized) return;
-      set({ initialized: true });
-
-      // Subscribe to library events
-      library.on(LIBRARY_EVENTS.SCAN_START, () => {
-        set({ scanning: true, scanProgress: 0 });
-      });
-
-      library.on(LIBRARY_EVENTS.SCAN_PROGRESS, (data: any) => {
-        set({ scanProgress: data.filesScanned || 0 });
-      });
-
-      library.on(LIBRARY_EVENTS.SCAN_COMPLETE, async () => {
-        set({ scanning: false });
-        // Full update with persistence when complete
-        await get()._updateLibrary(true);
-      });
-
-      // Real-time updates for new tracks found during scan
-      let updateTimeout: ReturnType<typeof setTimeout> | null = null;
-      let tracksSinceLastSave = 0;
-
-      library.on(LIBRARY_EVENTS.TRACK_ADDED, (data: any) => {
-        tracksSinceLastSave++;
-        
-        if (!updateTimeout) {
-          updateTimeout = setTimeout(() => {
-            // Persist periodically during scan (every 15 tracks) 
-            // to ensure progress is saved for large libraries
-            const shouldPersist = tracksSinceLastSave >= 15;
-            if (shouldPersist) {
-              tracksSinceLastSave = 0;
-            }
-            
-            get()._updateLibrary(shouldPersist);
-            updateTimeout = null;
-          }, 500); // Batched UI update
-        }
-      });
-
-      library.on(LIBRARY_EVENTS.LIBRARY_UPDATED, async () => {
-        await get()._updateLibrary(true);
-      });
-
-      try {
-        const { onLoad } = get();
-        if (onLoad) {
-          const cachedData = await onLoad();
-
-          if (cachedData && cachedData.tracks && cachedData.tracks.length > 0) {
-            console.log('📚 Loading library from cache:', cachedData.tracks.length, 'tracks');
-            library.restore(cachedData.tracks);
-          }
-        }
-      } catch (error) {
-        console.warn('Failed to load cached library:', error);
-      }
-    },
-
-    _updateLibrary: async (persist = true) => {
-      const tracks = library.getTracks();
-      const stats = library.getStats();
-      
-      const newData = {
-        artists: library.getArtists(),
-        albums: library.getAlbums(),
-        tracks,
-        stats,
-      };
-
-      set(newData);
-
-      // Save via injected callback - ONLY tracks and stats
-      // Skip if persist is false (e.g. during rapid scan updates)
-      if (persist) {
-        const { onSave } = get();
-        if (onSave) {
-          try {
-            await onSave({
-              tracks,
-              stats
-            });
-            console.log('💾 Library saved to cache:', stats.totalTracks, 'tracks');
-          } catch (error) {
-            console.error('Failed to save library to cache:', error);
-          }
-        }
-      }
-    },
+    totalTracks: tracks.length,
+    totalArtists: artists.length,
+    totalAlbums: albums.length,
+    totalGenres: genres.size,
+    totalSize: 0, // TODO: Calculate from track file sizes
   };
-});
+};
 
-// Note: initialization is now handled by the app layer (e.g. PlaybackPersistence)
-// to ensure persistence callbacks are set before initialization.
+export const useLibraryStore = create<LibraryState>((set, get) => ({
+  // Initial state
+  tracks: [],
+  artists: [],
+  albums: [],
+  stats: {
+    totalTracks: 0,
+    totalArtists: 0,
+    totalAlbums: 0,
+    totalGenres: 0,
+    totalSize: 0,
+  },
+  loading: false,
+  error: null,
+  searchQuery: '',
+  selectedArtist: null,
+  selectedAlbum: null,
+
+  // Actions
+  loadFromServers: (tracks: Track[], artists: Artist[], albums: Album[]) => {
+    const stats = calculateStats(tracks, artists, albums);
+    set({
+      tracks,
+      artists,
+      albums,
+      stats,
+      loading: false,
+      error: null,
+    });
+    console.log('📚 Library loaded:', stats);
+  },
+
+  setTracks: (tracks) => {
+    console.log('🔄 setTracks called with', tracks.length, 'tracks');
+    const { artists, albums } = get();
+    const stats = calculateStats(tracks, artists, albums);
+    set({ tracks, stats });
+  },
+
+  setArtists: (artists) => {
+    console.log('🔄 setArtists called with', artists.length, 'artists');
+    const { tracks, albums } = get();
+    const stats = calculateStats(tracks, artists, albums);
+    set({ artists, stats });
+  },
+
+  setAlbums: (albums) => {
+    console.log('🔄 setAlbums called with', albums.length, 'albums');
+    const { tracks, artists } = get();
+    const stats = calculateStats(tracks, artists, albums);
+    set({ albums, stats });
+  },
+
+  setLoading: (loading) => set({ loading }),
+  setError: (error) => set({ error }),
+
+  clearLibrary: () => {
+    set({
+      tracks: [],
+      artists: [],
+      albums: [],
+      stats: {
+        totalTracks: 0,
+        totalArtists: 0,
+        totalAlbums: 0,
+        totalGenres: 0,
+        totalSize: 0,
+      },
+      selectedArtist: null,
+      selectedAlbum: null,
+      searchQuery: '',
+      error: null,
+    });
+    console.log('🗑️ Library cleared');
+  },
+
+  // Filters
+  setSearchQuery: (query: string) => {
+    set({ searchQuery: query });
+  },
+
+  selectArtist: (artist: Artist | null) => {
+    set({ selectedArtist: artist, selectedAlbum: null });
+  },
+
+  selectAlbum: (album: Album | null) => {
+    set({ selectedAlbum: album });
+  },
+
+  clearSelection: () => {
+    set({ selectedArtist: null, selectedAlbum: null, searchQuery: '' });
+  },
+
+  // Getters
+  getFilteredArtists: () => {
+    const { artists, searchQuery } = get();
+    if (!searchQuery) return artists;
+    
+    const query = searchQuery.toLowerCase();
+    return artists.filter((a: Artist) =>
+      a.name.toLowerCase().includes(query)
+    );
+  },
+
+  getFilteredAlbums: () => {
+    const { albums, searchQuery, selectedArtist } = get();
+    let filtered = albums;
+    
+    // Filter by selected artist
+    if (selectedArtist) {
+      filtered = filtered.filter((a: Album) => a.artist === selectedArtist.name);
+    }
+    
+    // Filter by search query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((a: Album) =>
+        a.title.toLowerCase().includes(query) ||
+        a.artist.toLowerCase().includes(query)
+      );
+    }
+    
+    return filtered;
+  },
+
+  getFilteredTracks: () => {
+    const { tracks, searchQuery, selectedArtist, selectedAlbum } = get();
+    let filtered = tracks;
+    
+    // Filter by selected artist
+    if (selectedArtist) {
+      filtered = filtered.filter((t: Track) => t.artist === selectedArtist.name);
+    }
+    
+    // Filter by selected album
+    if (selectedAlbum) {
+      filtered = filtered.filter((t: Track) => 
+        t.album === selectedAlbum.title && t.artist === selectedAlbum.artist
+      );
+    }
+    
+    // Filter by search query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((t: Track) =>
+        t.title?.toLowerCase().includes(query) ||
+        t.artist?.toLowerCase().includes(query) ||
+        t.album?.toLowerCase().includes(query) ||
+        t.genre?.toLowerCase().includes(query)
+      );
+    }
+    
+    return filtered;
+  },
+
+  getAlbumById: (id: string) => {
+    return get().albums.find(a => a.id === id);
+  },
+
+  getArtistById: (id: string) => {
+    return get().artists.find(a => a.id === id);
+  },
+
+  getTrackById: (id: string) => {
+    return get().tracks.find(t => t.id === id);
+  },
+}));

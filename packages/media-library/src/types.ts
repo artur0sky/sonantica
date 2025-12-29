@@ -1,47 +1,17 @@
 /**
  * Media Library Types
  * 
- * Domain types for media library management.
+ * Re-exports types from @sonantica/shared for consistency.
+ * Following architecture principle: packages use shared types.
  */
 
-import type { MediaMetadata } from '@sonantica/shared';
-
-/**
- * Represents a track in the library
- */
-export interface Track {
-  id: string;
-  path: string;
-  filename: string;
-  mimeType: string;
-  size: number;
-  metadata: MediaMetadata;
-  addedAt: Date;
-  lastModified: Date;
-}
-
-/**
- * Represents an album
- */
-export interface Album {
-  id: string;
-  name: string;
-  artist: string;
-  artistId?: string;
-  year?: number;
-  coverArt?: string;
-  tracks: Track[];
-}
-
-/**
- * Represents an artist
- */
-export interface Artist {
-  id: string;
-  name: string;
-  albums: Album[];
-  trackCount: number;
-}
+// Re-export all library types from shared
+export type {
+  Track,
+  Artist,
+  Album,
+  AudioFormat,
+} from '@sonantica/shared';
 
 /**
  * Represents a genre

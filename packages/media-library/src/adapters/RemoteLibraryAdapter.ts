@@ -8,13 +8,14 @@
  */
 
 import type { Track, Artist, Album } from '@sonantica/shared';
+import type { ILibraryAdapter, LibraryStats, ScanProgress } from '../contracts/ILibraryAdapter';
 
 export interface RemoteLibraryConfig {
   serverUrl: string;
   apiKey?: string;
 }
 
-export class RemoteLibraryAdapter {
+export class RemoteLibraryAdapter implements ILibraryAdapter {
   private serverUrl: string;
   private apiKey?: string;
   private eventSource?: EventSource;
@@ -110,6 +111,19 @@ export class RemoteLibraryAdapter {
   }
 
   /**
+   * Get library statistics
+   */
+  async getStats(): Promise<LibraryStats> {
+    const response = await this.fetch('/api/scan/status');
+    const data = await response.json();
+    return {
+      totalTracks: data.stats?.tracks || 0,
+      totalArtists: data.stats?.artists || 0,
+      totalAlbums: data.stats?.albums || 0,
+    };
+  }
+
+  /**
    * Trigger library scan
    */
   async startScan(): Promise<void> {
@@ -119,12 +133,13 @@ export class RemoteLibraryAdapter {
   /**
    * Get scan status
    */
-  async getScanStatus(): Promise<{
-    isScanning: boolean;
-    stats: { tracks: number; artists: number; albums: number };
-  }> {
+  async getScanStatus(): Promise<ScanProgress> {
     const response = await this.fetch('/api/scan/status');
-    return response.json();
+    const data = await response.json();
+    return {
+      isScanning: data.isScanning,
+      filesScanned: data.stats?.tracks,
+    };
   }
 
   /**
