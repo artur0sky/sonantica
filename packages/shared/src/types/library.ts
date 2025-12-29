@@ -30,6 +30,12 @@ export interface Track {
   /** Unique identifier */
   id: string;
   
+  /** Server ID (for multi-server support) */
+  serverId?: string;
+  
+  /** Server name (for display) */
+  serverName?: string;
+  
   /** Track title */
   title: string;
   
