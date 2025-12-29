@@ -68,14 +68,16 @@ export function createStreamRouter(mediaPath: string): Router {
         const start = parseInt(parts[0], 10);
         let end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
         
-        // Validate range
-        if (start >= fileSize || end >= fileSize) {
+        // Fix: Clamp end to file size BEFORE checking validity
+        // Spec allows requesting bytes past the end (return available bytes)
+        end = Math.min(end, fileSize - 1);
+
+        // Validate range (start must be within file)
+        if (start >= fileSize) {
           console.error(`❌ Invalid range: ${start}-${end} for file size ${fileSize}`);
           return res.status(416).json({ error: 'Range not satisfiable' });
         }
         
-        // Ensure end is not beyond file size
-        end = Math.min(end, fileSize - 1);
         const chunkSize = (end - start) + 1;
         
         console.log(`📦 Range request: ${start}-${end}/${fileSize}, chunk: ${chunkSize}`);
