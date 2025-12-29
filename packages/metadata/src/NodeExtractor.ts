@@ -37,13 +37,20 @@ export async function extractMetadataFromFile(
     // Get file size first
     const stat = await fs.stat(filePath);
     
-    if (stat.size > maxSize) {
-      console.warn(`File too large: ${filePath} (${stat.size} bytes, limit: ${maxSize})`);
-      return {};
+    // We only need the beginning of the file for most metadata (ID3v2, FLAC metadata blocks)
+    // 16MB is more than enough for almost any metadata including high-resolution artwork
+    const bytesToRead = Math.min(stat.size, 16 * 1024 * 1024);
+    
+    // Read only the required chunk instead of the whole file
+    const fileHandle = await fs.open(filePath, 'r');
+    let buffer: Buffer;
+    
+    try {
+      buffer = Buffer.alloc(bytesToRead);
+      await fileHandle.read(buffer, 0, bytesToRead, 0);
+    } finally {
+      await fileHandle.close();
     }
-
-    // Read file into buffer
-    const buffer = await fs.readFile(filePath);
     
     // Convert Node.js Buffer to ArrayBuffer
     const arrayBuffer = buffer.buffer.slice(
