@@ -111,12 +111,23 @@ export async function extractMetadata(url: string): Promise<Partial<MediaMetadat
     MetadataSecurityValidator.validateURL(url);
 
     // Fetch the file with range request (first 16MB for HQ artwork support)
-    const response = await fetch(url, {
+    let response = await fetch(url, {
       headers: {
         'Range': `bytes=0-${MAX_FETCH_SIZE - 1}`,
       },
       signal: abortController.signal,
     });
+
+    // Fallback for 416 Range Not Satisfiable (e.g. file smaller than requested range)
+    if (response.status === 416) {
+      console.warn('⚠️ 416 Range Not Satisfiable, retrying with open range bytes=0-');
+      response = await fetch(url, {
+        headers: {
+          'Range': 'bytes=0-',
+        },
+        signal: abortController.signal,
+      });
+    }
 
     clearTimeout(timeoutId);
 

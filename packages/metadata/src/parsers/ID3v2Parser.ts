@@ -355,7 +355,7 @@ export class ID3v2Parser implements IMetadataParser {
           metadata.genre = parseMultipleValues(text);
           break;
         case 'USLT':
-          tags.USLT = { data: { text } };
+          tags.USLT = { data: this.parseUSLT(frameData) };
           break;
         case 'SYLT':
           tags.SYLT = { data: text };
@@ -364,6 +364,40 @@ export class ID3v2Parser implements IMetadataParser {
     } catch (error) {
       console.warn(`⚠️ Failed to process frame ${frameId}:`, error);
     }
+  }
+
+  /**
+   * Parse USLT (Unsynchronized Lyric/Text Transcription) frame
+   */
+  private parseUSLT(data: Uint8Array): { text: string; language: string } {
+    if (data.length < 5) return { text: '', language: '' };
+    
+    // Extract Language (3 bytes at offset 1)
+    const language = String.fromCharCode(data[1], data[2], data[3]);
+    
+    const encoding = data[0];
+    let offset = 4; // Skip encoding(1) + language(3)
+    const isDoubleByte = encoding === 1 || encoding === 2;
+    
+    while (offset < data.length) {
+      if (data[offset] === 0) {
+        if (isDoubleByte) {
+          if (offset + 1 < data.length && data[offset + 1] === 0) {
+            offset += 2;
+            break;
+          }
+          offset++;
+        } else {
+          offset++;
+          break;
+        }
+      } else {
+        offset++;
+      }
+    }
+    
+    const text = offset < data.length ? decodeText(data.slice(offset)) : '';
+    return { text, language };
   }
 
   /**
