@@ -48,7 +48,7 @@ const ArtistDetailPage = lazy(() =>
   }))
 );
 const SettingsPage = lazy(() =>
-  import("./features/library/pages/SettingsPage").then((m) => ({
+  import("./features/settings/pages/SettingsPage").then((m) => ({
     default: m.SettingsPage,
   }))
 );
