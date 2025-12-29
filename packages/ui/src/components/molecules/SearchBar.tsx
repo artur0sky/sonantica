@@ -48,13 +48,13 @@ export function SearchBar({ onResultSelect, className }: GlobalSearchBarProps) {
 
     // Search tracks
     tracks.forEach((track) => {
-      const title = track.metadata?.title?.toLowerCase() || "";
-      const artist = formatArtists(track.metadata?.artist).toLowerCase();
-      const album = track.metadata?.album?.toLowerCase() || "";
-      const genre = Array.isArray(track.metadata?.genre)
-        ? track.metadata.genre.join(", ").toLowerCase()
-        : track.metadata?.genre?.toLowerCase() || "";
-      const year = track.metadata?.year?.toString() || "";
+      const title = track.title?.toLowerCase() || "";
+      const artist = formatArtists(track.artist).toLowerCase();
+      const album = track.album?.toLowerCase() || "";
+      const genre = Array.isArray(track.genre)
+        ? track.genre.join(", ").toLowerCase()
+        : track.genre?.toLowerCase() || "";
+      const year = track.year?.toString() || "";
 
       if (
         title.includes(searchTerm) ||
@@ -66,9 +66,9 @@ export function SearchBar({ onResultSelect, className }: GlobalSearchBarProps) {
         foundResults.push({
           type: "track",
           id: track.id,
-          title: track.metadata?.title || "Unknown",
-          subtitle: formatArtists(track.metadata?.artist),
-          coverArt: track.metadata?.coverArt,
+          title: track.title || "Unknown",
+          subtitle: formatArtists(track.artist),
+          coverArt: track.coverArt,
           data: track,
         });
       }
@@ -84,7 +84,7 @@ export function SearchBar({ onResultSelect, className }: GlobalSearchBarProps) {
           subtitle: `${artist.trackCount} track${
             artist.trackCount !== 1 ? "s" : ""
           }`,
-          coverArt: artist.albums[0]?.coverArt,
+          coverArt: undefined, // Artist no longer has albums array
           data: artist,
         });
       }
@@ -93,13 +93,13 @@ export function SearchBar({ onResultSelect, className }: GlobalSearchBarProps) {
     // Search albums
     albums.forEach((album) => {
       if (
-        album.name.toLowerCase().includes(searchTerm) ||
+        album.title.toLowerCase().includes(searchTerm) ||
         album.artist.toLowerCase().includes(searchTerm)
       ) {
         foundResults.push({
           type: "album",
           id: album.id,
-          title: album.name,
+          title: album.title,
           subtitle: album.artist,
           coverArt: album.coverArt,
           data: album,
