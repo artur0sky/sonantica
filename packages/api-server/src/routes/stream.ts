@@ -12,36 +12,84 @@ import path from 'path';
 export function createStreamRouter(mediaPath: string): Router {
   const router = Router();
 
-  router.get('/:filePath(*)', async (req, res) => {
+  // Handle CORS preflight
+  router.options('/:serverId/:filePath(*)', (req, res) => {
+    res.writeHead(204, {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+      'Access-Control-Allow-Headers': 'Range, Content-Type',
+      'Access-Control-Max-Age': '86400',
+    });
+    res.end();
+  });
+
+  // Route: /api/stream/:serverId/:filePath
+  // serverId is ignored for now (single server), but accepted for multi-server compatibility
+  router.get('/:serverId/:filePath(*)', async (req, res) => {
     try {
-      const filePath = path.join(mediaPath, req.params.filePath);
+      const { serverId, filePath: relativeFilePath } = req.params;
+      const filePath = path.join(mediaPath, relativeFilePath);
+      
+      console.log(`🎵 Stream request: serverId=${serverId}, file=${relativeFilePath}`);
       
       // Security: Prevent directory traversal
       if (!filePath.startsWith(mediaPath)) {
+        console.error('❌ Access denied:', filePath);
         return res.status(403).json({ error: 'Access denied' });
       }
 
       // Check if file exists
       const stat = await fs.stat(filePath);
       if (!stat.isFile()) {
+        console.error('❌ File not found:', filePath);
         return res.status(404).json({ error: 'File not found' });
       }
 
       const fileSize = stat.size;
       const range = req.headers.range;
+      
+      // Detect content type from file extension
+      const ext = path.extname(filePath).toLowerCase();
+      const contentTypeMap: Record<string, string> = {
+        '.mp3': 'audio/mpeg',
+        '.flac': 'audio/flac',
+        '.m4a': 'audio/mp4',
+        '.aac': 'audio/aac',
+        '.ogg': 'audio/ogg',
+        '.opus': 'audio/opus',
+        '.wav': 'audio/wav',
+        '.aiff': 'audio/aiff',
+      };
+      const contentType = contentTypeMap[ext] || 'audio/mpeg';
 
       // Support range requests for seeking
       if (range) {
         const parts = range.replace(/bytes=/, '').split('-');
         const start = parseInt(parts[0], 10);
-        const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+        let end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+        
+        // Validate range
+        if (start >= fileSize || end >= fileSize) {
+          console.error(`❌ Invalid range: ${start}-${end} for file size ${fileSize}`);
+          return res.status(416).json({ error: 'Range not satisfiable' });
+        }
+        
+        // Ensure end is not beyond file size
+        end = Math.min(end, fileSize - 1);
         const chunkSize = (end - start) + 1;
+        
+        console.log(`📦 Range request: ${start}-${end}/${fileSize}, chunk: ${chunkSize}`);
 
         res.writeHead(206, {
           'Content-Range': `bytes ${start}-${end}/${fileSize}`,
           'Accept-Ranges': 'bytes',
-          'Content-Length': chunkSize,
-          'Content-Type': 'audio/mpeg', // TODO: Detect from file extension
+          'Content-Length': chunkSize.toString(),
+          'Content-Type': contentType,
+          // CORS headers
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+          'Access-Control-Allow-Headers': 'Range, Content-Type',
+          'Access-Control-Expose-Headers': 'Content-Length, Content-Range, Accept-Ranges',
         });
 
         const stream = (await import('fs')).createReadStream(filePath, { start, end });
@@ -50,14 +98,20 @@ export function createStreamRouter(mediaPath: string): Router {
         // Full file
         res.writeHead(200, {
           'Content-Length': fileSize,
-          'Content-Type': 'audio/mpeg', // TODO: Detect from file extension
+          'Content-Type': contentType,
+          'Accept-Ranges': 'bytes',
+          // CORS headers
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+          'Access-Control-Allow-Headers': 'Range, Content-Type',
+          'Access-Control-Expose-Headers': 'Content-Length, Content-Range, Accept-Ranges',
         });
 
         const stream = (await import('fs')).createReadStream(filePath);
         stream.pipe(res);
       }
     } catch (error) {
-      console.error('Stream error:', error);
+      console.error('❌ Stream error:', error);
       res.status(500).json({ error: 'Failed to stream file' });
     }
   });

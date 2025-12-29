@@ -201,6 +201,14 @@ export class LibraryService extends EventEmitter {
     );
   }
 
+  getStats() {
+    return {
+      tracks: this.tracks.size,
+      artists: this.artists.size,
+      albums: this.albums.size
+    };
+  }
+
   getScanningStatus(): boolean {
     return this.scanning;
   }

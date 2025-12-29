@@ -55,6 +55,19 @@ app.listen(PORT, () => {
   console.log(`🎵 Sonántica API Server running on http://localhost:${PORT}`);
   console.log(`📂 Media path: ${MEDIA_PATH}`);
   console.log(`🌐 CORS enabled for: ${process.env.CORS_ORIGIN || 'all origins'}`);
+  
+  // Auto-scan library on startup
+  console.log('🔍 Starting automatic library scan...');
+  libraryService.scan().then(() => {
+    const stats = libraryService.getStats();
+    console.log('✅ Initial scan complete:', {
+      tracks: stats.tracks,
+      artists: stats.artists,
+      albums: stats.albums
+    });
+  }).catch((error) => {
+    console.error('❌ Initial scan failed:', error);
+  });
 });
 
 export { app };
