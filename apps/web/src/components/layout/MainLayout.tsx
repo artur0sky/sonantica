@@ -3,12 +3,12 @@
  *
  * SoundCloud-inspired layout with dual sidebars and sticky player.
  * Following Sonántica's minimalist philosophy.
- * 
+ *
  * PERFORMANCE: Code splitting for heavy features (EQ, Recommendations, Lyrics)
  */
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useMemo, useEffect } from "react";
 import { usePlayerStore } from "@sonantica/player-core";
 import {
   useUIStore,
@@ -23,9 +23,17 @@ import { RightSidebar } from "./RightSidebar";
 import { IconLoader } from "@tabler/icons-react";
 
 // PERFORMANCE: Lazy load heavy sidebars (code splitting)
-const LyricsSidebar = lazy(() => import("./LyricsSidebar").then(m => ({ default: m.LyricsSidebar })));
-const EQSidebar = lazy(() => import("./EQSidebar").then(m => ({ default: m.EQSidebar })));
-const RecommendationsSidebar = lazy(() => import("./RecommendationsSidebar").then(m => ({ default: m.RecommendationsSidebar })));
+const LyricsSidebar = lazy(() =>
+  import("./LyricsSidebar").then((m) => ({ default: m.LyricsSidebar }))
+);
+const EQSidebar = lazy(() =>
+  import("./EQSidebar").then((m) => ({ default: m.EQSidebar }))
+);
+const RecommendationsSidebar = lazy(() =>
+  import("./RecommendationsSidebar").then((m) => ({
+    default: m.RecommendationsSidebar,
+  }))
+);
 
 import { useWaveformLoader } from "../../features/player/hooks/useWaveformLoader";
 import { PlaybackPersistence } from "../../features/player/components/PlaybackPersistence";
@@ -76,8 +84,50 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   const isMobile = useMediaQuery("(max-width: 1023px)");
 
+  // Calculate total width of all open right-sidebars for desktop
+  const totalRightOffset = useMemo(() => {
+    if (isMobile) return 8; // Default mobile margin
+    let width = 0;
+    if (isRightSidebarOpen && currentTrack) width += rightSidebarWidth;
+    if (lyricsOpen && currentTrack) width += lyricsSidebarWidth;
+    if (eqOpen && currentTrack) width += eqSidebarWidth;
+    if (recommendationsOpen && currentTrack)
+      width += recommendationsSidebarWidth;
+    return width + 12; // Base margin
+  }, [
+    isMobile,
+    isRightSidebarOpen,
+    lyricsOpen,
+    eqOpen,
+    recommendationsOpen,
+    rightSidebarWidth,
+    lyricsSidebarWidth,
+    eqSidebarWidth,
+    recommendationsSidebarWidth,
+    currentTrack,
+  ]);
+
+  // Determine if AlphabetNavigator should be in "mobile-like" mode (auto-hide on desktop)
+  // Tight space = more than 350px of sidebars OR window is small
+  const isCramped =
+    totalRightOffset > 350 ||
+    (window.innerWidth < 1440 && totalRightOffset > 100);
+
+  const setIsCramped = useUIStore((state) => state.setIsCramped);
+
+  useEffect(() => {
+    setIsCramped(isCramped);
+  }, [isCramped, setIsCramped]);
+
   return (
-    <div className="h-screen flex flex-col bg-bg text-text overflow-hidden relative">
+    <div
+      className="h-[100dvh] flex flex-col bg-bg text-text overflow-hidden relative"
+      style={
+        {
+          "--alphabet-right": `${totalRightOffset}px`,
+        } as React.CSSProperties
+      }
+    >
       {/* Persistence Layer */}
       <PlaybackPersistence />
 
@@ -102,7 +152,10 @@ export function MainLayout({ children }: MainLayoutProps) {
         )}
 
         {/* Center Content */}
-        <main className="flex-1 overflow-y-auto relative z-10 transition-all duration-300 w-full min-w-0">
+        <main
+          id="main-content"
+          className="flex-1 overflow-y-auto relative z-10 transition-all duration-300 w-full min-w-0"
+        >
           <AnimatePresence mode="wait">
             {isPlayerExpanded ? <ExpandedPlayer key="expanded" /> : children}
           </AnimatePresence>
@@ -205,7 +258,8 @@ export function MainLayout({ children }: MainLayoutProps) {
                 if (isRightSidebarOpen) useUIStore.getState().toggleQueue();
                 if (lyricsOpen) useUIStore.getState().toggleLyrics();
                 if (eqOpen) useUIStore.getState().toggleEQ();
-                if (recommendationsOpen) useUIStore.getState().toggleRecommendations();
+                if (recommendationsOpen)
+                  useUIStore.getState().toggleRecommendations();
               }}
               className="fixed inset-0 bg-black/60 z-[60] backdrop-blur-sm"
             />
@@ -296,7 +350,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       {/* Bottom Mini Player - Sticky */}
       <AnimatePresence mode="wait">
         {currentTrack && !isPlayerExpanded && (
-          <div className="sticky bottom-0 z-50 border-t border-border">
+          <div className="sticky bottom-0 z-50 border-t border-border bg-bg/95 backdrop-blur-xl pb-[env(safe-area-inset-bottom)] shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
             <MiniPlayer />
           </div>
         )}

@@ -73,7 +73,7 @@ export function LyricsSidebar({ isCollapsed }: LyricsSidebarProps) {
               Lyrics
             </h2>
             {currentTrack && (
-              <span className="text-[10px] text-text-muted font-mono uppercase tracking-wider">
+              <span className="text-[10px] text-text-muted font-sans uppercase tracking-wider">
                 {currentTrack.metadata?.title || "Unknown Title"}
               </span>
             )}
@@ -85,7 +85,7 @@ export function LyricsSidebar({ isCollapsed }: LyricsSidebarProps) {
           {lyrics && (
             <Badge
               variant={lyrics.isSynchronized ? "accent" : "default"}
-              className="text-[10px] px-2 py-0.5"
+              className="text-[10px] px-2 py-0.5 font-sans"
             >
               {lyrics.isSynchronized ? (
                 <>

@@ -88,7 +88,11 @@ export function Header() {
           <UserButton
             onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
               e.preventDefault();
-              contextMenu.handleContextMenu(e as any);
+              if (contextMenu.isOpen) {
+                contextMenu.close();
+              } else {
+                contextMenu.handleContextMenu(e as any);
+              }
             }}
           />
         </div>

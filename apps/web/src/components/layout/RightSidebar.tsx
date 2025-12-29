@@ -102,7 +102,7 @@ export function RightSidebar({ isCollapsed }: RightSidebarProps) {
       <div className="flex flex-col h-full">
         {!isCollapsed && fullQueue.length > 0 && (
           <div className="px-1 mb-4">
-            <span className="text-[10px] text-text-muted font-mono uppercase tracking-wider">
+            <span className="text-[10px] text-text-muted font-sans uppercase tracking-wider">
               {currentIndex + 1} / {fullQueue.length} tracks
             </span>
           </div>
@@ -434,7 +434,7 @@ function QueueItem({
             <motion.span
               initial={{ opacity: 0 }}
               whileHover={{ opacity: 1 }}
-              className="hidden lg:group-hover:inline-flex items-center gap-1 text-[9px] text-accent font-mono bg-accent/10 px-1 py-0.5 rounded shadow-sm border border-accent/20"
+              className="hidden lg:group-hover:inline-flex items-center gap-1 text-[9px] text-accent font-sans bg-accent/10 px-1 py-0.5 rounded shadow-sm border border-accent/20"
             >
               {bitrate || "1411"}k
             </motion.span>
@@ -444,7 +444,7 @@ function QueueItem({
 
       {!isCollapsed && (
         <div className="flex flex-col items-end gap-1 min-w-fit pr-1">
-          <span className="text-[10px] text-text-muted tabular-nums font-mono opacity-50 group-hover:opacity-100">
+          <span className="text-[10px] text-text-muted tabular-nums font-sans opacity-50 group-hover:opacity-100">
             {formatTime(duration)}
           </span>
           <Badge
@@ -476,8 +476,8 @@ function QueueItem({
             {formatArtists(artist)}
           </div>
           <div className="flex items-center justify-between mt-1 pt-1 border-t border-white/5">
-            <span className="text-[9px] font-mono text-accent">{ext}</span>
-            <span className="text-[9px] font-mono opacity-60">
+            <span className="text-[9px] font-sans text-accent">{ext}</span>
+            <span className="text-[9px] font-sans opacity-60">
               {formatTime(duration)}
             </span>
           </div>

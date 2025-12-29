@@ -5,11 +5,12 @@
  * Supports virtual scrolling for large libraries.
  */
 
-import { useState, useRef, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Link } from "wouter";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Button } from "@sonantica/ui";
 import { useLibraryStore } from "@sonantica/media-library";
+import { useUIStore } from "@sonantica/ui";
 import { TrackItem } from "../components/TrackItem";
 import {
   IconMusic,
@@ -46,6 +47,7 @@ type SortOrder = "asc" | "desc";
 
 export function TracksPage() {
   const { stats, searchQuery, getFilteredTracks } = useLibraryStore();
+  const isCramped = useUIStore((state) => state.isCramped);
 
   const [sortField, setSortField] = useState<SortField>("title");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
@@ -98,14 +100,14 @@ export function TracksPage() {
   }, [filteredTracks, sortField, sortOrder]);
 
   // PERFORMANCE: Virtual scrolling for large lists
-  const parentRef = useRef<HTMLDivElement>(null);
   const useVirtualScroll = sortedTracks.length > VIRTUAL_SCROLL_THRESHOLD;
 
   const virtualizer = useVirtualizer({
     count: sortedTracks.length,
-    getScrollElement: () => parentRef.current,
+    getScrollElement: () =>
+      document.getElementById("main-content") as HTMLDivElement,
     estimateSize: () => 76, // Estimated height of TrackItem
-    overscan: 5, // Render 5 extra items above/below viewport
+    overscan: 10, // Increased overscan for smoother scrolling on mobile
     enabled: useVirtualScroll,
   });
 
@@ -123,11 +125,16 @@ export function TracksPage() {
 
   const handleLetterClick = (index: number) => {
     if (useVirtualScroll) {
-      virtualizer.scrollToIndex(index, { align: "center", behavior: "smooth" });
+      virtualizer.scrollToIndex(index, { align: "start", behavior: "smooth" });
     } else {
       const element = document.getElementById(`track-${index}`);
       if (element) {
-        element.scrollIntoView({ behavior: "smooth", block: "center" });
+        // Find main container to scroll relative to it
+        const main = document.getElementById("main-content");
+        if (main) {
+          const top = element.offsetTop - 80; // Offset for sticky header
+          main.scrollTo({ top, behavior: "smooth" });
+        }
       }
     }
   };
@@ -286,17 +293,14 @@ export function TracksPage() {
             </p>
           </motion.div>
         ) : useVirtualScroll ? (
-          // PERFORMANCE: Virtual scrolling for large lists
-          <div
-            ref={parentRef}
-            className="h-[calc(100vh-300px)] overflow-auto"
-            style={{ contain: "strict" }}
-          >
+          // PERFORMANCE: Virtual scrolling for large lists - Using main container for scrolling
+          <>
             <div
               style={{
                 height: `${virtualizer.getTotalSize()}px`,
                 width: "100%",
                 position: "relative",
+                contain: "strict",
               }}
             >
               {virtualizer.getVirtualItems().map((virtualItem) => {
@@ -325,7 +329,7 @@ export function TracksPage() {
             <div className="py-3 sm:py-4 text-center text-xs text-text-muted/30">
               Showing {sortedTracks.length} tracks (Virtual Scrolling)
             </div>
-          </div>
+          </>
         ) : (
           // Standard rendering for small lists
           <motion.div
@@ -366,6 +370,7 @@ export function TracksPage() {
                   : t.album,
             }))}
             onLetterClick={handleLetterClick}
+            forceScrollOnly={isCramped}
           />
         )}
     </div>

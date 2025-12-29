@@ -13,7 +13,7 @@ import {
   IconSortAscending,
   IconSortDescending,
 } from "@tabler/icons-react";
-import { AlphabetNavigator, Button } from "@sonantica/ui";
+import { AlphabetNavigator, Button, useUIStore } from "@sonantica/ui";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 
@@ -34,6 +34,7 @@ type SortOrder = "asc" | "desc";
 
 export function AlbumsPage() {
   const { stats, searchQuery, getFilteredAlbums } = useLibraryStore();
+  const isCramped = useUIStore((state) => state.isCramped);
   const [, setLocation] = useLocation();
 
   const [sortField, setSortField] = useState<SortField>("title");
@@ -122,8 +123,10 @@ export function AlbumsPage() {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         const element = document.getElementById(`album-${index}`);
-        if (element) {
-          element.scrollIntoView({ behavior: "smooth", block: "center" });
+        const main = document.getElementById("main-content");
+        if (element && main) {
+          const top = element.offsetTop - 100; // Account for grid gap and sticky header
+          main.scrollTo({ top, behavior: "smooth" });
         }
       });
     });
@@ -240,12 +243,16 @@ export function AlbumsPage() {
         </div>
       )}
       {/* Navigator */}
-      {sortedAlbums.length > 50 && (
-        <AlphabetNavigator
-          items={sortedAlbums.map(a => ({ name: a.title }))}
-          onLetterClick={handleLetterClick}
-        />
-      )}
+      {sortedAlbums.length > 50 &&
+        (sortField === "title" || sortField === "artist") && (
+          <AlphabetNavigator
+            items={sortedAlbums.map((a) => ({
+              name: sortField === "title" ? a.title : a.artist,
+            }))}
+            onLetterClick={handleLetterClick}
+            forceScrollOnly={isCramped}
+          />
+        )}
     </div>
   );
 }
