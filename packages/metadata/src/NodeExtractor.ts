@@ -22,18 +22,29 @@ const parsers: IMetadataParser[] = [
 /**
  * Extract metadata from a local file path (Node.js only)
  * @param filePath - Absolute path to the audio file
+ * @param options - Extraction options
  * @returns Partial metadata object
  */
-export async function extractMetadataFromFile(filePath: string): Promise<Partial<MediaMetadata>> {
+export async function extractMetadataFromFile(
+  filePath: string,
+  options: { maxFileSize?: number } = {}
+): Promise<Partial<MediaMetadata>> {
   try {
-    // Read file into buffer
-    const buffer = await fs.readFile(filePath);
+    const maxSize = (options.maxFileSize === 0 || options.maxFileSize === undefined) 
+      ? MAX_READ_SIZE 
+      : (options.maxFileSize === -1 ? Infinity : options.maxFileSize);
+
+    // Get file size first
+    const stat = await fs.stat(filePath);
     
-    if (buffer.byteLength > MAX_READ_SIZE) {
-      console.warn(`File too large: ${filePath} (${buffer.byteLength} bytes)`);
+    if (stat.size > maxSize) {
+      console.warn(`File too large: ${filePath} (${stat.size} bytes, limit: ${maxSize})`);
       return {};
     }
 
+    // Read file into buffer
+    const buffer = await fs.readFile(filePath);
+    
     // Convert Node.js Buffer to ArrayBuffer
     const arrayBuffer = buffer.buffer.slice(
       buffer.byteOffset,
