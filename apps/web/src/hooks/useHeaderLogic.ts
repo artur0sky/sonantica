@@ -2,6 +2,7 @@ import { useLocation } from "wouter";
 import { useUIStore } from "@sonantica/ui";
 import { useLibraryStore } from "@sonantica/media-library";
 import { usePlayerStore, useQueueStore } from "@sonantica/player-core";
+import { buildStreamingUrl } from "../utils/streamingUrl";
 
 export function useHeaderLogic() {
   const { toggleLeftSidebar } = useUIStore();
@@ -14,25 +15,29 @@ export function useHeaderLogic() {
     switch (result.type) {
       case "track": {
         const track = result.data;
+        const { tracks } = useLibraryStore.getState();
+        
         // Find the album this track belongs to to queue the context
         const album = albums.find(
           (a) =>
-            a.name === track.metadata.album &&
-            a.artist === track.metadata.artist
+            a.title === track.album &&
+            a.artist === track.artist
         );
 
         if (album) {
-          const trackIndex = album.tracks.findIndex((t) => t.id === track.id);
-          const tracksAsSources = album.tracks.map((t) => ({
+          // Get tracks for this album from library
+          const albumTracks = tracks.filter(t => t.album === album.title && t.artist === album.artist);
+          const trackIndex = albumTracks.findIndex((t) => t.id === track.id);
+          const tracksAsSources = albumTracks.map((t) => ({
             ...t,
-            url: t.path,
+            url: buildStreamingUrl(t.serverId!, t.filePath!),
           }));
           setQueue(tracksAsSources, trackIndex >= 0 ? trackIndex : 0);
         } else {
-          setQueue([{ ...track, url: track.path }], 0);
+          setQueue([{ ...track, url: buildStreamingUrl(track.serverId!, track.filePath!) }], 0);
         }
 
-        await loadTrack({ ...track, url: track.path });
+        await loadTrack({ ...track, url: buildStreamingUrl(track.serverId!, track.filePath!) });
         await play();
         break;
       }

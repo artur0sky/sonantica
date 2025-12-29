@@ -1,210 +1,79 @@
 /**
  * Library Page
  *
- * Browse music library by artists, albums, and tracks.
+ * Main library view with server management.
+ * Server-based architecture - no local file scanning.
  */
 
-import React from "react";
+import { useLocation } from "wouter";
 import { Button } from "@sonantica/ui";
-import { useLibraryStore, FolderManager } from "@sonantica/media-library";
-import { usePlayerStore } from "@sonantica/player-core";
-import { TrackItem } from "./components/TrackItem";
-import { AlbumCard } from "./components/AlbumCard";
-import { ArtistCard } from "./components/ArtistCard";
-import { cn } from "@sonantica/shared";
-
-type ViewMode = "artists" | "albums" | "tracks";
-
-// Initialize FolderManager for getting scan paths
-const folderManager = new FolderManager(
-  {
-    load: async () => {
-      const stored = localStorage.getItem("sonantica:library-config");
-      return stored ? JSON.parse(stored) : null;
-    },
-    save: async (config) => {
-      localStorage.setItem("sonantica:library-config", JSON.stringify(config));
-    },
-  },
-  {
-    validatePath: async () => ({ valid: true }),
-    pathExists: async () => true,
-    isDirectory: async () => true,
-  }
-);
+import { IconSettings, IconServer } from "@tabler/icons-react";
+import { useLibraryStore } from "@sonantica/media-library";
+import { ServersSection } from "./components/ServersSection";
 
 export function LibraryPage() {
-  const {
-    stats,
-    scanning,
-    scanProgress,
-    selectedArtist,
-    selectedAlbum,
-    scan,
-    selectArtist,
-    selectAlbum,
-    clearSelection,
-    getFilteredArtists,
-    getFilteredAlbums,
-    getFilteredTracks,
-  } = useLibraryStore();
-
-  const { loadTrack, play } = usePlayerStore();
-
-  const [view, setView] = React.useState<ViewMode>("artists");
-
-  const handleScan = async () => {
-    try {
-      // Get scan paths from FolderManager instead of hardcoding
-      const paths = folderManager.getScanPaths();
-      await scan(paths);
-    } catch (error) {
-      console.error("Scan failed:", error);
-    }
-  };
-
-  const handleTrackClick = async (track: any) => {
-    try {
-      await loadTrack({
-        id: track.id,
-        url: track.path,
-        mimeType: track.mimeType,
-        metadata: track.metadata,
-      });
-      await play();
-    } catch (error) {
-      console.error("Failed to play track:", error);
-    }
-  };
-
-  const handleArtistClick = (artist: any) => {
-    selectArtist(artist);
-    setView("albums");
-  };
-
-  const handleAlbumClick = (album: any) => {
-    selectAlbum(album);
-    setView("tracks");
-  };
-
-  const filteredArtists = getFilteredArtists();
-  const filteredAlbums = getFilteredAlbums();
-  const filteredTracks = getFilteredTracks();
+  const [, setLocation] = useLocation();
+  const { stats } = useLibraryStore();
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-6xl mx-auto p-6 pb-32">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold">Music Library</h1>
-          {stats.totalTracks > 0 && (
-            <p className="text-sm text-text-muted mt-1">
-              {stats.totalTracks} tracks • {stats.totalAlbums} albums •{" "}
-              {stats.totalArtists} artists
-            </p>
-          )}
+          <h1 className="text-3xl font-bold mb-2">Library</h1>
+          <p className="text-text-muted">
+            {stats.totalTracks} tracks • {stats.totalArtists} artists •{" "}
+            {stats.totalAlbums} albums
+          </p>
         </div>
-
-        <Button onClick={handleScan} disabled={scanning} variant="primary">
-          {scanning ? `🔄 Scanning... (${scanProgress})` : "🔄 Scan Library"}
+        <Button
+          onClick={() => setLocation("/settings")}
+          variant="secondary"
+          className="flex items-center gap-2"
+        >
+          <IconSettings size={18} />
+          Settings
         </Button>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-2 border-b border-border">
-        {(["artists", "albums", "tracks"] as ViewMode[]).map((mode) => (
-          <button
-            key={mode}
-            onClick={() => setView(mode)}
-            className={cn(
-              "px-4 py-2 font-medium capitalize transition-fast",
-              "border-b-2 -mb-px",
-              view === mode
-                ? "text-accent border-accent"
-                : "text-text-muted border-transparent hover:text-text"
-            )}
-          >
-            {mode}
-          </button>
-        ))}
+      {/* Server Status */}
+      <div className="bg-surface-elevated border border-border rounded-lg p-6 mb-6">
+        <div className="flex items-center gap-3 mb-4">
+          <IconServer size={24} className="text-accent" />
+          <h2 className="text-xl font-semibold">Media Servers</h2>
+        </div>
+
+        <ServersSection />
       </div>
 
-      {/* Breadcrumbs */}
-      {(selectedArtist || selectedAlbum) && (
-        <div className="flex items-center gap-2 text-sm">
-          <button
-            onClick={() => {
-              clearSelection();
-              setView("artists");
-            }}
-            className="text-accent hover:underline"
-          >
-            Artists
-          </button>
+      {/* Quick Navigation */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Button
+          onClick={() => setLocation("/tracks")}
+          variant="secondary"
+          className="p-6 h-auto flex flex-col items-start"
+        >
+          <span className="text-2xl font-bold mb-1">{stats.totalTracks}</span>
+          <span className="text-sm text-text-muted">Tracks</span>
+        </Button>
 
-          {selectedArtist && (
-            <>
-              <span className="text-text-muted">›</span>
-              <button
-                onClick={() => {
-                  selectAlbum(null);
-                  setView("albums");
-                }}
-                className="text-accent hover:underline"
-              >
-                {selectedArtist.name}
-              </button>
-            </>
-          )}
+        <Button
+          onClick={() => setLocation("/artists")}
+          variant="secondary"
+          className="p-6 h-auto flex flex-col items-start"
+        >
+          <span className="text-2xl font-bold mb-1">{stats.totalArtists}</span>
+          <span className="text-sm text-text-muted">Artists</span>
+        </Button>
 
-          {selectedAlbum && (
-            <>
-              <span className="text-text-muted">›</span>
-              <span className="text-text-muted">{selectedAlbum.name}</span>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* Content */}
-      <div className="space-y-2">
-        {stats.totalTracks === 0 ? (
-          <div className="text-center py-12 bg-surface border border-border rounded-lg">
-            <p className="text-text-muted mb-2">No music found in library.</p>
-            <p className="text-sm text-text-muted">
-              Click "Scan Library" to index your music files.
-            </p>
-          </div>
-        ) : (
-          <>
-            {view === "artists" &&
-              filteredArtists.map((artist: any) => (
-                <ArtistCard
-                  key={artist.id}
-                  artist={artist}
-                  onClick={() => handleArtistClick(artist)}
-                />
-              ))}
-
-            {view === "albums" &&
-              filteredAlbums.map((album: any) => (
-                <AlbumCard
-                  key={album.id}
-                  album={album}
-                  onClick={() => handleAlbumClick(album)}
-                />
-              ))}
-
-            {view === "tracks" &&
-              filteredTracks.map((track: any) => (
-                <TrackItem
-                  key={track.id}
-                  track={track}
-                  onClick={() => handleTrackClick(track)}
-                />
-              ))}
-          </>
-        )}
+        <Button
+          onClick={() => setLocation("/albums")}
+          variant="secondary"
+          className="p-6 h-auto flex flex-col items-start"
+        >
+          <span className="text-2xl font-bold mb-1">{stats.totalAlbums}</span>
+          <span className="text-sm text-text-muted">Albums</span>
+        </Button>
       </div>
     </div>
   );

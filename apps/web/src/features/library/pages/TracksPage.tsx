@@ -1,10 +1,8 @@
 /**
  * Tracks Page
  *
- * Main library view showing all tracks.
- * Default landing page.
- *
- * PERFORMANCE: Uses virtual scrolling for large libraries (>1000 tracks)
+ * Displays all tracks in the library with sorting and filtering.
+ * Supports virtual scrolling for large libraries.
  */
 
 import { useState, useRef, useMemo } from "react";
@@ -28,6 +26,7 @@ import {
   playAll,
   playAllShuffled,
 } from "../../../utils/playContext";
+import { buildStreamingUrl } from "../../../utils/streamingUrl";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -55,52 +54,36 @@ export function TracksPage() {
 
   // Sort tracks
   const sortedTracks = useMemo(() => {
-    const tracks = [...filteredTracks];
+    const tracksToSort = [...filteredTracks];
 
-    tracks.sort((a, b) => {
+    tracksToSort.sort((a, b) => {
       let aVal: any;
       let bVal: any;
 
       switch (sortField) {
         case "title":
-          aVal = a.metadata?.title?.toLowerCase() || "";
-          bVal = b.metadata?.title?.toLowerCase() || "";
+          aVal = a.title?.toLowerCase() || "";
+          bVal = b.title?.toLowerCase() || "";
           break;
         case "artist":
-          aVal =
-            (Array.isArray(a.metadata?.artist)
-              ? a.metadata.artist[0]
-              : a.metadata?.artist
-            )?.toLowerCase() || "";
-          bVal =
-            (Array.isArray(b.metadata?.artist)
-              ? b.metadata.artist[0]
-              : b.metadata?.artist
-            )?.toLowerCase() || "";
+          aVal = a.artist?.toLowerCase() || "";
+          bVal = b.artist?.toLowerCase() || "";
           break;
         case "album":
-          aVal = a.metadata?.album?.toLowerCase() || "";
-          bVal = b.metadata?.album?.toLowerCase() || "";
+          aVal = a.album?.toLowerCase() || "";
+          bVal = b.album?.toLowerCase() || "";
           break;
         case "year":
-          aVal = a.metadata?.year || 0;
-          bVal = b.metadata?.year || 0;
+          aVal = a.year || 0;
+          bVal = b.year || 0;
           break;
         case "duration":
-          aVal = a.metadata?.duration || 0;
-          bVal = b.metadata?.duration || 0;
+          aVal = a.duration || 0;
+          bVal = b.duration || 0;
           break;
         case "genre":
-          aVal =
-            (Array.isArray(a.metadata?.genre)
-              ? a.metadata.genre[0]
-              : a.metadata?.genre
-            )?.toLowerCase() || "";
-          bVal =
-            (Array.isArray(b.metadata?.genre)
-              ? b.metadata.genre[0]
-              : b.metadata?.genre
-            )?.toLowerCase() || "";
+          aVal = a.genre?.toLowerCase() || "";
+          bVal = b.genre?.toLowerCase() || "";
           break;
         default:
           return 0;
@@ -111,7 +94,7 @@ export function TracksPage() {
       return 0;
     });
 
-    return tracks;
+    return tracksToSort;
   }, [filteredTracks, sortField, sortOrder]);
 
   // PERFORMANCE: Virtual scrolling for large lists
@@ -131,9 +114,15 @@ export function TracksPage() {
       // Create context from ALL sorted tracks (not just visible ones)
       const mediaSources = sortedTracks.map((t) => ({
         id: t.id,
-        url: t.path,
-        mimeType: t.mimeType,
-        metadata: t.metadata,
+        url: buildStreamingUrl(t.serverId!, t.filePath!),
+        mimeType: "audio/mpeg", // TODO: Get from track format
+        metadata: {
+          title: t.title,
+          artist: t.artist,
+          album: t.album,
+          duration: t.duration,
+          coverArt: t.coverArt,
+        },
       }));
 
       // Play from context with all tracks, starting at clicked track
@@ -158,9 +147,15 @@ export function TracksPage() {
     try {
       const mediaSources = sortedTracks.map((t) => ({
         id: t.id,
-        url: t.path,
-        mimeType: t.mimeType,
-        metadata: t.metadata,
+        url: buildStreamingUrl(t.serverId!, t.filePath!),
+        mimeType: "audio/mpeg",
+        metadata: {
+          title: t.title,
+          artist: t.artist,
+          album: t.album,
+          duration: t.duration,
+          coverArt: t.coverArt,
+        },
       }));
       await playAll(mediaSources);
     } catch (error) {
@@ -172,9 +167,15 @@ export function TracksPage() {
     try {
       const mediaSources = sortedTracks.map((t) => ({
         id: t.id,
-        url: t.path,
-        mimeType: t.mimeType,
-        metadata: t.metadata,
+        url: buildStreamingUrl(t.serverId!, t.filePath!),
+        mimeType: "audio/mpeg",
+        metadata: {
+          title: t.title,
+          artist: t.artist,
+          album: t.album,
+          duration: t.duration,
+          coverArt: t.coverArt,
+        },
       }));
       await playAllShuffled(mediaSources);
     } catch (error) {
@@ -392,12 +393,10 @@ export function TracksPage() {
             items={sortedTracks.map((t) => ({
               name:
                 sortField === "title"
-                  ? t.metadata?.title || t.filename
+                  ? t.title
                   : sortField === "artist"
-                  ? (Array.isArray(t.metadata?.artist)
-                      ? t.metadata.artist[0]
-                      : t.metadata?.artist) || "Unknown Artist"
-                  : t.metadata?.album || "Unknown Album",
+                  ? t.artist
+                  : t.album,
             }))}
             onLetterClick={handleLetterClick}
           />

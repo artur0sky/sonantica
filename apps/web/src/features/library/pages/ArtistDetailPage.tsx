@@ -17,13 +17,19 @@ import { ArtistCard } from "../components/ArtistCard";
 export function ArtistDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
-  const { getArtistById } = useLibraryStore();
+  const { getArtistById, albums } = useLibraryStore();
 
   const artist = useMemo(
     () => (id ? getArtistById(id) : null) ?? null,
     [id, getArtistById]
   );
-  
+
+  // Get albums for this artist from library
+  const artistAlbums = useMemo(
+    () => (artist ? albums.filter((a) => a.artist === artist.name) : []),
+    [artist, albums]
+  );
+
   // Get similar artists
   const similarArtists = useArtistSimilarArtists(artist, {
     limit: 5,
@@ -66,10 +72,10 @@ export function ArtistDetailPage() {
           className="w-32 h-32 md:w-48 md:h-48 flex-shrink-0 rounded-full overflow-hidden bg-surface-elevated shadow-xl border border-border flex items-center justify-center"
         >
           {/* Artists usually don't have images yet in our system, so use an icon or the first album art */}
-          {artist.albums[0]?.coverArt ? (
+          {artistAlbums[0]?.coverArt ? (
             <div className="relative w-full h-full">
               <img
-                src={artist.albums[0].coverArt}
+                src={artistAlbums[0].coverArt}
                 alt={artist.name}
                 className="w-full h-full object-cover blur-sm opacity-50"
               />
@@ -95,9 +101,9 @@ export function ArtistDetailPage() {
               {artist.name}
             </h1>
             <p className="text-lg text-text-muted">
-              {artist.albums.length} album
-              {artist.albums.length !== 1 ? "s" : ""} • {artist.trackCount}{" "}
-              track{artist.trackCount !== 1 ? "s" : ""}
+              {artistAlbums.length} album
+              {artistAlbums.length !== 1 ? "s" : ""} • {artist.trackCount} track
+              {artist.trackCount !== 1 ? "s" : ""}
             </p>
           </motion.div>
         </div>
@@ -106,7 +112,7 @@ export function ArtistDetailPage() {
       {/* Albums Section */}
       <h2 className="text-2xl font-bold mb-6">Albums</h2>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-        {artist.albums.map((album) => (
+        {artistAlbums.map((album) => (
           <AlbumCard
             key={album.id}
             album={album}
@@ -118,7 +124,9 @@ export function ArtistDetailPage() {
       {/* Similar Artists Section */}
       {similarArtists.length > 0 && (
         <div className="mt-12 pt-12 border-t border-border">
-          <h2 className="text-xl font-bold mb-6 text-text-muted">Similar Artists</h2>
+          <h2 className="text-xl font-bold mb-6 text-text-muted">
+            Similar Artists
+          </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
             {similarArtists.map((rec) => (
               <ArtistCard

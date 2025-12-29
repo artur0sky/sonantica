@@ -14,7 +14,7 @@ import {
 import { motion } from "framer-motion";
 import { cn } from "@sonantica/shared";
 import { usePlayerStore, useQueueStore } from "@sonantica/player-core";
-import { useLibraryStore } from "@sonantica/media-library";
+// useLibraryStore removed
 import { PlaybackState, formatArtists, formatTime } from "@sonantica/shared";
 import { useEffect } from "react";
 import { ContextMenu, useContextMenu, LazyAlbumArt, type ContextMenuItem } from "@sonantica/ui";
@@ -28,9 +28,9 @@ export function TrackItem({ track, onClick }: TrackItemProps) {
   const { currentTrack, state } = usePlayerStore();
   const { addToQueue, playNext } = useQueueStore();
 
-  const isCurrentTrack = currentTrack?.id === track.id;
-  const isPlaying = isCurrentTrack && state === PlaybackState.PLAYING;
-  const hydrateTrack = useLibraryStore((s) => s.hydrateTrack);
+  const iscurrentTrack = currentTrack?.id === track.id;
+  const isPlaying = iscurrentTrack && state === PlaybackState.PLAYING;
+  // hydrateTrack removed - no longer needed
 
   // Context menu state
   const contextMenu = useContextMenu();
@@ -68,13 +68,13 @@ export function TrackItem({ track, onClick }: TrackItemProps) {
 
   // Lazy hydration on appearance
   useEffect(() => {
-    if (!track.metadata?.coverArt) {
+    if (!track.coverArt) {
       const timer = setTimeout(() => {
-        hydrateTrack(track.id);
+        // Auto-hydration removed
       }, 1000); // 1s delay for list items to avoid overhead during scroll
       return () => clearTimeout(timer);
     }
-  }, [track.id, track.metadata?.coverArt, hydrateTrack]);
+  }, [track.id, track.coverArt]);
 
   return (
     <>
@@ -97,7 +97,7 @@ export function TrackItem({ track, onClick }: TrackItemProps) {
         onMouseLeave={contextMenu.handleLongPressEnd}
         className={cn(
           "flex items-center gap-4 p-3 rounded-lg cursor-pointer transition-colors group border border-transparent",
-          isCurrentTrack
+          iscurrentTrack
             ? "bg-surface-elevated border-accent/20"
             : "hover:bg-surface-elevated/50"
         )}
@@ -106,7 +106,7 @@ export function TrackItem({ track, onClick }: TrackItemProps) {
       <div className="w-12 h-12 flex-shrink-0 relative rounded-md overflow-hidden bg-surface-elevated border border-border">
         {/* PERFORMANCE: Lazy-loaded album art with LRU cache */}
         <LazyAlbumArt
-          src={track.metadata?.coverArt}
+          src={track.coverArt}
           alt="Album Art"
           className="w-full h-full rounded-md"
           iconSize={20}
@@ -134,7 +134,7 @@ export function TrackItem({ track, onClick }: TrackItemProps) {
         </div>
 
         {/* Current Track Indicator */}
-        {isCurrentTrack && (
+        {iscurrentTrack && (
           <div className="absolute bottom-0 left-0 right-0 h-1 bg-accent" />
         )}
       </div>
@@ -144,26 +144,26 @@ export function TrackItem({ track, onClick }: TrackItemProps) {
         <div
           className={cn(
             "font-medium truncate transition-colors",
-            isCurrentTrack ? "text-accent" : "text-text"
+            iscurrentTrack ? "text-accent" : "text-text"
           )}
         >
-          {track.metadata?.title || track.filename}
+          {track.title || track.filename}
         </div>
         <div className="text-sm text-text-muted truncate flex items-center gap-2">
-          <span>{formatArtists(track.metadata?.artist)}</span>
-          {track.metadata?.album && (
+          <span>{formatArtists(track.artist)}</span>
+          {track.album && (
             <>
               <span className="opacity-40">•</span>
-              <span className="opacity-80">{track.metadata.album}</span>
+              <span className="opacity-80">{track.album}</span>
             </>
           )}
         </div>
       </div>
 
       {/* Duration (if available) - Optional */}
-      {track.metadata?.duration && (
+      {track.duration && (
         <div className="text-sm text-text-muted font-mono variant-numeric-tabular">
-          {formatTime(track.metadata.duration)}
+          {formatTime(track.duration)}
         </div>
       )}
     </motion.div>
