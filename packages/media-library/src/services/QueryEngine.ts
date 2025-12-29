@@ -89,23 +89,9 @@ export class QueryEngine {
           const filterArtist = QuerySecurityValidator.sanitizeString(filter.artist.toLowerCase());
           
           tracks = tracks.filter(t => {
-            try {
-              const artist = t.metadata.artist;
-              if (!artist) return false;
-              
-              if (Array.isArray(artist)) {
-                return artist.some(a => {
-                  if (typeof a !== 'string') return false;
-                  return QuerySecurityValidator.sanitizeString(a.toLowerCase()).includes(filterArtist);
-                });
-              }
-              
-              if (typeof artist !== 'string') return false;
-              return QuerySecurityValidator.sanitizeString(artist.toLowerCase()).includes(filterArtist);
-            } catch (error) {
-              console.warn('Error filtering track by artist:', error);
-              return false;
-            }
+            const artist = t.artist;
+            if (!artist) return false;
+            return QuerySecurityValidator.sanitizeString(artist.toLowerCase()).includes(filterArtist);
           });
         }
 
@@ -114,14 +100,9 @@ export class QueryEngine {
           const filterAlbum = QuerySecurityValidator.sanitizeString(filter.album.toLowerCase());
           
           tracks = tracks.filter(t => {
-            try {
-              const album = t.metadata.album;
-              if (!album || typeof album !== 'string') return false;
-              return QuerySecurityValidator.sanitizeString(album.toLowerCase()).includes(filterAlbum);
-            } catch (error) {
-              console.warn('Error filtering track by album:', error);
-              return false;
-            }
+            const album = t.album;
+            if (!album) return false;
+            return QuerySecurityValidator.sanitizeString(album.toLowerCase()).includes(filterAlbum);
           });
         }
 
@@ -130,58 +111,30 @@ export class QueryEngine {
           const search = QuerySecurityValidator.sanitizeString(filter.search.toLowerCase());
           
           tracks = tracks.filter(t => {
-            try {
-              const title = t.metadata.title;
-              const album = t.metadata.album;
-              const artist = t.metadata.artist;
+            const title = t.title || '';
+            const album = t.album || '';
+            const artist = t.artist || '';
 
-              const titleMatch = title && typeof title === 'string' ? 
-                QuerySecurityValidator.sanitizeString(title.toLowerCase()).includes(search) : false;
-              
-              const albumMatch = album && typeof album === 'string' ? 
-                QuerySecurityValidator.sanitizeString(album.toLowerCase()).includes(search) : false;
-              
-              let artistMatch = false;
-              if (artist) {
-                if (Array.isArray(artist)) {
-                  artistMatch = artist.some(a => {
-                    if (typeof a !== 'string') return false;
-                    return QuerySecurityValidator.sanitizeString(a.toLowerCase()).includes(search);
-                  });
-                } else if (typeof artist === 'string') {
-                  artistMatch = QuerySecurityValidator.sanitizeString(artist.toLowerCase()).includes(search);
-                }
-              }
-              
-              return titleMatch || artistMatch || albumMatch;
-            } catch (error) {
-              console.warn('Error searching track:', error);
-              return false;
-            }
+            return (
+              QuerySecurityValidator.sanitizeString(title.toLowerCase()).includes(search) ||
+              QuerySecurityValidator.sanitizeString(artist.toLowerCase()).includes(search) ||
+              QuerySecurityValidator.sanitizeString(album.toLowerCase()).includes(search)
+            );
           });
         }
       }
 
       // Sort by artist, album, track number
       return tracks.sort((a, b) => {
-        try {
-          const artistA = this.getPrimaryArtist(a.metadata.artist);
-          const artistB = this.getPrimaryArtist(b.metadata.artist);
-          const artistCompare = artistA.localeCompare(artistB);
-          if (artistCompare !== 0) return artistCompare;
+        const artistCompare = (a.artist || '').localeCompare(b.artist || '');
+        if (artistCompare !== 0) return artistCompare;
 
-          const albumA = a.metadata.album || '';
-          const albumB = b.metadata.album || '';
-          const albumCompare = albumA.localeCompare(albumB);
-          if (albumCompare !== 0) return albumCompare;
+        const albumCompare = (a.album || '').localeCompare(b.album || '');
+        if (albumCompare !== 0) return albumCompare;
 
-          const trackA = typeof a.metadata.trackNumber === 'number' ? a.metadata.trackNumber : 0;
-          const trackB = typeof b.metadata.trackNumber === 'number' ? b.metadata.trackNumber : 0;
-          return trackA - trackB;
-        } catch (error) {
-          console.warn('Error sorting tracks:', error);
-          return 0;
-        }
+        const trackA = a.trackNumber || 0;
+        const trackB = b.trackNumber || 0;
+        return trackA - trackB;
       });
     } catch (error) {
       console.error('Error getting tracks:', error);
@@ -206,64 +159,50 @@ export class QueryEngine {
       const albumsMap = new Map<string, Album>();
 
       for (const track of tracksMap.values()) {
-        try {
-          // Get primary artist (first artist if multiple, or albumArtist if available)
-          const albumArtist = track.metadata.albumArtist;
-          const primaryArtist = (albumArtist && typeof albumArtist === 'string') ? 
-            albumArtist : 
-            this.getPrimaryArtist(track.metadata.artist);
-          
-          const albumName = (track.metadata.album && typeof track.metadata.album === 'string') ? 
-            track.metadata.album : 
-            'Unknown Album';
-          
-          // Use consistent key format: "Artist - Album"
-          const albumKey = `${primaryArtist} - ${albumName}`;
-          const albumId = generateStableId(albumKey);
+        const primaryArtist = track.albumArtist || track.artist || 'Unknown Artist';
+        const albumTitle = track.album || 'Unknown Album';
+        
+        // Use consistent key format: "Artist - Album"
+        const albumKey = `${primaryArtist} - ${albumTitle}`;
+        const albumId = generateStableId(albumKey);
 
-          if (!albumsMap.has(albumId)) {
-            const coverArt = track.metadata.coverArt;
-            const year = typeof track.metadata.year === 'number' ? track.metadata.year : undefined;
-            
-            albumsMap.set(albumId, {
-              id: albumId,
-              name: albumName,
-              artist: primaryArtist,
-              artistId: generateStableId(primaryArtist),
-              year,
-              coverArt,
-              tracks: [],
-            });
-          }
+        if (!albumsMap.has(albumId)) {
+          albumsMap.set(albumId, {
+            id: albumId,
+            title: albumTitle,
+            artist: primaryArtist,
+            year: track.year,
+            coverArt: track.coverArt,
+            trackCount: 0,
+            tracks: [], // Internal use for enrichment
+          } as any);
+        }
 
-          const album = albumsMap.get(albumId)!;
-          album.tracks.push(track);
-          
-          // Update cover art if this track has one and album doesn't
-          if (!album.coverArt && track.metadata.coverArt) {
-            album.coverArt = track.metadata.coverArt;
-          }
-        } catch (trackError) {
-          console.warn('Error processing track for album:', trackError);
-          // Continue with next track
+        const album = albumsMap.get(albumId)!;
+        (album as any).tracks.push(track);
+        album.trackCount++;
+        
+        // Update cover art if this track has one and album doesn't
+        if (!album.coverArt && track.coverArt) {
+          album.coverArt = track.coverArt;
+        }
+        
+        // Update year if missing
+        if (!album.year && track.year) {
+          album.year = track.year;
         }
       }
 
-      // Sort tracks within each album by track number
+      // Final processing: sort tracks and calculate duration
       for (const album of albumsMap.values()) {
-        try {
-          album.tracks.sort((a, b) => {
-            const trackA = typeof a.metadata.trackNumber === 'number' ? a.metadata.trackNumber : 0;
-            const trackB = typeof b.metadata.trackNumber === 'number' ? b.metadata.trackNumber : 0;
-            return trackA - trackB;
-          });
-        } catch (sortError) {
-          console.warn('Error sorting album tracks:', sortError);
-        }
+        const tracks = (album as any).tracks as Track[];
+        tracks.sort((a, b) => (a.trackNumber || 0) - (b.trackNumber || 0));
+        
+        album.totalDuration = tracks.reduce((sum, t) => sum + (t.duration || 0), 0);
       }
 
       return Array.from(albumsMap.values()).sort((a, b) =>
-        a.name.localeCompare(b.name)
+        a.title.localeCompare(b.title)
       );
     } catch (error) {
       console.error('Error getting albums:', error);
@@ -290,94 +229,39 @@ export class QueryEngine {
 
       // First pass: collect all albums for each artist
       for (const track of tracksMap.values()) {
-        try {
-          const artists = this.normalizeArtists(track.metadata.artist);
-          
-          for (const artistName of artists) {
-            if (typeof artistName !== 'string') continue;
-            
-            const artistId = generateStableId(artistName);
+        const artistName = track.artist || 'Unknown Artist';
+        const artistId = generateStableId(artistName);
 
-            if (!artistsMap.has(artistId)) {
-              artistsMap.set(artistId, {
-                id: artistId,
-                name: artistName,
-                albums: [],
-                trackCount: 0,
-              });
-              artistAlbumsMap.set(artistId, new Map());
-            }
+        if (!artistsMap.has(artistId)) {
+          artistsMap.set(artistId, {
+            id: artistId,
+            name: artistName,
+            trackCount: 0,
+            albumCount: 0,
+            imageUrl: track.coverArt, // Use first found cover art as representative
+          });
+        }
 
-            const albumName = (track.metadata.album && typeof track.metadata.album === 'string') ? 
-              track.metadata.album : 
-              'Unknown Album';
-            
-            // For sub-filtering in artists, we still want the GLOBAL album ID 
-            // to be based on the Primary Artist to ensure consistency across the app.
-            const albumArtist = track.metadata.albumArtist;
-            const albumPrimaryArtist = (albumArtist && typeof albumArtist === 'string') ? 
-              albumArtist : 
-              this.getPrimaryArtist(track.metadata.artist);
-            
-            const globalAlbumKey = `${albumPrimaryArtist} - ${albumName}`;
-            const albumId = generateStableId(globalAlbumKey);
-            const albumsForArtist = artistAlbumsMap.get(artistId)!;
-
-            if (!albumsForArtist.has(albumId)) {
-              const year = typeof track.metadata.year === 'number' ? track.metadata.year : undefined;
-              
-              albumsForArtist.set(albumId, {
-                id: albumId,
-                name: albumName,
-                artist: artistName,
-                artistId: artistId,
-                year,
-                coverArt: track.metadata.coverArt,
-                tracks: [],
-              });
-            }
-
-            const album = albumsForArtist.get(albumId)!;
-            album.tracks.push(track);
-            
-            // Update cover art if this track has one and album doesn't
-            if (!album.coverArt && track.metadata.coverArt) {
-              album.coverArt = track.metadata.coverArt;
-            }
-          }
-        } catch (trackError) {
-          console.warn('Error processing track for artist:', trackError);
-          // Continue with next track
+        const artist = artistsMap.get(artistId)!;
+        artist.trackCount++;
+        
+        // Track unique albums for albumCount
+        if (!artistAlbumsMap.has(artistId)) {
+          artistAlbumsMap.set(artistId, new Map());
+        }
+        
+        const albumsSet = artistAlbumsMap.get(artistId)!;
+        const albumKey = `${artistName} - ${track.album || 'Unknown Album'}`;
+        const albumId = generateStableId(albumKey);
+        
+        if (!albumsSet.has(albumId)) {
+          albumsSet.set(albumId, {} as any);
         }
       }
 
-      // Second pass: populate artists with their albums
-      for (const [artistName, artist] of artistsMap.entries()) {
-        try {
-          const albumsForArtist = artistAlbumsMap.get(artistName)!;
-          artist.albums = Array.from(albumsForArtist.values());
-          
-          // Sort tracks within each album
-          for (const album of artist.albums) {
-            try {
-              album.tracks.sort((a, b) => {
-                const trackA = typeof a.metadata.trackNumber === 'number' ? a.metadata.trackNumber : 0;
-                const trackB = typeof b.metadata.trackNumber === 'number' ? b.metadata.trackNumber : 0;
-                return trackA - trackB;
-              });
-            } catch (sortError) {
-              console.warn('Error sorting tracks in album:', sortError);
-            }
-          }
-          
-          // Sort albums by name
-          artist.albums.sort((a, b) => a.name.localeCompare(b.name));
-          
-          // Calculate total track count
-          artist.trackCount = artist.albums.reduce((sum, album) => sum + album.tracks.length, 0);
-        } catch (artistError) {
-          console.warn('Error processing artist:', artistError);
-        }
+      // Populate album counts
+      for (const [artistId, artist] of artistsMap.entries()) {
+        artist.albumCount = artistAlbumsMap.get(artistId)?.size || 0;
       }
 
       return Array.from(artistsMap.values()).sort((a, b) =>
@@ -406,26 +290,20 @@ export class QueryEngine {
       const genresMap = new Map<string, Genre>();
 
       for (const track of tracksMap.values()) {
-        try {
-          const genres = this.normalizeGenres(track.metadata.genre);
-          
-          for (const genreName of genres) {
-            if (typeof genreName !== 'string') continue;
-            
-            if (!genresMap.has(genreName)) {
-              genresMap.set(genreName, {
-                id: generateId(),
-                name: genreName,
-                trackCount: 0,
-              });
-            }
-
-            const genre = genresMap.get(genreName)!;
-            genre.trackCount++;
+        const genreField = track.genre || '';
+        const genres = genreField.split(',').map(g => g.trim()).filter(Boolean);
+        
+        for (const genreName of genres) {
+          if (!genresMap.has(genreName)) {
+            genresMap.set(genreName, {
+              id: generateStableId(genreName),
+              name: genreName,
+              trackCount: 0,
+            });
           }
-        } catch (trackError) {
-          console.warn('Error processing track for genre:', trackError);
-          // Continue with next track
+
+          const genre = genresMap.get(genreName)!;
+          genre.trackCount++;
         }
       }
 

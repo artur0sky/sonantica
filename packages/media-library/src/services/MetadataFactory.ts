@@ -70,6 +70,7 @@ export class MetadataFactory {
       const metadataModule = await import('@sonantica/metadata').catch(() => null);
       
       if (metadataModule) {
+        // @ts-ignore - MetadataExtractor update might not be picked up by TS yet
         const extractedMetadata = await metadataModule.extractMetadata(path, {
           maxFileSize: options.maxFileSize,
           coverArtSizeLimit: options.coverArtSizeLimit
