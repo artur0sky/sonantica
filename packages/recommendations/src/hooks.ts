@@ -58,7 +58,8 @@ export function useAlbumRecommendations(
     if (!track) return [];
 
     const engine = new RecommendationEngine();
-    return engine.getAlbumRecommendations(track, albums, options);
+    const tracks = useLibraryStore.getState().tracks;
+    return engine.getAlbumRecommendations(track, albums, tracks, options);
   }, [track, albums, options]);
 }
 
@@ -75,7 +76,8 @@ export function useArtistRecommendations(
     if (!track) return [];
 
     const engine = new RecommendationEngine();
-    return engine.getArtistRecommendations(track, artists, options);
+    const tracks = useLibraryStore.getState().tracks;
+    return engine.getArtistRecommendations(track, artists, tracks, options);
   }, [track, artists, options]);
 }
 
@@ -90,13 +92,15 @@ export function useAlbumSimilarAlbums(
   const tracks = useLibraryStore((s) => s.tracks);
 
   return useMemo(() => {
-    if (!album || album.tracks.length === 0) return [];
+    // Get tracks for this album from library
+    const albumTracks = tracks.filter(t => t.album === album?.title && t.artist === album?.artist);
+    if (!album || albumTracks.length === 0) return [];
 
     const engine = new RecommendationEngine();
     
     // Use first track as reference
-    const referenceTrack = album.tracks[0];
-    return engine.getAlbumRecommendations(referenceTrack, albums, options);
+    const referenceTrack = albumTracks[0];
+    return engine.getAlbumRecommendations(referenceTrack, albums, tracks, options);
   }, [album, albums, tracks, options]);
 }
 
@@ -111,15 +115,17 @@ export function useArtistSimilarArtists(
   const tracks = useLibraryStore((s) => s.tracks);
 
   return useMemo(() => {
-    if (!artist || artist.albums.length === 0) return [];
+    // Get tracks for this artist from library
+    const artistTracks = tracks.filter(t => t.artist === artist?.name);
+    if (!artist || artistTracks.length === 0) return [];
 
     const engine = new RecommendationEngine();
     
-    // Use first track from first album as reference
-    const referenceTrack = artist.albums[0].tracks[0];
+    // Use first track as reference
+    const referenceTrack = artistTracks[0];
     if (!referenceTrack) return [];
 
-    return engine.getArtistRecommendations(referenceTrack, artists, options);
+    return engine.getArtistRecommendations(referenceTrack, artists, tracks, options);
   }, [artist, artists, tracks, options]);
 }
 

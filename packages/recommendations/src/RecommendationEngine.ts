@@ -243,18 +243,19 @@ export class MetadataRecommendationStrategy implements IRecommendationStrategy {
             return context.track ? [context.track] : [];
 
         case 'album':
-            return context.album?.tracks || [];
+            // Get tracks from library that match this album
+            return library.filter(t => t.album === context.album?.title && t.artist === context.album?.artist).slice(0, 20);
 
         case 'artist':
-            // Flattening albums->tracks could be large. Limit this.
-            return context.artist?.albums?.flatMap(album => album.tracks).slice(0, 20) || [];
+            // Get tracks from library that match this artist
+            return library.filter(t => t.artist === context.artist?.name).slice(0, 20);
 
         case 'genre':
             if (!context.genre) return [];
             return library.filter(track => {
-            const genres = Array.isArray(track.metadata?.genre)
-                ? track.metadata.genre
-                : track.metadata?.genre ? [track.metadata.genre] : [];
+            const genres = Array.isArray(track.genre)
+                ? track.genre
+                : track.genre ? [track.genre] : [];
             return genres.some(g => 
                 typeof g === 'string' && g.toLowerCase().includes(context.genre.toLowerCase())
             );
@@ -263,7 +264,7 @@ export class MetadataRecommendationStrategy implements IRecommendationStrategy {
 
         case 'year':
             if (typeof context.year !== 'number') return [];
-            return library.filter(track => track.metadata?.year === context.year).slice(0, 50);
+            return library.filter(track => track.year === context.year).slice(0, 50);
 
         case 'multi-track':
             return context.tracks?.slice(0, 20) || [];
@@ -386,9 +387,7 @@ export class RecommendationEngine {
   /**
    * Get album recommendations based on a track
    */
-  getAlbumRecommendations(
-    track: Track,
-    albums: Album[],
+  getAlbumRecommendations(track: Track, albums: Album[], library: Track[],
     options?: RecommendationOptions
   ): AlbumRecommendation[] {
     if (!track || !albums || !Array.isArray(albums)) return [];
@@ -406,17 +405,17 @@ export class RecommendationEngine {
              if (Date.now() - startTime > REC_TIME_LIMIT_MS) break;
 
             // Skip if it's the same album
-            if (album.name === track.metadata?.album) continue;
+            if (album.title === track.album) continue;
 
             // Calculate simple similarity
-            // Optimization: compare track to first 3 tracks of album instead of all
-            const sampleTracks = album.tracks.slice(0, 3);
+            // Get sample tracks from library for this album
+            const sampleTracks = library.filter((t: Track) => t.album === album.title && t.artist === album.artist).slice(0, 3);
             if (sampleTracks.length === 0) continue;
 
-            const similarities = sampleTracks.map(albumTrack =>
+            const similarities = sampleTracks.map((albumTrack: Track) =>
                 this.strategy.calculateSimilarity(track, albumTrack)
             );
-            const avgScore = similarities.reduce((a, b) => a + b, 0) / similarities.length;
+            const avgScore = similarities.reduce((a: number, b: number) => a + b, 0) / similarities.length;
 
             if (avgScore >= minScore) {
                 scored.push({ album, score: avgScore });
@@ -433,7 +432,7 @@ export class RecommendationEngine {
             {
             type: 'artist',
             weight: score,
-            description: `Similar to ${track.metadata?.title || 'current track'}`,
+            description: `Similar to ${track.title || 'current track'}`,
             },
         ],
         }));
@@ -446,9 +445,7 @@ export class RecommendationEngine {
   /**
    * Get artist recommendations based on a track
    */
-  getArtistRecommendations(
-    track: Track,
-    artists: Artist[],
+  getArtistRecommendations(track: Track, artists: Artist[], library: Track[],
     options?: RecommendationOptions
   ): ArtistRecommendation[] {
      if (!track || !artists || !Array.isArray(artists)) return [];
@@ -464,9 +461,9 @@ export class RecommendationEngine {
              if (Date.now() - startTime > REC_TIME_LIMIT_MS) break;
 
             // Skip if it's the same artist
-            const trackArtists = Array.isArray(track.metadata?.artist)
-                ? track.metadata.artist
-                : track.metadata?.artist ? [track.metadata.artist] : [];
+            const trackArtists = Array.isArray(track.artist)
+                ? track.artist
+                : track.artist ? [track.artist] : [];
             
             // Safe string comparison
             if (trackArtists.some(a => typeof a === 'string' && a.toLowerCase() === artist.name.toLowerCase())) {
@@ -475,7 +472,7 @@ export class RecommendationEngine {
 
             // Calculate average similarity
             // Optimize: Sample max 5 tracks from artist to judge fit
-            const artistTracks = artist.albums.flatMap(album => album.tracks).slice(0, 5);
+            const artistTracks = library.filter((t: Track) => t.artist === artist.name).slice(0, 5);
             if (artistTracks.length === 0) continue;
 
             const similarities = artistTracks.map(artistTrack =>
@@ -498,7 +495,7 @@ export class RecommendationEngine {
             {
             type: 'artist',
             weight: score,
-            description: `Similar style to ${track.metadata?.artist || 'current artist'}`,
+            description: `Similar style to ${track.artist || 'current artist'}`,
             },
         ],
         }));
@@ -548,3 +545,4 @@ export class RecommendationEngine {
     this.strategy = strategy;
   }
 }
+
