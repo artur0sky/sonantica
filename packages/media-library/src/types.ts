@@ -5,13 +5,36 @@
  * Following architecture principle: packages use shared types.
  */
 
-// Re-export all library types from shared
-export type {
-  Track,
+import {
+  Track as SharedTrack,
   Artist,
   Album,
   AudioFormat,
 } from '@sonantica/shared';
+
+export type { Artist, Album, AudioFormat };
+
+export interface Track extends SharedTrack {
+  filename?: string;
+  path?: string; // Legacy/Internal path
+  size?: number;
+  lastModified?: Date;
+  mimeType?: string;
+  // Keep metadata property for now to avoid massive refactor if other components rely on it,
+  // but mark it as optional or try to move away from it.
+  // Actually MetadataFactory constructs it.
+  metadata?: {
+    title?: string;
+    artist?: string | string[];
+    album?: string;
+    year?: number;
+    trackNumber?: number;
+    coverArt?: string;
+    genre?: string | string[];
+    albumArtist?: string;
+    duration?: number;
+  };
+}
 
 /**
  * Represents a genre

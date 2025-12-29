@@ -153,12 +153,14 @@ export class LibraryScanner {
    * @param scannedPaths - Set to track scanned paths
    * @param callbacks - Callbacks for scan events
    * @param parallel - Whether to scan paths in parallel (default: false)
+   * @param options - Scan options
    */
   async scanPaths(
     paths: string[], 
     scannedPaths: Set<string>, 
     callbacks: ScannerCallbacks,
-    parallel: boolean = false
+    parallel: boolean = false,
+    options: { scanFileSizeLimit?: number; coverArtSizeLimit?: number } = {}
   ): Promise<void> {
     try {
       // Validate input
@@ -177,10 +179,10 @@ export class LibraryScanner {
 
       if (parallel) {
         console.log(`🚀 Parallel scan mode: ${paths.length} paths with max 3 concurrent`);
-        await this.scanPathsParallel(paths, scannedPaths, callbacks);
+        await this.scanPathsParallel(paths, scannedPaths, callbacks, options);
       } else {
         console.log(`📂 Sequential scan mode: ${paths.length} paths`);
-        await this.scanPathsSequential(paths, scannedPaths, callbacks);
+        await this.scanPathsSequential(paths, scannedPaths, callbacks, options);
       }
     } catch (error) {
       console.error('Scan paths failed:', error);
@@ -195,7 +197,8 @@ export class LibraryScanner {
   private async scanPathsSequential(
     paths: string[], 
     scannedPaths: Set<string>, 
-    callbacks: ScannerCallbacks
+    callbacks: ScannerCallbacks,
+    options: { scanFileSizeLimit?: number; coverArtSizeLimit?: number } = {}
   ): Promise<void> {
     for (const path of paths) {
       if (callbacks.shouldCancel()) {
@@ -206,7 +209,7 @@ export class LibraryScanner {
       try {
         LibraryScannerSecurityValidator.validatePath(path);
         this.recursionDepth = 0; // Reset depth for each root path
-        await this.scanPathRecursive(path, scannedPaths, callbacks);
+        await this.scanPathRecursive(path, scannedPaths, callbacks, options);
       } catch (error) {
         console.error(`Failed to scan path ${path}:`, error);
         // Continue with next path
@@ -221,7 +224,8 @@ export class LibraryScanner {
   private async scanPathsParallel(
     paths: string[], 
     scannedPaths: Set<string>, 
-    callbacks: ScannerCallbacks
+    callbacks: ScannerCallbacks,
+    options: { scanFileSizeLimit?: number; coverArtSizeLimit?: number } = {}
   ): Promise<void> {
     const MAX_CONCURRENT = 3; // Limit concurrent scans to prevent resource exhaustion
     const results: Promise<void>[] = [];
@@ -242,7 +246,7 @@ export class LibraryScanner {
         try {
           LibraryScannerSecurityValidator.validatePath(path);
           this.recursionDepth = 0; // Reset depth for each root path
-          await this.scanPathRecursive(path, scannedPaths, callbacks);
+          await this.scanPathRecursive(path, scannedPaths, callbacks, options);
         } catch (error) {
           console.error(`Failed to scan path ${path}:`, error);
           // Continue with next path
@@ -261,7 +265,8 @@ export class LibraryScanner {
   private async scanPathRecursive(
     path: string, 
     scannedPaths: Set<string>, 
-    callbacks: ScannerCallbacks
+    callbacks: ScannerCallbacks,
+    options: { scanFileSizeLimit?: number; coverArtSizeLimit?: number } = {}
   ): Promise<void> {
     const abortController = new AbortController();
     const timeoutId = setTimeout(() => abortController.abort(), FETCH_TIMEOUT_MS);
@@ -296,12 +301,12 @@ export class LibraryScanner {
           throw new Error('Invalid JSON response: Expected array');
         }
 
-        await this.processFileListRecursive(files, path, scannedPaths, callbacks);
+        await this.processFileListRecursive(files, path, scannedPaths, callbacks, options);
       } else {
         // Fallback: try to parse HTML directory listing
         const html = await response.text();
         LibraryScannerSecurityValidator.validateHtmlSize(html);
-        await this.parseHtmlListingRecursive(html, path, scannedPaths, callbacks);
+        await this.parseHtmlListingRecursive(html, path, scannedPaths, callbacks, options);
       }
     } catch (error) {
       clearTimeout(timeoutId);
@@ -328,7 +333,8 @@ export class LibraryScanner {
     files: any[],
     basePath: string,
     scannedPaths: Set<string>,
-    callbacks: ScannerCallbacks
+    callbacks: ScannerCallbacks,
+    options: { scanFileSizeLimit?: number; coverArtSizeLimit?: number } = {}
   ): Promise<void> {
     try {
       // Validate file list size
@@ -368,6 +374,14 @@ export class LibraryScanner {
             // Use factory for mime type check
             const mimeType = this.metadataFactory.getMimeType(ext || '');
             if (mimeType && isSupportedFormat(mimeType)) {
+              // Check file size limit BEFORE adding to scanned paths or processing
+              const fileSize = typeof file.size === 'number' && file.size >= 0 ? file.size : 0;
+
+              if (options.scanFileSizeLimit && options.scanFileSizeLimit > 0 && fileSize > options.scanFileSizeLimit) {
+                  console.warn(`⚠️ Skipping ${filename} (size ${fileSize} > limit ${options.scanFileSizeLimit})`);
+                  continue;
+              }
+
               scannedPaths.add(fullPath);
 
               // Check if track already exists
@@ -378,12 +392,14 @@ export class LibraryScanner {
               const trackModifiedTime = existingTrack?.lastModified ? new Date(existingTrack.lastModified).getTime() : 0;
               
               // Validate file size
-              const fileSize = typeof file.size === 'number' && file.size >= 0 ? file.size : 0;
               const sizeChanged = existingTrack && existingTrack.size !== fileSize;
               
               if (!existingTrack || (fileModifiedTime > trackModifiedTime && fileModifiedTime > 0) || sizeChanged) {
                 // New or modified track - add it
-                const track = await this.metadataFactory.createTrack(basePath, filename, fileSize, file.mtime);
+                const track = await this.metadataFactory.createTrack(basePath, filename, fileSize, file.mtime, {
+                    maxFileSize: options.scanFileSizeLimit,
+                    coverArtSizeLimit: options.coverArtSizeLimit
+                });
                 callbacks.onTrackFound(track);
               } else {
                 // Track exists and is unchanged
@@ -407,7 +423,7 @@ export class LibraryScanner {
             LibraryScannerSecurityValidator.validateFilename(dirname);
 
             // Recursively scan subdirectories
-            await this.scanPathRecursive(`${basePath}${dirname}/`, scannedPaths, callbacks);
+            await this.scanPathRecursive(`${basePath}${dirname}/`, scannedPaths, callbacks, options);
           } catch (dirError) {
             console.warn(`Error processing directory ${file.name}:`, dirError);
             // Continue with next directory
@@ -426,11 +442,16 @@ export class LibraryScanner {
    * Parse HTML directory listing (fallback, recursive)
    * @private
    */
+  /**
+   * Parse HTML directory listing (fallback, recursive)
+   * @private
+   */
   private async parseHtmlListingRecursive(
     html: string,
     basePath: string,
     scannedPaths: Set<string>,
-    callbacks: ScannerCallbacks
+    callbacks: ScannerCallbacks,
+    options: { scanFileSizeLimit?: number; coverArtSizeLimit?: number } = {}
   ): Promise<void> {
     try {
       // Use a safer regex with limits to prevent ReDoS
@@ -471,7 +492,7 @@ export class LibraryScanner {
           if (href.endsWith('/')) {
             const dirname = href.slice(0, -1);
             LibraryScannerSecurityValidator.validateFilename(dirname);
-            await this.scanPathRecursive(`${basePath}${href}`, scannedPaths, callbacks);
+            await this.scanPathRecursive(`${basePath}${href}`, scannedPaths, callbacks, options);
           } else {
             // Check if it's an audio file
             LibraryScannerSecurityValidator.validateFilename(href);
@@ -481,11 +502,21 @@ export class LibraryScanner {
 
             if (mimeType && isSupportedFormat(mimeType)) {
               const fullPath = `${basePath}${href}`;
+              
+              // Note: HTML listing doesn't provide file size usually. 
+              // We can't enforce fileSizeLimit here without HEAD request.
+              // For now, we trust or skip size check for HTML, 
+              // but createTrack will eventually fetch metadata.
+              // Metadata extraction DOES have size limit check on the buffer/response.
+              
               scannedPaths.add(fullPath);
 
               const existingTrack = callbacks.getExistingTrack(fullPath);
               if (!existingTrack) {
-                const track = await this.metadataFactory.createTrack(basePath, href, 0);
+                const track = await this.metadataFactory.createTrack(basePath, href, 0, undefined, {
+                    maxFileSize: options.scanFileSizeLimit,
+                    coverArtSizeLimit: options.coverArtSizeLimit
+                });
                 callbacks.onTrackFound(track);
               } else {
                 callbacks.onTrackUnchanged(href);

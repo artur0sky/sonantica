@@ -24,6 +24,11 @@ export interface ScanProgress {
     totalFiles?: number;
 }
 
+export interface ScanOptions {
+    scanFileSizeLimit?: number;
+    coverArtSizeLimit?: number;
+}
+
 export interface ILibraryAdapter {
     /**
      * Test connection to the library source
@@ -76,7 +81,7 @@ export interface ILibraryAdapter {
     /**
      * Request a library scan/refresh
      */
-    startScan(): Promise<void>;
+    startScan(options?: ScanOptions): Promise<void>;
 
     /**
      * Get current scan status

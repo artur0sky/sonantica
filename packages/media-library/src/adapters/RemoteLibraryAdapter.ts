@@ -8,7 +8,7 @@
  */
 
 import type { Track, Artist, Album } from '@sonantica/shared';
-import type { ILibraryAdapter, LibraryStats, ScanProgress } from '../contracts/ILibraryAdapter';
+import type { ILibraryAdapter, LibraryStats, ScanProgress, ScanOptions } from '../contracts/ILibraryAdapter';
 
 export interface RemoteLibraryConfig {
   serverUrl: string;
@@ -126,8 +126,11 @@ export class RemoteLibraryAdapter implements ILibraryAdapter {
   /**
    * Trigger library scan
    */
-  async startScan(): Promise<void> {
-    await this.fetch('/api/scan/start', { method: 'POST' });
+  async startScan(options?: ScanOptions): Promise<void> {
+    await this.fetch('/api/scan/start', { 
+      method: 'POST',
+      body: JSON.stringify(options || {})
+    });
   }
 
   /**

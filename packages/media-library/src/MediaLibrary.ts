@@ -74,7 +74,9 @@ export class MediaLibrary implements IMediaLibrary {
     this.tracksByPath.clear();
     for (const track of tracks) {
       this.tracks.set(track.id, track);
-      this.tracksByPath.set(track.path, track.id);
+      if (track.path) {
+        this.tracksByPath.set(track.path, track.id);
+      }
     }
     console.log(`📋 Library pre-populated with ${tracks.length} tracks`);
     this.emit(LIBRARY_EVENTS.LIBRARY_UPDATED, {});
@@ -83,7 +85,11 @@ export class MediaLibrary implements IMediaLibrary {
   /**
    * Scan for media files with change detection
    */
-  async scan(paths: string[], parallel: boolean = false): Promise<void> {
+  async scan(
+    paths: string[], 
+    parallel: boolean = false, 
+    options: { scanFileSizeLimit?: number; coverArtSizeLimit?: number } = {}
+  ): Promise<void> {
     if (this.currentScanPromise) {
       console.log('⏳ MediaLibrary: Scan already in progress, queuing/returning current promise');
       return this.currentScanPromise;
@@ -123,8 +129,8 @@ export class MediaLibrary implements IMediaLibrary {
           }
         };
 
-        // Pass parallel parameter to scanner
-        await this.libraryScanner.scanPaths(paths, scannedPaths, callbacks, parallel);
+        // Pass parallel parameter and options to scanner
+        await this.libraryScanner.scanPaths(paths, scannedPaths, callbacks, parallel, options);
 
         if (this.cancelScanFlag) {
           console.log('🛑 Scan cancelled by user');
@@ -166,9 +172,20 @@ export class MediaLibrary implements IMediaLibrary {
     
     for (const album of albums) {
       if (album.coverArt) {
-        for (const track of album.tracks) {
-          if (!track.metadata.coverArt) {
-            track.metadata.coverArt = album.coverArt;
+        // Cast to any to access generated tracks array
+        const tracks = (album as any).tracks as Track[];
+        if (tracks) {
+          for (const track of tracks) {
+            if (!track.metadata) {
+                track.metadata = {};
+            }
+            if (!track.metadata.coverArt) {
+              track.metadata.coverArt = album.coverArt;
+              // Also update root property
+              if (!track.coverArt) {
+                  track.coverArt = album.coverArt;
+              }
+            }
           }
         }
       }
@@ -196,7 +213,9 @@ export class MediaLibrary implements IMediaLibrary {
       const track = this.tracks.get(trackId);
       if (track) {
         this.tracks.delete(trackId);
-        this.tracksByPath.delete(track.path);
+        if (track.path) {
+          this.tracksByPath.delete(track.path);
+        }
         this.emit(LIBRARY_EVENTS.TRACK_REMOVED, { track });
         console.log(`🗑️ Removed orphaned track: ${track.filename}`);
       }
@@ -212,13 +231,15 @@ export class MediaLibrary implements IMediaLibrary {
    */
   private addTrack(track: Track): void {
     // Prevent duplicates: If this path already exists with a different ID, remove the old one first
-    const existingId = this.tracksByPath.get(track.path);
+    const existingId = track.path ? this.tracksByPath.get(track.path) : undefined;
     if (existingId && existingId !== track.id) {
       this.tracks.delete(existingId);
     }
 
     this.tracks.set(track.id, track);
-    this.tracksByPath.set(track.path, track.id);
+    if (track.path) {
+      this.tracksByPath.set(track.path, track.id);
+    }
     this.scanProgress.filesScanned++;
     this.scanProgress.filesFound++;
     this.scanProgress.currentFile = track.filename;
@@ -292,7 +313,7 @@ export class MediaLibrary implements IMediaLibrary {
       totalArtists: this.getArtists().length,
       totalAlbums: this.getAlbums().length,
       totalGenres: this.getGenres().length,
-      totalSize: Array.from(this.tracks.values()).reduce((sum, t) => sum + t.size, 0),
+      totalSize: Array.from(this.tracks.values()).reduce((sum, t) => sum + (t.size || 0), 0),
       lastScan: this.scanProgress.status === 'complete' ? new Date() : undefined,
     };
   }
@@ -345,7 +366,9 @@ export class MediaLibrary implements IMediaLibrary {
       if (typeof track.lastModified === 'string') track.lastModified = new Date(track.lastModified);
       
       this.tracks.set(track.id, track);
-      this.tracksByPath.set(track.path, track.id);
+      if (track.path) {
+        this.tracksByPath.set(track.path, track.id);
+      }
     }
     
     this.scanProgress = {

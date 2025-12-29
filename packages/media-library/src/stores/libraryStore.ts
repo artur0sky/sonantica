@@ -9,7 +9,7 @@
  */
 
 import { create } from 'zustand';
-import type { Track, Artist, Album } from '@sonantica/shared';
+import type { Track, Artist, Album } from '../types';
 
 export interface LibraryStats {
   totalTracks: number;
