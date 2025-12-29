@@ -14,3 +14,6 @@ export * from './stores/libraryStore';
 // Folder Management
 export * from './services/FolderManager';
 export type { IFolderConfigStorage, IFolderValidator } from './services/FolderManager';
+
+// Remote Adapter
+export { RemoteLibraryAdapter } from './adapters/RemoteLibraryAdapter';

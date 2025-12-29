@@ -95,6 +95,41 @@ services:
       com.sonantica.mode: "development"
 
   # ============================================
+  # API SERVER (Backend for streaming)
+  # ============================================
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+      target: production
+    container_name: sonantica-api
+    ports:
+      - "${API_PORT:-8080}:8080"
+    volumes:
+      # Media files - same as web service
+      - ${MEDIA_PATH:-./media}:/media:ro
+      - ${BUCKETS_PATH:-./buckets}:/buckets:ro
+      - F:\Music:/media:ro
+    environment:
+      - NODE_ENV=production
+      - API_PORT=8080
+      - MEDIA_PATH=/media
+      - CORS_ORIGIN=${CORS_ORIGIN:-*}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    networks:
+      - sonantica-net
+    labels:
+      com.sonantica.description: "Sonántica API Server - Music streaming backend"
+      com.sonantica.version: "0.1.0"
+      com.sonantica.mode: "production"
+
+  # ============================================
   # OPTIONAL: File Browser for Media Management
   # ============================================
   filebrowser:

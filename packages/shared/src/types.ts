@@ -101,3 +101,6 @@ export interface PlayerEvent {
 
 // Library Configuration
 export * from './types/library-config';
+
+// Library Domain (Tracks, Artists, Albums)
+export * from './types/library';

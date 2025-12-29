@@ -20,6 +20,7 @@
         "@sonantica/shared": "workspace:*"
     },
     "devDependencies": {
+        "@types/node": "^22.0.0",
         "typescript": "5.9.3",
         "tsup": "8.5.1"
     }
