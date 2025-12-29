@@ -164,7 +164,7 @@ export function ExpandedPlayer() {
           onSeek={(time) => seek(time)}
           className="mb-2 sm:mb-3 h-2 hover:h-12 sm:hover:h-16"
         />
-        <div className="flex justify-between text-xs sm:text-sm text-text-muted tabular-nums px-1 font-mono">
+        <div className="flex justify-between text-xs sm:text-sm text-text-muted tabular-nums px-1 font-sans">
           <span>{formatTime(currentTime)}</span>
           <span>{formatTime(duration)}</span>
         </div>

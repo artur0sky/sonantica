@@ -260,8 +260,6 @@ export function MiniPlayer() {
             </motion.button>
           </div>
 
-
-
           {/* Section 2: Center Playback Controls (Fixed Width) */}
           <div className="flex-none flex items-center justify-center gap-1 md:gap-2 mx-4">
             <div className="hidden lg:flex items-center">
@@ -302,11 +300,9 @@ export function MiniPlayer() {
             </div>
           </div>
 
-
-
           {/* Section 3: Right Controls (Right - Flexible) */}
           <div className="flex-1 min-w-0 basis-1/4 flex items-center justify-end gap-2 md:gap-3 px-2">
-            <div className="text-xs text-text-muted tabular-nums hidden md:flex items-center font-mono h-10">
+            <div className="text-xs text-text-muted tabular-nums hidden md:flex items-center font-sans h-10">
               {formatTime(currentTime)} / {formatTime(duration)}
             </div>
 

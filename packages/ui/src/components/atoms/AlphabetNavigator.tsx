@@ -8,6 +8,7 @@ interface AlphabetNavigatorProps {
   className?: string;
   vertical?: boolean;
   scrollContainerId?: string;
+  forceScrollOnly?: boolean;
 }
 
 const ALPHABET = "#ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
@@ -18,6 +19,7 @@ export function AlphabetNavigator({
   className,
   vertical = true,
   scrollContainerId,
+  forceScrollOnly = false,
 }: AlphabetNavigatorProps) {
   const [activeLetter, setActiveLetter] = useState<string | null>(null);
   const [isHovering, setIsHovering] = useState(false);
@@ -29,8 +31,8 @@ export function AlphabetNavigator({
   const letterIndices = useMemo(() => {
     const indices: Record<string, number> = {};
     items.forEach((item, index) => {
-      let firstChar = item.name.charAt(0).toUpperCase();
-      if (!/[A-Z]/.test(firstChar)) firstChar = "#";
+      let firstChar = item.name?.charAt(0).toUpperCase();
+      if (!firstChar || !/[A-Z]/.test(firstChar)) firstChar = "#";
 
       if (indices[firstChar] === undefined) {
         indices[firstChar] = index;
@@ -43,7 +45,7 @@ export function AlphabetNavigator({
     return ALPHABET.filter((l) => letterIndices[l] !== undefined);
   }, [letterIndices]);
 
-  // Detect scroll for mobile
+  // Detect scroll for visibility
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolling(true);
@@ -53,10 +55,10 @@ export function AlphabetNavigator({
         clearTimeout(scrollTimerRef.current);
       }
 
-      // Hide after 1.5s of no scrolling
+      // Hide after 2s of no scrolling
       scrollTimerRef.current = setTimeout(() => {
         setIsScrolling(false);
-      }, 1500);
+      }, 2000);
     };
 
     // Find the scroll container
@@ -100,13 +102,18 @@ export function AlphabetNavigator({
 
   return (
     <div
+      style={{ right: "var(--alphabet-right, 8px)" }}
       className={cn(
-        "fixed right-2 top-1/2 -translate-y-1/2 z-40 flex flex-col items-center gap-0.5 py-4 px-1 rounded-full bg-surface-elevated/20 backdrop-blur-md border border-white/5 transition-all duration-300",
-        // Mobile: show only when scrolling, Desktop: always show with hover effect
-        "md:opacity-40 md:hover:opacity-100",
-        isScrolling
-          ? "opacity-100"
-          : "opacity-0 pointer-events-none md:pointer-events-auto md:opacity-40",
+        "fixed top-1/2 -translate-y-1/2 z-40 flex flex-col items-center gap-0.5 py-4 px-1 rounded-full bg-surface-elevated/20 backdrop-blur-md border border-white/5 transition-all duration-500 ease-in-out",
+        // Desktop Persistent State (if not forced to scroll-only)
+        !forceScrollOnly &&
+          "md:opacity-40 md:hover:opacity-100 md:pointer-events-auto",
+        // Scroll/Mobile State
+        isScrolling || (isHovering && !forceScrollOnly)
+          ? "opacity-100 pointer-events-auto"
+          : "opacity-0 pointer-events-none",
+        // If not scrolling and strictly forceScrollOnly, should be hidden
+        forceScrollOnly && !isScrolling && "opacity-0 pointer-events-none",
         isHovering && "bg-surface-elevated/40",
         className
       )}
