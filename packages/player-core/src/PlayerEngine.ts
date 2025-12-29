@@ -132,6 +132,7 @@ export class PlayerEngine implements IPlayerEngine {
       
       // Initialize single audio element instance
       this.audio = new Audio();
+      this.audio.crossOrigin = 'anonymous'; // Enable CORS for Web Audio API
       
       // Attach persistent listeners
       this.attachAudioListeners();
@@ -167,6 +168,7 @@ export class PlayerEngine implements IPlayerEngine {
       if (!this.audio) {
         // Should theoretically not happen if initialized in constructor
         this.audio = new Audio();
+        this.audio.crossOrigin = 'anonymous'; // Enable CORS for Web Audio API
         this.attachAudioListeners();
       }
 
