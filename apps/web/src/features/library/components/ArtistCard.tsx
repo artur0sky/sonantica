@@ -1,11 +1,11 @@
 /**
  * Artist Card Component
- * 
+ *
  * Grid item for artist view
  */
 
-import { IconMicrophone } from '@tabler/icons-react';
-import { motion } from 'framer-motion';
+import { IconMicrophone } from "@tabler/icons-react";
+import { motion } from "framer-motion";
 
 interface ArtistCardProps {
   artist: any;
@@ -28,7 +28,7 @@ export function ArtistCard({ artist, onClick }: ArtistCardProps) {
         <div className="text-text-muted/20 group-hover:text-accent/50 transition-colors">
           <IconMicrophone size={48} stroke={1.5} />
         </div>
-        
+
         {/* Hover Overlay */}
         <div className="absolute inset-0 bg-accent/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-full" />
       </div>
@@ -39,7 +39,7 @@ export function ArtistCard({ artist, onClick }: ArtistCardProps) {
           {artist.name}
         </h3>
         <p className="text-sm text-text-muted truncate mb-2">
-          {artist.albums?.length || 0} albums • {artist.trackCount || 0} tracks
+          {artist.albumCount || 0} albums • {artist.trackCount || 0} tracks
         </p>
       </div>
     </motion.div>

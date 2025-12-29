@@ -91,14 +91,35 @@ export function useMultiServerLibrary() {
         adapter.getAlbums()
       ]);
 
-      // Tag tracks with server info
+      // Normalize and tag data
+      const baseUrl = server.serverUrl.endsWith('/') ? server.serverUrl : `${server.serverUrl}/`;
+      
+      const normalizeArt = (art?: string) => {
+        if (!art || art.startsWith('http') || art.startsWith('data:') || art.startsWith('blob:')) return art;
+        // If relative path, prefix with server base URL
+        return `${baseUrl}${art.startsWith('/') ? art.slice(1) : art}`;
+      };
+
       const taggedTracks = tracks.map(track => ({
         ...track,
         serverId: server.id,
-        serverName: server.name
+        serverName: server.name,
+        coverArt: normalizeArt(track.coverArt)
       }));
-      
-      console.log(`🏷️ Tagged ${taggedTracks.length} tracks with serverId: ${server.id}`);
+
+      const taggedArtists = artists.map(artist => ({
+        ...artist,
+        serverId: server.id,
+        imageUrl: normalizeArt(artist.imageUrl) 
+      }));
+
+      const taggedAlbums = albums.map(album => ({
+        ...album,
+        serverId: server.id,
+        coverArt: normalizeArt(album.coverArt)
+      }));
+
+      console.log(`🏷️ Tagged data from ${server.name}`);
 
       // Merge with existing data (remove old data from this server first)
       setState(prev => {
@@ -107,8 +128,8 @@ export function useMultiServerLibrary() {
         const otherAlbums = prev.albums.filter(a => (a as any).serverId !== serverId);
 
         const newTracks = [...otherTracks, ...taggedTracks];
-        const newArtists = [...otherArtists, ...artists];
-        const newAlbums = [...otherAlbums, ...albums];
+        const newArtists = [...otherArtists, ...taggedArtists];
+        const newAlbums = [...otherAlbums, ...taggedAlbums];
 
         // Sync with library store
         libraryStore.setTracks(newTracks);
