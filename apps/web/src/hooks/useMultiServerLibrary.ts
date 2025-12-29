@@ -13,9 +13,14 @@ import {
   getServersConfig, 
   createLibraryAdapterForServer
 } from '../services/LibraryService';
-import type { Track, Artist, Album } from '@sonantica/shared';
-import type { LibraryStats } from '@sonantica/media-library';
-import { useLibraryStore } from '@sonantica/media-library';
+import { 
+  useLibraryStore,
+  type LibraryStats,
+  type Track,
+  type Artist,
+  type Album
+} from '@sonantica/media-library';
+import { useSettingsStore } from '../stores/settingsStore';
 
 interface MultiServerLibraryState {
   tracks: Track[];
@@ -51,7 +56,7 @@ export function useMultiServerLibrary() {
   }, [libraryStore.tracks, libraryStore.artists, libraryStore.albums]);
 
   /**
-   * Scan a specific server
+   * Scan a specific server (Sync metadata to client)
    */
   const scanServer = useCallback(async (serverId: string) => {
     const config = getServersConfig();
@@ -136,6 +141,40 @@ export function useMultiServerLibrary() {
   }, []);
 
   /**
+   * Trigger a remote scan on the server (Command server to index files)
+   */
+  const triggerRemoteScan = useCallback(async (serverId: string) => {
+    const config = getServersConfig();
+    const server = config.servers.find(s => s.id === serverId);
+    
+    if (!server) return;
+
+    // Get settings from store state (using getState if available or just reading current state if hook is re-rendered)
+    // Zustand hook based access:
+    const settings = useSettingsStore.getState();
+
+    try {
+      const adapter = createLibraryAdapterForServer(serverId);
+      if (adapter) {
+        console.log(`📡 Triggering remote scan on ${server.name} with options:`, {
+            limit: settings.scanFileSizeLimit,
+            artLimit: settings.coverArtSizeLimit
+        });
+        
+        await adapter.startScan({
+           scanFileSizeLimit: settings.scanFileSizeLimit,
+           coverArtSizeLimit: settings.coverArtSizeLimit
+        });
+        
+        // Optionally follow up with a sync (scanServer) if desired, 
+        // but typically scan is async on server.
+      }
+    } catch (e) {
+      console.error("Failed to trigger remote scan", e);
+    }
+  }, []);
+
+  /**
    * Scan all configured servers
    */
   const scanAllServers = useCallback(async () => {
@@ -155,6 +194,16 @@ export function useMultiServerLibrary() {
 
     setState(prev => ({ ...prev, loading: false }));
   }, [scanServer]);
+
+  /**
+   * Trigger remote scan on ALL servers
+   */
+  const triggerRescanAll = useCallback(async () => {
+    const config = getServersConfig();
+    await Promise.all(
+      config.servers.map(server => triggerRemoteScan(server.id))
+    );
+  }, [triggerRemoteScan]);
 
   /**
    * Clear all library data
@@ -183,6 +232,8 @@ export function useMultiServerLibrary() {
     ...state,
     scanServer,
     scanAllServers,
+    triggerRemoteScan,
+    triggerRescanAll,
     clearLibrary,
     getTracksByServer,
     isScanning: state.loading || state.scanningServers.size > 0

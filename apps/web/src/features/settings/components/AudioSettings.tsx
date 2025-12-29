@@ -1,6 +1,25 @@
-import { SettingSection, SettingRow, Switch } from "@sonantica/ui";
+import { SettingSection, SettingRow, Switch, Select } from "@sonantica/ui";
+import { useSettingsStore } from "../../../stores/settingsStore";
 
 export function AudioSettings() {
+  const {
+    exclusiveMode,
+    gaplessPlayback,
+    replayGain,
+    soxResampler,
+    playbackBufferSize,
+    toggle,
+    setNumber,
+  } = useSettingsStore();
+
+  const bufferOptions = [
+    { value: (10 * 1024 * 1024).toString(), label: "10 MB (Low RAM)" },
+    { value: (50 * 1024 * 1024).toString(), label: "50 MB (Standard)" },
+    { value: (200 * 1024 * 1024).toString(), label: "200 MB (High Quality)" },
+    { value: (500 * 1024 * 1024).toString(), label: "500 MB (Very High)" },
+    { value: (1024 * 1024 * 1024).toString(), label: "1 GB (Max Performance)" },
+  ];
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <SettingSection
@@ -11,14 +30,35 @@ export function AudioSettings() {
           label="Exclusive Mode"
           description="Take exclusive control of the audio device for bit-perfect playback (Windows/macOS)."
         >
-          <Switch checked={false} onChange={() => {}} />
+          <Switch
+            checked={exclusiveMode}
+            onChange={() => toggle("exclusiveMode")}
+          />
         </SettingRow>
 
         <SettingRow
           label="Gapless Playback"
           description="Eliminate silence between tracks."
         >
-          <Switch checked={true} onChange={() => {}} />
+          <Switch
+            checked={gaplessPlayback}
+            onChange={() => toggle("gaplessPlayback")}
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Playback Buffer"
+          description="Amount of audio to cache ahead. Higher values reduce stuttering but use more RAM."
+        >
+          <div className="w-64">
+            <Select
+              options={bufferOptions}
+              value={playbackBufferSize.toString()}
+              onChange={(e) =>
+                setNumber("playbackBufferSize", parseInt(e.target.value))
+              }
+            />
+          </div>
         </SettingRow>
 
         <SettingRow
@@ -42,7 +82,7 @@ export function AudioSettings() {
           label="ReplayGain"
           description="Normalize volume across tracks to a standard level."
         >
-          <Switch checked={false} onChange={() => {}} />
+          <Switch checked={replayGain} onChange={() => toggle("replayGain")} />
         </SettingRow>
 
         <SettingRow
@@ -61,7 +101,10 @@ export function AudioSettings() {
           label="SoX Resampler"
           description="Use high-quality resampling (uses more CPU)."
         >
-          <Switch checked={true} onChange={() => {}} />
+          <Switch
+            checked={soxResampler}
+            onChange={() => toggle("soxResampler")}
+          />
         </SettingRow>
       </SettingSection>
     </div>

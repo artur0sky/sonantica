@@ -1,6 +1,10 @@
 import { SettingSection, SettingRow, Switch } from "@sonantica/ui";
+import { useSettingsStore } from "../../../stores/settingsStore";
 
 export function InterfaceSettings() {
+  const { animations, showSidebarOnStartup, minimizeToTray, toggle, theme } =
+    useSettingsStore();
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500 delay-200">
       <SettingSection
@@ -12,8 +16,8 @@ export function InterfaceSettings() {
           description="Choose your preferred visual style."
         >
           {/* Mock Select */}
-          <div className="bg-surface p-2 rounded text-sm px-4 border border-border">
-            Dark (Default)
+          <div className="bg-surface p-2 rounded text-sm px-4 border border-border capitalize">
+            {theme}
           </div>
         </SettingRow>
 
@@ -21,7 +25,7 @@ export function InterfaceSettings() {
           label="Animations"
           description="Enable fluid transitions and effects."
         >
-          <Switch checked={true} onChange={() => {}} />
+          <Switch checked={animations} onChange={() => toggle("animations")} />
         </SettingRow>
 
         <SettingRow
@@ -39,14 +43,20 @@ export function InterfaceSettings() {
           label="Show Sidebar on Startup"
           description="Keep the navigation sidebar open by default."
         >
-          <Switch checked={true} onChange={() => {}} />
+          <Switch
+            checked={showSidebarOnStartup}
+            onChange={() => toggle("showSidebarOnStartup")}
+          />
         </SettingRow>
 
         <SettingRow
           label="System Tray"
           description="Minimize to tray instead of closing (Desktop only)."
         >
-          <Switch checked={true} onChange={() => {}} />
+          <Switch
+            checked={minimizeToTray}
+            onChange={() => toggle("minimizeToTray")}
+          />
         </SettingRow>
       </SettingSection>
     </div>
