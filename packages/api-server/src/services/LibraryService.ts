@@ -128,39 +128,62 @@ export class LibraryService extends EventEmitter {
    * Index artist from track
    */
   private indexArtist(track: Track): void {
-    const artistId = this.generateId(track.artist);
+    const artistName = track.artist || 'Unknown Artist';
+    const artistId = this.generateId(artistName);
     
     if (!this.artists.has(artistId)) {
       this.artists.set(artistId, {
         id: artistId,
-        name: track.artist,
+        name: artistName,
         trackCount: 0,
-        albumCount: 0
+        albumCount: 0,
+        imageUrl: track.coverArt, // Use first found cover art as representative
       });
     }
 
     const artist = this.artists.get(artistId)!;
     artist.trackCount++;
+    
+    // Update image if missing
+    if (!artist.imageUrl && track.coverArt) {
+      artist.imageUrl = track.coverArt;
+    }
   }
 
   /**
    * Index album from track
    */
   private indexAlbum(track: Track): void {
-    const albumId = this.generateId(`${track.artist}-${track.album}`);
+    const primaryArtist = track.albumArtist || track.artist || 'Unknown Artist';
+    const albumId = this.generateId(`${primaryArtist}-${track.album}`);
     
     if (!this.albums.has(albumId)) {
       this.albums.set(albumId, {
         id: albumId,
         title: track.album,
-        artist: track.artist,
+        artist: primaryArtist,
         year: track.year,
-        trackCount: 0
+        trackCount: 0,
+        coverArt: track.coverArt,
       });
     }
 
     const album = this.albums.get(albumId)!;
     album.trackCount++;
+    
+    // Update cover art if missing
+    if (!album.coverArt && track.coverArt) {
+      album.coverArt = track.coverArt;
+    }
+    
+    // Update artist's album count if it's a new album for this artist
+    const artistId = this.generateId(primaryArtist);
+    const artist = this.artists.get(artistId);
+    if (artist) {
+        // This is a bit inefficient but correct for a simple indexer
+        const albumsForArtist = this.getAlbums().filter(a => a.artist === primaryArtist);
+        artist.albumCount = albumsForArtist.length;
+    }
   }
 
   /**
