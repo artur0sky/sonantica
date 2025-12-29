@@ -17,10 +17,14 @@ import { FLACParser } from './parsers/FLACParser';
 /**
  * Security constants
  */
-const MAX_FETCH_SIZE = 64 * 1024 * 1024; // 64MB max for HQ artwork and large FLAC files
-const MIN_FETCH_SIZE = 128 * 1024; // 128KB minimum
+const DEFAULT_MAX_FETCH_SIZE = 64 * 1024 * 1024; // 64MB max for HQ artwork and large FLAC files
 const FETCH_TIMEOUT_MS = 30000; // 30 seconds
 const ALLOWED_PROTOCOLS = ['http:', 'https:', 'blob:'];
+
+export interface MetadataOptions {
+  maxFileSize?: number; // 0 or undefined for default limit, -1 for unlimited
+  coverArtSizeLimit?: number; // Not yet implemented in parsers, but passed for future
+}
 
 /**
  * Security validator for metadata extraction
@@ -57,16 +61,16 @@ class MetadataSecurityValidator {
    * Validates fetch response
    * @throws {Error} If response is invalid
    */
-  static validateResponse(response: Response): void {
+  static validateResponse(response: Response, maxSize: number): void {
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
     const contentLength = response.headers.get('content-length');
-    if (contentLength) {
+    if (contentLength && maxSize > 0) {
       const size = parseInt(contentLength, 10);
-      if (size > MAX_FETCH_SIZE) {
-        throw new Error(`File too large: ${size} bytes (max: ${MAX_FETCH_SIZE})`);
+      if (size > maxSize) {
+        throw new Error(`File too large: ${size} bytes (max: ${maxSize})`);
       }
     }
   }
@@ -75,7 +79,7 @@ class MetadataSecurityValidator {
    * Validates ArrayBuffer size
    * @throws {Error} If buffer is invalid or too large
    */
-  static validateBuffer(buffer: ArrayBuffer): void {
+  static validateBuffer(buffer: ArrayBuffer, maxSize: number): void {
     if (!buffer || !(buffer instanceof ArrayBuffer)) {
       throw new Error('Invalid buffer: Must be an ArrayBuffer');
     }
@@ -84,7 +88,7 @@ class MetadataSecurityValidator {
       throw new Error('Invalid buffer: Empty buffer');
     }
 
-    if (buffer.byteLength > MAX_FETCH_SIZE) {
+    if (maxSize > 0 && buffer.byteLength > maxSize) {
       throw new Error(`Buffer too large: ${buffer.byteLength} bytes`);
     }
   }
@@ -99,22 +103,47 @@ const parsers: IMetadataParser[] = [
 /**
  * Extract metadata from an audio file URL
  * @param url - URL of the audio file
+ * @param options - Configuration options
  * @returns Partial metadata object
  * @throws {Error} If URL is invalid or extraction fails critically
  */
-export async function extractMetadata(url: string): Promise<Partial<MediaMetadata>> {
+export async function extractMetadata(url: string, options: MetadataOptions = {}): Promise<Partial<MediaMetadata>> {
   const abortController = new AbortController();
   const timeoutId = setTimeout(() => abortController.abort(), FETCH_TIMEOUT_MS);
+  
+  // Determine max size (use default if not specified, -1 or 0 -> Unlimited logic handled inside validator)
+  // Actually, let's normalize options.maxFileSize
+  // If undefined: use DEFAULT
+  // If 0 or -1: use Infinity (Unlimited)
+  // Else: use provided value
+  let maxFetchSize = DEFAULT_MAX_FETCH_SIZE;
+  if (options.maxFileSize !== undefined) {
+    maxFetchSize = (options.maxFileSize <= 0) ? Number.MAX_SAFE_INTEGER : options.maxFileSize;
+  }
 
   try {
     // Validate URL
     MetadataSecurityValidator.validateURL(url);
 
-    // Fetch the file with range request (first 16MB for HQ artwork support)
+    // Fetch the file with range request (first chunk for HQ artwork support)
+    // We request up to maxFetchSize. usage of range header depends on server support.
+    const fetchHeaders: any = {};
+    if (maxFetchSize < Number.MAX_SAFE_INTEGER) {
+        fetchHeaders['Range'] = `bytes=0-${maxFetchSize - 1}`;
+    } else {
+        // If unlimited, we might still want to limit to a reasonable huge chunk or just get standard logic
+        // But typically we still want a Range request to avoid downloading 100MB wav if we just need header.
+        // However, user "unlimited" request implies we should try hard.
+        // Let's keep range 0- to download everything if unlimited? or just skip Range and use standard fetch?
+        // Standard fetch streams. We want arraybuffer.
+        // Safest is to still use a large range if "unlimited" is requested for "size check", 
+        // but for reading metadata typically we don't need the whole file unless it's at the end (ID3v1).
+        // Let's stick to a very large range if unlimited.
+        fetchHeaders['Range'] = 'bytes=0-';
+    }
+
     let response = await fetch(url, {
-      headers: {
-        'Range': `bytes=0-${MAX_FETCH_SIZE - 1}`,
-      },
+      headers: fetchHeaders,
       signal: abortController.signal,
     });
 
@@ -132,12 +161,12 @@ export async function extractMetadata(url: string): Promise<Partial<MediaMetadat
     clearTimeout(timeoutId);
 
     // Validate response
-    MetadataSecurityValidator.validateResponse(response);
+    MetadataSecurityValidator.validateResponse(response, maxFetchSize);
 
     const buffer = await response.arrayBuffer();
     
     // Validate buffer
-    MetadataSecurityValidator.validateBuffer(buffer);
+    MetadataSecurityValidator.validateBuffer(buffer, maxFetchSize);
 
     const view = new DataView(buffer);
 
@@ -193,17 +222,14 @@ export async function extractMetadata(url: string): Promise<Partial<MediaMetadat
  * @param urls - Array of file URLs
  * @param batchSize - Number of files to process before yielding (default: 5)
  * @param onProgress - Optional callback for progress updates
+ * @param options - Metadata extraction options
  * @returns Array of metadata objects (same order as input URLs)
- * 
- * Example:
- * const results = await extractMetadataBatch(fileUrls, 5, (current, total) => {
- *   console.log(`Processing ${current}/${total}`);
- * });
  */
 export async function extractMetadataBatch(
   urls: string[],
   batchSize: number = 5,
-  onProgress?: (current: number, total: number) => void
+  onProgress?: (current: number, total: number) => void,
+  options: MetadataOptions = {}
 ): Promise<Array<Partial<MediaMetadata>>> {
   const results: Array<Partial<MediaMetadata>> = [];
   const total = urls.length;
@@ -213,7 +239,7 @@ export async function extractMetadataBatch(
     
     // Process batch in parallel (up to batchSize concurrent requests)
     const batchResults = await Promise.all(
-      batch.map(url => extractMetadata(url).catch(err => {
+      batch.map(url => extractMetadata(url, options).catch(err => {
         console.warn(`Failed to extract metadata for ${url}:`, err);
         return {}; // Return empty metadata on error
       }))
