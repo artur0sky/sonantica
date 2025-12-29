@@ -30,6 +30,7 @@ import {
   IconBolt,
   IconClock,
 } from "@tabler/icons-react";
+import { Button, Switch, ActionIconButton } from "@sonantica/ui";
 
 export function ServersSection() {
   const [, setLocation] = useLocation();
@@ -129,16 +130,14 @@ export function ServersSection() {
     }
   };
 
-  const handleToggleAutoScan = () => {
-    const newValue = !autoScan;
-    setAutoScan(newValue);
-    localStorage.setItem("sonantica:auto-scan", String(newValue));
+  const handleToggleAutoScan = (checked: boolean) => {
+    setAutoScan(checked);
+    localStorage.setItem("sonantica:auto-scan", String(checked));
   };
 
-  const handleToggleParallelScan = () => {
-    const newValue = !parallelScan;
-    setParallelScan(newValue);
-    localStorage.setItem("sonantica:parallel-scan", String(newValue));
+  const handleToggleParallelScan = (checked: boolean) => {
+    setParallelScan(checked);
+    localStorage.setItem("sonantica:parallel-scan", String(checked));
   };
 
   return (
@@ -151,13 +150,14 @@ export function ServersSection() {
             Manage your Sonántica server instances
           </p>
         </div>
-        <button
+        <Button
           onClick={handleAddServer}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
+          variant="primary"
+          className="flex items-center gap-2"
         >
           <IconPlus size={18} />
           Add Server
-        </button>
+        </Button>
       </div>
 
       {/* Library Stats */}
@@ -193,42 +193,37 @@ export function ServersSection() {
       {/* Scan Controls */}
       <div className="space-y-4">
         <div className="flex items-center gap-3 flex-wrap">
-          <button
+          <Button
             onClick={handleScanAll}
             disabled={isScanning || config.servers.length === 0}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+            variant="primary"
+            className="flex items-center gap-2"
           >
             <IconPlayerPlay
               size={18}
               className={isScanning ? "animate-pulse" : ""}
             />
             {isScanning ? "Scanning..." : "Scan All Servers"}
-          </button>
+          </Button>
           {tracks.length > 0 && (
-            <button
+            <Button
               onClick={handleClearLibrary}
-              className="px-4 py-2 bg-red-600/10 hover:bg-red-600/20 text-red-500 rounded-lg transition-colors"
+              variant="danger"
+              className="flex items-center gap-2"
             >
               Clear Library
-            </button>
+            </Button>
           )}
         </div>
 
         {/* Scan Options */}
-        <div className="flex items-center gap-6 p-4 bg-surface-elevated border border-border rounded-lg">
+        <div className="flex flex-col sm:flex-row gap-6 p-4 bg-surface-elevated border border-border rounded-lg">
           <div className="flex items-center gap-3">
-            <button
-              onClick={handleToggleAutoScan}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                autoScan ? "bg-primary" : "bg-gray-600"
-              }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  autoScan ? "translate-x-6" : "translate-x-1"
-                }`}
-              />
-            </button>
+            <Switch
+              checked={autoScan}
+              onChange={handleToggleAutoScan}
+              label="Auto-Scan"
+            />
             <div>
               <div className="text-sm font-medium text-text-primary">
                 Auto-Scan
@@ -240,18 +235,11 @@ export function ServersSection() {
           </div>
 
           <div className="flex items-center gap-3">
-            <button
-              onClick={handleToggleParallelScan}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                parallelScan ? "bg-primary" : "bg-gray-600"
-              }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  parallelScan ? "translate-x-6" : "translate-x-1"
-                }`}
-              />
-            </button>
+            <Switch
+              checked={parallelScan}
+              onChange={handleToggleParallelScan}
+              label="Parallel Scan"
+            />
             <div>
               <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
                 {parallelScan ? (
@@ -281,12 +269,9 @@ export function ServersSection() {
         <div className="text-center py-12 bg-surface-elevated rounded-lg border border-border">
           <IconServer size={48} className="mx-auto mb-4 text-text-muted" />
           <p className="text-text-muted mb-4">No servers configured</p>
-          <button
-            onClick={handleAddServer}
-            className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
-          >
+          <Button onClick={handleAddServer} variant="primary">
             Add Your First Server
-          </button>
+          </Button>
         </div>
       ) : (
         <div className="space-y-3">
@@ -305,25 +290,25 @@ export function ServersSection() {
                     : "bg-surface-elevated border-border hover:border-border-hover"
                 }`}
               >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <h4 className="font-medium text-text-primary">
+                      <h4 className="font-medium text-text-primary truncate">
                         {server.name}
                       </h4>
                       {isActive && (
-                        <span className="flex items-center gap-1 px-2 py-0.5 bg-primary text-white text-xs rounded-full">
+                        <span className="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 bg-primary text-white text-xs rounded-full">
                           <IconCheck size={12} />
                           Active
                         </span>
                       )}
                       {isServerScanning && (
-                        <span className="flex items-center gap-1 px-2 py-0.5 bg-green-600 text-white text-xs rounded-full animate-pulse">
+                        <span className="flex-shrink-0 flex items-center gap-1 px-2 py-0.5 bg-green-600 text-white text-xs rounded-full animate-pulse">
                           Scanning...
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-text-muted mb-1">
+                    <p className="text-sm text-text-muted mb-1 truncate">
                       {server.serverUrl}
                     </p>
                     {serverTracks.length > 0 && (
@@ -339,41 +324,36 @@ export function ServersSection() {
                     )}
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <button
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <Button
                       onClick={() => handleScanServer(server.id)}
                       disabled={isServerScanning}
-                      className="px-3 py-1.5 text-sm bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-lg transition-colors"
-                      title="Scan this server"
+                      variant="secondary"
+                      size="sm"
                     >
                       Scan
-                    </button>
+                    </Button>
                     {!isActive && (
-                      <button
+                      <Button
                         onClick={() => handleSwitchServer(server.id)}
-                        className="px-3 py-1.5 text-sm bg-surface-elevated border border-border rounded-lg hover:bg-surface-hover transition-colors"
+                        variant="ghost"
+                        size="sm"
                       >
                         Switch
-                      </button>
+                      </Button>
                     )}
-                    <button
+                    <ActionIconButton
+                      icon={IconRefresh}
                       onClick={() => handleTestConnection(server.id)}
-                      disabled={isTesting}
-                      className="p-2 text-text-muted hover:text-text-primary hover:bg-surface-hover rounded-lg transition-colors disabled:opacity-50"
                       title="Test connection"
-                    >
-                      <IconRefresh
-                        size={18}
-                        className={isTesting ? "animate-spin" : ""}
-                      />
-                    </button>
-                    <button
+                      className={isTesting ? "animate-spin" : ""}
+                    />
+                    <ActionIconButton
+                      icon={IconTrash}
                       onClick={() => handleRemoveServer(server.id)}
-                      className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
                       title="Remove server"
-                    >
-                      <IconTrash size={18} />
-                    </button>
+                      className="text-red-500 hover:bg-red-500/10"
+                    />
                   </div>
                 </div>
               </div>

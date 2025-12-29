@@ -14,6 +14,7 @@ import { ServerGuard } from "./components/ServerGuard";
 import { PWAUpdatePrompt } from "./components/PWAUpdatePrompt";
 import { IconLoader } from "@tabler/icons-react";
 import { useDSPIntegration } from "./hooks/useDSPIntegration";
+import { useAutoScan } from "./hooks/useAutoScan";
 
 // Lazy load pages
 const ServerSetupPage = lazy(() =>
@@ -60,6 +61,7 @@ const PageLoader = () => (
 
 function App() {
   useDSPIntegration();
+  useAutoScan();
 
   return (
     <>
