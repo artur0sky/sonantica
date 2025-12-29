@@ -1,18 +1,26 @@
 /**
  * Sonántica Web App
  *
- * Main application with SoundCloud-inspired layout.
+ * Main application with server-first architecture.
  * "Apps never implement domain logic."
+ *
+ * Philosophy: "Server-First" - Requires configured server
  */
 
 import { Suspense, lazy } from "react";
 import { Route, Switch } from "wouter";
 import { MainLayout } from "./components/layout/MainLayout";
+import { ServerGuard } from "./components/ServerGuard";
 import { PWAUpdatePrompt } from "./components/PWAUpdatePrompt";
 import { IconLoader } from "@tabler/icons-react";
 import { useDSPIntegration } from "./hooks/useDSPIntegration";
 
 // Lazy load pages
+const ServerSetupPage = lazy(() =>
+  import("./pages/ServerSetupPage").then((m) => ({
+    default: m.ServerSetupPage,
+  }))
+);
 const TracksPage = lazy(() =>
   import("./features/library/pages/TracksPage").then((m) => ({
     default: m.TracksPage,
@@ -55,46 +63,59 @@ function App() {
 
   return (
     <>
-      <MainLayout>
+      <ServerGuard>
         <Suspense fallback={<PageLoader />}>
           <Switch>
-            {/* Default view: Tracks */}
-            <Route path="/" component={TracksPage} />
+            {/* Server Setup - No layout */}
+            <Route path="/setup" component={ServerSetupPage} />
 
-            {/* Library views */}
-            <Route path="/albums" component={AlbumsPage} />
-            <Route path="/artists" component={ArtistsPage} />
-
-            {/* Detail views */}
-            <Route path="/album/:id" component={AlbumDetailPage} />
-            <Route path="/artist/:id" component={ArtistDetailPage} />
-
-            {/* Settings */}
-            <Route path="/settings" component={SettingsPage} />
-
-            {/* Playlists - Coming soon */}
-            <Route path="/playlists">
-              <div className="max-w-6xl mx-auto p-6">
-                <div className="text-center py-20">
-                  <div className="text-6xl mb-4">📋</div>
-                  <h2 className="text-2xl font-semibold mb-2">Playlists</h2>
-                  <p className="text-text-muted">Coming soon...</p>
-                </div>
-              </div>
-            </Route>
-
-            {/* 404 */}
+            {/* Main app with layout - requires server */}
             <Route>
-              <div className="max-w-6xl mx-auto p-6">
-                <div className="text-center py-20">
-                  <h1 className="text-4xl font-bold mb-2">404</h1>
-                  <p className="text-text-muted">Page not found</p>
-                </div>
-              </div>
+              <MainLayout>
+                <Switch>
+                  {/* Default view: Tracks */}
+                  <Route path="/" component={TracksPage} />
+
+                  {/* Library views */}
+                  <Route path="/library" component={TracksPage} />
+                  <Route path="/albums" component={AlbumsPage} />
+                  <Route path="/artists" component={ArtistsPage} />
+
+                  {/* Detail views */}
+                  <Route path="/album/:id" component={AlbumDetailPage} />
+                  <Route path="/artist/:id" component={ArtistDetailPage} />
+
+                  {/* Settings */}
+                  <Route path="/settings" component={SettingsPage} />
+
+                  {/* Playlists - Coming soon */}
+                  <Route path="/playlists">
+                    <div className="max-w-6xl mx-auto p-6">
+                      <div className="text-center py-20">
+                        <div className="text-6xl mb-4">📋</div>
+                        <h2 className="text-2xl font-semibold mb-2">
+                          Playlists
+                        </h2>
+                        <p className="text-text-muted">Coming soon...</p>
+                      </div>
+                    </div>
+                  </Route>
+
+                  {/* 404 */}
+                  <Route>
+                    <div className="max-w-6xl mx-auto p-6">
+                      <div className="text-center py-20">
+                        <h1 className="text-4xl font-bold mb-2">404</h1>
+                        <p className="text-text-muted">Page not found</p>
+                      </div>
+                    </div>
+                  </Route>
+                </Switch>
+              </MainLayout>
             </Route>
           </Switch>
         </Suspense>
-      </MainLayout>
+      </ServerGuard>
 
       {/* PWA Update Prompt */}
       <PWAUpdatePrompt />
