@@ -1,118 +1,81 @@
 # @sonantica/api-server
 
-**Sonántica API Server** - Centralized music streaming backend
+> "The user decides, the software accompanies."
 
-## Philosophy
+The **Sonántica API Server** is the self-hosted heart of your audio ecosystem. It acts as the bridge between your raw files and the polished listening experience, providing metadata indexing, reliable streaming, and library management without relying on third-party cloud services.
 
-> "User autonomy" - Self-hosted music streaming
+Designed for **autonomy**, it allows you to own your data while enjoying a modern streaming experience across all your devices.
 
-The API server embodies Sonántica's core value of **user control**. Instead of relying on cloud services, users host their own music library and stream to any device.
+## 📡 Responsibility
 
-## Architecture
+- **Library Indexing**: Recursively scans directories to build a rich metadata catalog (Artists, Albums, Genres).
+- **Audio Streaming**: Serves high-fidelity audio via HTTP Range Requests, enabling seeking and smooth playback.
+- **Real-time Sync**: Pushes library updates to connected clients via Server-Sent Events (SSE).
+- **Metadata Extraction**: Parses ID3, Vorbis, and FLAC tags to populate the library database.
 
-```
-┌─────────────┐
-│   Clients   │ (Web, Mobile, Desktop)
-└──────┬──────┘
-       │ HTTP/SSE
-┌──────▼──────┐
-│ API Server  │ (This package)
-├─────────────┤
-│ - Library   │ Metadata API
-│ - Stream    │ Audio delivery
-│ - Scan      │ Indexing
-└──────┬──────┘
-       │ File System
-┌──────▼──────┐
-│ /media/     │ Your music files
-└─────────────┘
-```
+## 🧠 Philosophy
 
-## Features
+> "Technically transparent, intentionally minimal."
 
-- **RESTful API** for library metadata
-- **HTTP Range Streaming** for audio files
-- **Real-time updates** via Server-Sent Events
-- **Automatic scanning** of media directories
-- **Metadata extraction** from audio files
+- **Stateless**: The server is designed to be lightweight; the "truth" is in your file tags.
+- **Read-Only by Default**: Resects your files. It indexes them, but avoids modifying them unless explicitly requested.
+- **Standard Protocol**: Uses standard HTTP/REST patterns, making it compatible with any future client.
 
-## API Endpoints
+## 📦 What's Inside
 
-### Library
-- `GET /api/library/tracks` - List all tracks
-- `GET /api/library/tracks/:id` - Get track details
-- `GET /api/library/artists` - List all artists
-- `GET /api/library/artists/:id/tracks` - Get artist's tracks
-- `GET /api/library/albums` - List all albums
-- `GET /api/library/albums/:id/tracks` - Get album's tracks
+- **LibraryController**: REST endpoints for querying tracks, albums, and artists.
+- **StreamController**: High-performance file streaming handler with support for partial content (206).
+- **ScanService**: Intelligent background worker that traverses file systems and extracts metadata.
+- **EventSystem**: SSE implementation for broadcasting scan progress and library changes.
 
-### Streaming
-- `GET /api/stream/:filePath` - Stream audio file (supports range requests)
+## 🛠️ Usage
 
-### Scanning
-- `POST /api/scan/start` - Trigger library scan
-- `GET /api/scan/status` - Get scan status
-- `GET /api/scan/events` - SSE endpoint for real-time updates
+### Running Locally
 
-## Environment Variables
-
-```env
-API_PORT=8080
-MEDIA_PATH=/media
-CORS_ORIGIN=*
-```
-
-## Usage
-
-### Development
 ```bash
+# Start the development server
 pnpm dev
-```
 
-### Production
-```bash
+# Build and start for production
 pnpm build
 pnpm start
 ```
 
-### Docker
-The API server is automatically included in the Docker Compose setup:
+### Environment Configuration
 
-```yaml
-services:
-  api:
-    build: .
-    ports:
-      - "8080:8080"
-    volumes:
-      - ./media:/media:ro
+```env
+PORT=8080
+MEDIA_ROOT=./media           # Path to your music library
+CORS_ORIGIN=http://localhost:3000
+SCAN_CONCURRENCY=4          # Number of files to process in parallel
 ```
 
-## Integration
+## 🏗️ Architecture
 
-Clients connect by configuring the server URL:
+The API Server follows a **Clean Architecture** approach:
 
-```typescript
-// Web/Mobile client
-const apiClient = new SonanticaClient('http://192.168.1.100:8080');
-await apiClient.library.getTracks();
+```
+src/
+├── controllers/    # Request handlers (HTTP layer)
+├── services/       # Business logic (Scanning, Streaming)
+├── models/         # Data structures and types
+└── utils/          # Shared utilities (FileSystem, Logging)
 ```
 
-## Security
+It is designed to be deployed as a microservice, either standalone or within a Docker container, seamlessly integrating with the Sonántica Monorepo.
 
-- **Directory traversal protection** on streaming endpoints
-- **CORS configuration** for web clients
-- **Read-only media access** (recommended)
+## 🛡️ Security & Performance
 
-## Future Enhancements
+- **Path Traversal Protection**: Rigorous checks to ensure requests cannot access files outside the `MEDIA_ROOT`.
+- **Stream Optimization**: Optimized piping of file streams to minimize memory footprint.
+- **Rate Limiting**: (Planned) To protect against abuse in public deployments.
 
-- [ ] Authentication (JWT/API keys)
-- [ ] Multi-user support
-- [ ] Playlist synchronization
-- [ ] Transcoding on-the-fly
-- [ ] Cover art caching
-- [ ] WebSocket for bidirectional communication
+> "Your music, served your way."
+
+## 📄 License
+
+Licensed under the **Apache License, Version 2.0**.
 
 ---
 
-**Part of the Sonántica ecosystem** - Audio-first, user-controlled multimedia player.
+Made with ❤ and **Psytrance**.
