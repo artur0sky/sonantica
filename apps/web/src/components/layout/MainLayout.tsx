@@ -15,12 +15,14 @@ import {
   MetadataPanel,
   MiniPlayer,
   ExpandedPlayer,
-  SidebarResizer, // New Molecule
+  SidebarResizer,
 } from "@sonantica/ui";
 import { Header } from "./Header";
 import { LeftSidebar } from "./LeftSidebar";
 import { RightSidebar } from "./RightSidebar";
-import { IconLoader } from "@tabler/icons-react";
+import { IconLoader, IconPlaylistAdd } from "@tabler/icons-react";
+import { useLibraryStore } from "@sonantica/media-library";
+import { DownloadButton } from "../DownloadButton";
 
 // PERFORMANCE: Lazy load heavy sidebars (code splitting)
 const LyricsSidebar = lazy(() =>
@@ -64,6 +66,13 @@ export function MainLayout({ children }: MainLayoutProps) {
   useKeyboardShortcuts();
 
   const currentTrack = usePlayerStore((s) => s.currentTrack);
+  const tracks = useLibraryStore((s) => s.tracks);
+
+  // Find full track data from library
+  const fullTrack = currentTrack
+    ? tracks.find((t) => t.id === currentTrack.id)
+    : null;
+
   const {
     isLeftSidebarOpen,
     isRightSidebarOpen,
@@ -157,7 +166,36 @@ export function MainLayout({ children }: MainLayoutProps) {
           className="flex-1 overflow-y-auto relative z-10 transition-all duration-300 w-full min-w-0"
         >
           <AnimatePresence mode="wait">
-            {isPlayerExpanded ? <ExpandedPlayer key="expanded" /> : children}
+            {isPlayerExpanded ? (
+              <ExpandedPlayer
+                key="expanded"
+                actionButtons={
+                  fullTrack && (
+                    <>
+                      <DownloadButton
+                        trackId={fullTrack.id}
+                        track={fullTrack}
+                        size={22}
+                        showLabel
+                      />
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        className="p-1 text-text-muted hover:text-text rounded-lg transition-colors flex items-center gap-2"
+                        title="Add to Playlist"
+                      >
+                        <IconPlaylistAdd size={22} />
+                        <span className="text-sm font-medium">
+                          Add to Playlist
+                        </span>
+                      </motion.button>
+                    </>
+                  )
+                }
+              />
+            ) : (
+              children
+            )}
           </AnimatePresence>
         </main>
 
@@ -351,7 +389,28 @@ export function MainLayout({ children }: MainLayoutProps) {
       <AnimatePresence mode="wait">
         {currentTrack && !isPlayerExpanded && (
           <div className="sticky bottom-0 z-50 border-t border-border bg-bg/95 backdrop-blur-xl pb-[env(safe-area-inset-bottom)] shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
-            <MiniPlayer />
+            <MiniPlayer
+              actionButtons={
+                fullTrack && (
+                  <>
+                    <DownloadButton
+                      trackId={fullTrack.id}
+                      track={fullTrack}
+                      size={18}
+                      className="p-1"
+                    />
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      className="p-1 text-text-muted hover:text-text rounded-lg transition-colors"
+                      title="Add to Playlist"
+                    >
+                      <IconPlaylistAdd size={18} />
+                    </motion.button>
+                  </>
+                )
+              }
+            />
           </div>
         )}
       </AnimatePresence>

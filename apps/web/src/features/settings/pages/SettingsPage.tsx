@@ -7,12 +7,14 @@ import {
   IconServer,
   IconInfoCircle,
   IconPalette,
+  IconCloudDownload,
 } from "@tabler/icons-react";
 
 // Sub-pages
 import { AudioSettings } from "../components/AudioSettings";
 import { LibrarySettings } from "../components/LibrarySettings";
 import { InterfaceSettings } from "../components/InterfaceSettings";
+import { OfflineSettings } from "../components/OfflineSettings";
 import { ServersSection } from "../../library/components/ServersSection";
 
 export function SettingsPage() {
@@ -34,6 +36,11 @@ export function SettingsPage() {
       id: "library",
       label: "Library",
       icon: IconBooks,
+    },
+    {
+      id: "offline",
+      label: "Offline",
+      icon: IconCloudDownload,
     },
     {
       id: "servers",
@@ -75,6 +82,7 @@ export function SettingsPage() {
         {activeTab === "general" && <InterfaceSettings />}
         {activeTab === "audio" && <AudioSettings />}
         {activeTab === "library" && <LibrarySettings />}
+        {activeTab === "offline" && <OfflineSettings />}
 
         {activeTab === "servers" && (
           <div className="bg-surface-elevated border border-border rounded-lg p-6 animate-in fade-in duration-500">

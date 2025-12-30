@@ -9,6 +9,7 @@
  */
 
 import { RemoteLibraryAdapter, type ILibraryAdapter } from '@sonantica/media-library';
+import { generateStableId } from '@sonantica/shared';
 
 export interface ServerConfig {
   id: string;
@@ -70,16 +71,26 @@ function saveServersConfig(config: ServersConfig): void {
 export function saveServerConfig(server: Omit<ServerConfig, 'id' | 'lastConnected'>): ServerConfig {
   const config = getServersConfig();
   
-  // Generate ID if new server
-  const id = `server-${Date.now()}`;
+  // Generate stable ID from URL
+  const baseId = generateStableId(server.serverUrl);
+  const id = `server-${baseId.replace('id-', '')}`;
+  
+  // Check if server already exists
+  const existingIndex = config.servers.findIndex(s => s.id === id);
+  
   const newServer: ServerConfig = {
     ...server,
     id,
     lastConnected: Date.now()
   };
   
-  // Add to servers list
-  config.servers.push(newServer);
+  if (existingIndex !== -1) {
+    // Update existing
+    config.servers[existingIndex] = newServer;
+  } else {
+    // Add new
+    config.servers.push(newServer);
+  }
   
   // Set as active
   config.activeServerId = id;

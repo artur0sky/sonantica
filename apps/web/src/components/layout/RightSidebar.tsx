@@ -12,6 +12,8 @@ import {
   IconPlayerPlay,
   IconChevronDown,
   IconChevronUp,
+  IconCloudDownload,
+  IconCircleCheckFilled,
 } from "@tabler/icons-react";
 import {
   motion,
@@ -23,8 +25,15 @@ import type { Variants } from "framer-motion";
 import { useState, useEffect } from "react";
 import { useLibraryStore } from "@sonantica/media-library";
 import { Button, Badge, SidebarContainer, useUIStore } from "@sonantica/ui";
-import { formatArtists, formatTime, cn } from "@sonantica/shared";
+import {
+  formatArtists,
+  formatTime,
+  cn,
+  OfflineStatus,
+} from "@sonantica/shared";
 import { useQueueLogic } from "../../hooks/useQueueLogic";
+import { useOfflineStore } from "@sonantica/offline-manager";
+import { useSettingsStore } from "../../stores/settingsStore";
 
 const itemVariants: Variants = {
   hidden: { x: 20, opacity: 0 },
@@ -283,11 +292,24 @@ function QueueItem({
   const [isRemoving, setIsRemoving] = useState(false);
   const [dragProgress, setDragProgress] = useState(0); // 0 to 1
 
+  // Offline state
+  const offlineItem = useOfflineStore((state: any) => state.items[track.id]);
+  const { offlineMode, hideUnavailableOffline } = useSettingsStore();
+
+  const isOfflineAvailable = offlineItem?.status === OfflineStatus.COMPLETED;
+  const isDownloading = offlineItem?.status === OfflineStatus.DOWNLOADING;
+  const shouldBeGrayedOut = offlineMode && !isOfflineAvailable;
+
   // Normalize metadata access
   const title = track.metadata?.title || track.title || "Unknown Title";
   const artist = track.metadata?.artist || track.artist || "Unknown Artist";
   const duration = track.metadata?.duration || track.duration || 0;
   const bitrate = track.metadata?.bitrate || track.bitrate;
+
+  // Hide if offline mode and hideUnavailableOffline is true
+  if (offlineMode && hideUnavailableOffline && !isOfflineAvailable) {
+    return null;
+  }
 
   // Lazy hydration on appearance
   useEffect(() => {
@@ -340,7 +362,8 @@ function QueueItem({
         "group relative flex items-center transition-all select-none",
         isCollapsed
           ? "justify-center p-0 mb-1"
-          : "p-2 rounded-xl border border-transparent hover:border-white/10 hover:bg-white/5 gap-2"
+          : "p-2 rounded-xl border border-transparent hover:border-white/10 hover:bg-white/5 gap-2",
+        shouldBeGrayedOut && "opacity-40 grayscale-[0.5]"
       )}
     >
       {/* Drag Handle - Larger touch target */}
@@ -428,6 +451,23 @@ function QueueItem({
             {title}
           </div>
           <div className="flex items-center gap-2 text-[10px] text-text-muted truncate">
+            {isOfflineAvailable && (
+              <IconCircleCheckFilled
+                size={12}
+                className="text-accent flex-shrink-0"
+              />
+            )}
+            {isDownloading && (
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
+              >
+                <IconCloudDownload
+                  size={12}
+                  className="text-accent flex-shrink-0"
+                />
+              </motion.div>
+            )}
             <span className="truncate opacity-70">{formatArtists(artist)}</span>
 
             {/* Bitrate Badge (Compact) */}

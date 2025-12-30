@@ -5,13 +5,29 @@
  */
 
 import { getServersConfig } from '../services/LibraryService';
+import { useOfflineStore } from '@sonantica/offline-manager';
+import { OfflineStatus } from '@sonantica/shared';
 
 /**
  * Build streaming URL for a track
  * Resolves the server URL from the serverId and constructs the full streaming URL
  */
-export function buildStreamingUrl(serverId: string, filePath: string): string {
+export function buildStreamingUrl(serverId: string, filePath: string, trackId?: string): string {
   try {
+    // Check if available offline first
+    if (trackId) {
+      const offlineItem = useOfflineStore.getState().items[trackId];
+      if (offlineItem?.status === OfflineStatus.COMPLETED) {
+        // Return the canonical offline URL pattern
+        // The Service Worker or Cache API will serve this
+        // Must match format in WebOfflineAdapter
+        const encodedId = encodeURIComponent(trackId);
+        const offlineUrl = `/offline/track/${encodedId}`;
+        console.log(`📦 Serving track ${trackId} from offline cache: ${offlineUrl}`);
+        return offlineUrl;
+      }
+    }
+
     // Get server configuration
     const config = getServersConfig();
     const server = config.servers.find(s => s.id === serverId);
@@ -42,13 +58,13 @@ export function buildStreamingUrl(serverId: string, filePath: string): string {
 /**
  * Build streaming URL from a track object
  */
-export function buildTrackStreamingUrl(track: { serverId?: string; filePath?: string }): string {
+export function buildTrackStreamingUrl(track: { id?: string; serverId?: string; filePath?: string }): string {
   if (!track.serverId || !track.filePath) {
     console.error('❌ Track missing serverId or filePath:', track);
     return '';
   }
   
-  return buildStreamingUrl(track.serverId, track.filePath);
+  return buildStreamingUrl(track.serverId, track.filePath, track.id);
 }
 
 /**
@@ -58,7 +74,7 @@ export function buildTrackStreamingUrl(track: { serverId?: string; filePath?: st
 export function trackToMediaSource(track: any): any {
   return {
     id: track.id,
-    url: buildStreamingUrl(track.serverId!, track.filePath!),
+    url: buildStreamingUrl(track.serverId!, track.filePath!, track.id),
     metadata: {
       title: track.title,
       artist: track.artist,

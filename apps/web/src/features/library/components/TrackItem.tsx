@@ -10,6 +10,9 @@ import {
   IconPlaylistAdd,
   IconPlayerSkipForward,
   IconInfoCircle,
+  IconCloudDownload,
+  IconCircleCheckFilled,
+  IconExclamationCircle,
 } from "@tabler/icons-react";
 import { motion } from "framer-motion";
 import { cn } from "@sonantica/shared";
@@ -24,6 +27,10 @@ import {
   type ContextMenuItem,
 } from "@sonantica/ui";
 import { trackToMediaSource } from "../../../utils/streamingUrl";
+import { useOfflineStore } from "@sonantica/offline-manager";
+import { useSettingsStore } from "../../../stores/settingsStore";
+import { OfflineStatus } from "@sonantica/shared";
+import { useOfflineManager } from "../../../hooks/useOfflineManager";
 
 interface TrackItemProps {
   track: any;
@@ -33,13 +40,29 @@ interface TrackItemProps {
 export function TrackItem({ track, onClick }: TrackItemProps) {
   const { currentTrack, state } = usePlayerStore();
   const { addToQueue, playNext } = useQueueStore();
+  const { downloadTrack, removeTrack } = useOfflineManager();
 
   const iscurrentTrack = currentTrack?.id === track.id;
   const isPlaying = iscurrentTrack && state === PlaybackState.PLAYING;
-  // hydrateTrack removed - no longer needed
+
+  // Offline state
+  const offlineItem = useOfflineStore((state) => state.items[track.id]);
+  const { offlineMode, hideUnavailableOffline } = useSettingsStore();
+
+  const isOfflineAvailable = offlineItem?.status === OfflineStatus.COMPLETED;
+  const isDownloading = offlineItem?.status === OfflineStatus.DOWNLOADING;
+  const isQueued = offlineItem?.status === OfflineStatus.QUEUED;
+  const isError = offlineItem?.status === OfflineStatus.ERROR;
+
+  const shouldBeGrayedOut = offlineMode && !isOfflineAvailable;
 
   // Context menu state
   const contextMenu = useContextMenu();
+
+  // If we should hide unavailable offline and it's not available, return null
+  if (offlineMode && hideUnavailableOffline && !isOfflineAvailable) {
+    return null;
+  }
 
   // Context menu items
   const menuItems: ContextMenuItem[] = [
@@ -57,6 +80,31 @@ export function TrackItem({ track, onClick }: TrackItemProps) {
     },
     {
       id: "divider-1",
+      label: "",
+      divider: true,
+      onClick: () => {},
+    },
+    // Download/Remove offline option
+    !isOfflineAvailable
+      ? {
+          id: "download-offline",
+          label: isDownloading
+            ? "Downloading..."
+            : isQueued
+            ? "Queued"
+            : "Download for Offline",
+          icon: <IconCloudDownload size={18} stroke={1.5} />,
+          onClick: () => downloadTrack(track),
+          disabled: isDownloading || isQueued,
+        }
+      : {
+          id: "remove-offline",
+          label: "Remove from Offline",
+          icon: <IconCircleCheckFilled size={18} stroke={1.5} />,
+          onClick: () => removeTrack(track.id),
+        },
+    {
+      id: "divider-2",
       label: "",
       divider: true,
       onClick: () => {},
@@ -102,10 +150,12 @@ export function TrackItem({ track, onClick }: TrackItemProps) {
         onMouseUp={contextMenu.handleLongPressEnd}
         onMouseLeave={contextMenu.handleLongPressEnd}
         className={cn(
-          "flex items-center gap-4 p-3 rounded-lg cursor-pointer transition-colors group border border-transparent",
+          "flex items-center gap-4 p-3 rounded-lg cursor-pointer transition-all group border border-transparent",
           iscurrentTrack
             ? "bg-surface-elevated border-accent/20"
-            : "hover:bg-surface-elevated/50"
+            : "hover:bg-surface-elevated/50",
+          shouldBeGrayedOut &&
+            "opacity-40 grayscale-[0.5] filter border-dashed border-border"
         )}
       >
         {/* Album Art / Icon */}
@@ -156,6 +206,35 @@ export function TrackItem({ track, onClick }: TrackItemProps) {
             {track.title || track.filename}
           </div>
           <div className="text-sm text-text-muted truncate flex items-center gap-2">
+            {isOfflineAvailable && (
+              <IconCircleCheckFilled
+                size={14}
+                className="text-accent flex-shrink-0"
+              />
+            )}
+            {isDownloading && (
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
+              >
+                <IconCloudDownload
+                  size={14}
+                  className="text-accent flex-shrink-0"
+                />
+              </motion.div>
+            )}
+            {isQueued && (
+              <IconCloudDownload
+                size={14}
+                className="text-text-muted flex-shrink-0 animate-pulse"
+              />
+            )}
+            {isError && (
+              <IconExclamationCircle
+                size={14}
+                className="text-red-500 flex-shrink-0"
+              />
+            )}
             <span>{formatArtists(track.artist)}</span>
             {track.album && (
               <>

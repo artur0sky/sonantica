@@ -21,6 +21,8 @@ import {
   type Album
 } from '@sonantica/media-library';
 import { useSettingsStore } from '../stores/settingsStore';
+import { useOfflineStore } from '@sonantica/offline-manager';
+import { OfflineStatus, generateStableId } from '@sonantica/shared';
 
 interface MultiServerLibraryState {
   tracks: Track[];
@@ -33,12 +35,20 @@ interface MultiServerLibraryState {
 }
 
 export function useMultiServerLibrary() {
-  const libraryStore = useLibraryStore();
+  const { 
+    tracks: storeTracks, 
+    artists: storeArtists, 
+    albums: storeAlbums,
+    setTracks,
+    setArtists,
+    setAlbums,
+    clearLibrary: storeClearLibrary
+  } = useLibraryStore();
   
   const [state, setState] = useState<MultiServerLibraryState>({
-    tracks: libraryStore.tracks,
-    artists: libraryStore.artists,
-    albums: libraryStore.albums,
+    tracks: storeTracks,
+    artists: storeArtists,
+    albums: storeAlbums,
     stats: null,
     loading: false,
     error: null,
@@ -49,11 +59,114 @@ export function useMultiServerLibrary() {
   useEffect(() => {
     setState(prev => ({
       ...prev,
-      tracks: libraryStore.tracks,
-      artists: libraryStore.artists,
-      albums: libraryStore.albums
+      tracks: storeTracks,
+      artists: storeArtists,
+      albums: storeAlbums
     }));
-  }, [libraryStore.tracks, libraryStore.artists, libraryStore.albums]);
+  }, [storeTracks, storeArtists, storeAlbums]);
+
+  /**
+   * Load offline content into the library
+   * Ensures content is available even without server connection
+   */
+  const loadOfflineContent = useCallback(() => {
+    const offlineItems = useOfflineStore.getState().items;
+    const offlineTracks: Track[] = [];
+
+    // 1. Extract tracks from offline store
+    Object.values(offlineItems).forEach(item => {
+      if (item.status === OfflineStatus.COMPLETED && item.track) {
+        offlineTracks.push(item.track);
+      }
+    });
+
+    if (offlineTracks.length === 0) return;
+
+    console.log(`📦 Loaded ${offlineTracks.length} offline tracks`);
+
+    // 2. Derive Artists and Albums from tracks
+    const artistsMap = new Map<string, Artist>();
+    const albumsMap = new Map<string, Album>();
+
+    offlineTracks.forEach(track => {
+      // Process Artist
+      const artistName = track.artist || 'Unknown Artist';
+      // Use name as key for deduplication
+      if (!artistsMap.has(artistName)) {
+        artistsMap.set(artistName, {
+          id: generateStableId(`artist-${artistName}`),
+          name: artistName,
+          addedAt: track.addedAt || new Date(),
+          updatedAt: new Date(),
+          trackCount: 0, 
+          albumCount: 0,
+          imageUrl: undefined,
+          serverIds: ['offline']
+        } as unknown as Artist);
+      }
+
+      // Process Album
+      const albumTitle = track.album || 'Unknown Album';
+      const albumKey = `${artistName}||${albumTitle}`; // Composite key
+      
+      if (!albumsMap.has(albumKey)) {
+        albumsMap.set(albumKey, {
+          id: generateStableId(`album-${albumKey}`),
+          title: albumTitle,
+          artist: artistName,
+          year: track.year,
+          coverArt: track.coverArt, // Use track cover art
+          addedAt: track.addedAt || new Date(),
+          updatedAt: new Date(),
+          trackCount: 0,
+          serverIds: ['offline']
+        } as unknown as Album);
+      }
+    });
+
+    const offlineArtists = Array.from(artistsMap.values());
+    const offlineAlbums = Array.from(albumsMap.values());
+
+    // 3. Merge into store directly
+    // The useEffect at line 59 will handle syncing this back to local state
+    
+    // We need to merge with CURRENT store state, not local state, to be safe.
+    const currentTracks = useLibraryStore.getState().tracks;
+    const currentArtists = useLibraryStore.getState().artists;
+    const currentAlbums = useLibraryStore.getState().albums;
+
+    // Deduplicate
+    const trackMap = new Map(currentTracks.map(t => [t.id, t]));
+    offlineTracks.forEach(t => trackMap.set(t.id, t));
+
+    const artistMap = new Map(currentArtists.map(a => [a.name, a]));
+    offlineArtists.forEach(a => {
+      if (!artistMap.has(a.name)) artistMap.set(a.name, a);
+    });
+
+    const albumMap = new Map(currentAlbums.map(a => [a.title + a.artist, a]));
+    offlineAlbums.forEach(a => {
+      const key = a.title + a.artist;
+      if (!albumMap.has(key)) albumMap.set(key, a);
+    });
+
+    const newTracks = Array.from(trackMap.values());
+    const newArtists = Array.from(artistMap.values());
+    const newAlbums = Array.from(albumMap.values());
+
+    // Only update if count changed to avoid loops/noise
+    if (newTracks.length !== currentTracks.length) {
+       console.log('💾 Merging offline content to store');
+       setTracks(newTracks);
+       setArtists(newArtists);
+       setAlbums(newAlbums);
+    }
+  }, [setTracks, setArtists, setAlbums]);
+
+  // Load offline content on mount
+  useEffect(() => {
+    loadOfflineContent();
+  }, [loadOfflineContent]);
 
   /**
    * Scan a specific server (Sync metadata to client)
@@ -132,9 +245,9 @@ export function useMultiServerLibrary() {
         const newAlbums = [...otherAlbums, ...taggedAlbums];
 
         // Sync with library store
-        libraryStore.setTracks(newTracks);
-        libraryStore.setArtists(newArtists);
-        libraryStore.setAlbums(newAlbums);
+        setTracks(newTracks);
+        setArtists(newArtists);
+        setAlbums(newAlbums);
 
         return {
           ...prev,
@@ -239,8 +352,8 @@ export function useMultiServerLibrary() {
       error: null,
       scanningServers: new Set()
     });
-    libraryStore.clearLibrary();
-  }, [libraryStore]);
+    storeClearLibrary();
+  }, [storeClearLibrary]);
 
   /**
    * Get tracks from a specific server

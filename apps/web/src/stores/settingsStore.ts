@@ -23,11 +23,17 @@ interface SettingsState {
   animations: boolean;
   showSidebarOnStartup: boolean;
   minimizeToTray: boolean;
+
+  // Offline
+  offlineMode: boolean;
+  hideUnavailableOffline: boolean;
+  downloadQuality: 'original' | 'high' | 'normal' | 'low';
   
   // Actions
   toggle: (key: keyof Omit<SettingsState, 'theme' | 'toggle' | 'setTheme' | 'setNumber'>) => void;
   setTheme: (theme: 'dark' | 'light' | 'system') => void;
   setNumber: (key: 'playbackBufferSize' | 'scanFileSizeLimit' | 'coverArtSizeLimit', value: number) => void;
+  setDownloadQuality: (quality: 'original' | 'high' | 'normal' | 'low') => void;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -52,10 +58,15 @@ export const useSettingsStore = create<SettingsState>()(
       animations: true,
       showSidebarOnStartup: true,
       minimizeToTray: false,
+
+      offlineMode: false,
+      hideUnavailableOffline: false,
+      downloadQuality: 'original',
       
       toggle: (key) => set((state) => ({ [key]: !state[key as keyof SettingsState] })),
       setTheme: (theme) => set({ theme }),
       setNumber: (key, value) => set({ [key]: value }),
+      setDownloadQuality: (quality) => set({ downloadQuality: quality }),
     }),
     {
       name: 'sonantica:settings',
