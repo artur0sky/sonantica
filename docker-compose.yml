@@ -108,7 +108,7 @@ services:
       - "${API_PORT:-8080}:8080"
     volumes:
       # Media files - same as web service
-      - ${MEDIA_PATH:-./media}:/media:ro
+      # - ${MEDIA_PATH:-./media}:/media:ro
       - ${BUCKETS_PATH:-./buckets}:/buckets:ro
       - F:\Music:/media:ro
     environment:
