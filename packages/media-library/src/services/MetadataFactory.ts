@@ -97,8 +97,18 @@ export class MetadataFactory {
     // Helper to normalize artist string
     const artistStr = Array.isArray(artist) ? artist.join(', ') : artist;
     
+    // Stable ID should be based on relative path within the library architecture, 
+    // stripping origin to remain stable if IP/Host changes.
+    let stableIdPath = path;
+    try {
+      const url = new URL(path, window.location.origin);
+      stableIdPath = url.pathname; // This includes /api/stream/server-id/...
+    } catch (e) {
+      // Fallback to original path if not a valid URL
+    }
+
     return {
-      id: generateStableId(path),
+      id: generateStableId(stableIdPath),
       filePath: path,
       title,
       artist: artistStr,
