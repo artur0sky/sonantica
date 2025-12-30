@@ -3,12 +3,128 @@
 #
 # Usage:
 #   Production:  docker compose up -d
-#   Development: docker compose --profile dev up
 #   Stop:        docker compose down
 
 services:
   # ============================================
-  # PRODUCTION SERVICE
+  # PERSISTENCE LAYER
+  # ============================================
+  postgres:
+    # Use custom build context from data/psql (contains pgvector & init scripts)
+    build:
+      context: ./data/psql
+      dockerfile: Dockerfile
+    container_name: sonantica-postgres
+    restart: always
+    environment:
+      PSQL_NAME: ${PSQL_NAME}
+      PSQL_USER: ${PSQL_USER}
+      PSQL_PASSWORD: ${PSQL_PASSWORD}
+      POSTGRES_PASSWORD: ${PSQL_PASSWORD}
+      ENCODING: ${ENCODING}
+      PGDATA: /var/lib/postgresql/data
+      TZ: ${TZ}
+    volumes:
+      # Data persistence - Uses named volume for safety
+      - postgres_data:/var/lib/postgresql/data
+      - ./data/psql/init.d:/config
+      - ./data/psql/logs:/var/log/postgresql
+    networks:
+      - sonantica-net
+    command: [ "postgres", "-p", "${PSQL_PORT}" ]
+    ports:
+      - "${PSQL_PORT}:${PSQL_PORT}"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PSQL_USER} -p ${PSQL_PORT}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    labels:
+      com.sonantica.description: "Primary Data Store"
+
+  redis:
+    # Use custom build context from data/redis (contains redis.conf)
+    build:
+      context: ./data/redis
+      dockerfile: Dockerfile
+    environment:
+      TZ: ${TZ}
+      REDIS_HOST: redis
+      REDIS_PORT: ${REDIS_PORT}
+    container_name: sonantica-redis
+    restart: always
+    volumes:
+      # Data persistence - Uses named volume for safety
+      - redis_data:/data
+      - ./data/redis/dump:/dump
+      - ./data/redis/logs:/var/log/redis
+    networks:
+      - sonantica-net
+    ports:
+      - "${REDIS_PORT}:${REDIS_PORT}"
+    command: [ "redis-server", "/usr/local/etc/redis/redis.conf", "--port", "${REDIS_PORT}" ]
+    healthcheck:
+      test: ["CMD", "redis-cli", "-p", "${REDIS_PORT}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    labels:
+      com.sonantica.description: "Cache & Message Broker"
+
+  # ============================================
+  # CORE SERVICES (High Performance)
+  # ============================================
+  stream-core:
+    build:
+      context: ./services/go-core
+      dockerfile: Dockerfile
+    container_name: sonantica-core
+    ports:
+      - "${CORE_PORT:-8090}:8080"
+    environment:
+      - POSTGRES_URL=postgres://${PSQL_USER}:${PSQL_PASSWORD}@postgres:${PSQL_PORT}/${PSQL_NAME}?sslmode=disable
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - MEDIA_PATH=/media
+    volumes:
+      - ${MEDIA_PATH:-./media}:/media:ro
+      - ${BUCKETS_PATH:-./buckets}:/buckets:ro
+      - F:\Music:/media:ro
+      - ./config:/config:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - sonantica-net
+    labels:
+      com.sonantica.description: "High-Performance Streaming Core (Go)"
+
+  audio-worker:
+    build:
+      context: ./services/python-worker
+      dockerfile: Dockerfile
+    container_name: sonantica-worker
+    environment:
+      - POSTGRES_URL=postgres://${PSQL_USER}:${PSQL_PASSWORD}@postgres:${PSQL_PORT}/${PSQL_NAME}?sslmode=disable
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - MEDIA_PATH=/media
+    volumes:
+      - ${MEDIA_PATH:-./media}:/media:ro
+      - ${BUCKETS_PATH:-./buckets}:/buckets:ro
+      - F:\Music:/media:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - sonantica-net
+    labels:
+      com.sonantica.description: "Audio Analysis Worker (Python)"
+
+  # ============================================
+  # FRONTEND & PROXY
   # ============================================
   web:
     build:
@@ -19,144 +135,21 @@ services:
     ports:
       - "${WEB_PORT:-3000}:80"
     volumes:
-      # Media files - Mount your music library here
-      # Example: ./media or /path/to/your/music
       - ${MEDIA_PATH:-./media}:/media:ro
-      # Buckets - For cloud storage mounts or additional libraries
-      # Example: ./buckets or /mnt/s3-music
       - ${BUCKETS_PATH:-./buckets}:/buckets:ro
-
       - F:\Music:/media:ro
-      # Config - User preferences, playlists, settings
       - ${CONFIG_PATH:-./config}:/config:rw
     environment:
       - NODE_ENV=production
       - SONANTICA_VERSION=${SONANTICA_VERSION:-0.1.0}
     restart: unless-stopped
-    healthcheck:
-      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health" ]
-      interval: 30s
-      timeout: 3s
-      retries: 3
-      start_period: 10s
+    depends_on:
+      - stream-core
     networks:
       - sonantica-net
     labels:
       com.sonantica.description: "Audio-first multimedia player"
-      com.sonantica.version: "0.1.0"
-      com.sonantica.mode: "production"
 
-  # ============================================
-  # DEVELOPMENT SERVICE (with hot-reload)
-  # ============================================
-  dev:
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
-      target: development
-    container_name: sonantica-dev
-    ports:
-      - "${DEV_PORT:-5173}:5173"
-    volumes:
-      # Source code - mounted for hot-reload
-      - ./packages:/app/packages:cached
-      - ./apps:/app/apps:cached
-      - ./docs:/app/docs:ro
-      - ./package.json:/app/package.json:ro
-      - ./pnpm-workspace.yaml:/app/pnpm-workspace.yaml:ro
-      - ./pnpm-lock.yaml:/app/pnpm-lock.yaml:ro
-      - ./.npmrc:/app/.npmrc:ro
-
-      # Media files - Mount your music library here
-      # Example: ./media or /path/to/your/music
-      - ${MEDIA_PATH:-./media}:/media:ro
-      # Buckets - For cloud storage mounts or additional libraries
-      # Example: ./buckets or /mnt/s3-music
-      - ${BUCKETS_PATH:-./buckets}:/buckets:ro
-
-      # Config - User preferences, playlists, settings
-      - ${CONFIG_PATH:-./config}:/config:rw
-
-      # Node modules - use named volume for better performance
-      - node_modules:/app/node_modules
-      - shared_dist:/app/packages/shared/dist
-      - core_dist:/app/packages/player-core/dist
-    environment:
-      - NODE_ENV=development
-      - VITE_HOST=0.0.0.0
-      - VITE_PORT=5173
-    command: sh -c "pnpm install && pnpm build && pnpm dev --host 0.0.0.0"
-    networks:
-      - sonantica-net
-    profiles:
-      - dev
-    labels:
-      com.sonantica.description: "Audio-first multimedia player (development)"
-      com.sonantica.version: "0.1.0"
-      com.sonantica.mode: "development"
-
-  # ============================================
-  # API SERVER (Backend for streaming)
-  # ============================================
-  api:
-    build:
-      context: .
-      dockerfile: Dockerfile.api
-      target: production
-    container_name: sonantica-api
-    ports:
-      - "${API_PORT:-8080}:8080"
-    volumes:
-      # Media files - same as web service
-      # - ${MEDIA_PATH:-./media}:/media:ro
-      - ${BUCKETS_PATH:-./buckets}:/buckets:ro
-      - F:\Music:/media:ro
-      # Config - Persistence for library cache
-      - ${CONFIG_PATH:-./config}:/config:rw
-    environment:
-      - NODE_ENV=production
-      - API_PORT=8080
-      - MEDIA_PATH=/media
-      - CORS_ORIGIN=${CORS_ORIGIN:-*}
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 3s
-      retries: 3
-      start_period: 10s
-    networks:
-      - sonantica-net
-    labels:
-      com.sonantica.description: "Sonántica API Server - Music streaming backend"
-      com.sonantica.version: "0.1.0"
-      com.sonantica.mode: "production"
-
-  # ============================================
-  # OPTIONAL: File Browser for Media Management
-  # ============================================
-  filebrowser:
-    image: filebrowser/filebrowser:latest
-    container_name: sonantica-filebrowser
-    ports:
-      - "${FILEBROWSER_PORT:-8080}:80"
-    volumes:
-      - ${MEDIA_PATH:-./media}:/srv/media
-      - ${BUCKETS_PATH:-./buckets}:/srv/buckets
-      - filebrowser_db:/database
-      - filebrowser_config:/config
-    environment:
-      - FB_BASEURL=/files
-    networks:
-      - sonantica-net
-    profiles:
-      - tools
-    labels:
-      com.sonantica.description: "File browser for media management"
-
-  # ============================================
-  # OPTIONAL: Nginx Reverse Proxy (for multiple services)
-  # ============================================
   nginx-proxy:
     image: nginx:alpine
     container_name: sonantica-proxy
@@ -170,8 +163,6 @@ services:
       - web
     networks:
       - sonantica-net
-    profiles:
-      - proxy
     labels:
       com.sonantica.description: "Reverse proxy for Sonántica services"
 
@@ -181,16 +172,13 @@ networks:
     name: sonantica-network
 
 volumes:
-  # Development volumes
   node_modules:
     driver: local
   shared_dist:
     driver: local
   core_dist:
     driver: local
-
-  # File browser volumes
-  filebrowser_db:
+  postgres_data:
     driver: local
-  filebrowser_config:
+  redis_data:
     driver: local
