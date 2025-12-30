@@ -20,6 +20,12 @@ function getOfflineManager(): OfflineManager {
     offlineManagerInstance = new OfflineManager(adapter, (track: Track) => {
       return buildTrackStreamingUrl(track);
     });
+    
+    // Auto-verify integrity on startup to fix any "zombie" tracks
+    // (tracks marked as downloaded but missing from cache or corrupt)
+    offlineManagerInstance.verifyIntegrity().catch(err => {
+      console.error('Failed to verify offline integrity:', err);
+    });
   }
   return offlineManagerInstance;
 }

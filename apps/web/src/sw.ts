@@ -25,8 +25,15 @@ precacheAndRoute(self.__WB_MANIFEST);
 
 // 1. Offline Tracks - Served from 'sonantica-offline-tracks' cache
 // Supports Range Requests for scrubbing/seeking
+console.log('Service Worker: v3 - Query Params Support');
+
 registerRoute(
-  ({ url }) => url.pathname.startsWith('/offline/track/'),
+  ({ url }) => {
+    // Match /offline/track (from query params) OR /offline/track/ (legacy)
+    const isMatch = url.pathname === '/offline/track' || url.pathname.startsWith('/offline/track/');
+    if (isMatch) console.log(`SW: Intercepting offline track: ${url.href}`);
+    return isMatch;
+  },
   new CacheFirst({
     cacheName: 'sonantica-offline-tracks',
     plugins: [

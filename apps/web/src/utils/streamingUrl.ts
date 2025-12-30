@@ -22,7 +22,8 @@ export function buildStreamingUrl(serverId: string, filePath: string, trackId?: 
         // The Service Worker or Cache API will serve this
         // Must match format in WebOfflineAdapter
         const encodedId = encodeURIComponent(trackId);
-        const offlineUrl = `/offline/track/${encodedId}`;
+        // Use query param format to match WebOfflineAdapter
+        const offlineUrl = `/offline/track?id=${encodedId}`;
         console.log(`📦 Serving track ${trackId} from offline cache: ${offlineUrl}`);
         return offlineUrl;
       }
