@@ -1,4 +1,25 @@
 /**
+ * Offline status for media items
+ */
+export enum OfflineStatus {
+  NONE = 'none',
+  QUEUED = 'queued',
+  DOWNLOADING = 'downloading',
+  COMPLETED = 'completed',
+  ERROR = 'error',
+}
+
+/**
+ * Download quality options
+ */
+export enum DownloadQuality {
+  ORIGINAL = 'original',
+  HIGH = 'high',
+  NORMAL = 'normal',
+  LOW = 'low',
+}
+
+/**
  * Library Domain Types
  * 
  * Core types for music library management.
@@ -83,6 +104,15 @@ export interface Track {
   
   /** Cover art URL or data URI */
   coverArt?: string;
+
+  /** Offline availability status */
+  offlineStatus?: OfflineStatus;
+
+  /** Quality used for offline storage */
+  offlineQuality?: DownloadQuality;
+
+  /** When the track was downloaded for offline use */
+  downloadedAt?: Date;
 }
 
 /**
@@ -109,6 +139,9 @@ export interface Artist {
   
   /** Genres associated with this artist */
   genres?: string[];
+
+  /** Whether the artist is marked for offline availability (all tracks) */
+  offlineStatus?: OfflineStatus;
 }
 
 /**
@@ -141,6 +174,9 @@ export interface Album {
   
   /** Record label */
   label?: string;
+
+  /** Whether the album is marked for offline availability (all tracks) */
+  offlineStatus?: OfflineStatus;
 }
 
 /**
