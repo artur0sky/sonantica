@@ -16,8 +16,9 @@ Our UI is designed to be **invisible but present**. We prioritize:
 Built on **Atomic Design** principles:
 
 - **Atoms**: Primitive elements (`Button`, `ShuffleButton`, `RepeatButton`, `VolumeSlider`).
-- **Molecules**: Compound logic (`WaveformScrubber`, `TrackRating`, `EnhancedVolumeControl`).
+- **Molecules**: Compound logic (`WaveformScrubber`, `TrackRating`, `EnhancedVolumeControl`, `AlphabetNavigator`).
 - **Organisms**: Complex features (`MiniPlayer`, `ExpandedPlayer`, `MetadataPanel`).
+- **Typography**: Standardized `Lexend` font usage for optimal readability.
 - **Layouts**: Structural foundations for the application.
 
 ## 🛠️ Built With

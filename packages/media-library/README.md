@@ -9,8 +9,9 @@ The intelligent indexing and management system for Sonántica. This package tran
 The Media Library is the "librarian" of Sonántica. It manages:
 - **Indexing**: Recursive scanning of directories (Web and Local).
 - **Organization**: Grouping tracks by Artist, Album, Genre, and Era.
-- **Search**: Fast, multi-criteria filtering.
+- **Search**: Fast, multi-criteria filtering with support for flat properties.
 - **Change Detection**: Efficient incremental scanning to detect new or removed files.
+- **Scan Control**: Customizable limits (depth, recursion) to handle massive directories safely.
 - **Persistence**: Caching library state to ensure instant startup.
 
 ## 🧠 Philosophy

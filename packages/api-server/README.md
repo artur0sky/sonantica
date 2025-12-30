@@ -8,7 +8,8 @@ Designed for **autonomy**, it allows you to own your data while enjoying a moder
 
 ## 📡 Responsibility
 
-- **Library Indexing**: Recursively scans directories to build a rich metadata catalog (Artists, Albums, Genres).
+- **Library Indexing**: Recursively scans directories to build a rich metadata catalog (Artists, Albums, Genres). Supports specific paths and exclusionary rules.
+- **Symlink Support**: Intelligently follows symbolic links while preventing circular references.
 - **Audio Streaming**: Serves high-fidelity audio via HTTP Range Requests, enabling seeking and smooth playback.
 - **Real-time Sync**: Pushes library updates to connected clients via Server-Sent Events (SSE).
 - **Metadata Extraction**: Parses ID3, Vorbis, and FLAC tags to populate the library database.

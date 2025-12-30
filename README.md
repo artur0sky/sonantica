@@ -22,13 +22,19 @@ Following strict **Clean Architecture** and **SOLID** principles, Sonántica is 
 ```text
 sonantica/
 ├─ apps/
-│  └─ web/              # Main PWA / Web Interface
+│  ├─ web/              # Main PWA / Web Interface
+│  └─ mobile/           # Native Capacitor Wrapper (Android/iOS)
 │
 ├─ packages/
 │  ├─ player-core/      # Audio engine & playback logic (UI-agnostic)
 │  ├─ media-library/    # Indexing, metadata management & search
 │  ├─ metadata/         # Low-level metadata extraction (ID3, Vorbis, FLAC)
+│  ├─ api-server/       # Self-hosted API for streaming and library sync
 │  ├─ audio-analyzer/   # FFT Analysis & waveform generation
+│  ├─ dsp/              # Audio processing (EQ, Presets, Gain)
+│  ├─ recommendations/  # Discovery engine (similar tracks, artists)
+│  ├─ lyrics/           # Synchronized lyrics parsing and management
+│  ├─ offline-manager/  # Offline playback and synchronization logic
 │  ├─ ui/               # Shared Design System & Components
 │  └─ shared/           # Fundamental types & utilities
 │
@@ -104,6 +110,9 @@ Configure your library paths in `.env`:
 *   **[@sonantica/media-library](./packages/media-library)**: The librarian. Organized indexing and fast search.
 *   **[@sonantica/ui](./packages/ui)**: The aesthetic interface. Built with React and Framer Motion.
 *   **[@sonantica/audio-analyzer](./packages/audio-analyzer)**: The scientific eye. Visualizing sound with precision.
+*   **[@sonantica/dsp](./packages/dsp)**: The studio. Advanced EQ and signal processing.
+*   **[@sonantica/api-server](./packages/api-server)**: The tower. Streaming and sync for your personal cloud.
+*   **[@sonantica/recommendations](./packages/recommendations)**: The guide. Intelligent discovery based on acoustic features.
 
 ## 🛠️ Built With
 

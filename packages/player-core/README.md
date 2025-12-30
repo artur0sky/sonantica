@@ -14,7 +14,7 @@ The Player Core follows the **Non-negotiable Principle**: It must be able to run
 - **Contract-Based**: Strictly defined interfaces (`IPlayerEngine`) ensure technical transparency.
 - **State Management**: Encapsulated Zustand store for predictable playback state across components.
 - **Event-Driven**: Complete observer pattern implementation for time updates, state changes, and errors.
-- **Queue Logic**: Integrated queue management with shuffle and repeat support.
+- **Queue Logic**: Integrated queue management with shuffle (various modes), repeat, and history support.
 
 ## 🛡️ Security & Reliability
 
