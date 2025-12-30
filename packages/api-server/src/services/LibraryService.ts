@@ -58,50 +58,77 @@ export class LibraryService extends EventEmitter {
   /**
    * Recursively scan a directory
    */
+  /**
+   * Recursively scan a directory with parallel processing
+   */
   private async scanDirectory(dirPath: string, visited: Set<string> = new Set()): Promise<void> {
     try {
       // Resolve real path to prevent infinite loops with circular symlinks
       const realPath = await fs.realpath(dirPath);
       if (visited.has(realPath)) {
+        // console.log(`  Skipping visited path: ${dirPath} -> ${realPath}`);
         return;
       }
       visited.add(realPath);
 
       const entries = await fs.readdir(dirPath, { withFileTypes: true });
-      const filePaths: string[] = [];
+      
+      const files: string[] = [];
+      const directories: string[] = [];
 
+      // Categorize entries first
       for (const entry of entries) {
         const fullPath = path.join(dirPath, entry.name);
-
         try {
-          // Check if it's a directory (follow symlinks)
-          let isDirectory = entry.isDirectory();
-          if (entry.isSymbolicLink()) {
-            const stats = await fs.stat(fullPath);
-            isDirectory = stats.isDirectory();
-          }
-
-          if (isDirectory) {
-            // Skip hidden directories (like .git)
-            if (entry.name.startsWith('.')) continue;
-            await this.scanDirectory(fullPath, visited);
+          if (entry.isDirectory() || entry.isSymbolicLink()) {
+             // We'll check isDirectory/Symlink logic deeply inside the loop for safety, 
+             // but here we just group them.
+             // For symlinks we need to stat them to know if they are dirs, 
+             // but to stay fast we can just assume potential dir and let the processor handle it.
+             directories.push(fullPath);
           } else if (this.isAudioFile(entry.name)) {
-            filePaths.push(fullPath);
+            files.push(fullPath);
           }
-        } catch (error) {
-          console.warn(`⚠️ Failed to access: ${fullPath}`, error);
+        } catch (e) {
+          // ignore stat errors here
         }
       }
 
-      // Index audio files in this directory with limited concurrency
-      // We process batches to balance speed and memory/OS limits
-      const BATCH_SIZE = 10;
-      for (let i = 0; i < filePaths.length; i += BATCH_SIZE) {
-        const batch = filePaths.slice(i, i + BATCH_SIZE);
-        await Promise.all(batch.map(filePath => this.indexFile(filePath)));
-      }
+      // 1. Process Files in parallel (Higher concurrency)
+      // Batch size 20 for file processing
+      await this.processInBatches(files, 20, async (filePath) => {
+        await this.indexFile(filePath);
+      });
+
+      // 2. Process Subdirectories in parallel (Lower concurrency to save file handles)
+      // Batch size 5 for directory recursion
+      await this.processInBatches(directories, 5, async (subdirPath) => {
+        try {
+           const stats = await fs.stat(subdirPath);
+           if (!stats.isDirectory()) return;
+           
+           const name = path.basename(subdirPath);
+           // Security/System checks
+           if (['.git', 'node_modules', '$RECYCLE.BIN', 'System Volume Information'].includes(name)) return;
+           
+           await this.scanDirectory(subdirPath, visited);
+        } catch (error) {
+           console.warn(`⚠️ Failed to access subdir: ${subdirPath}`, error);
+        }
+      });
+
     } catch (error) {
       console.error(`❌ Failed to scan directory: ${dirPath}`, error);
+    }
+  }
+
+  /**
+   * Helper to process an array in batches (concurrency limit)
+   */
+  private async processInBatches<T>(items: T[], batchSize: number, task: (item: T) => Promise<void>): Promise<void> {
+    for (let i = 0; i < items.length; i += batchSize) {
+      const batch = items.slice(i, i + batchSize);
+      await Promise.all(batch.map(item => task(item)));
     }
   }
 
