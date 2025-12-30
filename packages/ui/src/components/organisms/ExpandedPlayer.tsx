@@ -29,7 +29,12 @@ import {
 } from "@tabler/icons-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-export function ExpandedPlayer() {
+interface ExpandedPlayerProps {
+  /** Optional action buttons to render in the info area */
+  actionButtons?: React.ReactNode;
+}
+
+export function ExpandedPlayer({ actionButtons }: ExpandedPlayerProps = {}) {
   const {
     currentTrack,
     state,
@@ -148,9 +153,14 @@ export function ExpandedPlayer() {
           )}
         </AnimatePresence>
 
-        {/* Rating */}
-        <div className="flex justify-center mt-3 sm:mt-4">
-          <TrackRating trackId={currentTrack.id} mode="both" size={18} />
+        {/* Rating & Actions */}
+        <div className="flex justify-center items-center gap-4 mt-3 sm:mt-4">
+          <TrackRating trackId={currentTrack.id} mode="both" size={20} />
+          {actionButtons && (
+            <div className="flex items-center gap-2 border-l border-border pl-4 ml-2">
+              {actionButtons}
+            </div>
+          )}
         </div>
       </div>
 

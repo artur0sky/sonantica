@@ -33,7 +33,12 @@ import {
 } from "@tabler/icons-react";
 import { motion } from "framer-motion";
 
-export function MiniPlayer() {
+interface MiniPlayerProps {
+  /** Optional action buttons to render next to track info */
+  actionButtons?: React.ReactNode;
+}
+
+export function MiniPlayer({ actionButtons }: MiniPlayerProps = {}) {
   const {
     currentTrack,
     state,
@@ -247,6 +252,13 @@ export function MiniPlayer() {
                     </motion.div>
                   </div>
                 </div>
+
+                {/* Action Buttons (Download, Playlist, etc.) */}
+                {actionButtons && (
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    {actionButtons}
+                  </div>
+                )}
 
                 <div className="hidden xl:flex items-center flex-shrink-0">
                   <TrackRating
