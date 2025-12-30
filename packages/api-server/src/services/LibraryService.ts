@@ -134,14 +134,17 @@ export class LibraryService extends EventEmitter {
         lossless: ['.flac', '.alac', '.wav', '.aiff'].includes(path.extname(filePath).toLowerCase())
       } : undefined;
 
+      // Normalize path to POSIX style (forward slashes) for stable IDs across platforms
+      const normalizedPath = relativePath.split(path.sep).join('/');
+      
       const track: Track = {
-        id: this.generateId(relativePath),
+        id: this.generateId(normalizedPath),
         title: metadata.title || path.basename(filePath, path.extname(filePath)),
         artist: Array.isArray(metadata.artist) ? metadata.artist[0] : (metadata.artist || 'Unknown Artist'),
         album: metadata.album || 'Unknown Album',
         albumArtist: metadata.albumArtist,
         duration: metadata.duration || 0,
-        filePath: relativePath,
+        filePath: normalizedPath,
         format,
         year: metadata.year,
         genre: Array.isArray(metadata.genre) ? metadata.genre[0] : metadata.genre,

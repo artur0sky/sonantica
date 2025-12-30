@@ -28,13 +28,17 @@ export function createStreamRouter(mediaPath: string): Router {
   router.get('/:serverId/:filePath(*)', async (req, res) => {
     try {
       const { serverId, filePath: relativeFilePath } = req.params;
-      const filePath = path.join(mediaPath, relativeFilePath);
+      
+      // Resolve paths to handle OS differences (forward/backslash) and ensure absolute paths
+      const absoluteMediaPath = path.resolve(mediaPath);
+      const filePath = path.resolve(mediaPath, relativeFilePath);
       
       console.log(`🎵 Stream request: serverId=${serverId}, file=${relativeFilePath}`);
       
       // Security: Prevent directory traversal
-      if (!filePath.startsWith(mediaPath)) {
-        console.error('❌ Access denied:', filePath);
+      // We use startsWith on resolved absolute paths which ensures safety and OS compatibility
+      if (!filePath.startsWith(absoluteMediaPath)) {
+        console.error('❌ Access denied:', filePath, 'Must be within:', absoluteMediaPath);
         return res.status(403).json({ error: 'Access denied' });
       }
 
