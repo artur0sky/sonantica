@@ -23,7 +23,7 @@ function getOfflineManager(): OfflineManager {
     
     // Auto-verify integrity on startup to fix any "zombie" tracks
     // (tracks marked as downloaded but missing from cache or corrupt)
-    offlineManagerInstance.verifyIntegrity().catch(err => {
+    offlineManagerInstance.verifyIntegrity().catch((err: unknown) => {
       console.error('Failed to verify offline integrity:', err);
     });
   }
