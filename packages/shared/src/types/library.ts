@@ -113,6 +113,9 @@ export interface Track {
 
   /** When the track was downloaded for offline use */
   downloadedAt?: Date;
+
+  /** File Modification Timestamp (for incremental scanning) */
+  fileModifiedAt?: number;
 }
 
 /**
