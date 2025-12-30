@@ -101,7 +101,9 @@ export class MetadataFactory {
     // stripping origin to remain stable if IP/Host changes.
     let stableIdPath = path;
     try {
-      const url = new URL(path, window.location.origin);
+      // In Node.js, window is undefined. Use a dummy base for relative paths.
+      const base = typeof window !== 'undefined' ? window.location.origin : 'http://localhost';
+      const url = new URL(path, base);
       stableIdPath = url.pathname; // This includes /api/stream/server-id/...
     } catch (e) {
       // Fallback to original path if not a valid URL
