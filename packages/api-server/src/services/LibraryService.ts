@@ -238,19 +238,53 @@ export class LibraryService extends EventEmitter {
     }
   }
 
+  private activeStreams = 0;
+
+  /**
+   * Set streaming mode priority
+   * Called by the stream router when a stream starts or ends.
+   */
+  setStreamingMode(active: boolean) {
+    if (active) {
+      this.activeStreams++;
+    } else {
+      this.activeStreams = Math.max(0, this.activeStreams - 1);
+    }
+  }
+
   /**
    * Helper to process an array in batches with yielding
    * Yielding (setTimeout) ensures the Event Loop is not starving, 
    * allowing streaming requests to be processed in between batches.
    */
-  private async processInBatches<T>(items: T[], batchSize: number, task: (item: T) => Promise<void>): Promise<void> {
-    for (let i = 0; i < items.length; i += batchSize) {
-      const batch = items.slice(i, i + batchSize);
+  private async processInBatches<T>(items: T[], defaultBatchSize: number, task: (item: T) => Promise<void>): Promise<void> {
+    let currentIndex = 0;
+
+    while (currentIndex < items.length) {
+      // Dynamic Batch Size Strategy:
+      // - If Streaming is active: Use batch size 1 (Serial) to absolutely minimize I/O contention.
+      // - If Idle: Use requested defaultBatchSize (Parallel) for speed.
+      const currentBatchSize = this.activeStreams > 0 ? 1 : defaultBatchSize;
+      
+      const batch = items.slice(currentIndex, currentIndex + currentBatchSize);
+      
+      // Process batch
       await Promise.all(batch.map(item => task(item)));
       
-      // Yield to event loop for 20ms to allow streaming I/O to pass through
-      if (i + batchSize < items.length) {
-        await new Promise(resolve => setTimeout(resolve, 20));
+      currentIndex += currentBatchSize;
+
+      // Dynamic yielding based on streaming activity
+      // - Streaming active: 500ms delay between *single* items (Slow scan mode)
+      // - Idle: 20ms delay between *batches* (Fast scan mode)
+      const delay = this.activeStreams > 0 ? 500 : 20;
+
+      if (this.activeStreams > 0 && currentIndex % 5 === 0) {
+        // Optional debugging
+        // console.log(`🐢 Slow scan active. Processed ${currentIndex}/${items.length}`);
+      }
+      
+      if (currentIndex < items.length) {
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
   }

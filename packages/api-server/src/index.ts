@@ -47,7 +47,7 @@ const libraryService = new LibraryService(MEDIA_PATH);
 
 // Routes
 app.use('/api/library', createLibraryRouter(libraryService));
-app.use('/api/stream', createStreamRouter(MEDIA_PATH));
+app.use('/api/stream', createStreamRouter(MEDIA_PATH, libraryService));
 app.use('/api/scan', createScanRouter(libraryService));
 
 // Start server

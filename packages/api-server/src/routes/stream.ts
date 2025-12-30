@@ -8,9 +8,16 @@
 import { Router } from 'express';
 import { promises as fs } from 'fs';
 import path from 'path';
+import { LibraryService } from '../services/LibraryService';
 
-export function createStreamRouter(mediaPath: string): Router {
+export function createStreamRouter(mediaPath: string, libraryService?: LibraryService): Router {
   const router = Router();
+
+  const notifyStreaming = (active: boolean) => {
+    if (libraryService) {
+      libraryService.setStreamingMode(active);
+    }
+  };
 
   // Handle CORS preflight
   router.options('/:serverId/:filePath(*)', (req, res) => {
@@ -99,6 +106,12 @@ export function createStreamRouter(mediaPath: string): Router {
         });
 
         const stream = (await import('fs')).createReadStream(filePath, { start, end });
+        
+        // Notify library service that streaming is active (Critical for prioritization)
+        notifyStreaming(true);
+        res.on('close', () => notifyStreaming(false));
+        res.on('finish', () => notifyStreaming(false));
+        
         stream.pipe(res);
       } else {
         // Full file
@@ -112,6 +125,13 @@ export function createStreamRouter(mediaPath: string): Router {
           'Access-Control-Allow-Headers': 'Range, Content-Type',
           'Access-Control-Expose-Headers': 'Content-Length, Content-Range, Accept-Ranges',
         });
+
+        // Notify library service that streaming is active
+        notifyStreaming(true);
+        
+        // Listen for completion/cancellation
+        res.on('close', () => notifyStreaming(false));
+        res.on('finish', () => notifyStreaming(false));
 
         const stream = (await import('fs')).createReadStream(filePath);
         stream.pipe(res);
