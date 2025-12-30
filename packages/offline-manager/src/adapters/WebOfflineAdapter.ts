@@ -8,9 +8,23 @@ export class WebOfflineAdapter implements IOfflineAdapter {
     try {
       const cache = await caches.open(CACHE_NAME);
       const encodedId = encodeURIComponent(trackId);
-      const offlineUrl = new URL(`/offline/track/${encodedId}`, self.location.origin).href;
+      // Use query param to avoid path encoding issues (e.g. %2F decoding)
+      const offlineUrl = new URL(`/offline/track?id=${encodedId}`, self.location.origin).href;
       const response = await cache.match(offlineUrl);
-      return !!response;
+      
+      if (!response) return false;
+
+      // Strict check: if it's cached but small (< 5KB), it's corrupt/error page
+      const sizeHeader = response.headers.get('content-length');
+      let size = sizeHeader ? parseInt(sizeHeader, 10) : 0;
+      
+      if (size > 0 && size < 5 * 1024) {
+         console.warn(`🗑️ Found corrupted cache for ${trackId} (${size} bytes). Deleting.`);
+         await cache.delete(offlineUrl);
+         return false;
+      }
+      
+      return true;
     } catch (e) {
       return false;
     }
@@ -20,16 +34,16 @@ export class WebOfflineAdapter implements IOfflineAdapter {
     if (typeof caches === 'undefined') throw new Error('Offline storage is only available in secure contexts (HTTPS or localhost)');
     const cache = await caches.open(CACHE_NAME);
     
-    // Create a special offline URL for the cache
-    // Use absolute URL to be safe and encode ID to handle special chars
     const encodedId = encodeURIComponent(trackId);
-    const offlineUrl = new URL(`/offline/track/${encodedId}`, self.location.origin).href;
+    // Use query param
+    const offlineUrl = new URL(`/offline/track?id=${encodedId}`, self.location.origin).href;
     
     // Create a Response from the blob
     const response = new Response(blob, {
       headers: {
         'Content-Type': blob.type || 'audio/mpeg',
         'Content-Length': blob.size.toString(),
+        'Accept-Ranges': 'bytes',
       }
     });
     
@@ -51,7 +65,8 @@ export class WebOfflineAdapter implements IOfflineAdapter {
   async removeTrack(trackId: string): Promise<void> {
     const cache = await caches.open(CACHE_NAME);
     const keys = await cache.keys();
-    const toDelete = keys.filter(request => request.url.includes(`/offline/track/${trackId}`) || request.url.includes(`/offline/cover/${trackId}`));
+    // Match query param pattern
+    const toDelete = keys.filter(request => request.url.includes(`/offline/track?id=${encodeURIComponent(trackId)}`) || request.url.includes(`/offline/cover/${trackId}`));
     
     for (const request of toDelete) {
       await cache.delete(request);
@@ -62,7 +77,7 @@ export class WebOfflineAdapter implements IOfflineAdapter {
     if (typeof caches === 'undefined') return undefined;
     
     const encodedId = encodeURIComponent(trackId);
-    const offlineUrl = new URL(`/offline/track/${encodedId}`, self.location.origin).href;
+    const offlineUrl = new URL(`/offline/track?id=${encodedId}`, self.location.origin).href;
     
     const cache = await caches.open(CACHE_NAME);
     const response = await cache.match(offlineUrl);

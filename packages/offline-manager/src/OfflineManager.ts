@@ -115,13 +115,28 @@ export class OfflineManager implements IOfflineManager {
           }
 
           const contentType = response.headers.get('content-type');
-          if (contentType && contentType.includes('text/html')) {
-            throw new Error('Invalid content type: text/html. Possibly a 404 fallback page.');
+          console.log(`📡 Response type: ${contentType}, length: ${response.headers.get('content-length')}`);
+
+          if (contentType) {
+            if (contentType.includes('text/html')) {
+              throw new Error('Invalid content type: text/html. Possibly a 404 fallback page.');
+            }
+            if (contentType.includes('application/json')) {
+              // It might be a JSON error response despite 200 OK (some misconfigured servers)
+              // Or it's definitely not an audio file
+              throw new Error('Invalid content type: application/json. Likely an API error.');
+            }
           }
 
           // Get content length for progress tracking
           const contentLength = response.headers.get('content-length');
           const total = contentLength ? parseInt(contentLength, 10) : 0;
+          
+          // Validation: suspiciously small files (e.g. < 5KB) are likely errors
+          // Exception: allow if we can't determine size (total=0)
+          if (total > 0 && total < 5 * 1024) { 
+             throw new Error(`File too small (${total} bytes). Likely an error message or corrupt file.`);
+          }
           
           let loaded = 0;
           const reader = response.body?.getReader();
@@ -148,8 +163,26 @@ export class OfflineManager implements IOfflineManager {
           }
 
           // Combine chunks into a single blob
-          const blob = new Blob(chunks as BlobPart[], { type: response.headers.get('content-type') || 'audio/mpeg' });
+          const mimeType = response.headers.get('content-type') || 'audio/mpeg';
+          const blob = new Blob(chunks as BlobPart[], { type: mimeType });
           
+          console.log(`💾 Downloaded ${blob.size} bytes, Type: ${mimeType}`);
+
+          // Strict validation: Reject HTML/Text masquerading as audio
+          if (mimeType.includes('text/html') || mimeType.includes('application/json')) {
+             throw new Error(`Invalid content type: ${mimeType}. Download is likely an error page.`);
+          }
+
+          // Strict validation: Reject small files
+          if (blob.size < 10 * 1024) { 
+             throw new Error(`Downloaded file is too small (${blob.size} bytes). Invalid audio file.`);
+          }
+
+          // Verify integrity if content-length was available
+          if (total > 0 && blob.size !== total) {
+             throw new Error(`Download incomplete: expected ${total} bytes, got ${blob.size}`);
+          }
+
           console.log(`💾 Saving track to cache: ${track.title} (${(blob.size / 1024 / 1024).toFixed(2)} MB)`);
           
           // Save to cache using adapter
@@ -175,5 +208,35 @@ export class OfflineManager implements IOfflineManager {
    */
   setUrlBuilder(builder: (track: Track) => string) {
     this.urlBuilder = builder;
+  }
+
+  /**
+   * Verified integrity of offline store against actual cache
+   * Removes "zombie" tracks that think they are downloaded but are missing/corrupt in cache
+   */
+  async verifyIntegrity(): Promise<void> {
+    const store = useOfflineStore.getState();
+    const offlineItems = Object.values(store.items).filter(item => item.status === OfflineStatus.COMPLETED);
+    
+    if (offlineItems.length === 0) return;
+
+    console.log(`🔍 Verifying integrity of ${offlineItems.length} offline tracks...`);
+    let fixedCount = 0;
+
+    for (const item of offlineItems) {
+      const isAvailable = await this.adapter.isAvailable(item.id);
+      
+      if (!isAvailable) {
+        console.warn(`⚠️ Track ${item.id} is marked as downloaded but missing/corrupt in cache. Resetting status.`);
+        store.removeItem(item.id); // Or set to NONE, but removeItem cleans it up completely
+        fixedCount++;
+      }
+    }
+
+    if (fixedCount > 0) {
+      console.log(`✅ Integrity check complete: Fixed ${fixedCount} inconsistencies.`);
+    } else {
+      console.log(`✅ Integrity check complete: All tracks valid.`);
+    }
   }
 }

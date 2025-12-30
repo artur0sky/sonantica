@@ -68,4 +68,9 @@ export interface IOfflineManager {
    * Set the download quality
    */
   setDefaultQuality(quality: DownloadQuality): void;
+
+  /**
+   * Verify integrity of offline store against actual cache
+   */
+  verifyIntegrity(): Promise<void>;
 }
