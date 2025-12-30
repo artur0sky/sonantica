@@ -69,6 +69,9 @@ importers:
       '@sonantica/metadata':
         specifier: workspace:*
         version: link:../../packages/metadata
+      '@sonantica/offline-manager':
+        specifier: workspace:*
+        version: link:../../packages/offline-manager
       '@sonantica/player-core':
         specifier: workspace:*
         version: link:../../packages/player-core
@@ -286,6 +289,25 @@ importers:
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.3
+      tsup:
+        specifier: 8.5.1
+        version: 8.5.1(postcss@8.5.6)(typescript@5.9.3)
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
+  packages/offline-manager:
+    dependencies:
+      '@sonantica/shared':
+        specifier: workspace:*
+        version: link:../shared
+      zustand:
+        specifier: 5.0.9
+        version: 5.0.9(@types/react@19.2.3)(react@19.2.3)
+    devDependencies:
+      rimraf:
+        specifier: 6.1.2
+        version: 6.1.2
       tsup:
         specifier: 8.5.1
         version: 8.5.1(postcss@8.5.6)(typescript@5.9.3)
