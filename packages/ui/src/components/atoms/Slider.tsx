@@ -1,41 +1,77 @@
 /**
  * Slider Atom
- * 
+ *
  * Range input for volume and timeline.
  */
 
-import { cn } from '../../utils/cn';
+import { cn } from "../../utils/cn";
 
-interface SliderProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
+interface SliderProps
+  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "type"> {
   value: number;
   min?: number;
   max?: number;
   step?: number;
+  buffered?: number; // End of single buffer range (e.g. for simple progress)
 }
 
-export function Slider({ className, value, min = 0, max = 100, step = 1, ...props }: SliderProps) {
+export function Slider({
+  className,
+  value,
+  min = 0,
+  max = 100,
+  step = 1,
+  buffered = 0,
+  ...props
+}: SliderProps) {
+  const percentage = ((value - min) / (max - min)) * 100;
+  const bufferPercentage = ((buffered - min) / (max - min)) * 100;
+
   return (
-    <input
-      type="range"
-      min={min}
-      max={max}
-      step={step}
-      value={value}
-      className={cn(
-        'w-full h-2 bg-surface-elevated rounded-lg appearance-none cursor-pointer',
-        'focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg',
-        '[&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4',
-        '[&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-accent',
-        '[&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:transition-transform',
-        '[&::-webkit-slider-thumb]:hover:scale-110',
-        '[&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:rounded-full',
-        '[&::-moz-range-thumb]:bg-accent [&::-moz-range-thumb]:border-0',
-        '[&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:transition-transform',
-        '[&::-moz-range-thumb]:hover:scale-110',
-        'disabled:opacity-50 disabled:cursor-not-allowed',
-        className
-      )}
-      {...props}
-    />
+    <div
+      className={cn("relative w-full h-4 flex items-center group", className)}
+    >
+      {/* Background Track */}
+      <div className="absolute w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+        {/* Buffer Indicator */}
+        <div
+          className="absolute h-full bg-white/20 transition-all duration-300"
+          style={{ width: `${clamp(bufferPercentage, 0, 100)}%` }}
+        />
+        {/* Progress Track */}
+        <div
+          className="absolute h-full bg-accent transition-all duration-75"
+          style={{ width: `${clamp(percentage, 0, 100)}%` }}
+        />
+      </div>
+
+      {/* Hidden Native Input for interaction */}
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        className={cn(
+          "absolute w-full h-full opacity-0 cursor-pointer z-10",
+          "disabled:cursor-not-allowed"
+        )}
+        {...props}
+      />
+
+      {/* Thumb (Always visible but non-interactive to native, z-index lower than input) */}
+      <div
+        className={cn(
+          "absolute w-4 h-4 bg-white rounded-full shadow-lg pointer-events-none transition-transform group-hover:scale-110",
+          "border-2 border-accent"
+        )}
+        style={{ left: `calc(${clamp(percentage, 0, 100)}% - 8px)` }}
+      />
+    </div>
   );
+}
+
+// Utility for internal usage if not imported
+function clamp(val: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, val));
 }

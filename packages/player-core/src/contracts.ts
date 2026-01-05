@@ -5,7 +5,7 @@
  * All communication between layers is by contract.
  */
 
-import type { MediaSource, PlaybackStatus, PlayerEvent } from '@sonantica/shared';
+import type { MediaSource, PlaybackStatus, PlayerEvent, BufferConfig } from '@sonantica/shared';
 
 /**
  * Main interface for the audio player engine
@@ -17,6 +17,16 @@ export interface IPlayerEngine {
    * Load a media source for playback
    */
   load(source: MediaSource): Promise<void>;
+
+  /**
+   * Proactively pre-buffer upcoming tracks
+   */
+  prebuffer(sources: MediaSource[]): void;
+
+  /**
+   * Update buffer configuration at runtime
+   */
+  updateBufferConfig(config: Partial<BufferConfig>): void;
 
   /**
    * Start or resume playback
