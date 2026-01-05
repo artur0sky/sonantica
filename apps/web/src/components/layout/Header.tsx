@@ -15,6 +15,7 @@ import {
   type ContextMenuItem,
 } from "@sonantica/ui";
 import { useHeaderLogic } from "../../hooks/useHeaderLogic";
+import logo from "../../assets/logo.png";
 
 export function Header() {
   const { toggleLeftSidebar, handleSearchResultSelect } = useHeaderLogic();
@@ -67,9 +68,13 @@ export function Header() {
               <motion.div
                 whileHover={{ rotate: 180 }}
                 transition={{ duration: 0.5 }}
-                className="w-7 h-7 sm:w-8 sm:h-8 bg-accent rounded-lg flex items-center justify-center text-white font-bold text-base sm:text-lg flex-shrink-0 shadow-lg shadow-accent/20"
+                className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center flex-shrink-0"
               >
-                S
+                <img
+                  src={logo}
+                  alt="Sonántica Logo"
+                  className="w-full h-full object-contain"
+                />
               </motion.div>
               <span className="text-lg sm:text-xl font-bold tracking-tight group-hover:text-accent transition-colors hidden sm:inline">
                 Sonántica
