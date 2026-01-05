@@ -13,7 +13,7 @@ export default defineConfig({
       srcDir: 'src',
       filename: 'sw.ts',
       registerType: 'autoUpdate',
-      includeAssets: ['icon.svg', 'icon-192.png', 'icon-512.png', 'icon-maskable.png'],
+      includeAssets: ['icon-192.png', 'icon-512.png', 'icon-maskable.png'],
       manifest: {
         name: 'Sonántica',
         short_name: 'Sonántica',
@@ -25,12 +25,6 @@ export default defineConfig({
         start_url: '/',
         orientation: 'portrait-primary',
         icons: [
-          {
-            src: '/icon.svg',
-            sizes: 'any',
-            type: 'image/svg+xml',
-            purpose: 'any maskable'
-          },
           {
             src: '/icon-192.png',
             sizes: '192x192',
@@ -57,14 +51,14 @@ export default defineConfig({
             short_name: 'Library',
             description: 'Browse your music library',
             url: '/library',
-            icons: [{ src: '/icon.svg', sizes: 'any' }]
+            icons: [{ src: '/icon-192.png', sizes: '192x192', type: 'image/png' }]
           },
           {
             name: 'Now Playing',
             short_name: 'Playing',
             description: 'View current playback',
             url: '/player',
-            icons: [{ src: '/icon.svg', sizes: 'any' }]
+            icons: [{ src: '/icon-192.png', sizes: '192x192', type: 'image/png' }]
           }
         ]
       },
