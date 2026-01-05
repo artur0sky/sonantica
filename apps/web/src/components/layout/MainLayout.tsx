@@ -171,27 +171,38 @@ export function MainLayout({ children }: MainLayoutProps) {
                 key="expanded"
                 actionButtons={
                   fullTrack && (
-                    <>
+                    <div className="flex items-center gap-2">
                       <DownloadButton
                         trackId={fullTrack.id}
                         track={fullTrack}
                         size={22}
-                        showLabel
+                        showLabel={!isMobile}
                       />
                       <motion.button
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
                         className="p-1 text-text-muted hover:text-text rounded-lg transition-colors flex items-center gap-2"
                         title="Add to Playlist"
+                        onClick={() => {
+                          /* TODO: Open Add to Playlist Dialog */
+                          alert("Add to Playlist: " + fullTrack.title);
+                        }}
                       >
                         <IconPlaylistAdd size={22} />
-                        <span className="text-sm font-medium">
-                          Add to Playlist
-                        </span>
+                        {!isMobile && (
+                          <span className="text-sm font-medium">
+                            Add to Playlist
+                          </span>
+                        )}
                       </motion.button>
-                    </>
+                    </div>
                   )
                 }
+                onLongPressArt={() => {
+                  if (fullTrack) {
+                    alert("Add to Playlist: " + fullTrack.title);
+                  }
+                }}
               />
             ) : (
               children
