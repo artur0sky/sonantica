@@ -8,6 +8,9 @@ importers:
 
   .:
     devDependencies:
+      '@sonantica/lyrics':
+        specifier: workspace:^
+        version: link:packages/lyrics
       vite-plugin-pwa:
         specifier: 0.21.1
         version: 0.21.1(vite@7.3.0)(workbox-build@7.4.0)(workbox-window@7.4.0)
