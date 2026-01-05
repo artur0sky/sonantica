@@ -42,10 +42,18 @@ export function buildStreamingUrl(serverId: string, filePath: string, trackId?: 
     
     // Construct absolute URL
     const baseUrl = server.serverUrl.replace(/\/$/, ''); // Remove trailing slash
-    const encodedPath = encodeURIComponent(filePath);
-    const streamUrl = `${baseUrl}/api/stream/${serverId}/${encodedPath}`;
     
-    console.log(`🎵 Stream URL: ${streamUrl}`);
+    // Use trackId for secure ID-based streaming (Sonantica Core v2)
+    if (trackId) {
+      const streamUrl = `${baseUrl}/stream/${trackId}`;
+      console.log(`🎵 Stream URL: ${streamUrl}`);
+      return streamUrl;
+    }
+
+    // Fallback: This will likely fail on v2 core, but kept for signature compatibility
+    console.warn("⚠️ trackId missing, falling back to legacy path streaming (may fail)");
+    const encodedPath = encodeURIComponent(filePath);
+    const streamUrl = `${baseUrl}/stream/${encodedPath}`; // Note: Backend route changed to /stream/{id}
     
     return streamUrl;
   } catch (error) {
