@@ -80,13 +80,9 @@ export function DownloadButton({
       whileTap={{ scale: 0.95 }}
       disabled={isDownloading || isQueued}
       className={cn(
-        "flex items-center gap-2 p-2 rounded-lg transition-colors",
+        "flex items-center gap-2 p-1.5 rounded-full transition-all duration-200 bg-transparent text-text-muted hover:text-text",
         isOfflineAvailable && "text-accent",
         (isDownloading || isQueued) && "opacity-50 cursor-wait",
-        !isOfflineAvailable &&
-          !isDownloading &&
-          !isQueued &&
-          "hover:bg-surface-elevated",
         className
       )}
       title={getLabel()}

@@ -197,7 +197,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                         <motion.button
                           whileHover={{ scale: 1.1 }}
                           whileTap={{ scale: 0.9 }}
-                          className="p-1 text-text-muted hover:text-text rounded-lg transition-colors flex items-center gap-2"
+                          className="p-1.5 text-text-muted hover:text-text rounded-full transition-all duration-200 flex items-center gap-2"
                           title="Add to Playlist"
                           onClick={() => {
                             /* TODO: Open Add to Playlist Dialog */
@@ -205,11 +205,9 @@ export function MainLayout({ children }: MainLayoutProps) {
                           }}
                         >
                           <IconPlaylistAdd size={22} />
-                          {!isMobile && (
-                            <span className="text-sm font-medium">
-                              Add to Playlist
-                            </span>
-                          )}
+                          <span className="text-sm font-medium">
+                            Add to Playlist
+                          </span>
                         </motion.button>
                       )}
                     </div>

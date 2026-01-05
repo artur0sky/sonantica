@@ -14,6 +14,8 @@ import {
   TimelineSection,
   ControlsSection,
   NavigationFooter,
+  ArtistPhotoSection,
+  WidgetsSection,
 } from "./sections";
 import type { ExpandedPlayerProps } from "./types";
 
@@ -37,6 +39,7 @@ interface MobileLayoutProps extends ExpandedPlayerProps {
   onToggleRecommendations: () => void;
   onToggleLyrics: () => void;
   onToggleQueue: () => void;
+  onLongPressArt?: () => void;
 }
 
 export function ExpandedPlayerMobile({
@@ -63,9 +66,9 @@ export function ExpandedPlayerMobile({
   onLongPressArt,
 }: MobileLayoutProps) {
   return (
-    <div className="lg:hidden flex flex-col h-[100dvh] bg-black">
-      {/* Mobile Sticky Header - Positioned where the app navbar used to be */}
-      <header className="h-14 flex flex-none justify-between items-center px-4 border-b border-white/5 bg-black/40 backdrop-blur-xl z-20">
+    <div className="lg:hidden flex flex-col h-[100dvh] bg-black overflow-hidden overscroll-none select-none">
+      {/* Mobile Sticky Header - Always on top */}
+      <header className="h-14 flex flex-none justify-between items-center px-4 border-b border-white/5 bg-black/40 backdrop-blur-xl z-30">
         <PlayerButton
           icon={IconChevronDown}
           onClick={onClose}
@@ -90,86 +93,81 @@ export function ExpandedPlayerMobile({
         />
       </header>
 
-      {/* Main Content Area - Scrollable */}
-      <div className="flex-1 overflow-y-auto scrollbar-none flex flex-col px-4 pt-4 pb-0">
-        {/* Fibonacci Vertical Layout: φ² (cover) : φ (info) : 1 (controls) */}
-        <div className="flex-1 flex flex-col gap-4 min-h-0">
-          {/* Cover Art - Fibonacci's Largest Square (φ² ≈ 2.618) */}
-          <div className="flex-[2.618] flex items-center justify-center min-h-0">
-            <CoverArtSection
-              coverArt={currentTrack.metadata?.coverArt}
-              trackTitle={currentTrack.metadata?.title || "Unknown"}
-              enableGestures
-              onNext={onNext}
-              onPrevious={onPrevious}
-              onLongPress={onLongPressArt}
-            />
-          </div>
+      {/* Parallax/Scroll Container */}
+      <div className="flex-1 overflow-y-auto scrollbar-none relative">
+        {/* STICKY BACK: Cover Art Section */}
+        <div className="sticky top-0 h-[65dvh] flex items-center justify-center p-6 z-0">
+          <CoverArtSection
+            coverArt={currentTrack.metadata?.coverArt}
+            trackTitle={currentTrack.metadata?.title || "Unknown"}
+            enableGestures
+            onNext={onNext}
+            onPrevious={onPrevious}
+            onLongPress={onLongPressArt}
+          />
+        </div>
 
-          {/* Track Info - Golden Rectangle (φ ≈ 1.618) */}
-          <div className="flex-[1.618] flex flex-col gap-3 min-h-0">
-            <div className="flex-1 min-w-0 text-center w-full">
-              <motion.h1
-                layoutId="player-title-mobile"
-                className="text-2xl font-black tracking-tight line-clamp-2"
-              >
-                {currentTrack.metadata?.title || "Unknown Title"}
-              </motion.h1>
-              <motion.p
-                layoutId="player-artist-mobile"
-                className="text-lg text-text-muted font-bold mt-1"
-              >
-                {formatArtists(currentTrack.metadata?.artist)}
-              </motion.p>
-            </div>
+        {/* SCROLLING OVER: Content Area */}
+        <div className="relative z-10 flex flex-col">
+          {/* Main Info & Controls Overlay (Initially reveals the cover art, then overlays it) */}
+          <div className="flex flex-col gap-8 px-4 pb-8 bg-gradient-to-t from-black via-black/95 to-transparent pt-40 -mt-20">
+            {/* Track Info */}
+            <div className="flex flex-col gap-4">
+              <div className="text-center w-full">
+                <motion.h1
+                  layoutId="player-title-mobile"
+                  className="text-2xl font-black tracking-tight line-clamp-2"
+                >
+                  {currentTrack.metadata?.title || "Unknown Title"}
+                </motion.h1>
+                <motion.p
+                  layoutId="player-artist-mobile"
+                  className="text-lg text-text-muted font-bold mt-1"
+                >
+                  {formatArtists(currentTrack.metadata?.artist)}
+                </motion.p>
+              </div>
 
-            <div className="flex items-center justify-between w-full px-2">
-              <div className="bg-white/5 p-2 rounded-2xl">
+              <div className="flex items-center justify-between w-full px-4">
                 <TrackRating
                   trackId={currentTrack.id}
                   mode="both"
-                  size={20}
+                  size={22}
                   compact
+                  className="p-1"
+                />
+                {actionButtons && (
+                  <div className="flex items-center">{actionButtons}</div>
+                )}
+              </div>
+            </div>
+
+            {/* Controls Area */}
+            <div className="flex flex-col gap-8">
+              <div className="px-1">
+                <TimelineSection
+                  trackId={currentTrack.id}
+                  currentTime={currentTime}
+                  duration={duration}
+                  onSeek={onSeek}
                 />
               </div>
-              {actionButtons && (
-                <div className="bg-white/5 p-2 rounded-2xl">
-                  {actionButtons}
-                </div>
-              )}
-            </div>
-          </div>
 
-          {/* Controls - Unit Rectangle (1) */}
-          <div className="flex-1 flex flex-col gap-6 justify-end pb-2">
-            {/* Timeline */}
-            <div className="px-1">
-              <TimelineSection
-                trackId={currentTrack.id}
-                currentTime={currentTime}
-                duration={duration}
-                onSeek={onSeek}
-              />
-            </div>
+              <div className="px-1">
+                <ControlsSection
+                  isPlaying={isPlaying}
+                  isShuffled={isShuffled}
+                  repeatMode={repeatMode}
+                  onPlay={onPlay}
+                  onPause={onPause}
+                  onNext={onNext}
+                  onPrevious={onPrevious}
+                  onToggleShuffle={onToggleShuffle}
+                  onToggleRepeat={onToggleRepeat}
+                  size="mobile"
+                />
+              </div>
 
-            {/* Playback Controls */}
-            <div className="px-1">
-              <ControlsSection
-                isPlaying={isPlaying}
-                isShuffled={isShuffled}
-                repeatMode={repeatMode}
-                onPlay={onPlay}
-                onPause={onPause}
-                onNext={onNext}
-                onPrevious={onPrevious}
-                onToggleShuffle={onToggleShuffle}
-                onToggleRepeat={onToggleRepeat}
-                size="mobile"
-              />
-            </div>
-
-            {/* Navigation Footer */}
-            <div className="mt-4">
               <NavigationFooter
                 recommendationsOpen={recommendationsOpen}
                 isQueueOpen={isQueueOpen}
@@ -178,6 +176,15 @@ export function ExpandedPlayerMobile({
                 onToggleQueue={onToggleQueue}
               />
             </div>
+          </div>
+
+          {/* WIDGETS Section (Scrolling Over) */}
+          <div className="bg-black flex flex-col gap-10 px-4 py-10 border-t border-white/5 shadow-[0_-20px_40px_rgba(0,0,0,0.5)]">
+            <ArtistPhotoSection />
+            <WidgetsSection />
+
+            {/* Extra spacer for scroll freedom */}
+            <div className="h-32" />
           </div>
         </div>
       </div>
