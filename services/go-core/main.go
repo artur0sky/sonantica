@@ -83,7 +83,9 @@ func main() {
 	r.Route("/api/library", func(r chi.Router) {
 		r.Get("/tracks", api.GetTracks)
 		r.Get("/artists", api.GetArtists)
+		r.Get("/artists/{id}/tracks", api.GetTracksByArtist)
 		r.Get("/albums", api.GetAlbums)
+		r.Get("/albums/{id}/tracks", api.GetTracksByAlbum)
 	})
 
 	r.Route("/api/scan", func(r chi.Router) {

@@ -17,7 +17,7 @@ import {
 import { motion } from "framer-motion";
 import { cn } from "@sonantica/shared";
 import { usePlayerStore, useQueueStore } from "@sonantica/player-core";
-// useLibraryStore removed
+import { useLibraryStore } from "@sonantica/media-library";
 import { PlaybackState, formatArtists, formatTime } from "@sonantica/shared";
 import { useEffect } from "react";
 import {
@@ -160,13 +160,23 @@ export function TrackItem({ track, onClick }: TrackItemProps) {
       >
         {/* Album Art / Icon */}
         <div className="w-12 h-12 flex-shrink-0 relative rounded-md overflow-hidden bg-surface-elevated border border-border">
-          {/* PERFORMANCE: Lazy-loaded album art with LRU cache */}
-          <LazyAlbumArt
-            src={track.coverArt}
-            alt="Album Art"
-            className="w-full h-full rounded-md"
-            iconSize={20}
-          />
+          {/* PERFORMANCE: Lazy-loaded album art with LRU cache + manual hydration */}
+          {(() => {
+            const libraryTracks = useLibraryStore.getState().tracks;
+            const coverArt =
+              track.coverArt ||
+              track.metadata?.coverArt ||
+              libraryTracks.find((t) => t.id === track.id)?.coverArt;
+
+            return (
+              <LazyAlbumArt
+                src={coverArt}
+                alt="Album Art"
+                className="w-full h-full rounded-md"
+                iconSize={20}
+              />
+            );
+          })()}
 
           {/* Play/Pause Overlay (Hover) */}
           <div

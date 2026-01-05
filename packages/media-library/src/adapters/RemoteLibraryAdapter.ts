@@ -26,6 +26,48 @@ export class RemoteLibraryAdapter implements ILibraryAdapter {
   }
 
   /**
+   * Normalize Album: prepend server URL to coverArt if path is relative
+   */
+  private normalizeAlbum(album: any): Album {
+    let coverArt = album.coverArt;
+    if (coverArt) {
+      if (!coverArt.startsWith('http') && coverArt.startsWith('/')) {
+        coverArt = `${this.serverUrl}${coverArt}`;
+      } else if (!coverArt.startsWith('http')) {
+        coverArt = `${this.serverUrl}/api/cover/${album.id}`;
+      }
+    } else {
+      coverArt = `${this.serverUrl}/api/cover/${album.id}`;
+    }
+
+    return {
+      ...album,
+      coverArt
+    };
+  }
+
+  /**
+   * Normalize Track: prepend server URL to coverArt if path is relative
+   */
+  private normalizeTrack(track: any): Track {
+    let coverArt = track.coverArt;
+    if (coverArt) {
+      if (!coverArt.startsWith('http') && coverArt.startsWith('/')) {
+        coverArt = `${this.serverUrl}${coverArt}`;
+      } else if (!coverArt.startsWith('http')) {
+        coverArt = `${this.serverUrl}/api/cover/${track.albumId || track.id}`;
+      }
+    } else if (track.albumId) {
+      coverArt = `${this.serverUrl}/api/cover/${track.albumId}`;
+    }
+
+    return {
+      ...track,
+      coverArt
+    };
+  }
+
+  /**
    * Fetch with authentication
    */
   private async fetch(endpoint: string, options: RequestInit = {}): Promise<Response> {
@@ -56,7 +98,7 @@ export class RemoteLibraryAdapter implements ILibraryAdapter {
   async getTracks(): Promise<Track[]> {
     const response = await this.fetch('/api/library/tracks');
     const data = await response.json();
-    return data.tracks;
+    return (data.tracks || []).map((t: any) => this.normalizeTrack(t));
   }
 
   /**
@@ -64,7 +106,8 @@ export class RemoteLibraryAdapter implements ILibraryAdapter {
    */
   async getTrack(id: string): Promise<Track> {
     const response = await this.fetch(`/api/library/tracks/${id}`);
-    return response.json();
+    const track = await response.json();
+    return this.normalizeTrack(track);
   }
 
   /**
@@ -82,7 +125,7 @@ export class RemoteLibraryAdapter implements ILibraryAdapter {
   async getTracksByArtist(artistId: string): Promise<Track[]> {
     const response = await this.fetch(`/api/library/artists/${artistId}/tracks`);
     const data = await response.json();
-    return data.tracks;
+    return (data.tracks || []).map((t: any) => this.normalizeTrack(t));
   }
 
   /**
@@ -91,32 +134,7 @@ export class RemoteLibraryAdapter implements ILibraryAdapter {
   async getAlbums(): Promise<Album[]> {
     const response = await this.fetch('/api/library/albums');
     const data = await response.json();
-    return data.albums.map((album: any) => {
-      let coverUrl = undefined;
-      
-      if (album.coverArt) {
-        // If it's already a full URL, use it
-        if (album.coverArt.startsWith('http')) {
-          coverUrl = album.coverArt;
-        } 
-        // If it's a root-relative path (like /covers/ or /media/), prepend server URL
-        else if (album.coverArt.startsWith('/')) {
-          coverUrl = `${this.serverUrl}${album.coverArt}`;
-        }
-        // Legacy: use ID-based endpoint
-        else {
-          coverUrl = `${this.serverUrl}/api/cover/${album.id}`;
-        }
-      } else {
-        // Fallback for albums without path but with ID
-        coverUrl = `${this.serverUrl}/api/cover/${album.id}`;
-      }
-
-      return {
-        ...album,
-        coverArt: coverUrl
-      };
-    });
+    return (data.albums || []).map((album: any) => this.normalizeAlbum(album));
   }
 
   /**
@@ -125,7 +143,7 @@ export class RemoteLibraryAdapter implements ILibraryAdapter {
   async getTracksByAlbum(albumId: string): Promise<Track[]> {
     const response = await this.fetch(`/api/library/albums/${albumId}/tracks`);
     const data = await response.json();
-    return data.tracks;
+    return (data.tracks || []).map((t: any) => this.normalizeTrack(t));
   }
 
   /**

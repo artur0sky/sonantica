@@ -25,8 +25,9 @@ type Track struct {
 	CreatedAt       time.Time  `json:"createdAt" db:"created_at"`
 	UpdatedAt       time.Time  `json:"updatedAt" db:"updated_at"`
 	// Joined fields for API response
-	ArtistName *string `json:"artist,omitempty" db:"artist_name"`
-	AlbumTitle *string `json:"album,omitempty" db:"album_title"`
+	ArtistName    *string `json:"artist,omitempty" db:"artist_name"`
+	AlbumTitle    *string `json:"album,omitempty" db:"album_title"`
+	AlbumCoverArt *string `json:"coverArt,omitempty" db:"album_cover_art"`
 }
 
 type Album struct {

@@ -10,6 +10,7 @@ import (
 	"sonantica-core/models"
 	"sonantica-core/scanner"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -23,7 +24,8 @@ func GetTracks(w http.ResponseWriter, r *http.Request) {
 			t.format, t.bitrate, t.sample_rate, t.channels, t.track_number, t.disc_number, 
 			t.genre, t.play_count, t.is_favorite, t.created_at, t.updated_at,
 			a.name as artist_name,
-			al.title as album_title
+			al.title as album_title,
+			al.cover_art_path as album_cover_art
 		FROM tracks t
 		LEFT JOIN artists a ON t.artist_id = a.id
 		LEFT JOIN albums al ON t.album_id = al.id
@@ -139,5 +141,81 @@ func GetScanStatus(w http.ResponseWriter, r *http.Request) {
 			"artists": artistCount,
 			"albums":  albumCount,
 		},
+	})
+}
+
+// GetTracksByArtist returns tracks filtered by artist ID
+func GetTracksByArtist(w http.ResponseWriter, r *http.Request) {
+	artistID := chi.URLParam(r, "id")
+	w.Header().Set("Content-Type", "application/json")
+
+	query := `
+		SELECT 
+			t.id, t.title, t.album_id, t.artist_id, t.file_path, t.duration_seconds, 
+			t.format, t.bitrate, t.sample_rate, t.channels, t.track_number, t.disc_number, 
+			t.genre, t.play_count, t.is_favorite, t.created_at, t.updated_at,
+			a.name as artist_name,
+			al.title as album_title,
+			al.cover_art_path as album_cover_art
+		FROM tracks t
+		LEFT JOIN artists a ON t.artist_id = a.id
+		LEFT JOIN albums al ON t.album_id = al.id
+		WHERE t.artist_id = $1
+		ORDER BY al.release_year DESC, t.track_number ASC
+	`
+
+	rows, err := database.DB.Query(r.Context(), query, artistID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Query error: %v", err), http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	tracks, err := pgx.CollectRows(rows, pgx.RowToStructByName[models.Track])
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Row scan error: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"tracks": tracks,
+	})
+}
+
+// GetTracksByAlbum returns tracks filtered by album ID
+func GetTracksByAlbum(w http.ResponseWriter, r *http.Request) {
+	albumID := chi.URLParam(r, "id")
+	w.Header().Set("Content-Type", "application/json")
+
+	query := `
+		SELECT 
+			t.id, t.title, t.album_id, t.artist_id, t.file_path, t.duration_seconds, 
+			t.format, t.bitrate, t.sample_rate, t.channels, t.track_number, t.disc_number, 
+			t.genre, t.play_count, t.is_favorite, t.created_at, t.updated_at,
+			a.name as artist_name,
+			al.title as album_title,
+			al.cover_art_path as album_cover_art
+		FROM tracks t
+		LEFT JOIN artists a ON t.artist_id = a.id
+		LEFT JOIN albums al ON t.album_id = al.id
+		WHERE t.album_id = $1
+		ORDER BY t.disc_number ASC, t.track_number ASC
+	`
+
+	rows, err := database.DB.Query(r.Context(), query, albumID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Query error: %v", err), http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	tracks, err := pgx.CollectRows(rows, pgx.RowToStructByName[models.Track])
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Row scan error: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"tracks": tracks,
 	})
 }
