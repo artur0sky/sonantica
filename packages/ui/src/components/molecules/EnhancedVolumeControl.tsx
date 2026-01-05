@@ -21,6 +21,7 @@ interface EnhancedVolumeControlProps {
   onVolumeChange: (vol: number) => void;
   peakHz?: number;
   className?: string;
+  size?: "sm" | "md";
 }
 
 export function EnhancedVolumeControl({
@@ -28,6 +29,7 @@ export function EnhancedVolumeControl({
   onVolumeChange,
   peakHz = 0,
   className,
+  size = "md",
 }: EnhancedVolumeControlProps) {
   const [isHovered, setIsHovered] = useState(false);
 
