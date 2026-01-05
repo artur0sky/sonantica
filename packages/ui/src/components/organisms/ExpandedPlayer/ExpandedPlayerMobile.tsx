@@ -96,7 +96,7 @@ export function ExpandedPlayerMobile({
       {/* Parallax/Scroll Container */}
       <div className="flex-1 overflow-y-auto scrollbar-none relative">
         {/* STICKY BACK: Cover Art Section */}
-        <div className="sticky top-0 h-[65dvh] flex items-center justify-center p-6 z-0">
+        <div className="sticky top-0 h-[46dvh] flex items-start justify-center p-6 z-0">
           <CoverArtSection
             coverArt={currentTrack.metadata?.coverArt}
             trackTitle={currentTrack.metadata?.title || "Unknown"}
@@ -110,7 +110,7 @@ export function ExpandedPlayerMobile({
         {/* SCROLLING OVER: Content Area */}
         <div className="relative z-10 flex flex-col">
           {/* Main Info & Controls Overlay (Initially reveals the cover art, then overlays it) */}
-          <div className="flex flex-col gap-8 px-4 pb-8 bg-gradient-to-t from-black via-black/95 to-transparent pt-40 -mt-20">
+          <div className="flex flex-col gap-6 px-4 pb-8 bg-gradient-to-t from-black via-black/95 to-transparent pt-32 -mt-32">
             {/* Track Info */}
             <div className="flex flex-col gap-4">
               <div className="text-center w-full">
@@ -143,7 +143,7 @@ export function ExpandedPlayerMobile({
             </div>
 
             {/* Controls Area */}
-            <div className="flex flex-col gap-8">
+            <div className="flex flex-col gap-6">
               <div className="px-1">
                 <TimelineSection
                   trackId={currentTrack.id}

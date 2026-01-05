@@ -69,7 +69,7 @@ export function CoverArtSection({
 
   // Mobile: Interactive with gestures
   return (
-    <div className="flex-1 flex items-center justify-center w-full min-h-0 mb-8 px-2">
+    <div className="flex-1 flex items-start justify-center w-full min-h-0">
       <motion.div
         layoutId="player-artwork-mobile"
         className="relative group aspect-square w-full"
