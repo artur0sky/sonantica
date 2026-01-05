@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Button, Badge } from "@sonantica/ui";
+import { Button } from "@sonantica/ui";
 import { cn } from "@sonantica/shared";
 import { IconMicrophone, IconClock } from "@tabler/icons-react";
 import { useLyricsDisplayLogic } from "../../../hooks/useLyricsDisplayLogic";
