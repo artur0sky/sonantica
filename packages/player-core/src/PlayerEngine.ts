@@ -128,6 +128,7 @@ export class PlayerEngine implements IPlayerEngine {
   private isDisposed: boolean = false;
   private currentLoadController: AbortController | null = null;
   private bufferManager: BufferManager;
+  private highFreqLoopId: number | null = null;
 
   constructor(bufferConfig: Partial<BufferConfig> = {}) {
     try {
@@ -142,6 +143,9 @@ export class PlayerEngine implements IPlayerEngine {
       
       // Attach persistent listeners
       this.attachAudioListeners();
+      
+      // Bind methods
+      this.highFreqUpdate = this.highFreqUpdate.bind(this);
     } catch (error) {
       console.error('❌ Failed to initialize PlayerEngine:', error);
       throw new Error(`PlayerEngine initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -289,6 +293,7 @@ export class PlayerEngine implements IPlayerEngine {
     try {
       await this.audio.play();
       this.setState(PlaybackState.PLAYING);
+      this.startHighFreqLoop();
       console.log('▶️  Playing');
     } catch (error) {
       this.setState(PlaybackState.ERROR);
@@ -316,6 +321,7 @@ export class PlayerEngine implements IPlayerEngine {
     try {
       this.audio.pause();
       this.setState(PlaybackState.PAUSED);
+      this.stopHighFreqLoop();
       console.log('⏸️  Paused');
     } catch (error) {
       console.error('❌ Pause failed:', error);
@@ -340,6 +346,7 @@ export class PlayerEngine implements IPlayerEngine {
       this.audio.pause();
       this.audio.currentTime = 0;
       this.setState(PlaybackState.STOPPED);
+      this.stopHighFreqLoop();
       console.log('⏹️  Stopped');
     } catch (error) {
       console.error('❌ Stop failed:', error);
@@ -565,9 +572,7 @@ export class PlayerEngine implements IPlayerEngine {
         this.audio = null;
       }
 
-      // Clear all listeners
-      this.listeners.clear();
-      
+      this.stopHighFreqLoop();
       this.setState(PlaybackState.IDLE);
       this.isDisposed = true;
       
@@ -686,5 +691,48 @@ export class PlayerEngine implements IPlayerEngine {
     } catch (error) {
       console.error('❌ Emit event failed:', error);
     }
+  }
+
+  /**
+   * Start high-frequency update loop (60fps)
+   * Essential for super-synchronized lyrics
+   * @private
+   */
+  private startHighFreqLoop(): void {
+    if (this.highFreqLoopId) return;
+    this.highFreqLoopId = requestAnimationFrame(this.highFreqUpdate);
+  }
+
+  /**
+   * Stop high-frequency update loop
+   * @private
+   */
+  private stopHighFreqLoop(): void {
+    if (this.highFreqLoopId) {
+      cancelAnimationFrame(this.highFreqLoopId);
+      this.highFreqLoopId = null;
+    }
+  }
+
+  /**
+   * High-frequency update handler
+   * @private
+   */
+  private highFreqUpdate(): void {
+    if (!this.audio || this.isDisposed || this.state !== PlaybackState.PLAYING) {
+      this.highFreqLoopId = null;
+      return;
+    }
+
+    try {
+      this.emit(PLAYER_EVENTS.TIME_UPDATE, {
+        currentTime: this.audio.currentTime,
+        duration: this.audio.duration,
+      });
+    } catch (error) {
+      console.warn('⚠️ High-freq update failed:', error);
+    }
+
+    this.highFreqLoopId = requestAnimationFrame(this.highFreqUpdate);
   }
 }

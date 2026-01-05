@@ -34,6 +34,10 @@ export class LRCParser {
         lrcText = lrcText.slice(0, MAX_LRC_SIZE);
       }
 
+      // Extract offset metadata if present
+      const meta = this.extractMetadata(lrcText);
+      const globalOffset = meta.offset ? parseInt(meta.offset, 10) : 0;
+
       const lines: LyricsLine[] = [];
       // Split safely
       const lrcLines = lrcText.split(/\r?\n/);
@@ -70,11 +74,16 @@ export class LRCParser {
           const centiseconds = match[3] ? parseInt(match[3].padEnd(3, '0'), 10) : 0;
 
           // Safe math
-          const timeMs = (minutes * 60 + seconds) * 1000 + centiseconds;
+          // Apply global offset: Positive offset means lyrics are delayed (timestamps should be smaller)
+          // or lyrics are early (timestamps should be larger)?
+          // Standard: offset = (LRC time) - (Audio time)
+          // So Audio time = LRC time - offset.
+          // We want the lyrics to trigger at (LRC time - offset) relative to audio context.
+          const timeMs = (minutes * 60 + seconds) * 1000 + centiseconds - globalOffset;
           
           // Basic sanity check for timestamp (max 24 hours)
-          if (timeMs >= 0 && timeMs < 86400000) {
-            timestamps.push(timeMs);
+          if (timeMs >= -86400000 && timeMs < 86400000) {
+            timestamps.push(Math.max(0, timeMs));
           }
           
           lastIndex = match.index + match[0].length;
