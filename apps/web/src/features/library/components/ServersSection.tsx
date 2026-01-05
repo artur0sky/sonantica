@@ -12,14 +12,16 @@
  */
 
 import { useState, useEffect } from "react";
-import { useLocation } from "wouter";
+
 import {
   getServersConfig,
   setActiveServer,
   removeServerConfig,
   testServerConnectionById,
+  saveServerConfig,
 } from "../../../services/LibraryService";
 import { useMultiServerLibrary } from "../../../hooks/useMultiServerLibrary";
+import { useSettingsStore } from "../../../stores/settingsStore";
 import {
   IconServer,
   IconCheck,
@@ -30,18 +32,20 @@ import {
   IconBolt,
   IconClock,
 } from "@tabler/icons-react";
-import { Button, Switch, ActionIconButton } from "@sonantica/ui";
+import { Button, Switch, ActionIconButton, Input } from "@sonantica/ui";
 
 export function ServersSection() {
-  const [, setLocation] = useLocation();
   const [config, setConfig] = useState(getServersConfig());
   const [testing, setTesting] = useState<string | null>(null);
-  const [autoScan, setAutoScan] = useState(() => {
-    return localStorage.getItem("sonantica:auto-scan") === "true";
-  });
-  const [parallelScan, setParallelScan] = useState(() => {
-    return localStorage.getItem("sonantica:parallel-scan") !== "false"; // Default true
-  });
+
+  // Add Server State
+  const [isAdding, setIsAdding] = useState(false);
+  const [newServerUrl, setNewServerUrl] = useState("");
+  const [newServerApiKey, setNewServerApiKey] = useState("");
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
+
+  const { autoScan, parallelScanning, toggle } = useSettingsStore();
 
   const {
     tracks,
@@ -73,10 +77,10 @@ export function ServersSection() {
       removeServerConfig(serverId);
       setConfig(getServersConfig());
 
-      // If no servers left, redirect to setup
+      // If no servers left, redirect to setup if empty
       const newConfig = getServersConfig();
       if (newConfig.servers.length === 0) {
-        setLocation("/setup");
+        // We stay on page to show empty state with "Add Server" button
       }
     }
   };
@@ -100,8 +104,61 @@ export function ServersSection() {
     }
   };
 
-  const handleAddServer = () => {
-    setLocation("/setup");
+  const handleStartAddServer = () => {
+    setIsAdding(true);
+    setNewServerUrl("");
+    setNewServerApiKey("");
+    setAddError(null);
+  };
+
+  const handleCancelAdd = () => {
+    setIsAdding(false);
+    setAddError(null);
+  };
+
+  const handleAddServerSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAddError(null);
+
+    if (!newServerUrl.trim()) {
+      setAddError("Please enter a server URL");
+      return;
+    }
+
+    setIsConnecting(true);
+
+    try {
+      // Save temporarily to test
+      const tempServer = saveServerConfig({
+        name: newServerUrl.trim(),
+        serverUrl: newServerUrl.trim(),
+        apiKey: newServerApiKey.trim() || undefined,
+      });
+
+      // Now test it
+      const connected = await testServerConnectionById(tempServer.id);
+
+      if (!connected) {
+        // Rollback
+        removeServerConfig(tempServer.id);
+        throw new Error(
+          "Unable to connect to server. Check URL and try again."
+        );
+      }
+
+      // Success
+      setConfig(getServersConfig());
+      setIsAdding(false);
+
+      // Optional: Setup auto-scan for this new server?
+      if (autoScan) {
+        scanServer(tempServer.id);
+      }
+    } catch (err) {
+      setAddError(err instanceof Error ? err.message : "Failed to add server");
+    } finally {
+      setIsConnecting(false);
+    }
   };
 
   const handleScanServer = async (serverId: string) => {
@@ -109,7 +166,7 @@ export function ServersSection() {
   };
 
   const handleScanAll = async () => {
-    if (parallelScan) {
+    if (parallelScanning) {
       // Scan all servers in parallel
       await scanAllServers();
     } else {
@@ -130,16 +187,6 @@ export function ServersSection() {
     }
   };
 
-  const handleToggleAutoScan = (checked: boolean) => {
-    setAutoScan(checked);
-    localStorage.setItem("sonantica:auto-scan", String(checked));
-  };
-
-  const handleToggleParallelScan = (checked: boolean) => {
-    setParallelScan(checked);
-    localStorage.setItem("sonantica:parallel-scan", String(checked));
-  };
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -150,18 +197,83 @@ export function ServersSection() {
             Manage your Sonántica server instances
           </p>
         </div>
-        <Button
-          onClick={handleAddServer}
-          variant="primary"
-          className="flex items-center gap-2"
-        >
-          <IconPlus size={18} />
-          Add Server
-        </Button>
+        {!isAdding && (
+          <Button
+            onClick={handleStartAddServer}
+            variant="primary"
+            className="flex items-center gap-2"
+          >
+            <IconPlus size={18} />
+            Add Server
+          </Button>
+        )}
       </div>
 
+      {/* Add Server Form */}
+      {isAdding && (
+        <div className="bg-surface-elevated border border-primary/50 rounded-lg p-6 animate-in fade-in slide-in-from-top-2">
+          <h4 className="font-medium text-text-primary mb-4">Add New Server</h4>
+          <form onSubmit={handleAddServerSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-text-muted mb-1">
+                  Server URL
+                </label>
+                <Input
+                  value={newServerUrl}
+                  onChange={(e) => setNewServerUrl(e.target.value)}
+                  placeholder="http://192.168.1.100:8080"
+                  autoFocus
+                  disabled={isConnecting}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-text-muted mb-1">
+                  API Key (Optional)
+                </label>
+                <Input
+                  type="password"
+                  value={newServerApiKey}
+                  onChange={(e) => setNewServerApiKey(e.target.value)}
+                  placeholder="Secret key"
+                  disabled={isConnecting}
+                />
+              </div>
+            </div>
+
+            {addError && (
+              <p className="text-sm text-red-400 bg-red-400/10 p-2 rounded">
+                {addError}
+              </p>
+            )}
+
+            <div className="flex justify-end gap-3 pt-2">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={handleCancelAdd}
+                disabled={isConnecting}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                disabled={isConnecting}
+                className="flex items-center gap-2"
+              >
+                {isConnecting && (
+                  <IconRefresh className="animate-spin" size={16} />
+                )}
+                {isConnecting ? "Connecting..." : "Add Server"}
+              </Button>
+            </div>
+          </form>
+        </div>
+      )}
+
       {/* Library Stats */}
-      {tracks.length > 0 && (
+      {tracks.length > 0 && !isAdding && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="bg-surface-elevated border border-border rounded-lg p-4">
             <div className="text-2xl font-bold text-text-primary">
@@ -221,7 +333,7 @@ export function ServersSection() {
           <div className="flex items-center gap-3">
             <Switch
               checked={autoScan}
-              onChange={handleToggleAutoScan}
+              onChange={() => toggle("autoScan")}
               label="Auto-Scan"
             />
             <div>
@@ -236,13 +348,13 @@ export function ServersSection() {
 
           <div className="flex items-center gap-3">
             <Switch
-              checked={parallelScan}
-              onChange={handleToggleParallelScan}
+              checked={parallelScanning}
+              onChange={() => toggle("parallelScanning")}
               label="Parallel Scan"
             />
             <div>
               <div className="flex items-center gap-2 text-sm font-medium text-text-primary">
-                {parallelScan ? (
+                {parallelScanning ? (
                   <>
                     <IconBolt size={16} className="text-yellow-500" />
                     Parallel Scan
@@ -255,7 +367,7 @@ export function ServersSection() {
                 )}
               </div>
               <div className="text-xs text-text-muted">
-                {parallelScan
+                {parallelScanning
                   ? "Scan all servers simultaneously (faster)"
                   : "Scan servers one by one (safer)"}
               </div>
@@ -265,11 +377,11 @@ export function ServersSection() {
       </div>
 
       {/* Servers List */}
-      {config.servers.length === 0 ? (
+      {config.servers.length === 0 && !isAdding ? (
         <div className="text-center py-12 bg-surface-elevated rounded-lg border border-border">
           <IconServer size={48} className="mx-auto mb-4 text-text-muted" />
           <p className="text-text-muted mb-4">No servers configured</p>
-          <Button onClick={handleAddServer} variant="primary">
+          <Button onClick={handleStartAddServer} variant="primary">
             Add Your First Server
           </Button>
         </div>
