@@ -116,27 +116,37 @@ class AudioRepository:
             # Race condition handling: someone else created it
             return session.query(Artist).filter(Artist.name == name).first().id
 
-    def get_or_create_album(self, session: Session, title: str, artist_id: str) -> str:
+    def get_or_create_album(self, session: Session, title: str, artist_id: str, cover_path: str = None) -> str:
         title = title.strip().replace("\x00", "")
         album = session.query(Album).filter(Album.title == title, Album.artist_id == artist_id).first()
+        
         if album:
+            # Update cover if missing
+            if not album.cover_art_path and cover_path:
+                album.cover_art_path = cover_path
+                session.commit()
             return album.id
             
         try:
-            new_album = Album(title=title, artist_id=artist_id)
+            new_album = Album(title=title, artist_id=artist_id, cover_art_path=cover_path)
             session.add(new_album)
             session.commit()
             return new_album.id
         except IntegrityError:
             session.rollback()
-            return session.query(Album).filter(Album.title == title, Album.artist_id == artist_id).first().id
+            album = session.query(Album).filter(Album.title == title, Album.artist_id == artist_id).first()
+            if album and not album.cover_art_path and cover_path:
+                album.cover_art_path = cover_path
+                session.commit()
+            return album.id
 
     def save_track(self, meta: dict, file_path_rel: str):
         session = self.SessionLocal()
         try:
             # 1. Resolve Dependencies
             artist_id = self.get_or_create_artist(session, meta["artist"])
-            album_id = self.get_or_create_album(session, meta["album"], artist_id)
+            # Pass cover_path to album creation
+            album_id = self.get_or_create_album(session, meta["album"], artist_id, meta.get("cover_path"))
             
             # 2. Check if Track exists (Update vs Insert)
             track = session.query(Track).filter(Track.file_path == file_path_rel).first()
@@ -189,6 +199,74 @@ def get_repo():
         repo = AudioRepository(url)
     return repo
 
+import hashlib
+
+def extract_cover_art(audio, full_path, rel_path, album_name=None, artist_name=None):
+    """
+    Extracts cover art and returns relative path to the image file.
+    Prioritizes folder.jpg/cover.jpg, then embedded tags.
+    If extracted, saves to /covers volume to avoid read-only FS errors.
+    """
+    dir_path = os.path.dirname(full_path)
+    rel_dir = os.path.dirname(rel_path)
+    
+    # 1. Check for existing cover files in the source directory (preferred)
+    common_names = ["cover.jpg", "folder.jpg", "cover.png", "folder.png", "front.jpg"]
+    for name in common_names:
+        if os.path.exists(os.path.join(dir_path, name)):
+            # If it exists on disk, we just return the path relative to media root
+            # The Go backend will resolve it against /media
+            return os.path.join(rel_dir, name)
+
+    # 2. Extract from Embedded Tags
+    art_data = None
+    ext = ".jpg"
+    
+    try:
+        if hasattr(audio, 'tags'):
+            # ID3 (MP3)
+            if 'APIC:' in audio.tags: 
+                 for key in audio.tags.keys():
+                     if key.startswith('APIC'):
+                         art_data = audio.tags[key].data
+                         break
+            # FLAC
+            elif hasattr(audio, 'pictures') and audio.pictures:
+                art_data = audio.pictures[0].data
+            # Ogg / Vorbis
+            elif 'metadata_block_picture' in audio.tags:
+                 pass
+    except Exception as e:
+        logger.warning(f"Error checking embedded art: {e}")
+
+    if art_data:
+        # Save extracted art to /covers (Writable Volume)
+        # Naming convention: hash of (Artist + Album) to ensure uniqueness
+        identifier = f"{artist_name}_{album_name}".encode('utf-8')
+        file_hash = hashlib.md5(identifier).hexdigest()
+        
+        # Ensure /covers exists (it should be mounted)
+        cache_dir = "/covers"
+        if not os.path.exists(cache_dir):
+            os.makedirs(cache_dir, exist_ok=True)
+            
+        save_path = os.path.join(cache_dir, f"{file_hash}.jpg")
+        
+        # If already exists, don't overwrite to save I/O
+        if not os.path.exists(save_path):
+            try:
+                with open(save_path, "wb") as f:
+                    f.write(art_data)
+                logger.info(f"🖼️ Extracted cover art to {save_path}")
+            except Exception as e:
+                logger.error(f"Failed to write cover art to cache: {e}")
+                return None
+        
+        # Return absolute path. The Go backend's resolveMediaPath will see it's absolute and serve it directly.
+        return save_path
+            
+    return None
+
 def analyze_audio(file_path):
     """
     Extract metadata using Mutagen (Fast & Secure)
@@ -199,25 +277,24 @@ def analyze_audio(file_path):
         logger.error(f"File not found during analysis: {file_path}")
         return None
 
-    ext = path.suffix.lower()
-    
-    metadata = {
-        "duration": 0,
-        "bitrate": 0,
-        "sample_rate": 0,
-        "channels": 0,
-        "title": path.stem, # Default to filename
-        "artist": "Unknown Artist",
-        "album": "Unknown Album",
-        "track_number": 0,
-        "genre": "Unknown"
-    }
-
     try:
         audio = mutagen.File(file_path)
         if not audio:
             logger.warning(f"Could not open file with Mutagen: {file_path}")
             return None
+            
+        metadata = {
+            "duration": 0,
+            "bitrate": 0,
+            "sample_rate": 0,
+            "channels": 0,
+            "title": path.stem, # Default to filename
+            "artist": "Unknown Artist",
+            "album": "Unknown Album",
+            "track_number": 0,
+            "genre": "Unknown",
+            "cover_path": None
+        }
 
         # Technical Metadata
         if audio.info:
@@ -239,6 +316,15 @@ def analyze_audio(file_path):
                 metadata["track_number"] = int(track_num_raw.split('/')[0])
             except:
                 pass
+                
+        # Extract Cover Art
+        metadata["cover_path"] = extract_cover_art(
+            audio, 
+            str(file_path), 
+            str(Path(file_path).relative_to(MEDIA_PATH)), # Use relative path for calculation
+            metadata["album"],
+            metadata["artist"]
+        )
 
         return metadata
 

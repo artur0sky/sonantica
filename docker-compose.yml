@@ -93,6 +93,7 @@ services:
       - F:\Music:/media:ro
       - ./config:/config:ro
       - ./logs/core:/var/log/sonantica
+      - sonantica_cache:/covers
     depends_on:
       postgres:
         condition: service_healthy
@@ -118,6 +119,7 @@ services:
       - ${BUCKETS_PATH:-./buckets}:/buckets:ro
       - F:\Music:/media:ro
       - ./logs/worker:/var/log/sonantica
+      - sonantica_cache:/covers
     depends_on:
       redis:
         condition: service_healthy
@@ -184,4 +186,6 @@ volumes:
   postgres_data:
     driver: local
   redis_data:
+    driver: local
+  sonantica_cache:
     driver: local

@@ -77,6 +77,7 @@ func main() {
 	// Routes
 	r.Get("/health", healthCheck)
 	r.Get("/stream/{id}", api.StreamTrack)
+	r.Get("/api/cover/*", api.GetAlbumCover)
 
 	// API Routes
 	r.Route("/api/library", func(r chi.Router) {
@@ -87,9 +88,20 @@ func main() {
 
 	r.Route("/api/scan", func(r chi.Router) {
 		r.Post("/start", api.ScanLibrary)
-		// TODO: Implement Status
-		// r.Get("/status", api.GetScanStatus)
+		r.Get("/status", api.GetScanStatus)
 	})
+
+	// Static Assets
+	workDir, _ := os.Getwd()
+	fmt.Printf("📂 Working directory: %s\n", workDir)
+
+	// Serve the /covers directory statically
+	// This is where the audio-worker extracts embedded art
+	r.Handle("/covers/*", http.StripPrefix("/covers/", http.FileServer(http.Dir("/covers"))))
+	r.Handle("/api/covers/*", http.StripPrefix("/api/covers/", http.FileServer(http.Dir("/covers"))))
+
+	// Serve the /media directory statically (optional, for direct file access if needed)
+	// r.Handle("/api/raw/*", http.StripPrefix("/api/raw/", http.FileServer(http.Dir("/media"))))
 
 	// Start Server
 	port := os.Getenv("PORT")

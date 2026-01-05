@@ -91,7 +91,32 @@ export class RemoteLibraryAdapter implements ILibraryAdapter {
   async getAlbums(): Promise<Album[]> {
     const response = await this.fetch('/api/library/albums');
     const data = await response.json();
-    return data.albums;
+    return data.albums.map((album: any) => {
+      let coverUrl = undefined;
+      
+      if (album.coverArt) {
+        // If it's already a full URL, use it
+        if (album.coverArt.startsWith('http')) {
+          coverUrl = album.coverArt;
+        } 
+        // If it's a root-relative path (like /covers/ or /media/), prepend server URL
+        else if (album.coverArt.startsWith('/')) {
+          coverUrl = `${this.serverUrl}${album.coverArt}`;
+        }
+        // Legacy: use ID-based endpoint
+        else {
+          coverUrl = `${this.serverUrl}/api/cover/${album.id}`;
+        }
+      } else {
+        // Fallback for albums without path but with ID
+        coverUrl = `${this.serverUrl}/api/cover/${album.id}`;
+      }
+
+      return {
+        ...album,
+        coverArt: coverUrl
+      };
+    });
   }
 
   /**

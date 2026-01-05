@@ -65,6 +65,9 @@ export interface Track {
   
   /** Album name */
   album: string;
+
+  /** Album ID */
+  albumId?: string;
   
   /** Duration in seconds */
   duration: number;

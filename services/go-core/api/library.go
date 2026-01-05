@@ -121,3 +121,23 @@ func ScanLibrary(w http.ResponseWriter, r *http.Request) {
 		"path":   mediaPath,
 	})
 }
+
+// GetScanStatus returns the current status and statistics of the library
+func GetScanStatus(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	var trackCount, artistCount, albumCount int
+
+	database.DB.QueryRow(r.Context(), "SELECT count(*) FROM tracks").Scan(&trackCount)
+	database.DB.QueryRow(r.Context(), "SELECT count(*) FROM artists").Scan(&artistCount)
+	database.DB.QueryRow(r.Context(), "SELECT count(*) FROM albums").Scan(&albumCount)
+
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"isScanning": false, // TODO: Pull from scanner state
+		"stats": map[string]int{
+			"tracks":  trackCount,
+			"artists": artistCount,
+			"albums":  albumCount,
+		},
+	})
+}
