@@ -85,7 +85,7 @@ export function ExpandedPlayer({
       animate={{ y: 0, opacity: 1 }}
       exit={{ y: "100%", opacity: 0 }}
       transition={{ type: "spring", damping: 30, stiffness: 200 }}
-      className="fixed inset-0 z-[100] flex flex-col bg-black overflow-hidden"
+      className="fixed inset-0 h-[100dvh] z-[100] flex flex-col bg-black overflow-hidden"
     >
       {/* Premium Background Ambience - Blurred Cover Art */}
       <AnimatePresence>

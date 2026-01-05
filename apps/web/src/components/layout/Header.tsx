@@ -12,6 +12,7 @@ import {
   UserButton,
   ContextMenu,
   useContextMenu,
+  useUIStore,
   type ContextMenuItem,
 } from "@sonantica/ui";
 import { useHeaderLogic } from "../../hooks/useHeaderLogic";
@@ -21,6 +22,7 @@ export function Header() {
   const { toggleLeftSidebar, handleSearchResultSelect } = useHeaderLogic();
   const [, setLocation] = useLocation();
   const contextMenu = useContextMenu();
+  const isPlayerExpanded = useUIStore((s) => s.isPlayerExpanded);
 
   // User menu items
   const userMenuItems: ContextMenuItem[] = [
@@ -52,8 +54,16 @@ export function Header() {
     <>
       <motion.header
         initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        className="h-14 sm:h-16 border-b border-border bg-surface flex items-center px-3 sm:px-4 md:px-6 gap-2 sm:gap-4 select-none z-30"
+        animate={{
+          y: isPlayerExpanded ? -80 : 0,
+          opacity: isPlayerExpanded ? 0 : 1,
+        }}
+        transition={{ duration: 0.3, ease: "easeInOut" }}
+        className={`h-14 sm:h-16 flex items-center px-3 sm:px-4 md:px-6 gap-2 sm:gap-4 select-none transition-all duration-300 ${
+          isPlayerExpanded
+            ? "z-0 pointer-events-none"
+            : "z-30 bg-surface border-b border-border"
+        }`}
       >
         {/* Left: Logo (Toggles Sidebar) */}
         <div className="flex items-center flex-shrink-0">

@@ -87,11 +87,26 @@ export function MainLayout({ children }: MainLayoutProps) {
     eqSidebarWidth,
     recommendationsOpen,
     recommendationsSidebarWidth,
+    closeLeftSidebarOnPlay,
   } = useUIStore();
 
   const { startResizing } = useSidebarResize();
 
   const isMobile = useMediaQuery("(max-width: 1023px)");
+
+  // Auto-close left sidebar when playing (desktop only)
+  const state = usePlayerStore((s) => s.state);
+  useEffect(() => {
+    if (!isMobile && state === "playing" && currentTrack && isLeftSidebarOpen) {
+      closeLeftSidebarOnPlay();
+    }
+  }, [
+    state,
+    currentTrack,
+    isMobile,
+    isLeftSidebarOpen,
+    closeLeftSidebarOnPlay,
+  ]);
 
   // Calculate total width of all open right-sidebars for desktop
   const totalRightOffset = useMemo(() => {
@@ -178,23 +193,25 @@ export function MainLayout({ children }: MainLayoutProps) {
                         size={22}
                         showLabel={!isMobile}
                       />
-                      <motion.button
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                        className="p-1 text-text-muted hover:text-text rounded-lg transition-colors flex items-center gap-2"
-                        title="Add to Playlist"
-                        onClick={() => {
-                          /* TODO: Open Add to Playlist Dialog */
-                          alert("Add to Playlist: " + fullTrack.title);
-                        }}
-                      >
-                        <IconPlaylistAdd size={22} />
-                        {!isMobile && (
-                          <span className="text-sm font-medium">
-                            Add to Playlist
-                          </span>
-                        )}
-                      </motion.button>
+                      {!isMobile && (
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          className="p-1 text-text-muted hover:text-text rounded-lg transition-colors flex items-center gap-2"
+                          title="Add to Playlist"
+                          onClick={() => {
+                            /* TODO: Open Add to Playlist Dialog */
+                            alert("Add to Playlist: " + fullTrack.title);
+                          }}
+                        >
+                          <IconPlaylistAdd size={22} />
+                          {!isMobile && (
+                            <span className="text-sm font-medium">
+                              Add to Playlist
+                            </span>
+                          )}
+                        </motion.button>
+                      )}
                     </div>
                   )
                 }

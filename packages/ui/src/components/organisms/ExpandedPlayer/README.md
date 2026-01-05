@@ -6,8 +6,15 @@ This component follows **Atomic Design**, **Clean Architecture**, **SOLID**, and
 
 ### Golden Ratio (φ ≈ 1.618)
 The desktop layout uses the **Golden Ratio** for visual harmony:
-- Main grid: `1fr : 1.618fr` (Cover Art : Info Grid)
-- Info section: `1.618fr : 1fr` (Track Info : Widgets)
+- Main grid: `1.618fr : 1fr` (Cover Art : Info Grid)
+- Info section: `1.618fr : 1fr` (Track Info : Controls)
+- **Cover Art**: Full-size, no max-width limits - occupies entire left column for maximum visual impact
+
+### Mobile Fibonacci Sequence
+The mobile layout follows Fibonacci proportions vertically:
+- Cover Art: `flex-[2.618]` (φ² - largest element)
+- Info Section: `flex-[1.618]` (φ - golden rectangle)
+- Controls: `flex-1` (1 - unit rectangle)
 
 ## 🏗️ Architecture
 

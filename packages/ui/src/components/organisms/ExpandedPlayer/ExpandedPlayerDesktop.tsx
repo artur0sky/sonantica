@@ -63,40 +63,40 @@ export function ExpandedPlayerDesktop({
   onToggleQueue,
 }: DesktopLayoutProps) {
   return (
-    <div className="hidden lg:grid lg:grid-cols-[1fr_1.618fr] lg:gap-8 xl:gap-12 h-full p-8 xl:p-12 max-w-screen-2xl mx-auto">
-      {/* LEFT: Pure Cover Art - Gallery Style (Golden Ratio: 1) */}
+    <div className="hidden lg:grid lg:grid-cols-[1.618fr_1fr] lg:gap-8 xl:gap-12 h-full p-8 xl:p-12 max-w-screen-2xl mx-auto">
+      {/* LEFT: Pure Cover Art - Fibonacci's Largest Square (φ²) */}
       <CoverArtSection
         coverArt={currentTrack.metadata?.coverArt}
         trackTitle={currentTrack.metadata?.title || "Unknown"}
         enableGestures={false}
       />
 
-      {/* RIGHT: Info Grid (Golden Ratio: φ ≈ 1.618) */}
-      <div className="grid grid-rows-[auto_1fr_auto] gap-6 xl:gap-8 min-h-0">
-        {/* Top: Header */}
-        <header className="flex justify-between items-center">
-          <PlayerButton
-            icon={IconChevronDown}
-            onClick={onClose}
-            size="lg"
-            title="Minimize"
-          />
-          <div className="flex flex-col items-center">
-            <span className="text-[10px] uppercase tracking-[0.2em] text-text-muted font-black opacity-60">
-              Now Playing
-            </span>
-          </div>
-          <PlayerButton
-            icon={IconDots}
-            onClick={() => {}}
-            size="lg"
-            title="More Options"
-          />
-        </header>
+      {/* RIGHT: Fibonacci Spiral - Two rectangles (φ top, 1 bottom) */}
+      <div className="grid grid-rows-[1.618fr_1fr] gap-6 xl:gap-8 min-h-0">
+        {/* TOP RIGHT: Info Section (φ rectangle) */}
+        <div className="flex flex-col gap-4 xl:gap-6 min-h-0">
+          {/* Header */}
+          <header className="flex justify-between items-center">
+            <PlayerButton
+              icon={IconChevronDown}
+              onClick={onClose}
+              size="lg"
+              title="Minimize"
+            />
+            <div className="flex flex-col items-center">
+              <span className="text-[10px] uppercase tracking-[0.2em] text-text-muted font-black opacity-60">
+                Now Playing
+              </span>
+            </div>
+            <PlayerButton
+              icon={IconDots}
+              onClick={() => {}}
+              size="lg"
+              title="More Options"
+            />
+          </header>
 
-        {/* Middle: 2-Column Grid (Info:Widgets using Golden Ratio φ) */}
-        <div className="grid grid-cols-[1.618fr_1fr] gap-6 xl:gap-8 min-h-0">
-          {/* INFO Section */}
+          {/* Track Info */}
           <InfoSection
             title={currentTrack.metadata?.title || "Unknown Title"}
             artist={formatArtists(currentTrack.metadata?.artist)}
@@ -104,16 +104,16 @@ export function ExpandedPlayerDesktop({
             trackId={currentTrack.id}
             actionButtons={actionButtons}
           />
+        </div>
 
-          {/* RIGHT Column: Artist Photo + Widgets */}
-          <div className="grid grid-rows-[1fr_1fr] gap-6 xl:gap-8">
+        {/* BOTTOM RIGHT: Controls & Widgets (1 rectangle) */}
+        <div className="flex flex-col gap-4 xl:gap-6 justify-between">
+          {/* Widgets Grid (Artist Photo + Widgets) */}
+          <div className="grid grid-cols-2 gap-4 xl:gap-6">
             <ArtistPhotoSection />
             <WidgetsSection />
           </div>
-        </div>
 
-        {/* Bottom: Controls */}
-        <div className="flex flex-col gap-6">
           {/* Timeline */}
           <TimelineSection
             trackId={currentTrack.id}

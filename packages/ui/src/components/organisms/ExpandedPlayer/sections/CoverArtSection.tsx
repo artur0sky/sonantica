@@ -37,10 +37,10 @@ export function CoverArtSection({
   // Desktop: Pure gallery style (no interactions)
   if (!enableGestures) {
     return (
-      <div className="flex items-center justify-center">
+      <div className="flex items-center justify-center h-full">
         <motion.div
           layoutId="player-artwork-desktop"
-          className="relative aspect-square w-full max-w-[50vh] xl:max-w-[55vh]"
+          className="relative aspect-square w-full h-full"
           whileHover={{ scale: 1.005 }}
           transition={{ type: "spring", stiffness: 300, damping: 20 }}
         >
@@ -72,13 +72,7 @@ export function CoverArtSection({
     <div className="flex-1 flex items-center justify-center w-full min-h-0 mb-8 px-2">
       <motion.div
         layoutId="player-artwork-mobile"
-        className="relative group aspect-square w-full max-w-[95vw]"
-        drag="x"
-        dragConstraints={{ left: 0, right: 0 }}
-        dragElastic={0.2}
-        onDragStart={gestures.handleDragStart}
-        onDrag={gestures.handleDrag}
-        onDragEnd={gestures.handleDragEnd}
+        className="relative group aspect-square w-full"
         whileHover={{ scale: 1.005 }}
         animate={gestures.longPressActive ? { scale: 0.95 } : { scale: 1 }}
         transition={{ type: "spring", stiffness: 300, damping: 20 }}
