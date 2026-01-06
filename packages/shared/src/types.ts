@@ -88,6 +88,7 @@ export interface PlaybackStatus {
   duration: number; // in seconds
   volume: number; // 0.0 to 1.0
   isMuted: boolean;
+  bufferedRanges: { start: number; end: number }[]; // in seconds
 }
 
 /**
@@ -101,6 +102,9 @@ export interface PlayerEvent {
 
 // Library Configuration
 export * from './types/library-config';
+
+// Player Configuration
+export * from './types/player-config';
 
 // Library Domain (Tracks, Artists, Albums)
 export * from './types/library';

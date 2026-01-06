@@ -7,6 +7,7 @@
 import { getServersConfig } from '../services/LibraryService';
 import { useOfflineStore } from '@sonantica/offline-manager';
 import { OfflineStatus } from '@sonantica/shared';
+import { useLibraryStore } from '@sonantica/media-library';
 
 /**
  * Build streaming URL for a track
@@ -42,10 +43,18 @@ export function buildStreamingUrl(serverId: string, filePath: string, trackId?: 
     
     // Construct absolute URL
     const baseUrl = server.serverUrl.replace(/\/$/, ''); // Remove trailing slash
-    const encodedPath = encodeURIComponent(filePath);
-    const streamUrl = `${baseUrl}/api/stream/${serverId}/${encodedPath}`;
     
-    console.log(`🎵 Stream URL: ${streamUrl}`);
+    // Use trackId for secure ID-based streaming (Sonantica Core v2)
+    if (trackId) {
+      const streamUrl = `${baseUrl}/stream/${trackId}`;
+      console.log(`🎵 Stream URL: ${streamUrl}`);
+      return streamUrl;
+    }
+
+    // Fallback: This will likely fail on v2 core, but kept for signature compatibility
+    console.warn("⚠️ trackId missing, falling back to legacy path streaming (may fail)");
+    const encodedPath = encodeURIComponent(filePath);
+    const streamUrl = `${baseUrl}/stream/${encodedPath}`; // Note: Backend route changed to /stream/{id}
     
     return streamUrl;
   } catch (error) {
@@ -73,23 +82,39 @@ export function buildTrackStreamingUrl(track: { id?: string; serverId?: string; 
  * This is the canonical way to convert library tracks to playable sources
  */
 export function trackToMediaSource(track: any): any {
+  // Try to get enriched cover art from library store if missing
+  let coverArt = track.coverArt || track.metadata?.coverArt;
+  
+  if (!coverArt) {
+    try {
+      // Direct access to store to avoid hook issues in utils
+      const libraryTracks = useLibraryStore.getState().tracks;
+      const foundTrack = libraryTracks.find((t: any) => t.id === track.id);
+      if (foundTrack) {
+        coverArt = foundTrack.coverArt;
+      }
+    } catch (e) {
+      // Ignore if store not available
+    }
+  }
+
   return {
     id: track.id,
     url: buildStreamingUrl(track.serverId!, track.filePath!, track.id),
     metadata: {
-      title: track.title,
-      artist: track.artist,
-      album: track.album,
-      duration: track.duration,
-      coverArt: track.coverArt,
-      year: track.year,
-      trackNumber: track.trackNumber,
-      genre: track.genre,
-      albumArtist: track.albumArtist,
-      bitrate: track.format?.bitrate,
-      sampleRate: track.format?.sampleRate,
-      bitsPerSample: track.format?.bitsPerSample,
-      lyrics: track.lyrics,
+      title: track.title || track.metadata?.title,
+      artist: track.artist || track.metadata?.artist,
+      album: track.album || track.metadata?.album,
+      duration: track.duration || track.metadata?.duration,
+      coverArt: coverArt,
+      year: track.year || track.metadata?.year,
+      trackNumber: track.trackNumber || track.metadata?.trackNumber,
+      genre: track.genre || track.metadata?.genre,
+      albumArtist: track.albumArtist || track.metadata?.albumArtist,
+      bitrate: track.format?.bitrate || track.metadata?.bitrate,
+      sampleRate: track.format?.sampleRate || track.metadata?.sampleRate,
+      bitsPerSample: track.format?.bitsPerSample || track.metadata?.bitsPerSample,
+      lyrics: track.lyrics || track.metadata?.lyrics,
     },
   };
 }

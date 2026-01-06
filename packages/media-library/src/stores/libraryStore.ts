@@ -89,9 +89,28 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
 
   // Actions
   loadFromServers: (tracks: Track[], artists: Artist[], albums: Album[]) => {
-    const stats = calculateStats(tracks, artists, albums);
+    // Enrich tracks with cover art from albums
+    const enrichedTracks = tracks.map(track => {
+      if (track.coverArt) return track; // Already has art
+      
+      // Try to find album
+      // Strategy 1: Match by albumId
+      let album = track.albumId ? albums.find(a => a.id === track.albumId) : null;
+      
+      // Strategy 2: Match by name and artist
+      if (!album) {
+        album = albums.find(a => a.title === track.album && a.artist === track.artist);
+      }
+      
+      if (album && album.coverArt) {
+        return { ...track, coverArt: album.coverArt };
+      }
+      return track;
+    });
+
+    const stats = calculateStats(enrichedTracks, artists, albums);
     set({
-      tracks,
+      tracks: enrichedTracks,
       artists,
       albums,
       stats,

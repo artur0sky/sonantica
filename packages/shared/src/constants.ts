@@ -46,6 +46,7 @@ export const PLAYER_EVENTS = {
   STATE_CHANGE: 'player:state-change',
   TIME_UPDATE: 'player:time-update',
   VOLUME_CHANGE: 'player:volume-change',
+  BUFFER_UPDATE: 'player:buffer-update',
   ERROR: 'player:error',
   LOADED: 'player:loaded',
   ENDED: 'player:ended',

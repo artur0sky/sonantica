@@ -54,6 +54,7 @@ export interface UIState {
   setEQSidebarWidth: (width: number) => void;
   setRecommendationsSidebarWidth: (width: number) => void;
   setIsCramped: (isCramped: boolean) => void;
+  closeLeftSidebarOnPlay: () => void; // Auto-close left sidebar when playing
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -173,5 +174,9 @@ export const useUIStore = create<UIState>((set) => ({
   },
   setIsCramped: (isCramped: boolean) => {
     set({ isCramped });
+  },
+
+  closeLeftSidebarOnPlay: () => {
+    set({ isLeftSidebarOpen: false });
   },
 }));

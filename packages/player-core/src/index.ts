@@ -19,3 +19,4 @@ export type { QueueState } from './stores/queueStore';
 // Services
 export { MediaSessionService, mediaSessionService } from './services/MediaSessionService';
 export type { MediaSessionHandlers } from './services/MediaSessionService';
+export { BufferManager } from './services/BufferManager';

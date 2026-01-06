@@ -1,12 +1,17 @@
-import { motion } from "framer-motion";
+/**
+ * Skip Button Component
+ *
+ * Skip to next or previous track.
+ * Atomic design: built on top of PlayerButton.
+ */
+
 import { IconPlayerSkipBack, IconPlayerSkipForward } from "@tabler/icons-react";
-import { cn } from "../../utils";
-import { buttonAnimations } from "../../utils/animations";
+import { PlayerButton } from "./PlayerButton";
 
 interface SkipButtonProps {
   direction: "prev" | "next";
   onClick: () => void;
-  size?: number;
+  size?: number | "xs" | "sm" | "md" | "lg" | "xl";
   className?: string;
   disabled?: boolean;
 }
@@ -14,26 +19,21 @@ interface SkipButtonProps {
 export function SkipButton({
   direction,
   onClick,
-  size = 24,
+  size = "md",
   className,
-  disabled,
+  disabled = false,
 }: SkipButtonProps) {
   const Icon =
     direction === "prev" ? IconPlayerSkipBack : IconPlayerSkipForward;
 
   return (
-    <motion.button
+    <PlayerButton
+      icon={Icon}
       onClick={onClick}
+      size={size}
+      className={className}
       disabled={disabled}
-      whileHover={buttonAnimations.hover}
-      whileTap={buttonAnimations.tap}
-      className={cn(
-        "text-text-muted transition-colors p-2 disabled:opacity-50 disabled:cursor-not-allowed",
-        className
-      )}
-      aria-label={direction === "prev" ? "Previous track" : "Next track"}
-    >
-      <Icon size={size} stroke={1.5} />
-    </motion.button>
+      title={direction === "prev" ? "Previous" : "Next"}
+    />
   );
 }

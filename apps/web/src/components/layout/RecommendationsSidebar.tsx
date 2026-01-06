@@ -7,6 +7,7 @@
 
 import { useState } from "react";
 import { SidebarContainer, useUIStore, Button } from "@sonantica/ui";
+import { useLibraryStore } from "@sonantica/media-library";
 import { useQueueRecommendations } from "@sonantica/recommendations";
 import { TrackItem } from "../../features/library/components/TrackItem";
 import {
@@ -122,16 +123,24 @@ export function RecommendationsSidebar() {
                   className="bg-surface-elevated/30 rounded-lg p-2 hover:bg-surface-elevated transition-colors cursor-pointer group"
                 >
                   <div className="aspect-square rounded-md overflow-hidden bg-surface-elevated mb-2 relative">
-                    {rec.item.coverArt ? (
-                      <img
-                        src={rec.item.coverArt}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-surface-elevated border border-border">
-                        <IconDisc size={20} className="text-text-muted/30" />
-                      </div>
-                    )}
+                    {(() => {
+                      const albums = useLibraryStore.getState().albums;
+                      const coverArt =
+                        rec.item.coverArt ||
+                        albums.find((a) => a.id === rec.item.id)?.coverArt;
+
+                      return coverArt ? (
+                        <img
+                          src={coverArt}
+                          className="w-full h-full object-cover"
+                          alt={rec.item.title}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-surface-elevated border border-border">
+                          <IconDisc size={20} className="text-text-muted/30" />
+                        </div>
+                      );
+                    })()}
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                       <IconPlayerPlay
                         className="text-white drop-shadow-md"

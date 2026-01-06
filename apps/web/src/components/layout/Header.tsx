@@ -12,14 +12,17 @@ import {
   UserButton,
   ContextMenu,
   useContextMenu,
+  useUIStore,
   type ContextMenuItem,
 } from "@sonantica/ui";
 import { useHeaderLogic } from "../../hooks/useHeaderLogic";
+import logo from "../../assets/logo.png";
 
 export function Header() {
   const { toggleLeftSidebar, handleSearchResultSelect } = useHeaderLogic();
   const [, setLocation] = useLocation();
   const contextMenu = useContextMenu();
+  const isPlayerExpanded = useUIStore((s) => s.isPlayerExpanded);
 
   // User menu items
   const userMenuItems: ContextMenuItem[] = [
@@ -51,8 +54,16 @@ export function Header() {
     <>
       <motion.header
         initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        className="h-14 sm:h-16 border-b border-border bg-surface flex items-center px-3 sm:px-4 md:px-6 gap-2 sm:gap-4 select-none z-30"
+        animate={{
+          y: isPlayerExpanded ? -80 : 0,
+          opacity: isPlayerExpanded ? 0 : 1,
+        }}
+        transition={{ duration: 0.3, ease: "easeInOut" }}
+        className={`h-14 sm:h-16 flex items-center px-3 sm:px-4 md:px-6 gap-2 sm:gap-4 select-none transition-all duration-300 ${
+          isPlayerExpanded
+            ? "z-0 pointer-events-none"
+            : "z-30 bg-surface border-b border-border"
+        }`}
       >
         {/* Left: Logo (Toggles Sidebar) */}
         <div className="flex items-center flex-shrink-0">
@@ -67,9 +78,13 @@ export function Header() {
               <motion.div
                 whileHover={{ rotate: 180 }}
                 transition={{ duration: 0.5 }}
-                className="w-7 h-7 sm:w-8 sm:h-8 bg-accent rounded-lg flex items-center justify-center text-white font-bold text-base sm:text-lg flex-shrink-0 shadow-lg shadow-accent/20"
+                className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center flex-shrink-0"
               >
-                S
+                <img
+                  src={logo}
+                  alt="Sonántica Logo"
+                  className="w-full h-full object-contain"
+                />
               </motion.div>
               <span className="text-lg sm:text-xl font-bold tracking-tight group-hover:text-accent transition-colors hidden sm:inline">
                 Sonántica

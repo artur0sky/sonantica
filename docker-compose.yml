@@ -17,13 +17,14 @@ services:
     container_name: sonantica-postgres
     restart: always
     environment:
-      PSQL_NAME: ${PSQL_NAME}
-      PSQL_USER: ${PSQL_USER}
-      PSQL_PASSWORD: ${PSQL_PASSWORD}
-      POSTGRES_PASSWORD: ${PSQL_PASSWORD}
-      ENCODING: ${ENCODING}
-      PGDATA: /var/lib/postgresql/data
-      TZ: ${TZ}
+      POSTGRES_USER: ${POSTGRES_USER:-sonantica}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sonantica}
+      POSTGRES_DB: ${POSTGRES_DB:-sonantica}
+      # Variables for custom entrypoint.sh in data/psql
+      PSQL_NAME: ${POSTGRES_DB:-sonantica}
+      PSQL_USER: ${POSTGRES_USER:-sonantica}
+      PSQL_PASSWORD: ${POSTGRES_PASSWORD:-sonantica}
+      ENCODING: UTF8
     volumes:
       # Data persistence - Uses named volume for safety
       - postgres_data:/var/lib/postgresql/data
@@ -91,6 +92,8 @@ services:
       - ${BUCKETS_PATH:-./buckets}:/buckets:ro
       - F:\Music:/media:ro
       - ./config:/config:ro
+      - ./logs/core:/var/log/sonantica
+      - sonantica_cache:/covers
     depends_on:
       postgres:
         condition: service_healthy
@@ -115,6 +118,8 @@ services:
       - ${MEDIA_PATH:-./media}:/media:ro
       - ${BUCKETS_PATH:-./buckets}:/buckets:ro
       - F:\Music:/media:ro
+      - ./logs/worker:/var/log/sonantica
+      - sonantica_cache:/covers
     depends_on:
       redis:
         condition: service_healthy
@@ -181,4 +186,6 @@ volumes:
   postgres_data:
     driver: local
   redis_data:
+    driver: local
+  sonantica_cache:
     driver: local

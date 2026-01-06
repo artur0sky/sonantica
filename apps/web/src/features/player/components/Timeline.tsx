@@ -9,7 +9,7 @@ import { usePlayerStore } from "@sonantica/player-core";
 import { formatTime } from "@sonantica/shared";
 
 export function Timeline() {
-  const { currentTime, duration, seek, state } = usePlayerStore();
+  const { currentTime, duration, buffered, seek, state } = usePlayerStore();
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newTime = parseFloat(e.target.value);
@@ -27,6 +27,7 @@ export function Timeline() {
         min={0}
         max={duration || 0}
         step={0.1}
+        buffered={buffered}
         onChange={handleSeek}
         disabled={!duration}
       />
