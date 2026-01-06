@@ -94,7 +94,7 @@ services:
     volumes:
       - ${MEDIA_PATH:-./media}:/media:ro
       - ${BUCKETS_PATH:-./buckets}:/buckets:ro
-      - ./media:/media:ro
+      - F:\Music:/media:ro
       - ./config:/config:ro
       - ./logs/core:/var/log/sonantica
       - sonantica_cache:/covers
@@ -122,7 +122,7 @@ services:
     volumes:
       - ${MEDIA_PATH:-./media}:/media:ro
       - ${BUCKETS_PATH:-./buckets}:/buckets:ro
-      - ./media:/media:ro
+      - F:\Music:/media:ro
       - ./logs/worker:/var/log/sonantica
       - sonantica_cache:/covers
     depends_on:
@@ -147,7 +147,7 @@ services:
     volumes:
       - ${MEDIA_PATH:-./media}:/media:ro
       - ${BUCKETS_PATH:-./buckets}:/buckets:ro
-      - ./media:/media:ro
+      - F:/Music:/media:ro
       - ${CONFIG_PATH:-./config}:/config:rw
     environment:
       - NODE_ENV=production

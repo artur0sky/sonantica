@@ -23,6 +23,7 @@ import { RightSidebar } from "./RightSidebar";
 import { IconLoader, IconPlaylistAdd } from "@tabler/icons-react";
 import { useLibraryStore } from "@sonantica/media-library";
 import { DownloadButton } from "../DownloadButton";
+import { cn } from "@sonantica/shared";
 
 // PERFORMANCE: Lazy load heavy sidebars (code splitting)
 const LyricsSidebar = lazy(() =>
@@ -43,6 +44,7 @@ import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { useMediaSession } from "../../hooks/useMediaSession";
 import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
 import { useSidebarResize } from "../../hooks/useSidebarResize"; // New Hook
+import { useDominantColor } from "../../hooks/useDominantColor";
 
 // Sidebar loading fallback
 const SidebarLoader = () => (
@@ -139,16 +141,31 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   const setIsCramped = useUIStore((state) => state.setIsCramped);
 
+  // Extract dominant color from cover art for solid theme
+  const { color: dominantColor, contrastColor } = useDominantColor(
+    fullTrack?.coverArt
+  );
+  const mutedColor =
+    contrastColor === "#ffffff" ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.6)";
+
   useEffect(() => {
     setIsCramped(isCramped);
   }, [isCramped, setIsCramped]);
 
   return (
     <div
-      className="h-[100dvh] pt-[max(env(safe-area-inset-top),2rem)] lg:pt-[env(safe-area-inset-top)] flex flex-col bg-bg text-text overflow-hidden relative"
+      className={cn(
+        "h-[100dvh] transition-all duration-300 flex flex-col bg-bg text-text overflow-hidden relative",
+        isPlayerExpanded
+          ? "pt-0"
+          : "pt-[max(env(safe-area-inset-top),2rem)] lg:pt-[env(safe-area-inset-top)]"
+      )}
       style={
         {
           "--alphabet-right": `${totalRightOffset}px`,
+          "--dominant-color": dominantColor,
+          "--contrast-color": contrastColor,
+          "--color-accent-foreground": dominantColor,
         } as React.CSSProperties
       }
     >
@@ -182,43 +199,65 @@ export function MainLayout({ children }: MainLayoutProps) {
         >
           <AnimatePresence mode="wait">
             {isPlayerExpanded ? (
-              <ExpandedPlayer
-                key="expanded"
-                actionButtons={
-                  fullTrack && (
-                    <div className="flex items-center gap-2">
-                      <DownloadButton
-                        trackId={fullTrack.id}
-                        track={fullTrack}
-                        size={22}
-                        showLabel={!isMobile}
-                      />
-                      {!isMobile && (
-                        <motion.button
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
-                          className="p-1.5 text-text-muted hover:text-text rounded-full transition-all duration-200 flex items-center gap-2"
-                          title="Add to Playlist"
-                          onClick={() => {
-                            /* TODO: Open Add to Playlist Dialog */
-                            alert("Add to Playlist: " + fullTrack.title);
-                          }}
-                        >
-                          <IconPlaylistAdd size={22} />
-                          <span className="text-sm font-medium">
-                            Add to Playlist
-                          </span>
-                        </motion.button>
-                      )}
-                    </div>
-                  )
+              <div
+                className="h-full w-full"
+                style={
+                  {
+                    backgroundColor: dominantColor,
+                    color: contrastColor,
+                    "--color-text": contrastColor,
+                    "--color-text-muted": mutedColor,
+                    "--color-accent": contrastColor,
+                    "--color-accent-hover": contrastColor,
+                    "--color-border":
+                      contrastColor === "#ffffff"
+                        ? "rgba(255,255,255,0.1)"
+                        : "rgba(0,0,0,0.1)",
+                    "--color-surface-elevated":
+                      contrastColor === "#ffffff"
+                        ? "rgba(255,255,255,0.1)"
+                        : "rgba(0,0,0,0.1)",
+                  } as React.CSSProperties
                 }
-                onLongPressArt={() => {
-                  if (fullTrack) {
-                    alert("Add to Playlist: " + fullTrack.title);
+              >
+                <ExpandedPlayer
+                  key="expanded"
+                  actionButtons={
+                    fullTrack && (
+                      <div className="flex items-center gap-2">
+                        <DownloadButton
+                          trackId={fullTrack.id}
+                          track={fullTrack}
+                          size={22}
+                          showLabel={!isMobile}
+                        />
+                        {!isMobile && (
+                          <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                            className="p-1.5 text-text-muted hover:text-text rounded-full transition-all duration-200 flex items-center gap-2"
+                            title="Add to Playlist"
+                            onClick={() => {
+                              /* TODO: Open Add to Playlist Dialog */
+                              alert("Add to Playlist: " + fullTrack.title);
+                            }}
+                          >
+                            <IconPlaylistAdd size={22} />
+                            <span className="text-sm font-medium">
+                              Add to Playlist
+                            </span>
+                          </motion.button>
+                        )}
+                      </div>
+                    )
                   }
-                }}
-              />
+                  onLongPressArt={() => {
+                    if (fullTrack) {
+                      alert("Add to Playlist: " + fullTrack.title);
+                    }
+                  }}
+                />
+              </div>
             ) : (
               children
             )}
@@ -228,13 +267,32 @@ export function MainLayout({ children }: MainLayoutProps) {
         {/* Right Sidebar - Queue (Desktop Only - Relative Position) */}
         {!isMobile && isRightSidebarOpen && currentTrack && (
           <aside
-            style={{ width: rightSidebarWidth }}
-            className="bg-surface border-l border-border h-full flex-shrink-0 z-20 relative"
+            className="border-l border-white/10 h-full flex-shrink-0 z-20 relative shadow-[-10px_0_30px_rgba(0,0,0,0.2)]"
+            style={
+              {
+                width: rightSidebarWidth,
+                backgroundColor: dominantColor,
+                color: contrastColor,
+                "--color-text": contrastColor,
+                "--color-text-muted": mutedColor,
+                "--color-border":
+                  contrastColor === "#ffffff"
+                    ? "rgba(255,255,255,0.1)"
+                    : "rgba(0,0,0,0.1)",
+                "--color-surface": "transparent",
+                "--color-surface-elevated":
+                  contrastColor === "#ffffff"
+                    ? "rgba(255,255,255,0.1)"
+                    : "rgba(0,0,0,0.1)",
+                "--color-accent": contrastColor,
+                "--color-accent-hover": contrastColor,
+              } as React.CSSProperties
+            }
           >
             <SidebarResizer
               orientation="vertical"
               onMouseDown={() => startResizing("right")}
-              className="left-0"
+              className="left-0 opacity-20 hover:opacity-50"
             />
             <RightSidebar isCollapsed={rightSidebarWidth === 80} />
           </aside>
@@ -243,13 +301,32 @@ export function MainLayout({ children }: MainLayoutProps) {
         {/* Lyrics Sidebar (Desktop Only - Relative Position) */}
         {!isMobile && lyricsOpen && currentTrack && (
           <aside
-            style={{ width: lyricsSidebarWidth }}
-            className="bg-surface border-l border-border h-full flex-shrink-0 z-20 relative"
+            className="border-l border-white/10 h-full flex-shrink-0 z-20 relative shadow-[-10px_0_30px_rgba(0,0,0,0.2)]"
+            style={
+              {
+                width: lyricsSidebarWidth,
+                backgroundColor: dominantColor,
+                color: contrastColor,
+                "--color-text": contrastColor,
+                "--color-text-muted": mutedColor,
+                "--color-border":
+                  contrastColor === "#ffffff"
+                    ? "rgba(255,255,255,0.1)"
+                    : "rgba(0,0,0,0.1)",
+                "--color-surface": "transparent",
+                "--color-surface-elevated":
+                  contrastColor === "#ffffff"
+                    ? "rgba(255,255,255,0.1)"
+                    : "rgba(0,0,0,0.1)",
+                "--color-accent": contrastColor,
+                "--color-accent-hover": contrastColor,
+              } as React.CSSProperties
+            }
           >
             <SidebarResizer
               orientation="vertical"
               onMouseDown={() => startResizing("lyrics")}
-              className="left-0"
+              className="left-0 opacity-20 hover:opacity-50"
             />
             <Suspense fallback={<SidebarLoader />}>
               <LyricsSidebar isCollapsed={lyricsSidebarWidth === 80} />
@@ -260,13 +337,32 @@ export function MainLayout({ children }: MainLayoutProps) {
         {/* EQ Sidebar (Desktop Only - Relative Position) */}
         {!isMobile && eqOpen && currentTrack && (
           <aside
-            style={{ width: eqSidebarWidth }}
-            className="bg-surface border-l border-border h-full flex-shrink-0 z-20 relative"
+            className="border-l border-white/10 h-full flex-shrink-0 z-20 relative shadow-[-10px_0_30px_rgba(0,0,0,0.2)]"
+            style={
+              {
+                width: eqSidebarWidth,
+                backgroundColor: dominantColor,
+                color: contrastColor,
+                "--color-text": contrastColor,
+                "--color-text-muted": mutedColor,
+                "--color-border":
+                  contrastColor === "#ffffff"
+                    ? "rgba(255,255,255,0.1)"
+                    : "rgba(0,0,0,0.1)",
+                "--color-surface": "transparent",
+                "--color-surface-elevated":
+                  contrastColor === "#ffffff"
+                    ? "rgba(255,255,255,0.1)"
+                    : "rgba(0,0,0,0.1)",
+                "--color-accent": contrastColor,
+                "--color-accent-hover": contrastColor,
+              } as React.CSSProperties
+            }
           >
             <SidebarResizer
               orientation="vertical"
               onMouseDown={() => startResizing("eq")}
-              className="left-0"
+              className="left-0 opacity-20 hover:opacity-50"
             />
             <Suspense fallback={<SidebarLoader />}>
               <EQSidebar isCollapsed={eqSidebarWidth === 80} />
@@ -277,13 +373,32 @@ export function MainLayout({ children }: MainLayoutProps) {
         {/* Recommendations Sidebar (Desktop Only - Relative Position) */}
         {!isMobile && recommendationsOpen && currentTrack && (
           <aside
-            style={{ width: recommendationsSidebarWidth }}
-            className="bg-surface border-l border-border h-full flex-shrink-0 z-20 relative"
+            className="border-l border-white/10 h-full flex-shrink-0 z-20 relative shadow-[-10px_0_30px_rgba(0,0,0,0.2)]"
+            style={
+              {
+                width: recommendationsSidebarWidth,
+                backgroundColor: dominantColor,
+                color: contrastColor,
+                "--color-text": contrastColor,
+                "--color-text-muted": mutedColor,
+                "--color-border":
+                  contrastColor === "#ffffff"
+                    ? "rgba(255,255,255,0.1)"
+                    : "rgba(0,0,0,0.1)",
+                "--color-surface": "transparent",
+                "--color-surface-elevated":
+                  contrastColor === "#ffffff"
+                    ? "rgba(255,255,255,0.1)"
+                    : "rgba(0,0,0,0.1)",
+                "--color-accent": contrastColor,
+                "--color-accent-hover": contrastColor,
+              } as React.CSSProperties
+            }
           >
             <SidebarResizer
               orientation="vertical"
               onMouseDown={() => startResizing("recommendations")}
-              className="left-0"
+              className="left-0 opacity-20 hover:opacity-50"
             />
             <Suspense fallback={<SidebarLoader />}>
               <RecommendationsSidebar />
@@ -353,7 +468,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-y-0 right-0 w-[320px] bg-surface z-[70] shadow-2xl border-l border-border overflow-y-auto pt-[max(env(safe-area-inset-top),2rem)]"
+            className="fixed inset-y-0 right-0 w-[320px] bg-accent text-white z-[70] shadow-2xl border-l border-white/10 overflow-y-auto pt-[max(env(safe-area-inset-top),2rem)] [--color-text-muted:rgba(255,255,255,0.7)] [--color-border:rgba(255,255,255,0.1)] [--color-surface-elevated:rgba(255,255,255,0.15)] [--color-accent:white]"
           >
             <RightSidebar isCollapsed={false} />
           </motion.aside>
@@ -368,7 +483,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-y-0 right-0 w-[320px] bg-surface z-[70] shadow-2xl border-l border-border overflow-y-auto pt-[max(env(safe-area-inset-top),2rem)]"
+            className="fixed inset-y-0 right-0 w-[320px] bg-accent text-white z-[70] shadow-2xl border-l border-white/10 overflow-y-auto pt-[max(env(safe-area-inset-top),2rem)] [--color-text-muted:rgba(255,255,255,0.7)] [--color-border:rgba(255,255,255,0.1)] [--color-surface-elevated:rgba(255,255,255,0.15)] [--color-accent:white]"
           >
             <Suspense fallback={<SidebarLoader />}>
               <LyricsSidebar isCollapsed={false} />
@@ -385,7 +500,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-y-0 right-0 w-[320px] bg-surface z-[70] shadow-2xl border-l border-border overflow-y-auto pt-[max(env(safe-area-inset-top),2rem)]"
+            className="fixed inset-y-0 right-0 w-[320px] bg-accent text-white z-[70] shadow-2xl border-l border-white/10 overflow-y-auto pt-[max(env(safe-area-inset-top),2rem)] [--color-text-muted:rgba(255,255,255,0.7)] [--color-border:rgba(255,255,255,0.1)] [--color-surface-elevated:rgba(255,255,255,0.15)] [--color-accent:white]"
           >
             <Suspense fallback={<SidebarLoader />}>
               <EQSidebar isCollapsed={false} />
@@ -402,7 +517,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-y-0 right-0 w-[320px] bg-surface z-[70] shadow-2xl border-l border-border overflow-y-auto pt-[max(env(safe-area-inset-top),2rem)]"
+            className="fixed inset-y-0 right-0 w-[320px] bg-accent text-white z-[70] shadow-2xl border-l border-white/10 overflow-y-auto pt-[max(env(safe-area-inset-top),2rem)] [--color-text-muted:rgba(255,255,255,0.7)] [--color-border:rgba(255,255,255,0.1)] [--color-surface-elevated:rgba(255,255,255,0.15)] [--color-accent:white]"
           >
             <Suspense fallback={<SidebarLoader />}>
               <RecommendationsSidebar />

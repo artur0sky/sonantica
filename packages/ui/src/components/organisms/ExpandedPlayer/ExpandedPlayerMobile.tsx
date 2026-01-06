@@ -66,7 +66,7 @@ export function ExpandedPlayerMobile({
   onLongPressArt,
 }: MobileLayoutProps) {
   return (
-    <div className="lg:hidden flex flex-col h-full bg-black overflow-hidden overscroll-none select-none pt-[max(env(safe-area-inset-top),2rem)]">
+    <div className="lg:hidden flex flex-col h-full bg-black overflow-hidden overscroll-none select-none pt-[max(env(safe-area-inset-top),2rem)] lg:pt-[env(safe-area-inset-top)]">
       {/* Mobile Sticky Header - Always on top */}
       <header className="h-14 flex flex-none justify-between items-center px-6 md:px-12 border-b border-white/5 bg-black/40 backdrop-blur-xl z-30">
         <PlayerButton

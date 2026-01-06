@@ -76,7 +76,13 @@ export const useUIStore = create<UIState>((set) => ({
   isCramped: false,
 
   togglePlayerExpanded: () => {
-    set((state) => ({ isPlayerExpanded: !state.isPlayerExpanded }));
+    set((state) => {
+      const isExpanded = !state.isPlayerExpanded;
+      return { 
+        isPlayerExpanded: isExpanded,
+        isLeftSidebarOpen: isExpanded ? false : state.isLeftSidebarOpen
+      };
+    });
   },
 
   toggleQueue: () => {
@@ -119,7 +125,10 @@ export const useUIStore = create<UIState>((set) => ({
   },
 
   setPlayerExpanded: (expanded: boolean) => {
-    set({ isPlayerExpanded: expanded });
+    set((state) => ({ 
+      isPlayerExpanded: expanded,
+      isLeftSidebarOpen: expanded ? false : state.isLeftSidebarOpen
+    }));
   },
 
   setQueueOpen: (open: boolean) => {
