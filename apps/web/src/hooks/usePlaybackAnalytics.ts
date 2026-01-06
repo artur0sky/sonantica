@@ -5,6 +5,7 @@
  * Automatically tracks all playback events.
  */
 
+import { useMemo } from 'react';
 import { usePlaybackTracking } from '@sonantica/analytics';
 import { usePlayerStore } from '@sonantica/player-core';
 import { PlaybackState } from '@sonantica/shared';
@@ -22,13 +23,13 @@ export function usePlaybackAnalytics() {
   const duration = usePlayerStore((state) => state.duration);
   const volume = usePlayerStore((state) => state.volume);
 
-  const playerState = {
+  const playerState = useMemo(() => ({
     isPlaying: state === PlaybackState.PLAYING,
     position: currentTime,
     volume: volume,
-  };
+  }), [state, currentTime, volume]);
 
-  const trackOptions = {
+  const trackOptions = useMemo(() => ({
     trackId: currentTrack?.id || '',
     albumId: currentTrack?.metadata?.albumId || '',
     artistId: Array.isArray(currentTrack?.metadata?.artistId) 
@@ -41,7 +42,7 @@ export function usePlaybackAnalytics() {
     source: 'library' as const,
     eqEnabled: false,
     dspEffects: [],
-  };
+  }), [currentTrack, duration]);
 
   // The hook handles progress and auto-start/pause tracking automatically
   usePlaybackTracking(trackOptions, playerState);

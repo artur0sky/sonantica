@@ -5,7 +5,6 @@ import { ResponsivePie } from '@nivo/pie';
 import { ResponsiveHeatMap } from '@nivo/heatmap';
 import { ResponsiveCalendar } from '@nivo/calendar';
 import { AnalyticsCard } from '../atoms/AnalyticsAtoms';
-import { useTheme } from '../../hooks/useTheme'; // Assuming exists or using current vars
 
 /**
  * Sonántica Nivo Theme

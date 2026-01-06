@@ -32,7 +32,7 @@ export function DownloadButton({
   showLabel = false,
 }: DownloadButtonProps) {
   const { downloadTrack, removeTrack } = useOfflineManager();
-  const offlineItem = useOfflineStore((state) => state.items[trackId]);
+  const offlineItem = useOfflineStore((state: any) => state.items[trackId]);
 
   const isOfflineAvailable = offlineItem?.status === OfflineStatus.COMPLETED;
   const isDownloading = offlineItem?.status === OfflineStatus.DOWNLOADING;

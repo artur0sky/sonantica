@@ -23,9 +23,9 @@ export function useAnalyticsIntegration() {
     collectPlaybackData: true,
     collectUIInteractions: true,
     collectSearchData: true,
-    batchSize: 50,
-    flushInterval: 30000, // 30 seconds
-    maxBufferSize: 200,
+    batchSize: 100,
+    flushInterval: 60000, // 60 seconds
+    maxBufferSize: 500,
   });
 
   const [location] = useLocation();

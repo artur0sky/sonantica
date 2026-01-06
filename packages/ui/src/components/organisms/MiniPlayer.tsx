@@ -105,9 +105,9 @@ export function MiniPlayer({ actionButtons }: MiniPlayerProps = {}) {
       (prev) => (prev - 1 + sidebarButtons.length) % sidebarButtons.length
     );
   };
-  const getWaveform = useWaveformStore((state) => state.getWaveform);
-  const spectrum = useAnalyzerStore((state) => state.spectrum);
-  const bands = spectrum ? spectrum.bands.map((b) => b.amplitude) : undefined;
+  const getWaveform = useWaveformStore((state: any) => state.getWaveform);
+  const spectrum = useAnalyzerStore((state: any) => state.spectrum);
+  const bands = spectrum ? spectrum.bands.map((b: any) => b.amplitude) : undefined;
 
   if (!currentTrack) return null;
 

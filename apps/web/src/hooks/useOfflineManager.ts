@@ -32,7 +32,7 @@ function getOfflineManager(): OfflineManager {
 
 export function useOfflineManager() {
   const { downloadQuality } = useSettingsStore();
-  const offlineItems = useOfflineStore((state) => state.items);
+  const offlineItems = useOfflineStore((state: any) => state.items);
   const manager = useMemo(() => getOfflineManager(), []);
 
   const downloadTrack = useCallback(async (track: Track) => {
