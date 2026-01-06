@@ -48,7 +48,7 @@ export function OfflineSettings() {
           <select
             value={downloadQuality}
             onChange={(e) => setDownloadQuality(e.target.value as any)}
-            className="bg-surface p-2 rounded text-sm px-4 border border-border min-w-[140px] focus:outline-none focus:ring-2 focus:ring-accent/50"
+            className="w-full sm:w-auto bg-surface p-2 rounded text-sm px-4 border border-border min-w-[140px] focus:outline-none focus:ring-2 focus:ring-accent/50"
           >
             <option value="original">Original (Lossless)</option>
             <option value="high">High (320kbps)</option>

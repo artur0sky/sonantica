@@ -93,7 +93,7 @@ export function LibrarySettings() {
           label="Max Scan File Size"
           description="Skip files larger than this size. Selecting Unlimited may cause freezes on huge files."
         >
-          <div className="w-56">
+          <div className="w-full sm:w-56">
             <Select
               options={fileSizeOptions}
               value={scanFileSizeLimit.toString()}
@@ -138,7 +138,7 @@ export function LibrarySettings() {
           label="Cover Art Max Size"
           description="Limit the size of extracted embedded artwork."
         >
-          <div className="w-56">
+          <div className="w-full sm:w-56">
             <Select
               options={coverArtOptions}
               value={coverArtSizeLimit.toString()}
@@ -158,6 +158,7 @@ export function LibrarySettings() {
           <Button
             variant="secondary"
             size="sm"
+            className="w-full sm:w-auto"
             onClick={() => {
               if (
                 confirm(
@@ -179,7 +180,7 @@ export function LibrarySettings() {
           <Button
             variant="danger"
             size="sm"
-            className="text-red-400 hover:text-red-300 border-red-900/50 hover:bg-red-900/20"
+            className="w-full sm:w-auto text-red-400 hover:text-red-300 border-red-900/50 hover:bg-red-900/20"
             onClick={handleClear}
             disabled={isClearing}
           >

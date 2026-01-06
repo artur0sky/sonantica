@@ -16,7 +16,7 @@ export function InterfaceSettings() {
           description="Choose your preferred visual style."
         >
           {/* Mock Select */}
-          <div className="bg-surface p-2 rounded text-sm px-4 border border-border capitalize">
+          <div className="w-full sm:w-auto bg-surface p-2 rounded text-sm px-4 border border-border capitalize text-center sm:text-left">
             {theme}
           </div>
         </SettingRow>
@@ -32,7 +32,7 @@ export function InterfaceSettings() {
           label="Cover Art Size"
           description="Default size of album covers in lists."
         >
-          <div className="bg-surface p-2 rounded text-sm px-4 border border-border">
+          <div className="w-full sm:w-auto bg-surface p-2 rounded text-sm px-4 border border-border text-center sm:text-left">
             Medium
           </div>
         </SettingRow>

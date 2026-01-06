@@ -50,7 +50,7 @@ export function AudioSettings() {
           label="Playback Buffer"
           description="Amount of audio to cache ahead. Higher values reduce stuttering but use more RAM."
         >
-          <div className="w-64">
+          <div className="w-full sm:w-64">
             <Select
               options={bufferOptions}
               value={playbackBufferSize.toString()}
@@ -65,9 +65,9 @@ export function AudioSettings() {
           label="Crossfade"
           description="Smoothly fade between tracks."
         >
-          <div className="w-32">
+          <div className="w-full sm:w-32">
             {/* Mock Select for now */}
-            <div className="bg-surface p-2 rounded text-sm text-center">
+            <div className="bg-surface p-2 rounded text-sm text-center border border-border">
               Disabled
             </div>
           </div>
