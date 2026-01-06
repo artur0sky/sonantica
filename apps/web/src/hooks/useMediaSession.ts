@@ -27,11 +27,16 @@ export function useMediaSession() {
   useEffect(() => {
     const checkPerms = async () => {
       if (isNative && state === PlaybackState.PLAYING) {
-        await requestNotificationPermission();
+        const granted = await requestNotificationPermission();
+        if (granted) {
+            // Force refresh of media session controls after permission is granted
+            mediaSessionService.updateMetadata(currentTrack);
+            mediaSessionService.updatePlaybackState('playing');
+        }
       }
     };
     checkPerms();
-  }, [isNative, state, requestNotificationPermission]);
+  }, [isNative, state, requestNotificationPermission, currentTrack]);
 
   // Update metadata when track changes
   useEffect(() => {
