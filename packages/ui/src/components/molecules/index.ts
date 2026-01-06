@@ -21,3 +21,6 @@ export type { Tab } from './Tabs';
 export * from './settings/SettingRow';
 export * from './settings/SettingSection';
 export { StatCard } from './StatCard';
+export { Goniometer } from './Goniometer';
+export { CorrelationMeter } from './CorrelationMeter';
+export { DynamicRangeMeter } from './DynamicRangeMeter';

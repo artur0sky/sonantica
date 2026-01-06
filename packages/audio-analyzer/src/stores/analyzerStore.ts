@@ -1,23 +1,28 @@
 import { create } from 'zustand';
 import { AudioAnalyzer } from '../AudioAnalyzer';
-import type { SpectrumData } from '../contracts';
+import type { SpectrumData, StereoAnalysisData, StereoWaveform } from '../contracts';
 
 interface AnalyzerState {
   analyzer: AudioAnalyzer | null;
   isConnected: boolean;
   spectrum: SpectrumData | null;
+  stereoMetrics: StereoAnalysisData | null;
+  stereoWaveform: StereoWaveform | null;
   
   // Actions
   initialize: () => void;
   connect: (element: HTMLAudioElement) => void;
   disconnect: () => void;
   updateSpectrum: () => void; // Called by requestAnimationFrame loop
+  updateStereo: () => void; // Called for goniometer/meters
 }
 
 export const useAnalyzerStore = create<AnalyzerState>((set, get) => ({
   analyzer: null,
   isConnected: false,
   spectrum: null,
+  stereoMetrics: null,
+  stereoWaveform: null,
 
   initialize: () => {
     if (get().analyzer) return;
@@ -58,7 +63,7 @@ export const useAnalyzerStore = create<AnalyzerState>((set, get) => ({
     const { analyzer } = get();
     if (analyzer) {
         analyzer.disconnect();
-        set({ isConnected: false, spectrum: null });
+        set({ isConnected: false, spectrum: null, stereoMetrics: null, stereoWaveform: null });
     }
   },
 
@@ -67,6 +72,16 @@ export const useAnalyzerStore = create<AnalyzerState>((set, get) => ({
     if (analyzer && isConnected) {
         const data = analyzer.getSpectrum();
         set({ spectrum: data });
+    }
+  },
+
+  updateStereo: () => {
+    const { analyzer, isConnected } = get();
+    if (analyzer && isConnected) {
+        set({ 
+            stereoMetrics: analyzer.getStereoMetrics(),
+            stereoWaveform: analyzer.getStereoWaveform()
+        });
     }
   }
 }));
