@@ -69,8 +69,8 @@ export function ExpandedPlayerMobile({
 }: MobileLayoutProps) {
   return (
     <div className="lg:hidden flex flex-col h-full bg-transparent overflow-hidden overscroll-none select-none pt-[max(env(safe-area-inset-top),2rem)] lg:pt-[env(safe-area-inset-top)]">
-      {/* Mobile Sticky Header - Always on top */}
-      <header className="h-14 flex flex-none justify-between items-center px-6 md:px-12 border-b border-white/5 bg-[var(--color-surface-elevated)] backdrop-blur-xl z-30">
+      {/* Mobile Sticky Header - Transparent */}
+      <header className="h-14 flex flex-none justify-between items-center px-6 md:px-12 bg-transparent z-30">
         <PlayerButton
           icon={IconChevronDown}
           onClick={onClose}
@@ -178,14 +178,6 @@ export function ExpandedPlayerMobile({
                   size="mobile"
                 />
               </div>
-
-              <NavigationFooter
-                recommendationsOpen={recommendationsOpen}
-                isQueueOpen={isQueueOpen}
-                onToggleRecommendations={onToggleRecommendations}
-                onToggleLyrics={onToggleLyrics}
-                onToggleQueue={onToggleQueue}
-              />
             </div>
           </div>
 
@@ -198,6 +190,17 @@ export function ExpandedPlayerMobile({
             <div className="h-32" />
           </div>
         </div>
+      </div>
+
+      {/* Footer Navigation - Fixed at bottom */}
+      <div className="flex-none px-6 md:px-12 pb-[env(safe-area-inset-bottom)] pt-4 bg-[var(--dominant-color)] z-40">
+        <NavigationFooter
+          recommendationsOpen={recommendationsOpen}
+          isQueueOpen={isQueueOpen}
+          onToggleRecommendations={onToggleRecommendations}
+          onToggleLyrics={onToggleLyrics}
+          onToggleQueue={onToggleQueue}
+        />
       </div>
     </div>
   );
