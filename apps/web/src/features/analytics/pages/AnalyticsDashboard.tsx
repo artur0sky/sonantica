@@ -51,7 +51,7 @@ export const AnalyticsDashboard = () => {
   }, [data]);
 
   const playbackData = useMemo(() => {
-    if (!data?.playbackTimeline) return [];
+    if (!data?.playbackTimeline || data.playbackTimeline.length === 0) return [];
     
     return [
       {
@@ -59,48 +59,48 @@ export const AnalyticsDashboard = () => {
         color: "hsl(243, 75%, 59%)",
         data: data.playbackTimeline.map(point => ({
           x: new Date(point.date).toLocaleDateString('en-US', { weekday: 'short' }),
-          y: point.playCount
+          y: point.playCount || 0
         }))
       }
     ];
   }, [data]);
 
   const topTracks = useMemo(() => {
-    if (!data?.topTracks) return [];
+    if (!data?.topTracks || data.topTracks.length === 0) return [];
     
     const maxPlays = data.topTracks.length > 0 ? data.topTracks[0].playCount : 1;
 
     return data.topTracks.map(track => ({
       id: track.trackId,
-      title: track.trackTitle,
-      subtitle: track.artistName,
-      value: track.playCount,
+      title: track.trackTitle || 'Unknown Track',
+      subtitle: track.artistName || 'Unknown Artist',
+      value: track.playCount || 0,
       image: track.albumArt,
       percentage: (track.playCount / maxPlays) * 100
     }));
   }, [data]);
 
   const genreData = useMemo(() => {
-    if (!data?.genreDistribution) return [];
+    if (!data?.genreDistribution || data.genreDistribution.length === 0) return [];
     
     return data.genreDistribution.map(g => ({
-      genre: g.genre,
-      count: g.playCount
+      genre: g.genre || 'Unknown',
+      count: g.playCount || 0
     }));
   }, [data]);
 
   const platformData = useMemo(() => {
-    if (!data?.platformStats) return [];
+    if (!data?.platformStats || data.platformStats.length === 0) return [];
     
     return data.platformStats.map(p => ({
-      id: p.platform,
-      label: p.platform.charAt(0).toUpperCase() + p.platform.slice(1),
-      value: p.sessionCount
+      id: p.platform || 'unknown',
+      label: (p.platform || 'unknown').charAt(0).toUpperCase() + (p.platform || 'unknown').slice(1),
+      value: p.sessionCount || 0
     }));
   }, [data]);
 
   const heatmapData = useMemo(() => {
-    if (!data?.listeningHeatmap) return [];
+    if (!data?.listeningHeatmap || data.listeningHeatmap.length === 0) return [];
     
     // Nivo Heatmap expects rows as ID with data array
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -108,24 +108,27 @@ export const AnalyticsDashboard = () => {
 
     // Grouping by day of week
     data.listeningHeatmap.forEach(item => {
-      const dayIndex = item.dayOfWeek;
-      const hour = item.hour !== undefined ? `${item.hour.toString().padStart(2, '0')}:00` : '00:00';
+      if (!item) return;
+      const dayIndex = item.dayOfWeek ?? 0;
+      const hourStr = item.hour !== undefined ? `${item.hour.toString().padStart(2, '0')}:00` : '00:00';
       
-      result[dayIndex].data.push({
-        x: hour,
-        y: item.value
-      });
+      if (result[dayIndex]) {
+        result[dayIndex].data.push({
+          x: hourStr,
+          y: item.value || 0
+        });
+      }
     });
 
     return result.filter((d: any) => d.data.length > 0);
   }, [data]);
 
   const calendarData = useMemo(() => {
-    if (!data?.listeningHeatmap) return [];
+    if (!data?.listeningHeatmap || data.listeningHeatmap.length === 0) return [];
     
     return data.listeningHeatmap.map(item => ({
       day: item.date,
-      value: item.value
+      value: item.value || 0
     }));
   }, [data]);
 

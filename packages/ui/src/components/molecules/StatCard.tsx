@@ -52,7 +52,7 @@ export const StatCard: React.FC<StatCardProps> = ({
               animate="visible"
               className="text-2xl sm:text-3xl font-bold tracking-tight text-text"
             >
-              {value}
+              {value !== undefined && value !== null ? value : '--'}
             </motion.span>
           )}
           {(unit && !loading) && (
