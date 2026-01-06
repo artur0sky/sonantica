@@ -85,7 +85,7 @@ export function ExpandedPlayer({
       animate={{ y: 0, opacity: 1 }}
       exit={{ y: "100%", opacity: 0 }}
       transition={{ type: "spring", damping: 30, stiffness: 200 }}
-      className="fixed inset-0 lg:relative lg:inset-auto h-[100dvh] lg:h-full z-[100] lg:z-10 flex flex-col bg-[var(--dominant-color,black)] lg:bg-transparent overflow-hidden overscroll-none"
+      className="fixed inset-0 lg:relative lg:inset-auto h-[100dvh] lg:h-full z-[100] lg:z-10 flex flex-col bg-[var(--dominant-color)] lg:bg-transparent overflow-hidden overscroll-none"
     >
       {/* Premium Background Ambience - Blurred Cover Art (Mobile Only) */}
       {/* Solid Background handled by MainLayout wrapper passing CSS variables */}
