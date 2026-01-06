@@ -66,9 +66,12 @@ export interface Lyrics {
 export interface MediaMetadata {
   title?: string;
   artist?: string | string[]; // Single artist or multiple artists
+  artistId?: string | string[]; // Artist UUID(s)
   album?: string;
+  albumId?: string; // Album UUID
   duration?: number; // in seconds
   coverArt?: string; // URL or data URI
+  format?: string; // e.g., 'flac', 'mp3'
   year?: number; // Release year
   trackNumber?: number; // Track number in album
   genre?: string | string[]; // Single genre or multiple genres
