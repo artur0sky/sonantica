@@ -16,6 +16,7 @@ export { Toggle } from './Toggle';
 export { Select } from './Select';
 export * from './PlayButton';
 export * from './SkipButton';
+export * from './PlayerButton';
 export * from './ActionIconButton';
 export * from './UserButton';
 export * from './ScanButton';

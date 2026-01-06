@@ -111,10 +111,35 @@ export class FLACParser implements IMetadataParser {
         return false;
       }
 
-      return view.getUint8(0) === 0x66 && // 'f'
-             view.getUint8(1) === 0x4C && // 'L'
-             view.getUint8(2) === 0x61 && // 'a'
-             view.getUint8(3) === 0x43;   // 'C'
+      // Check for FLAC signature ('fLaC') at start
+      if (view.getUint8(0) === 0x66 && // 'f'
+          view.getUint8(1) === 0x4C && // 'L'
+          view.getUint8(2) === 0x61 && // 'a'
+          view.getUint8(3) === 0x43) { // 'C'
+        return true;
+      }
+
+      // Heuristic: Check for ID3v2 tag at start, which might precede FLAC
+      // Some legacy tools incorrectly prepend ID3v2 tags to FLAC files
+      if (view.byteLength > 10 && 
+          view.getUint8(0) === 0x49 && // 'I'
+          view.getUint8(1) === 0x44 && // 'D'
+          view.getUint8(2) === 0x33) { // '3'
+        
+        // Scan for 'fLaC' signature within a reasonable range (e.g., first 128KB)
+        // ID3v2 tags can be large if they contain artwork
+        const scanLimit = Math.min(view.byteLength, 131072); 
+        for (let i = 10; i < scanLimit - 3; i++) {
+             if (view.getUint8(i) === 0x66 && // 'f'
+                 view.getUint8(i+1) === 0x4C && // 'L'
+                 view.getUint8(i+2) === 0x61 && // 'a'
+                 view.getUint8(i+3) === 0x43) { // 'C'
+               return true; // Found FLAC signature embedded
+             }
+        }
+      }
+
+      return false;
     } catch (error) {
       console.warn('FLAC canParse check failed:', error);
       return false;
@@ -131,7 +156,31 @@ export class FLACParser implements IMetadataParser {
         throw new Error('Buffer too small for FLAC header');
       }
 
-      let offset = 4; // Skip "fLaC"
+      let offset = 0;
+      
+      // Find start of FLAC stream
+      if (view.getUint8(0) === 0x66 && view.getUint8(1) === 0x4C && view.getUint8(2) === 0x61 && view.getUint8(3) === 0x43) {
+        offset = 4;
+      } else {
+        // Search for fLaC signature
+        const scanLimit = Math.min(view.byteLength, 131072);
+        let found = false;
+        for (let i = 0; i < scanLimit - 3; i++) {
+          if (view.getUint8(i) === 0x66 && 
+              view.getUint8(i+1) === 0x4C && 
+              view.getUint8(i+2) === 0x61 && 
+              view.getUint8(i+3) === 0x43) {
+            offset = i + 4;
+            found = true;
+            console.warn(`⚠️ FLAC signature found at offset ${i} (preceded by ID3/garbage)`);
+            break;
+          }
+        }
+        
+        if (!found) {
+           throw new Error('FLAC signature not found');
+        }
+      }
 
       // Read metadata blocks
       while (offset < view.byteLength && blocksProcessed < MAX_BLOCKS) {

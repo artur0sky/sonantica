@@ -45,6 +45,7 @@ export interface QueueState {
   
   // Getters
   getRemainingTracks: () => MediaSource[];
+  getUpcoming: (limit: number) => MediaSource[];
   reorderUpcoming: (newUpcoming: MediaSource[]) => void;
   
   // Persistence callbacks
@@ -282,6 +283,11 @@ export const useQueueStore = create<QueueState>((set, get) => ({
   getRemainingTracks: () => {
     const state = get();
     return state.queue.slice(state.currentIndex + 1);
+  },
+
+  getUpcoming: (limit: number) => {
+    const state = get();
+    return state.queue.slice(state.currentIndex + 1, state.currentIndex + 1 + limit);
   },
 
   reorderUpcoming: (newUpcoming: MediaSource[]) => {

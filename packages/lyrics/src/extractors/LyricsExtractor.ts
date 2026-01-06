@@ -38,6 +38,8 @@ export class LyricsExtractor {
     try {
       if (!this.validateTags(tags)) return null;
 
+      const language = this.detectLanguage(tags);
+
       // Extract raw text
       let lyricsText: string | null = null;
       let syncedLyricsText: any = null;
@@ -94,6 +96,7 @@ export class LyricsExtractor {
             text: this.extractPlainText(syncedLines),
             synced: syncedLines,
             isSynchronized: true,
+            language,
             source: 'embedded',
           };
         }
@@ -107,6 +110,7 @@ export class LyricsExtractor {
             text: this.extractPlainText(syncedLines),
             synced: syncedLines,
             isSynchronized: true,
+            language,
             source: 'embedded',
           };
         }
@@ -117,6 +121,7 @@ export class LyricsExtractor {
         return {
           text: this.cleanLyricsText(lyricsText),
           isSynchronized: false,
+          language,
           source: 'embedded',
         };
       }

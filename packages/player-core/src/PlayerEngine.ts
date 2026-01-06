@@ -17,8 +17,11 @@ import {
   PLAYER_EVENTS,
   DEFAULT_VOLUME,
   clamp,
+  BufferStrategy,
+  type BufferConfig,
 } from '@sonantica/shared';
 import type { IPlayerEngine } from './contracts';
+import { BufferManager } from './services/BufferManager';
 
 /**
  * Event listener type
@@ -124,17 +127,25 @@ export class PlayerEngine implements IPlayerEngine {
   private listeners: Map<string, Set<EventListener>> = new Map();
   private isDisposed: boolean = false;
   private currentLoadController: AbortController | null = null;
+  private bufferManager: BufferManager;
+  private highFreqLoopId: number | null = null;
 
-  constructor() {
+  constructor(bufferConfig: Partial<BufferConfig> = {}) {
     try {
       console.log('🎵 Sonántica Player Core initialized');
       console.log('   "Every file has an intention."');
       
+      this.bufferManager = new BufferManager(bufferConfig);
+      
       // Initialize single audio element instance
       this.audio = new Audio();
+      this.audio.crossOrigin = 'anonymous'; // Enable CORS for Web Audio API
       
       // Attach persistent listeners
       this.attachAudioListeners();
+      
+      // Bind methods
+      this.highFreqUpdate = this.highFreqUpdate.bind(this);
     } catch (error) {
       console.error('❌ Failed to initialize PlayerEngine:', error);
       throw new Error(`PlayerEngine initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -150,10 +161,12 @@ export class PlayerEngine implements IPlayerEngine {
       throw new Error('Cannot load media: PlayerEngine has been disposed');
     }
 
-    // Cancel any ongoing load operation
+    // Cancel any ongoing load operation in the player and buffer manager
     if (this.currentLoadController) {
       this.currentLoadController.abort();
     }
+    
+    this.bufferManager.cancelAllFetches();
 
     this.currentLoadController = new AbortController();
     const { signal } = this.currentLoadController;
@@ -167,14 +180,18 @@ export class PlayerEngine implements IPlayerEngine {
       if (!this.audio) {
         // Should theoretically not happen if initialized in constructor
         this.audio = new Audio();
+        this.audio.crossOrigin = 'anonymous'; // Enable CORS for Web Audio API
         this.attachAudioListeners();
       }
 
       // Reset specific properties but keep the element
       this.audio.pause();
       
+      // Get secure blob URL from buffer manager
+      const secureUrl = await this.bufferManager.getBufferUrl(source);
+      
       // Sanitized URL assignment
-      this.audio.src = source.url;
+      this.audio.src = secureUrl;
       this.audio.volume = this.volume;
       this.audio.muted = this.isMuted;
       this.audio.load();
@@ -239,6 +256,24 @@ export class PlayerEngine implements IPlayerEngine {
   }
 
   /**
+   * Proactively pre-buffer upcoming tracks
+   */
+  prebuffer(sources: MediaSource[]): void {
+    if (this.isDisposed) return;
+    this.bufferManager.prebuffer(sources).catch(err => 
+      console.warn('⚠️ Player pre-buffering failed:', err)
+    );
+  }
+
+  /**
+   * Update buffer configuration at runtime
+   */
+  updateBufferConfig(config: Partial<BufferConfig>): void {
+    if (this.isDisposed) return;
+    this.bufferManager.updateConfig(config);
+  }
+
+  /**
    * Start playback
    * @throws {Error} If no media is loaded or playback fails
    */
@@ -258,6 +293,7 @@ export class PlayerEngine implements IPlayerEngine {
     try {
       await this.audio.play();
       this.setState(PlaybackState.PLAYING);
+      this.startHighFreqLoop();
       console.log('▶️  Playing');
     } catch (error) {
       this.setState(PlaybackState.ERROR);
@@ -285,6 +321,7 @@ export class PlayerEngine implements IPlayerEngine {
     try {
       this.audio.pause();
       this.setState(PlaybackState.PAUSED);
+      this.stopHighFreqLoop();
       console.log('⏸️  Paused');
     } catch (error) {
       console.error('❌ Pause failed:', error);
@@ -309,6 +346,7 @@ export class PlayerEngine implements IPlayerEngine {
       this.audio.pause();
       this.audio.currentTime = 0;
       this.setState(PlaybackState.STOPPED);
+      this.stopHighFreqLoop();
       console.log('⏹️  Stopped');
     } catch (error) {
       console.error('❌ Stop failed:', error);
@@ -405,12 +443,23 @@ export class PlayerEngine implements IPlayerEngine {
    */
   getStatus(): PlaybackStatus {
     try {
+      const bufferedRanges: { start: number; end: number }[] = [];
+      if (this.audio) {
+        for (let i = 0; i < this.audio.buffered.length; i++) {
+          bufferedRanges.push({
+            start: this.audio.buffered.start(i),
+            end: this.audio.buffered.end(i),
+          });
+        }
+      }
+
       return {
         state: this.state,
         currentTime: this.audio?.currentTime || 0,
         duration: this.audio?.duration || 0,
         volume: this.volume,
         isMuted: this.isMuted,
+        bufferedRanges,
       };
     } catch (error) {
       console.error('❌ Get status failed:', error);
@@ -420,6 +469,7 @@ export class PlayerEngine implements IPlayerEngine {
         duration: 0,
         volume: this.volume,
         isMuted: this.isMuted,
+        bufferedRanges: [],
       };
     }
   }
@@ -512,6 +562,9 @@ export class PlayerEngine implements IPlayerEngine {
         this.currentLoadController = null;
       }
 
+      // Cleanup buffer manager
+      this.bufferManager.dispose();
+
       // Cleanup audio
       if (this.audio) {
         this.audio.pause();
@@ -519,9 +572,7 @@ export class PlayerEngine implements IPlayerEngine {
         this.audio = null;
       }
 
-      // Clear all listeners
-      this.listeners.clear();
-      
+      this.stopHighFreqLoop();
       this.setState(PlaybackState.IDLE);
       this.isDisposed = true;
       
@@ -551,6 +602,23 @@ export class PlayerEngine implements IPlayerEngine {
           });
         } catch (error) {
           console.error('❌ Time update event failed:', error);
+        }
+      });
+
+      this.audio.addEventListener('progress', () => {
+        if (!this.audio || this.isDisposed) return;
+        
+        try {
+          const bufferedRanges: { start: number; end: number }[] = [];
+          for (let i = 0; i < this.audio.buffered.length; i++) {
+            bufferedRanges.push({
+              start: this.audio.buffered.start(i),
+              end: this.audio.buffered.end(i),
+            });
+          }
+          this.emit(PLAYER_EVENTS.BUFFER_UPDATE, { bufferedRanges });
+        } catch (error) {
+          console.error('❌ Progress (buffer) event failed:', error);
         }
       });
 
@@ -623,5 +691,48 @@ export class PlayerEngine implements IPlayerEngine {
     } catch (error) {
       console.error('❌ Emit event failed:', error);
     }
+  }
+
+  /**
+   * Start high-frequency update loop (60fps)
+   * Essential for super-synchronized lyrics
+   * @private
+   */
+  private startHighFreqLoop(): void {
+    if (this.highFreqLoopId) return;
+    this.highFreqLoopId = requestAnimationFrame(this.highFreqUpdate);
+  }
+
+  /**
+   * Stop high-frequency update loop
+   * @private
+   */
+  private stopHighFreqLoop(): void {
+    if (this.highFreqLoopId) {
+      cancelAnimationFrame(this.highFreqLoopId);
+      this.highFreqLoopId = null;
+    }
+  }
+
+  /**
+   * High-frequency update handler
+   * @private
+   */
+  private highFreqUpdate(): void {
+    if (!this.audio || this.isDisposed || this.state !== PlaybackState.PLAYING) {
+      this.highFreqLoopId = null;
+      return;
+    }
+
+    try {
+      this.emit(PLAYER_EVENTS.TIME_UPDATE, {
+        currentTime: this.audio.currentTime,
+        duration: this.audio.duration,
+      });
+    } catch (error) {
+      console.warn('⚠️ High-freq update failed:', error);
+    }
+
+    this.highFreqLoopId = requestAnimationFrame(this.highFreqUpdate);
   }
 }

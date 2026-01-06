@@ -6,7 +6,7 @@
 
 import { useMemo } from "react";
 import { useParams, useLocation } from "wouter";
-import { useLibraryStore, type Track } from "@sonantica/media-library";
+import { useLibraryStore } from "@sonantica/media-library";
 import { TrackItem } from "../components/TrackItem";
 import {
   IconChevronLeft,
@@ -18,15 +18,27 @@ import { Button } from "@sonantica/ui";
 import { useAlbumSimilarAlbums } from "@sonantica/recommendations";
 import { AlbumCard } from "../components/AlbumCard";
 import { playFromContext } from "../../../utils/playContext";
+import { trackToMediaSource } from "../../../utils/streamingUrl";
 
 export function AlbumDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
-  const { getAlbumById } = useLibraryStore();
+  const { getAlbumById, tracks } = useLibraryStore();
 
   const album = useMemo(
     () => (id ? getAlbumById(id) : null) ?? null,
     [id, getAlbumById]
+  );
+
+  // Get tracks for this album
+  const albumTracks = useMemo(
+    () =>
+      album
+        ? tracks.filter(
+            (t) => t.album === album.title && t.artist === album.artist
+          )
+        : [],
+    [album, tracks]
   );
 
   // Get similar albums with a balanced diversity score
@@ -51,18 +63,12 @@ export function AlbumDetailPage() {
   }
 
   const handlePlayAll = () => {
-    const tracksAsSources = album.tracks.map((t: Track) => ({
-      ...t,
-      url: t.path,
-    }));
+    const tracksAsSources = albumTracks.map(trackToMediaSource);
     playFromContext(tracksAsSources, 0);
   };
 
   const handleTrackClick = (index: number) => {
-    const tracksAsSources = album.tracks.map((t: Track) => ({
-      ...t,
-      url: t.path,
-    }));
+    const tracksAsSources = albumTracks.map(trackToMediaSource);
     playFromContext(tracksAsSources, index);
   };
 
@@ -89,7 +95,7 @@ export function AlbumDetailPage() {
           {album.coverArt ? (
             <img
               src={album.coverArt}
-              alt={album.name}
+              alt={album.title}
               className="w-full h-full object-cover"
             />
           ) : (
@@ -109,14 +115,17 @@ export function AlbumDetailPage() {
               Album
             </span>
             <h1 className="text-4xl md:text-6xl font-bold mb-4 tracking-tight">
-              {album.name}
+              {album.title}
             </h1>
             <div className="flex items-center gap-3 text-lg text-text-muted">
               <span
                 className="font-medium text-text hover:text-accent cursor-pointer transition-colors"
                 onClick={() => {
-                  if (album.artistId) {
-                    setLocation(`/artist/${album.artistId}`);
+                  // Find artist by name
+                  const artists = useLibraryStore.getState().artists;
+                  const artist = artists.find((a) => a.name === album.artist);
+                  if (artist) {
+                    setLocation(`/artist/${artist.id}`);
                   } else {
                     // Fallback to searching by name if ID is missing
                     setLocation(`/tracks?query=${album.artist}`);
@@ -133,8 +142,8 @@ export function AlbumDetailPage() {
               )}
               <span className="opacity-30">•</span>
               <span>
-                {album.tracks.length} track
-                {album.tracks.length !== 1 ? "s" : ""}
+                {albumTracks.length} track
+                {albumTracks.length !== 1 ? "s" : ""}
               </span>
             </div>
 
@@ -153,7 +162,7 @@ export function AlbumDetailPage() {
 
       {/* Tracks List */}
       <div className="space-y-1">
-        {album.tracks.map((track, index) => (
+        {albumTracks.map((track, index) => (
           <TrackItem
             key={track.id}
             track={track}
@@ -161,11 +170,13 @@ export function AlbumDetailPage() {
           />
         ))}
       </div>
-      
+
       {/* Similar Albums Section */}
       {similarAlbums.length > 0 && (
         <div className="mt-16 pt-12 border-t border-border">
-          <h2 className="text-xl font-bold mb-6 text-text-muted">You Might Also Like</h2>
+          <h2 className="text-xl font-bold mb-6 text-text-muted">
+            You Might Also Like
+          </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
             {similarAlbums.map((rec) => (
               <AlbumCard

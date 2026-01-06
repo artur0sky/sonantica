@@ -1,21 +1,22 @@
 /**
  * Context Menu Component
- * 
+ *
  * Reusable context menu for right-click and long-press interactions.
  * Follows Sonántica's philosophy: "User autonomy" - full control over actions.
  */
 
-import { motion, AnimatePresence } from 'framer-motion';
-import { useEffect, useRef, useState } from 'react';
-import { cn, gpuAnimations } from '@sonantica/shared';
+import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+import { cn, gpuAnimations } from "@sonantica/shared";
 
 export interface ContextMenuItem {
   id: string;
   label: string;
   icon?: React.ReactNode;
   onClick: () => void;
-  variant?: 'default' | 'danger';
+  variant?: "default" | "danger";
   divider?: boolean;
+  disabled?: boolean;
 }
 
 interface ContextMenuProps {
@@ -25,7 +26,12 @@ interface ContextMenuProps {
   onClose: () => void;
 }
 
-export function ContextMenu({ items, isOpen, position, onClose }: ContextMenuProps) {
+export function ContextMenu({
+  items,
+  isOpen,
+  position,
+  onClose,
+}: ContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const [adjustedPosition, setAdjustedPosition] = useState(position);
 
@@ -66,17 +72,17 @@ export function ContextMenu({ items, isOpen, position, onClose }: ContextMenuPro
     };
 
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         onClose();
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleEscape);
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleEscape);
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
     };
   }, [isOpen, onClose]);
 
@@ -87,7 +93,7 @@ export function ContextMenu({ items, isOpen, position, onClose }: ContextMenuPro
           ref={menuRef}
           {...gpuAnimations.modal}
           style={{
-            position: 'fixed',
+            position: "fixed",
             left: adjustedPosition.x,
             top: adjustedPosition.y,
             zIndex: 9999,
@@ -101,17 +107,25 @@ export function ContextMenu({ items, isOpen, position, onClose }: ContextMenuPro
                   <div className="h-px bg-border my-1 mx-2" />
                 )}
                 <motion.button
-                  whileHover={{ backgroundColor: 'var(--color-surface)' }}
-                  whileTap={{ scale: 0.98 }}
+                  whileHover={
+                    !item.disabled
+                      ? { backgroundColor: "var(--color-surface)" }
+                      : {}
+                  }
+                  whileTap={!item.disabled ? { scale: 0.98 } : {}}
                   onClick={() => {
+                    if (item.disabled) return;
                     item.onClick();
                     onClose();
                   }}
+                  disabled={item.disabled}
                   className={cn(
-                    'w-full px-4 py-2.5 text-left flex items-center gap-3 transition-colors',
-                    item.variant === 'danger'
-                      ? 'text-red-400 hover:text-red-300'
-                      : 'text-text hover:text-accent'
+                    "w-full px-4 py-2.5 text-left flex items-center gap-3 transition-colors",
+                    item.disabled && "opacity-50 cursor-not-allowed",
+                    !item.disabled &&
+                      (item.variant === "danger"
+                        ? "text-red-400 hover:text-red-300"
+                        : "text-text hover:text-accent")
                   )}
                 >
                   {item.icon && (
@@ -147,7 +161,7 @@ export function useContextMenu() {
 
   const handleLongPressStart = (e: React.TouchEvent | React.MouseEvent) => {
     longPressTimerRef.current = setTimeout(() => {
-      const touch = 'touches' in e ? e.touches[0] : e;
+      const touch = "touches" in e ? e.touches[0] : e;
       setPosition({ x: touch.clientX, y: touch.clientY });
       setIsOpen(true);
     }, 500); // 500ms long press

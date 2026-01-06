@@ -16,6 +16,28 @@ import { Filesystem, Directory } from '@capacitor/filesystem';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { Keyboard } from '@capacitor/keyboard';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
+import { LocalNotifications } from '@capacitor/local-notifications';
+
+/**
+ * Hook to manage app permissions
+ */
+export function usePermissions() {
+  const requestNotificationPermission = useCallback(async () => {
+    try {
+      const status = await LocalNotifications.checkPermissions();
+      if (status.display !== 'granted') {
+        const result = await LocalNotifications.requestPermissions();
+        return result.display === 'granted';
+      }
+      return true;
+    } catch (error) {
+      console.error('Error requesting notification permission:', error);
+      return false;
+    }
+  }, []);
+
+  return { requestNotificationPermission };
+}
 
 /**
  * Hook to detect if running in Capacitor (native mobile)
@@ -59,7 +81,7 @@ export function useAppState(callbacks: {
     });
 
     return () => {
-      stateListener.remove();
+      stateListener.then((h) => h.remove());
     };
   }, [callbacks]);
 }
@@ -133,8 +155,8 @@ export function useKeyboard() {
     });
 
     return () => {
-      showListener.remove();
-      hideListener.remove();
+      showListener.then((h) => h.remove());
+      hideListener.then((h) => h.remove());
     };
   }, []);
 
@@ -197,7 +219,7 @@ export function useBackButton(handler: () => boolean) {
     });
 
     return () => {
-      listener.remove();
+      listener.then((h) => h.remove());
     };
   }, [handler]);
 }

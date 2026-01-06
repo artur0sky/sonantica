@@ -11,11 +11,32 @@
 import { useEffect } from 'react';
 import { usePlayerStore, useQueueStore, mediaSessionService } from '@sonantica/player-core';
 import { PlaybackState } from '@sonantica/shared';
+import { Capacitor } from '@capacitor/core';
+import { usePermissions } from '@sonantica/mobile';
 
 export function useMediaSession() {
   const { currentTrack, state, play, pause, stop, seek } = usePlayerStore();
-  const { next, previous } = useQueueStore();
+  const { next, previous, toggleShuffle, toggleRepeat } = useQueueStore();
   const player = usePlayerStore((s) => s.player);
+  
+  const isNative = Capacitor.isNativePlatform();
+
+  // Request notification permission on mobile when playing starts
+  const { requestNotificationPermission } = usePermissions();
+  
+  useEffect(() => {
+    const checkPerms = async () => {
+      if (isNative && state === PlaybackState.PLAYING) {
+        const granted = await requestNotificationPermission();
+        if (granted) {
+            // Force refresh of media session controls after permission is granted
+            mediaSessionService.updateMetadata(currentTrack);
+            mediaSessionService.updatePlaybackState('playing');
+        }
+      }
+    };
+    checkPerms();
+  }, [isNative, state, requestNotificationPermission, currentTrack]);
 
   // Update metadata when track changes
   useEffect(() => {
@@ -49,7 +70,7 @@ export function useMediaSession() {
       mediaSessionService.updatePositionState(
         audio.duration || 0,
         audio.currentTime || 0,
-        1.0
+        audio.playbackRate || 1.0
       );
     };
 
@@ -106,13 +127,21 @@ export function useMediaSession() {
         console.log(`⏩ Media Session: Seek to ${time}s`);
         seek(time);
       },
-    });
+      onToggleShuffle: () => {
+        console.log('🔀 Media Session: Shuffle toggle');
+        toggleShuffle();
+      },
+      onToggleRepeat: () => {
+        console.log('🔁 Media Session: Repeat toggle');
+        toggleRepeat();
+      },
+    } as any);
 
     // Cleanup on unmount
     return () => {
       mediaSessionService.clear();
     };
-  }, [play, pause, stop, next, previous, seek, player]);
+  }, [play, pause, stop, next, previous, seek, player, toggleShuffle, toggleRepeat]);
 
   return {
     isSupported: mediaSessionService.isMediaSessionSupported(),

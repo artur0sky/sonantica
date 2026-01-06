@@ -1,42 +1,22 @@
-import { motion } from "framer-motion";
-import { cn } from "../../utils";
-import { buttonAnimations } from "../../utils/animations";
+/**
+ * Action Icon Button Atom
+ *
+ * Used for secondary actions (EQ, Lyrics, Queue, etc).
+ * Atomic design: built on top of PlayerButton.
+ */
 
-interface ActionIconButtonProps {
-  icon: React.ElementType;
-  onClick: () => void;
-  isActive?: boolean;
-  title?: string;
-  size?: number;
-  className?: string;
+import { PlayerButton, PlayerButtonProps } from "./PlayerButton";
+
+interface ActionIconButtonProps extends Omit<PlayerButtonProps, "onClick"> {
+  onClick: (e?: React.MouseEvent) => void;
 }
 
-export function ActionIconButton({
-  icon: Icon,
-  onClick,
-  isActive = false,
-  title,
-  size = 20,
-  className,
-}: ActionIconButtonProps) {
+export function ActionIconButton(props: ActionIconButtonProps) {
   return (
-    <motion.button
-      onClick={onClick}
-      whileHover={{
-        ...buttonAnimations.hover,
-        color: isActive ? "var(--color-accent-hover)" : "var(--color-text)",
-      }}
-      whileTap={buttonAnimations.tap}
-      className={cn(
-        "transition-colors flex items-center justify-center p-2 rounded-full",
-        isActive
-          ? "text-accent bg-accent/10"
-          : "text-text-muted hover:bg-white/5",
-        className
-      )}
-      title={title}
-    >
-      <Icon size={size} stroke={1.5} />
-    </motion.button>
+    <PlayerButton
+      {...props}
+      variant={props.variant || "ghost"}
+      size={props.size || "sm"}
+    />
   );
 }

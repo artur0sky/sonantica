@@ -7,9 +7,9 @@ The bedrock of the Sonántica ecosystem. This package defines the common vocabul
 ## 📖 Responsibility
 
 As the most foundational layer of our architecture, `@sonantica/shared` defines:
-- **Core Domain Types**: `Track`, `Album`, `Artist`, `PlaybackState`.
+- **Core Domain Types**: `Track`, `Album`, `Artist`, `PlaybackState`, `OfflineStatus`.
 - **Global Constants**: Application names, versioning, and default settings.
-- **Fundamental Utilities**: Time formatting, math helpers (clamp, normalize), and ID generation.
+- **Fundamental Utilities**: Time formatting, math helpers (clamp, normalize), and stable ID generation.
 - **Contracts**: Base event types used for cross-package communication.
 
 ## 🧠 Philosophy

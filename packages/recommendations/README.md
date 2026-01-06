@@ -65,6 +65,7 @@ const { tracks, artists, albums } = useRecommendations(currentTrack, {
 - Listening history patterns
 - Genre and artist relationships
 - Configurable diversity factor
+- **Decoupled Architecture**: Logic independent of specific media-library types for better portability.
 
 ## 📄 License
 

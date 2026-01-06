@@ -1,16 +1,19 @@
 /**
  * @sonantica/media-library
  * 
- * Media library indexing and metadata management.
+ * Media library management for server-based architecture.
  * 
  * "Every file has an intention."
  */
 
 export * from './types';
-export * from './MediaLibrary';
-export * from './contracts';
 export * from './stores/libraryStore';
+export * from './contracts';
 
-// Folder Management
-export * from './services/FolderManager';
-export type { IFolderConfigStorage, IFolderValidator } from './services/FolderManager';
+// Adapters
+export { RemoteLibraryAdapter } from './adapters/RemoteLibraryAdapter';
+export type { RemoteLibraryConfig } from './adapters/RemoteLibraryAdapter';
+
+// Contracts
+export type { ILibraryAdapter, LibraryStats, ScanProgress } from './contracts/ILibraryAdapter';
+

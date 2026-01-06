@@ -7,11 +7,15 @@ export class MetadataFactory {
   /**
    * Create a track object with enhanced metadata extraction
    */
+  /**
+   * Create a track object with enhanced metadata extraction
+   */
   async createTrack(
     basePath: string,
     filename: string,
     size: number,
-    mtime?: string
+    mtime?: string,
+    options: { maxFileSize?: number; coverArtSizeLimit?: number } = {}
   ): Promise<Track> {
     const path = `${basePath}${filename}`;
     const ext = filename.split('.').pop()?.toLowerCase() || '';
@@ -66,7 +70,11 @@ export class MetadataFactory {
       const metadataModule = await import('@sonantica/metadata').catch(() => null);
       
       if (metadataModule) {
-        const extractedMetadata = await metadataModule.extractMetadata(path);
+        // @ts-ignore - MetadataExtractor update might not be picked up by TS yet
+        const extractedMetadata = await metadataModule.extractMetadata(path, {
+          maxFileSize: options.maxFileSize,
+          coverArtSizeLimit: options.coverArtSizeLimit
+        });
         
         // Use extracted metadata if available, fallback to path-based
         if (extractedMetadata.title) title = extractedMetadata.title;
@@ -86,12 +94,38 @@ export class MetadataFactory {
       console.warn(`⚠️ Could not extract metadata from ${filename}, using path-based metadata:`, error);
     }
 
+    // Helper to normalize artist string
+    const artistStr = Array.isArray(artist) ? artist.join(', ') : artist;
+    
+    // Stable ID should be based on relative path within the library architecture, 
+    // stripping origin to remain stable if IP/Host changes.
+    let stableIdPath = path;
+    try {
+      // In Node.js, window is undefined. Use a dummy base for relative paths.
+      const base = typeof window !== 'undefined' ? window.location.origin : 'http://localhost';
+      const url = new URL(path, base);
+      stableIdPath = url.pathname; // This includes /api/stream/server-id/...
+    } catch (e) {
+      // Fallback to original path if not a valid URL
+    }
+
     return {
-      id: generateStableId(path),
+      id: generateStableId(stableIdPath),
+      filePath: path,
+      title,
+      artist: artistStr,
+      album,
+      duration: duration || 0,
+      
+      // Extended properties for media-library
       path,
       filename,
       mimeType: this.getMimeType(ext),
       size,
+      lastModified: mtime ? new Date(mtime) : new Date(),
+      addedAt: new Date(),
+      
+      // Metadata (Legacy/Extended)
       metadata: {
         title,
         artist,
@@ -103,29 +137,50 @@ export class MetadataFactory {
         albumArtist,
         duration,
       },
-      addedAt: new Date(),
-      lastModified: mtime ? new Date(mtime) : new Date(),
+      
+      // Optional SharedTrack properties
+      year,
+      genre: Array.isArray(genre) ? genre.join(', ') : genre,
+      trackNumber,
+      coverArt,
+      albumArtist,
     };
   }
 
   /**
    * Hydrate track metadata (lazy extraction)
    */
-  async hydrateTrack(track: Track): Promise<Track> {
+  async hydrateTrack(
+    track: Track,
+    options: { maxFileSize?: number; coverArtSizeLimit?: number } = {}
+  ): Promise<Track> {
     // Only hydrate if missing critical info like coverArt
-    if (track.metadata.coverArt) return track;
+    if (track.metadata?.coverArt || track.coverArt) return track;
 
     try {
       const metadataModule = await import('@sonantica/metadata').catch(() => null);
       
       if (metadataModule) {
-        const extracted = await metadataModule.extractMetadata(track.path);
+        // @ts-ignore - MetadataExtractor update might not be picked up by TS yet
+        const extracted = await metadataModule.extractMetadata(track.path, {
+           maxFileSize: options.maxFileSize,
+           coverArtSizeLimit: options.coverArtSizeLimit
+        });
         
         // Merge extracted metadata
-        track.metadata = {
+        const newMetadata = {
           ...track.metadata,
           ...extracted,
         };
+        
+        // Update root properties if extracted
+        if (extracted.title) track.title = extracted.title;
+        if (extracted.artist) track.artist = Array.isArray(extracted.artist) ? extracted.artist.join(', ') : extracted.artist;
+        if (extracted.album) track.album = extracted.album;
+        if (extracted.duration) track.duration = extracted.duration;
+        if (extracted.coverArt) track.coverArt = extracted.coverArt;
+        
+        track.metadata = newMetadata;
         
         return track;
       }

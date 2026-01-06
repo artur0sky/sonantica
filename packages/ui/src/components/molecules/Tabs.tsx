@@ -25,8 +25,13 @@ export interface TabsProps {
  */
 export function Tabs({ tabs, activeTab, onTabChange, className }: TabsProps) {
   return (
-    <div className={cn("border-b border-border", className)}>
-      <nav className="flex gap-1 -mb-px" role="tablist">
+    <div
+      className={cn(
+        "border-b border-border overflow-x-auto scrollbar-none",
+        className
+      )}
+    >
+      <nav className="flex gap-1 -mb-px min-w-max px-4 sm:px-0" role="tablist">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
           const Icon = tab.icon;
@@ -38,7 +43,7 @@ export function Tabs({ tabs, activeTab, onTabChange, className }: TabsProps) {
               aria-selected={isActive}
               onClick={() => onTabChange(tab.id)}
               className={cn(
-                "relative px-4 py-3 text-sm font-medium transition-colors",
+                "relative px-4 py-4 text-sm font-medium transition-colors whitespace-nowrap",
                 "hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
                 "flex items-center gap-2",
                 isActive ? "text-text" : "text-text-muted hover:text-text"

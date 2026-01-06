@@ -1,10 +1,4 @@
-/**
- * Mini Player Component
- *
- * Sticky bottom player inspired by SoundCloud.
- * "Functional elegance" - minimal but complete controls.
- */
-
+import React from "react";
 import { usePlayerStore, useQueueStore } from "@sonantica/player-core";
 import { useUIStore } from "../../stores/uiStore";
 import { useAnalyzerStore, useWaveformStore } from "@sonantica/audio-analyzer";
@@ -33,7 +27,12 @@ import {
 } from "@tabler/icons-react";
 import { motion } from "framer-motion";
 
-export function MiniPlayer() {
+interface MiniPlayerProps {
+  /** Optional action buttons to render next to track info */
+  actionButtons?: React.ReactNode;
+}
+
+export function MiniPlayer({ actionButtons }: MiniPlayerProps = {}) {
   const {
     currentTrack,
     state,
@@ -60,6 +59,52 @@ export function MiniPlayer() {
 
   const { repeatMode, toggleRepeat, isShuffled, toggleShuffle } =
     useQueueStore();
+  const [featuredButtonIndex, setFeaturedButtonIndex] = React.useState(3); // Default to Queue (index 3)
+  const [showAllButtons, setShowAllButtons] = React.useState(false);
+
+  const sidebarButtons = [
+    {
+      id: "visualizer",
+      icon: IconActivityHeartbeat,
+      label: "Visualizer",
+      action: toggleVisualization,
+      isActive: isVisualizationEnabled,
+    },
+    {
+      id: "eq",
+      icon: IconAdjustmentsHorizontal,
+      label: "Equalizer",
+      action: toggleEQ,
+    },
+    {
+      id: "lyrics",
+      icon: IconMicrophone,
+      label: "Lyrics",
+      action: toggleLyrics,
+    },
+    {
+      id: "queue",
+      icon: IconPlaylist,
+      label: "Queue",
+      action: toggleQueue,
+    },
+    {
+      id: "discovery",
+      icon: IconSparkles,
+      label: "Discovery",
+      action: toggleRecommendations,
+    },
+  ];
+
+  const handleNextButton = () => {
+    setFeaturedButtonIndex((prev) => (prev + 1) % sidebarButtons.length);
+  };
+
+  const handlePrevButton = () => {
+    setFeaturedButtonIndex(
+      (prev) => (prev - 1 + sidebarButtons.length) % sidebarButtons.length
+    );
+  };
   const getWaveform = useWaveformStore((state) => state.getWaveform);
   const spectrum = useAnalyzerStore((state) => state.spectrum);
   const bands = spectrum ? spectrum.bands.map((b) => b.amplitude) : undefined;
@@ -75,7 +120,7 @@ export function MiniPlayer() {
       animate={{ y: 0, opacity: 1 }}
       exit={{ y: 100, opacity: 0 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      className="border-t border-border"
+      className="bg-black/95 backdrop-blur-xl border-t border-white/5"
     >
       {/* Progress Bar with Waveform */}
       <WaveformScrubber
@@ -84,279 +129,184 @@ export function MiniPlayer() {
         duration={duration}
         waveform={getWaveform(currentTrack.id) ?? undefined}
         onSeek={seek}
-        className="absolute -top-1 left-0 right-0 z-10"
+        className="absolute -top-1.5 left-0 right-0 z-10 h-1 hover:h-6 transition-all duration-300"
       />
 
       {/* Real-time Visualization Background */}
       <BackgroundSpectrum
         bands={bands ?? undefined}
         enabled={isVisualizationEnabled}
-        className="absolute inset-0 z-0 opacity-20 pointer-events-none"
+        className="absolute inset-0 z-0 opacity-10 pointer-events-none"
         height={64}
       />
 
-      {/* Player Controls - Responsive Layout */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center px-2 sm:px-4 md:px-6 py-2 sm:py-2.5 relative z-10 gap-2 sm:gap-0">
-        {/* Mobile Layout: Stacked */}
-        <div className="flex sm:hidden items-center gap-2 w-full">
-          {/* Track Info - Mobile */}
-          <motion.button
+      {/* Player Controls */}
+      <div className="flex items-center px-4 md:px-6 h-16 relative z-10">
+        {/* Section 1: Track Info (Left) */}
+        <motion.div
+          drag="x"
+          dragConstraints={{ left: 0, right: 0 }}
+          onDragEnd={(_, info) => {
+            if (info.offset.x > 80) previous();
+            else if (info.offset.x < -80) next();
+          }}
+          className="flex-1 min-w-0 flex items-center gap-3 relative cursor-grab active:cursor-grabbing"
+        >
+          <motion.div
+            layoutId="player-artwork"
             onClick={togglePlayerExpanded}
-            whileHover={{ scale: 1.01 }}
-            whileTap={{ scale: 0.99 }}
-            className="flex items-center gap-2 min-w-0 flex-1 py-1 px-2 rounded-lg transition-colors text-left"
+            className="w-10 h-10 flex-shrink-0 bg-surface-elevated rounded-md flex items-center justify-center text-text-muted border border-white/5 overflow-hidden cursor-pointer active:scale-95 transition-transform"
           >
-            <motion.div
-              layoutId="player-artwork"
-              className="w-10 h-10 flex-shrink-0 bg-surface rounded-md flex items-center justify-center text-text-muted border border-border overflow-hidden"
-            >
-              {currentTrack.metadata?.coverArt ? (
-                <img
-                  src={currentTrack.metadata.coverArt}
-                  alt="Cover"
-                  className="w-full h-full object-cover select-none pointer-events-none"
-                  draggable="false"
-                />
-              ) : (
-                <IconMusic size={20} stroke={1.5} />
-              )}
-            </motion.div>
+            {currentTrack.metadata?.coverArt ? (
+              <img
+                src={currentTrack.metadata.coverArt}
+                alt="Cover"
+                className="w-full h-full object-cover select-none pointer-events-none"
+                draggable="false"
+              />
+            ) : (
+              <IconMusic size={20} stroke={1.5} />
+            )}
+          </motion.div>
 
-            <div className="min-w-0 flex-1 overflow-hidden">
-              <div className="font-medium text-sm leading-tight truncate">
-                {currentTrack.metadata?.title || "Unknown Title"}
-              </div>
-              <div className="text-xs text-text-muted leading-tight truncate">
-                {formatArtists(currentTrack.metadata?.artist)}
-              </div>
+          <div
+            className="min-w-0 flex-1 cursor-pointer"
+            onClick={togglePlayerExpanded}
+          >
+            <div className="font-medium text-sm leading-tight truncate text-text">
+              {currentTrack.metadata?.title || "Unknown Title"}
             </div>
-          </motion.button>
+            <div className="text-[11px] text-text-muted leading-tight truncate mt-0.5">
+              {formatArtists(currentTrack.metadata?.artist)}
+            </div>
+          </div>
 
-          {/* Mobile Controls */}
-          <div className="flex items-center gap-1 flex-shrink-0">
-            <SkipButton direction="prev" onClick={previous} size={20} />
+          {/* Action Buttons (Download, etc.) */}
+          {actionButtons && (
+            <div className="hidden sm:flex items-center gap-1 ml-2">
+              {actionButtons}
+            </div>
+          )}
+        </motion.div>
 
-            <PlayButton
-              isPlaying={isPlaying}
-              onClick={isPlaying ? pause : play}
-              size="sm"
-              className="w-9 h-9"
-            />
+        {/* Section 2: Playback Controls (Center) */}
+        <div className="flex items-center justify-center gap-2 md:gap-4 mx-4">
+          <div className="flex">
+            <RepeatButton mode={repeatMode} onClick={toggleRepeat} size="xs" />
+          </div>
 
-            <SkipButton direction="next" onClick={next} size={20} />
+          <SkipButton direction="prev" onClick={previous} size="sm" />
 
-            <ActionIconButton
-              icon={IconAdjustmentsHorizontal}
-              onClick={toggleEQ}
-              title="EQ"
-              size={20}
-            />
-            <ActionIconButton
-              icon={IconMicrophone}
-              onClick={toggleLyrics}
-              title="Lyrics"
-              size={20}
-            />
-            <ActionIconButton
-              icon={IconPlaylist}
-              onClick={toggleQueue}
-              title="Queue"
-              size={20}
-            />
-            <ActionIconButton
-              icon={IconSparkles}
-              onClick={toggleRecommendations}
-              title="Recommendations"
-              size={20}
+          <PlayButton
+            isPlaying={isPlaying}
+            onClick={isPlaying ? pause : play}
+            size="md"
+            className="shadow-accent/20"
+          />
+
+          <SkipButton direction="next" onClick={next} size="sm" />
+
+          <div className="flex">
+            <ShuffleButton
+              isShuffled={isShuffled}
+              onClick={toggleShuffle}
+              size="xs"
             />
           </div>
         </div>
 
-        {/* Desktop/Tablet Layout: 5 Sections */}
-        <div className="hidden sm:flex items-center w-full">
-          {/* Section 1: Track Info (Left - Flexible) */}
-          <div className="flex-1 min-w-0 basis-1/4">
-            <motion.button
-              onClick={togglePlayerExpanded}
-              drag="x"
-              dragConstraints={{ left: 0, right: 0 }}
-              dragElastic={0.2}
-              onDragEnd={(_, info) => {
-                if (info.offset.x > 100) {
-                  previous();
-                } else if (info.offset.x < -100) {
-                  next();
-                }
-              }}
-              whileHover={{
-                scale: 1.01,
-                backgroundColor: "rgba(255,255,255,0.02)",
-              }}
-              whileTap={{ scale: 0.99 }}
-              className="flex items-center gap-2 min-w-0 py-1 px-2 rounded-lg transition-colors text-left w-full"
+        {/* Section 3: Right Controls */}
+        <div className="flex-1 flex items-center justify-end gap-1 md:gap-2">
+          <div className="text-[11px] text-text-muted tabular-nums hidden xl:block font-medium mr-4">
+            {formatTime(currentTime)} / {formatTime(duration)}
+          </div>
+
+          <div className="hidden md:flex">
+            <EnhancedVolumeControl
+              volume={volume}
+              onVolumeChange={setVolume}
+              size="sm"
+            />
+          </div>
+
+          {/* Mobile Swipeable Button / Extended Menu */}
+          <div className="flex items-center gap-1 md:gap-2 relative">
+            <motion.div
+              layout
+              className={cn(
+                "flex items-center gap-1 transition-all duration-300",
+                showAllButtons
+                  ? "bg-white/5 rounded-full p-1 border border-white/10 pr-2"
+                  : ""
+              )}
             >
-              <motion.div
-                layoutId="player-artwork"
-                drag="x"
-                dragConstraints={{ left: 0, right: 0 }}
-                dragElastic={0.2}
-                onDragEnd={(_, info) => {
-                  if (info.offset.x > 80) {
-                    previous();
-                  } else if (info.offset.x < -80) {
-                    next();
-                  }
-                }}
-                className="w-10 h-10 md:w-12 md:h-12 flex-shrink-0 bg-surface rounded-md flex items-center justify-center text-text-muted border border-border overflow-hidden cursor-grab active:cursor-grabbing"
-              >
-                {currentTrack.metadata?.coverArt ? (
-                  <img
-                    src={currentTrack.metadata.coverArt}
-                    alt="Cover"
-                    className="w-full h-full object-cover select-none pointer-events-none"
-                    draggable="false"
-                  />
-                ) : (
-                  <IconMusic size={24} stroke={1.5} />
-                )}
-              </motion.div>
+              {sidebarButtons.map((btn, idx) => {
+                const isFeatured = idx === featuredButtonIndex;
+                const shouldShow = showAllButtons || isFeatured;
 
-              <div className="min-w-0 flex-1 flex items-center justify-between gap-2">
-                <div className="min-w-0 flex-1 overflow-hidden">
-                  <div className="relative overflow-hidden group/title">
-                    <motion.div
-                      layoutId="player-title"
-                      className="font-medium text-sm leading-tight whitespace-nowrap"
-                      style={{ display: "inline-block", minWidth: "100%" }}
-                    >
-                      <span className="block truncate">
-                        {currentTrack.metadata?.title || "Unknown Title"}
-                      </span>
-                    </motion.div>
-                  </div>
+                if (!shouldShow) return null;
 
-                  <div className="relative overflow-hidden group/artist mt-0.5">
-                    <motion.div
-                      layoutId="player-artist"
-                      className="text-xs text-text-muted leading-tight whitespace-nowrap"
-                      style={{ display: "inline-block", minWidth: "100%" }}
-                    >
-                      <span className="block truncate">
-                        {formatArtists(currentTrack.metadata?.artist)}
-                      </span>
-                    </motion.div>
-                  </div>
-                </div>
+                return (
+                  <motion.div
+                    key={btn.id}
+                    layout
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.8, opacity: 0 }}
+                    {...(isFeatured && !showAllButtons
+                      ? {
+                          drag: "x",
+                          dragConstraints: { left: 0, right: 0 },
+                          onDragEnd: (_: any, info: any) => {
+                            if (info.offset.x > 30) handlePrevButton();
+                            else if (info.offset.x < -30) handleNextButton();
+                          },
+                        }
+                      : {})}
+                  >
+                    <ActionIconButton
+                      icon={btn.icon}
+                      onClick={() => {
+                        btn.action();
+                        if (showAllButtons) setShowAllButtons(false);
+                      }}
+                      onContextMenu={(e: React.MouseEvent) => {
+                        e.preventDefault();
+                        setShowAllButtons(true);
+                      }}
+                      onPointerDown={() => {
+                        const timer = setTimeout(
+                          () => setShowAllButtons(true),
+                          600
+                        );
+                        const clearTimer = () => {
+                          clearTimeout(timer);
+                          window.removeEventListener("pointerup", clearTimer);
+                        };
+                        window.addEventListener("pointerup", clearTimer);
+                      }}
+                      isActive={"isActive" in btn ? btn.isActive : false}
+                      size="xs"
+                      title={btn.label}
+                      className={cn(
+                        "transition-all",
+                        isFeatured && !showAllButtons
+                          ? "scale-110 bg-white/10"
+                          : "opacity-60 hover:opacity-100"
+                      )}
+                    />
+                  </motion.div>
+                );
+              })}
+            </motion.div>
 
-                <div className="hidden xl:flex items-center flex-shrink-0">
-                  <TrackRating
-                    trackId={currentTrack.id}
-                    mode="both"
-                    size={12}
-                    compact
-                  />
-                </div>
-              </div>
-            </motion.button>
-          </div>
-
-
-
-          {/* Section 2: Center Playback Controls (Fixed Width) */}
-          <div className="flex-none flex items-center justify-center gap-1 md:gap-2 mx-4">
-            <div className="hidden lg:flex items-center">
-              <RepeatButton
-                size={18}
-                mode={repeatMode}
-                onClick={toggleRepeat}
+            {/* Backdrop to close menu */}
+            {showAllButtons && (
+              <div
+                className="fixed inset-0 z-[-1]"
+                onClick={() => setShowAllButtons(false)}
               />
-            </div>
-
-            <SkipButton
-              direction="prev"
-              onClick={previous}
-              size={20}
-              className="p-1.5"
-            />
-
-            <PlayButton
-              isPlaying={isPlaying}
-              onClick={isPlaying ? pause : play}
-              size="md"
-              className="w-9 h-9 md:w-10 md:h-10"
-            />
-
-            <SkipButton
-              direction="next"
-              onClick={next}
-              size={20}
-              className="p-1.5"
-            />
-
-            <div className="hidden lg:flex items-center">
-              <ShuffleButton
-                size={18}
-                isShuffled={isShuffled}
-                onClick={toggleShuffle}
-              />
-            </div>
-          </div>
-
-
-
-          {/* Section 3: Right Controls (Right - Flexible) */}
-          <div className="flex-1 min-w-0 basis-1/4 flex items-center justify-end gap-2 md:gap-3 px-2">
-            <div className="text-xs text-text-muted tabular-nums hidden md:flex items-center font-mono h-10">
-              {formatTime(currentTime)} / {formatTime(duration)}
-            </div>
-
-            <div className="hidden lg:flex items-center">
-              <EnhancedVolumeControl
-                volume={volume}
-                onVolumeChange={setVolume}
-              />
-            </div>
-
-            <ActionIconButton
-              icon={IconActivityHeartbeat}
-              onClick={toggleVisualization}
-              isActive={isVisualizationEnabled}
-              title="Toggle Visualization"
-              className="hidden md:flex p-1.5"
-              size={20}
-            />
-
-            <ActionIconButton
-              icon={IconAdjustmentsHorizontal}
-              onClick={toggleEQ}
-              title="Toggle EQ"
-              className="hidden sm:flex p-1.5"
-              size={20}
-            />
-
-            <ActionIconButton
-              icon={IconMicrophone}
-              onClick={toggleLyrics}
-              title="Toggle Lyrics"
-              className="hidden sm:flex p-1.5"
-              size={20}
-            />
-
-            <ActionIconButton
-              icon={IconPlaylist}
-              onClick={toggleQueue}
-              title="Toggle Queue"
-              className="hidden sm:flex p-1.5"
-              size={20}
-            />
-
-            <ActionIconButton
-              icon={IconSparkles}
-              onClick={toggleRecommendations}
-              title="Toggle Recommendations"
-              className="hidden sm:flex p-1.5"
-              size={20}
-            />
+            )}
           </div>
         </div>
       </div>

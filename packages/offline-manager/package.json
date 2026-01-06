@@ -1,0 +1,39 @@
+{
+    "name": "@sonantica/offline-manager",
+    "version": "0.1.0",
+    "description": "Cross-platform offline media manager for Sonántica",
+    "main": "./dist/index.js",
+    "module": "./dist/index.mjs",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.mjs",
+            "require": "./dist/index.js"
+        }
+    },
+    "scripts": {
+        "build": "tsup src/index.ts --format cjs,esm --dts",
+        "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
+        "clean": "rimraf dist",
+        "test": "echo \"No tests yet\"",
+        "lint": "echo \"No linting configured yet\""
+    },
+    "keywords": [
+        "sonantica",
+        "offline",
+        "cache",
+        "download"
+    ],
+    "author": "Sonántica Team",
+    "license": "Apache-2.0",
+    "dependencies": {
+        "@sonantica/shared": "workspace:*",
+        "zustand": "5.0.9"
+    },
+    "devDependencies": {
+        "tsup": "8.5.1",
+        "typescript": "5.9.3",
+        "rimraf": "6.1.2"
+    }
+}

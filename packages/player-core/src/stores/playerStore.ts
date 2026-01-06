@@ -9,7 +9,7 @@ import { create } from 'zustand';
 import { PlayerEngine } from '../PlayerEngine';
 import { useQueueStore } from './queueStore';
 import { PLAYER_EVENTS } from '@sonantica/shared';
-import { PlaybackState, type MediaSource } from '@sonantica/shared';
+import { PlaybackState, type MediaSource, type BufferConfig } from '@sonantica/shared';
 
 export interface PlayerState {
   // Player instance
@@ -20,7 +20,8 @@ export interface PlayerState {
   currentTrack: MediaSource | null;
   currentTime: number;
   duration: number;
-  buffered: number; // Buffered time in seconds
+  buffered: number; // For backward compatibility (last range end)
+  bufferedRanges: { start: number; end: number }[];
   volume: number;
   muted: boolean;
   
@@ -37,6 +38,7 @@ export interface PlayerState {
   seek: (time: number) => void;
   setVolume: (volume: number) => void;
   toggleMute: () => void;
+  updateBufferConfig: (config: Partial<BufferConfig>) => void;
   
   // Queue navigation (uses callbacks)
   next: () => Promise<void>;
@@ -66,6 +68,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     currentTime: 0,
     duration: 0,
     buffered: 0,
+    bufferedRanges: [],
     volume: 0.7,
     muted: false,
     _hasRestored: false,
@@ -103,6 +106,12 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
         
         await player.load(enhancedSource);
         set({ currentTrack: enhancedSource, _hasRestored: true });
+
+        // Trigger pre-buffering of next tracks
+        const nextTracks = useQueueStore.getState().getUpcoming(3);
+        if (nextTracks.length > 0) {
+          player.prebuffer(nextTracks);
+        }
       } catch (error) {
         console.error('Failed to load track:', error);
         set({ state: PlaybackState.ERROR });
@@ -141,6 +150,10 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
       const { muted } = get();
       player.setMuted(!muted);
       set({ muted: !muted });
+    },
+
+    updateBufferConfig: (config: Partial<BufferConfig>) => {
+      player.updateBufferConfig(config);
     },
 
     next: async () => {
@@ -214,6 +227,17 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
         set({
           currentTime: event.data.currentTime,
           duration: event.data.duration,
+        });
+      });
+
+      player.on(PLAYER_EVENTS.BUFFER_UPDATE, (event: any) => {
+        const ranges = event.data.bufferedRanges || [];
+        // Extract the end of the last range for the "simple" buffered percentage
+        const lastEnd = ranges.length > 0 ? ranges[ranges.length - 1].end : 0;
+        
+        set({
+          bufferedRanges: ranges,
+          buffered: lastEnd
         });
       });
 

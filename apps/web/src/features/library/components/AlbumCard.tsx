@@ -1,14 +1,23 @@
 /**
  * Album Card Component
- * 
+ *
  * Grid item for album view
  */
 
-import { IconPlaylistAdd, IconPlayerSkipForward, IconArrowsShuffle } from '@tabler/icons-react';
-import { motion } from 'framer-motion';
-import { ContextMenu, useContextMenu, LazyAlbumArt, type ContextMenuItem } from '@sonantica/ui';
-import { useQueueStore } from '@sonantica/player-core';
-import { gpuAnimations } from '@sonantica/shared';
+import {
+  IconPlaylistAdd,
+  IconPlayerSkipForward,
+  IconArrowsShuffle,
+} from "@tabler/icons-react";
+import { motion } from "framer-motion";
+import {
+  ContextMenu,
+  useContextMenu,
+  LazyAlbumArt,
+  type ContextMenuItem,
+} from "@sonantica/ui";
+import { useQueueStore } from "@sonantica/player-core";
+import { gpuAnimations } from "@sonantica/shared";
 
 interface AlbumCardProps {
   album: any;
@@ -22,8 +31,8 @@ export function AlbumCard({ album, onClick }: AlbumCardProps) {
   // Context menu items
   const menuItems: ContextMenuItem[] = [
     {
-      id: 'play-next',
-      label: 'Play Album Next',
+      id: "play-next",
+      label: "Play Album Next",
       icon: <IconPlayerSkipForward size={18} stroke={1.5} />,
       onClick: () => {
         if (album.tracks && album.tracks.length > 0) {
@@ -32,8 +41,8 @@ export function AlbumCard({ album, onClick }: AlbumCardProps) {
       },
     },
     {
-      id: 'add-to-queue',
-      label: 'Add Album to Queue',
+      id: "add-to-queue",
+      label: "Add Album to Queue",
       icon: <IconPlaylistAdd size={18} stroke={1.5} />,
       onClick: () => {
         if (album.tracks && album.tracks.length > 0) {
@@ -42,12 +51,12 @@ export function AlbumCard({ album, onClick }: AlbumCardProps) {
       },
     },
     {
-      id: 'shuffle',
-      label: 'Shuffle Album',
+      id: "shuffle",
+      label: "Shuffle Album",
       icon: <IconArrowsShuffle size={18} stroke={1.5} />,
       onClick: () => {
         // TODO: Implement shuffle album
-        console.log('Shuffle album:', album);
+        console.log("Shuffle album:", album);
       },
     },
   ];
@@ -76,7 +85,7 @@ export function AlbumCard({ album, onClick }: AlbumCardProps) {
             className="w-full h-full rounded-lg"
             iconSize={64}
           />
-          
+
           {/* Hover Overlay */}
           <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity" />
         </div>
@@ -84,13 +93,11 @@ export function AlbumCard({ album, onClick }: AlbumCardProps) {
         {/* Info */}
         <div className="text-center group-hover:text-left transition-all">
           <h3 className="font-semibold text-lg truncate mb-1 group-hover:text-accent transition-colors">
-            {album.name}
+            {album.title || album.name}
           </h3>
-          <p className="text-sm text-text-muted truncate">
-            {album.artist}
-          </p>
+          <p className="text-sm text-text-muted truncate">{album.artist}</p>
           <p className="text-xs text-text-muted/60 mt-2 font-mono">
-            {album.year || 'Unknown Year'} • {album.tracks?.length || 0} tracks
+            {album.year || "Unknown Year"} • {album.trackCount || 0} tracks
           </p>
         </div>
       </motion.div>

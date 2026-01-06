@@ -13,6 +13,7 @@ import {
   PageHeader,
   SortControl,
   EmptyState,
+  useUIStore,
 } from "@sonantica/ui";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
@@ -34,6 +35,7 @@ type SortOrder = "asc" | "desc";
 
 export function ArtistsPage() {
   const { stats, searchQuery, getFilteredArtists } = useLibraryStore();
+  const isCramped = useUIStore((state) => state.isCramped);
   const [, setLocation] = useLocation();
 
   const [sortField, setSortField] = useState<SortField>("name");
@@ -116,8 +118,10 @@ export function ArtistsPage() {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         const element = document.getElementById(`artist-${index}`);
-        if (element) {
-          element.scrollIntoView({ behavior: "smooth", block: "center" });
+        const main = document.getElementById("main-content");
+        if (element && main) {
+          const top = element.offsetTop - 100; // Account for grid gap and sticky header
+          main.scrollTo({ top, behavior: "smooth" });
         }
       });
     });
@@ -199,6 +203,7 @@ export function ArtistsPage() {
         <AlphabetNavigator
           items={sortedArtists}
           onLetterClick={handleLetterClick}
+          forceScrollOnly={isCramped}
         />
       )}
     </div>

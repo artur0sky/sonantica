@@ -18,6 +18,8 @@
     "@sonantica/lyrics": "workspace:*",
     "@sonantica/media-library": "workspace:*",
     "@sonantica/metadata": "workspace:*",
+    "@sonantica/mobile": "workspace:*",
+    "@sonantica/offline-manager": "workspace:*",
     "@sonantica/player-core": "workspace:*",
     "@sonantica/recommendations": "workspace:*",
     "@sonantica/shared": "workspace:*",

@@ -3,14 +3,28 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
+import path from 'path';
+
 // https://vite.dev/config/
 export default defineConfig({
+  base: './',
+  resolve: {
+      alias: {
+        'react': path.resolve(__dirname, './node_modules/react'),
+        'react-dom': path.resolve(__dirname, './node_modules/react-dom'),
+        // Force resolution to the source to avoid double-bundling issues if symlinks are weird
+        '@sonantica/mobile': path.resolve(__dirname, '../mobile/src/index.ts'),
+      },
+  },
   plugins: [
     react(),
     tailwindcss(),
     VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       registerType: 'autoUpdate',
-      includeAssets: ['icon.svg', 'icon-192.png', 'icon-512.png', 'icon-maskable.png'],
+      includeAssets: ['icon-192.png', 'icon-512.png', 'icon-maskable.png'],
       manifest: {
         name: 'Sonántica',
         short_name: 'Sonántica',
@@ -22,12 +36,6 @@ export default defineConfig({
         start_url: '/',
         orientation: 'portrait-primary',
         icons: [
-          {
-            src: '/icon.svg',
-            sizes: 'any',
-            type: 'image/svg+xml',
-            purpose: 'any maskable'
-          },
           {
             src: '/icon-192.png',
             sizes: '192x192',
@@ -54,102 +62,17 @@ export default defineConfig({
             short_name: 'Library',
             description: 'Browse your music library',
             url: '/library',
-            icons: [{ src: '/icon.svg', sizes: 'any' }]
+            icons: [{ src: '/icon-192.png', sizes: '192x192', type: 'image/png' }]
           },
           {
             name: 'Now Playing',
             short_name: 'Playing',
             description: 'View current playback',
             url: '/player',
-            icons: [{ src: '/icon.svg', sizes: 'any' }]
+            icons: [{ src: '/icon-192.png', sizes: '192x192', type: 'image/png' }]
           }
         ]
       },
-      workbox: {
-        // Cache strategy for the app shell
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        
-        // Runtime caching strategies
-        runtimeCaching: [
-          {
-            // Cache audio files with a custom strategy
-            urlPattern: /\.(?:mp3|flac|m4a|aac|ogg|opus|wav|aiff)$/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'audio-cache',
-              expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
-              },
-              cacheableResponse: {
-                statuses: [0, 200],
-              },
-            },
-          },
-          {
-            // Cache images (album art, etc.)
-            urlPattern: /\.(?:png|jpg|jpeg|webp|gif|svg)$/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'image-cache',
-              expiration: {
-                maxEntries: 200,
-                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
-              },
-            },
-          },
-          {
-            // Cache fonts
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'google-fonts-cache',
-              expiration: {
-                maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
-              },
-              cacheableResponse: {
-                statuses: [0, 200],
-              },
-            },
-          },
-          {
-            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'gstatic-fonts-cache',
-              expiration: {
-                maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
-              },
-              cacheableResponse: {
-                statuses: [0, 200],
-              },
-            },
-          },
-          {
-            // Network-first for API calls (metadata, etc.)
-            urlPattern: /^https:\/\/.*\/api\/.*/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'api-cache',
-              networkTimeoutSeconds: 10,
-              expiration: {
-                maxEntries: 50,
-                maxAgeSeconds: 60 * 60 * 24, // 1 day
-              },
-            },
-          },
-        ],
-        
-        // Clean up old caches
-        cleanupOutdatedCaches: true,
-        
-        // Skip waiting and claim clients immediately
-        skipWaiting: true,
-        clientsClaim: true,
-      },
-      
       devOptions: {
         enabled: true,
         type: 'module',

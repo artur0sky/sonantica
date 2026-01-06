@@ -22,13 +22,19 @@ Following strict **Clean Architecture** and **SOLID** principles, Sonántica is 
 ```text
 sonantica/
 ├─ apps/
-│  └─ web/              # Main PWA / Web Interface
+│  ├─ web/              # Main PWA / Web Interface
+│  └─ mobile/           # Native Capacitor Wrapper (Android/iOS)
 │
 ├─ packages/
 │  ├─ player-core/      # Audio engine & playback logic (UI-agnostic)
 │  ├─ media-library/    # Indexing, metadata management & search
 │  ├─ metadata/         # Low-level metadata extraction (ID3, Vorbis, FLAC)
+│  ├─ api-server/       # Self-hosted API for streaming and library sync
 │  ├─ audio-analyzer/   # FFT Analysis & waveform generation
+│  ├─ dsp/              # Audio processing (EQ, Presets, Gain)
+│  ├─ recommendations/  # Discovery engine (similar tracks, artists)
+│  ├─ lyrics/           # Synchronized lyrics parsing and management
+│  ├─ offline-manager/  # Offline playback and synchronization logic
 │  ├─ ui/               # Shared Design System & Components
 │  └─ shared/           # Fundamental types & utilities
 │
@@ -68,42 +74,95 @@ Sonántica is built to be **invisible**. It should never compete with your music
 
 See the full [Performance Guide](./docs/PERFORMANCE_OPTIMIZATIONS.md).
 
-## 🚀 Quick Start
+## 🎧 Getting Started
 
-### Prerequisites
-- **Node.js**: >= 18.0.0
-- **pnpm**: >= 8.0.0
+Sonántica is designed to be self-hosted, giving you absolute control over your library and data.
 
-### Installation
+### 1. Prepare Your Environment
+
+Create a dedicated folder for your installation. Inside, you'll need three subfolders to persist your data:
+
 ```bash
-# Clone and install
-pnpm install
-
-# Build all packages in the correct order
-pnpm build
-
-# Start the web application
-pnpm dev
+/sonantica
+  ├── /media      # Put your music here (FLAC, MP3, WAV, etc.)
+  ├── /buckets    # (Optional) For object storage
+  └── /config     # Where Sonántica stores database and preferences
 ```
 
-### Docker Deployment 🐳
+### 2. Configure the System
 
-For a production-ready environment with localized media support:
+Copy the `.env.example` file to `.env` and adjust it to match your paths.
+
+**Important:** You can mount **any** folder on your computer as your media library by setting `MEDIA_PATH`.
+
+```properties
+# .env
+
+# Example: Pointing to an external drive or common music folder
+MEDIA_PATH=D:\Music\HiFi_Collection
+# or for Linux/Mac:
+# MEDIA_PATH=/mnt/external_drive/Music
+
+CONFIG_PATH=./config
+WEB_PORT=3000
+```
+
+Sonántica will mount the path defined in `MEDIA_PATH` as read-only inside the container to ensure safety.
+
+### 3. Launch with Docker 🐳
+
+The recommended way to run Sonántica is via Docker Compose. This spins up the Player, the Stream Core (Go), the Database (Postgres), and the Analysis Worker (Python).
 
 ```bash
 docker compose up -d
 ```
 
-Configure your library paths in `.env`:
-- `MEDIA_PATH`: Your high-fidelity music collection.
-- `CONFIG_PATH`: Where Sonántica remembers your preferences.
+> **Note for First Run:** The system will immediately begin indexing your `/media` folder. Depending on the size of your library (e.g., >1TB), the initial scan and acoustic analysis may take some time. The UI will update in real-time as tracks are discovered.
 
-## 📦 Core Packages
+### 4. Access the Player
 
-*   **[@sonantica/player-core](./packages/player-core)**: The heartbeat of the system. A framework-agnostic audio engine.
-*   **[@sonantica/media-library](./packages/media-library)**: The librarian. Organized indexing and fast search.
-*   **[@sonantica/ui](./packages/ui)**: The aesthetic interface. Built with React and Framer Motion.
-*   **[@sonantica/audio-analyzer](./packages/audio-analyzer)**: The scientific eye. Visualizing sound with precision.
+Open your browser and navigate to:
+**http://localhost:3000**
+
+---
+
+### 🛠️ Developer Setup (Contribution)
+
+If you wish to contribute to the code:
+
+**Prerequisites:**
+- Node.js >= 18.0.0
+- pnpm >= 8.0.0
+
+**Installation:**
+```bash
+# Clone the repository
+git clone https://github.com/artur0sky/sonantica.git
+
+# Install dependencies
+pnpm install
+
+# Build packages in order
+pnpm build
+
+# Start development server
+pnpm dev
+```
+
+## 📦 Core Packages & Services
+
+### Shared Libraries (`/packages`)
+*   **[@sonantica/player-core](./packages/player-core)**: The heartbeat. A UI-agnostic audio engine that manages the playback lifecycle.
+*   **[@sonantica/media-library](./packages/media-library)**: The librarian. Handles indexing, browsing, and search with zero-latency.
+*   **[@sonantica/ui](./packages/ui)**: The face. A token-based design system implementing our "Acoustic Aesthetics".
+*   **[@sonantica/dsp](./packages/dsp)**: The studio. Professional 10-band EQ and signal processing chain.
+*   **[@sonantica/audio-analyzer](./packages/audio-analyzer)**: The scope. Real-time visualization and metric extraction.
+*   **[@sonantica/recommendations](./packages/recommendations)**: The guide. Acoustically-aware discovery engine.
+*   **[@sonantica/shared](./packages/shared)**: The foundation. Universal types and contracts.
+
+### Active Services (`/services`)
+*   **[Stream Core (Go)](./services/go-core)**: The engine room. High-performance, concurrent streaming server and library manager.
+*   **[Audio Worker (Python)](./services/python-worker)**: The analyst. Background process for deep metadata extraction and waveform generation.
 
 ## 🛠️ Built With
 

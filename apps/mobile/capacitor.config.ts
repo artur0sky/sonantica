@@ -5,8 +5,9 @@ const config: CapacitorConfig = {
   appName: 'Sonántica',
   webDir: '../web/dist',
   server: {
-    androidScheme: 'https',
-    iosScheme: 'https',
+    androidScheme: 'http',
+    iosScheme: 'http',
+    cleartext: true,
   },
   plugins: {
     SplashScreen: {

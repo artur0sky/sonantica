@@ -7,10 +7,10 @@ Professional metadata extraction and management for Sonántica. Reads tags from 
 ## 📖 Responsibility
 
 Understand the intention of every file:
-- **Tag Reading**: ID3, Vorbis Comments, FLAC tags
-- **Cover Art Extraction**: Embedded and external artwork
+- **Tag Reading**: ID3, Vorbis Comments, FLAC tags, MP4/M4A atoms (iTunes)
+- **Cover Art Extraction**: Embedded and external artwork (optimized for speed)
 - **Format Detection**: Codec and quality information
-- **Batch Processing**: Efficient library scanning
+- **Batch Processing**: Efficient library scanning with partial file reading
 
 ## 🧠 Philosophy
 
@@ -40,6 +40,7 @@ await extractor.extractMetadataBatch(
 
 **Optimizations:**
 - Processes 5 files at a time (configurable)
+- **Partial Reading**: reads only necessary bytes (headers/footers) instead of loading the full file
 - Yields to main thread between batches
 - UI remains responsive during large scans
 

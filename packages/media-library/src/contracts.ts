@@ -21,7 +21,7 @@ export interface IMediaLibrary {
   /**
    * Scan directories for media files
    */
-  scan(paths: string[], parallel?: boolean): Promise<void>;
+  scan(paths: string[], parallel?: boolean, options?: { scanFileSizeLimit?: number; coverArtSizeLimit?: number }): Promise<void>;
 
   /**
    * Cancel an ongoing scan

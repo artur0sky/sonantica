@@ -3,29 +3,39 @@
  *
  * SoundCloud-inspired layout with dual sidebars and sticky player.
  * Following Sonántica's minimalist philosophy.
- * 
+ *
  * PERFORMANCE: Code splitting for heavy features (EQ, Recommendations, Lyrics)
  */
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useMemo, useEffect } from "react";
 import { usePlayerStore } from "@sonantica/player-core";
 import {
   useUIStore,
   MetadataPanel,
   MiniPlayer,
   ExpandedPlayer,
-  SidebarResizer, // New Molecule
+  SidebarResizer,
 } from "@sonantica/ui";
 import { Header } from "./Header";
 import { LeftSidebar } from "./LeftSidebar";
 import { RightSidebar } from "./RightSidebar";
-import { IconLoader } from "@tabler/icons-react";
+import { IconLoader, IconPlaylistAdd } from "@tabler/icons-react";
+import { useLibraryStore } from "@sonantica/media-library";
+import { DownloadButton } from "../DownloadButton";
 
 // PERFORMANCE: Lazy load heavy sidebars (code splitting)
-const LyricsSidebar = lazy(() => import("./LyricsSidebar").then(m => ({ default: m.LyricsSidebar })));
-const EQSidebar = lazy(() => import("./EQSidebar").then(m => ({ default: m.EQSidebar })));
-const RecommendationsSidebar = lazy(() => import("./RecommendationsSidebar").then(m => ({ default: m.RecommendationsSidebar })));
+const LyricsSidebar = lazy(() =>
+  import("./LyricsSidebar").then((m) => ({ default: m.LyricsSidebar }))
+);
+const EQSidebar = lazy(() =>
+  import("./EQSidebar").then((m) => ({ default: m.EQSidebar }))
+);
+const RecommendationsSidebar = lazy(() =>
+  import("./RecommendationsSidebar").then((m) => ({
+    default: m.RecommendationsSidebar,
+  }))
+);
 
 import { useWaveformLoader } from "../../features/player/hooks/useWaveformLoader";
 import { PlaybackPersistence } from "../../features/player/components/PlaybackPersistence";
@@ -56,6 +66,13 @@ export function MainLayout({ children }: MainLayoutProps) {
   useKeyboardShortcuts();
 
   const currentTrack = usePlayerStore((s) => s.currentTrack);
+  const tracks = useLibraryStore((s) => s.tracks);
+
+  // Find full track data from library
+  const fullTrack = currentTrack
+    ? tracks.find((t) => t.id === currentTrack.id)
+    : null;
+
   const {
     isLeftSidebarOpen,
     isRightSidebarOpen,
@@ -70,14 +87,71 @@ export function MainLayout({ children }: MainLayoutProps) {
     eqSidebarWidth,
     recommendationsOpen,
     recommendationsSidebarWidth,
+    closeLeftSidebarOnPlay,
   } = useUIStore();
 
   const { startResizing } = useSidebarResize();
 
   const isMobile = useMediaQuery("(max-width: 1023px)");
 
+  // Auto-close left sidebar when playing (desktop only)
+  const state = usePlayerStore((s) => s.state);
+  useEffect(() => {
+    if (!isMobile && state === "playing" && currentTrack && isLeftSidebarOpen) {
+      closeLeftSidebarOnPlay();
+    }
+  }, [
+    state,
+    currentTrack,
+    isMobile,
+    isLeftSidebarOpen,
+    closeLeftSidebarOnPlay,
+  ]);
+
+  // Calculate total width of all open right-sidebars for desktop
+  const totalRightOffset = useMemo(() => {
+    if (isMobile) return 8; // Default mobile margin
+    let width = 0;
+    if (isRightSidebarOpen && currentTrack) width += rightSidebarWidth;
+    if (lyricsOpen && currentTrack) width += lyricsSidebarWidth;
+    if (eqOpen && currentTrack) width += eqSidebarWidth;
+    if (recommendationsOpen && currentTrack)
+      width += recommendationsSidebarWidth;
+    return width + 12; // Base margin
+  }, [
+    isMobile,
+    isRightSidebarOpen,
+    lyricsOpen,
+    eqOpen,
+    recommendationsOpen,
+    rightSidebarWidth,
+    lyricsSidebarWidth,
+    eqSidebarWidth,
+    recommendationsSidebarWidth,
+    currentTrack,
+  ]);
+
+  // Determine if AlphabetNavigator should be in "mobile-like" mode (auto-hide on desktop)
+  // Tight space = more than 350px of sidebars OR window is small
+  const isCramped =
+    totalRightOffset > 350 ||
+    (window.innerWidth < 1440 && totalRightOffset > 100);
+
+  const setIsCramped = useUIStore((state) => state.setIsCramped);
+
+  useEffect(() => {
+    setIsCramped(isCramped);
+  }, [isCramped, setIsCramped]);
+
   return (
-    <div className="h-screen flex flex-col bg-bg text-text overflow-hidden relative">
+    <div
+      className="h-[100dvh] pt-[max(env(safe-area-inset-top),2rem)] flex flex-col bg-bg text-text overflow-hidden relative"
+      style={
+        {
+          "--alphabet-right": `${totalRightOffset}px`,
+        } as React.CSSProperties
+      }
+    >
       {/* Persistence Layer */}
       <PlaybackPersistence />
 
@@ -102,9 +176,52 @@ export function MainLayout({ children }: MainLayoutProps) {
         )}
 
         {/* Center Content */}
-        <main className="flex-1 overflow-y-auto relative z-10 transition-all duration-300 w-full min-w-0">
+        <main
+          id="main-content"
+          className="flex-1 overflow-y-auto relative z-10 transition-all duration-300 w-full min-w-0"
+        >
           <AnimatePresence mode="wait">
-            {isPlayerExpanded ? <ExpandedPlayer key="expanded" /> : children}
+            {isPlayerExpanded ? (
+              <ExpandedPlayer
+                key="expanded"
+                actionButtons={
+                  fullTrack && (
+                    <div className="flex items-center gap-2">
+                      <DownloadButton
+                        trackId={fullTrack.id}
+                        track={fullTrack}
+                        size={22}
+                        showLabel={!isMobile}
+                      />
+                      {!isMobile && (
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          className="p-1.5 text-text-muted hover:text-text rounded-full transition-all duration-200 flex items-center gap-2"
+                          title="Add to Playlist"
+                          onClick={() => {
+                            /* TODO: Open Add to Playlist Dialog */
+                            alert("Add to Playlist: " + fullTrack.title);
+                          }}
+                        >
+                          <IconPlaylistAdd size={22} />
+                          <span className="text-sm font-medium">
+                            Add to Playlist
+                          </span>
+                        </motion.button>
+                      )}
+                    </div>
+                  )
+                }
+                onLongPressArt={() => {
+                  if (fullTrack) {
+                    alert("Add to Playlist: " + fullTrack.title);
+                  }
+                }}
+              />
+            ) : (
+              children
+            )}
           </AnimatePresence>
         </main>
 
@@ -205,7 +322,8 @@ export function MainLayout({ children }: MainLayoutProps) {
                 if (isRightSidebarOpen) useUIStore.getState().toggleQueue();
                 if (lyricsOpen) useUIStore.getState().toggleLyrics();
                 if (eqOpen) useUIStore.getState().toggleEQ();
-                if (recommendationsOpen) useUIStore.getState().toggleRecommendations();
+                if (recommendationsOpen)
+                  useUIStore.getState().toggleRecommendations();
               }}
               className="fixed inset-0 bg-black/60 z-[60] backdrop-blur-sm"
             />
@@ -220,7 +338,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             animate={{ x: 0 }}
             exit={{ x: "-100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-y-0 left-0 w-[280px] bg-surface z-[70] shadow-2xl border-r border-border overflow-y-auto"
+            className="fixed inset-y-0 left-0 w-[280px] bg-surface z-[70] shadow-2xl border-r border-border overflow-y-auto pt-[max(env(safe-area-inset-top),2rem)]"
           >
             <LeftSidebar isCollapsed={false} />
           </motion.aside>
@@ -235,7 +353,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-y-0 right-0 w-[320px] bg-surface z-[70] shadow-2xl border-l border-border overflow-y-auto"
+            className="fixed inset-y-0 right-0 w-[320px] bg-surface z-[70] shadow-2xl border-l border-border overflow-y-auto pt-[max(env(safe-area-inset-top),2rem)]"
           >
             <RightSidebar isCollapsed={false} />
           </motion.aside>
@@ -250,7 +368,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-y-0 right-0 w-[320px] bg-surface z-[70] shadow-2xl border-l border-border overflow-y-auto"
+            className="fixed inset-y-0 right-0 w-[320px] bg-surface z-[70] shadow-2xl border-l border-border overflow-y-auto pt-[max(env(safe-area-inset-top),2rem)]"
           >
             <Suspense fallback={<SidebarLoader />}>
               <LyricsSidebar isCollapsed={false} />
@@ -267,7 +385,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-y-0 right-0 w-[320px] bg-surface z-[70] shadow-2xl border-l border-border overflow-y-auto"
+            className="fixed inset-y-0 right-0 w-[320px] bg-surface z-[70] shadow-2xl border-l border-border overflow-y-auto pt-[max(env(safe-area-inset-top),2rem)]"
           >
             <Suspense fallback={<SidebarLoader />}>
               <EQSidebar isCollapsed={false} />
@@ -284,7 +402,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-y-0 right-0 w-[320px] bg-surface z-[70] shadow-2xl border-l border-border overflow-y-auto"
+            className="fixed inset-y-0 right-0 w-[320px] bg-surface z-[70] shadow-2xl border-l border-border overflow-y-auto pt-[max(env(safe-area-inset-top),2rem)]"
           >
             <Suspense fallback={<SidebarLoader />}>
               <RecommendationsSidebar />
@@ -296,8 +414,29 @@ export function MainLayout({ children }: MainLayoutProps) {
       {/* Bottom Mini Player - Sticky */}
       <AnimatePresence mode="wait">
         {currentTrack && !isPlayerExpanded && (
-          <div className="sticky bottom-0 z-50 border-t border-border">
-            <MiniPlayer />
+          <div className="sticky bottom-0 z-50 border-t border-border bg-bg/95 backdrop-blur-xl pb-[env(safe-area-inset-bottom)] shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
+            <MiniPlayer
+              actionButtons={
+                fullTrack && (
+                  <>
+                    <DownloadButton
+                      trackId={fullTrack.id}
+                      track={fullTrack}
+                      size={18}
+                      className="p-1"
+                    />
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      className="p-1 text-text-muted hover:text-text rounded-lg transition-colors"
+                      title="Add to Playlist"
+                    >
+                      <IconPlaylistAdd size={18} />
+                    </motion.button>
+                  </>
+                )
+              }
+            />
           </div>
         )}
       </AnimatePresence>

@@ -8,31 +8,10 @@
  */
 
 import { IconX, IconMicrophone, IconClock } from "@tabler/icons-react";
-import { motion, AnimatePresence } from "framer-motion";
-import type { Variants } from "framer-motion";
+import { motion } from "framer-motion";
 import { Badge } from "@sonantica/ui";
 import { cn } from "@sonantica/shared";
 import { useLyricsLogic } from "../../hooks/useLyricsLogic";
-
-const itemVariants: Variants = {
-  hidden: { x: 20, opacity: 0 },
-  visible: {
-    x: 0,
-    opacity: 1,
-    transition: {
-      type: "spring",
-      stiffness: 300,
-      damping: 24,
-    },
-  },
-  exit: {
-    x: -20,
-    opacity: 0,
-    transition: {
-      duration: 0.2,
-    },
-  },
-};
 
 interface LyricsSidebarProps {
   isCollapsed?: boolean;
@@ -45,9 +24,11 @@ export function LyricsSidebar({ isCollapsed }: LyricsSidebarProps) {
     currentTrack,
     lyrics,
     currentLineIndex,
+    isUserScrolling,
     lyricsContainerRef,
     currentLineRef,
     handleLineClick,
+    scrollToCurrentLine,
   } = useLyricsLogic();
 
   if (!lyricsOpen) return null;
@@ -58,12 +39,12 @@ export function LyricsSidebar({ isCollapsed }: LyricsSidebarProps) {
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: 300, opacity: 0 }}
       transition={{ type: "spring", damping: 20 }}
-      className="flex flex-col h-full overflow-hidden"
+      className="flex flex-col h-full overflow-hidden relative"
     >
       {/* Header */}
       <div
         className={cn(
-          "p-4 border-b border-border flex items-center justify-between transition-all",
+          "p-4 border-b border-border flex items-center justify-between transition-all relative z-10 bg-surface",
           isCollapsed && "flex-col gap-4 px-2"
         )}
       >
@@ -73,7 +54,7 @@ export function LyricsSidebar({ isCollapsed }: LyricsSidebarProps) {
               Lyrics
             </h2>
             {currentTrack && (
-              <span className="text-[10px] text-text-muted font-mono uppercase tracking-wider">
+              <span className="text-[10px] text-text-muted font-sans uppercase tracking-wider">
                 {currentTrack.metadata?.title || "Unknown Title"}
               </span>
             )}
@@ -83,19 +64,37 @@ export function LyricsSidebar({ isCollapsed }: LyricsSidebarProps) {
           className={cn("flex items-center gap-2", isCollapsed && "flex-col")}
         >
           {lyrics && (
-            <Badge
-              variant={lyrics.isSynchronized ? "accent" : "default"}
-              className="text-[10px] px-2 py-0.5"
-            >
-              {lyrics.isSynchronized ? (
-                <>
-                  <IconClock size={12} className="mr-1" stroke={1.5} />
-                  Synced
-                </>
-              ) : (
-                "Text"
+            <button
+              onClick={scrollToCurrentLine}
+              disabled={!isUserScrolling}
+              className={cn(
+                "transition-all duration-300",
+                !isUserScrolling && "pointer-events-none"
               )}
-            </Badge>
+            >
+              <Badge
+                variant={lyrics.isSynchronized ? "accent" : "default"}
+                className={cn(
+                  "text-[10px] px-2 py-0.5 font-sans transition-all",
+                  isUserScrolling && lyrics.isSynchronized
+                    ? "bg-accent text-white shadow-lg scale-110 hover:bg-accent-hover active:scale-95"
+                    : "opacity-80"
+                )}
+              >
+                {lyrics.isSynchronized ? (
+                  <>
+                    <IconClock
+                      size={12}
+                      className={cn("mr-1", isUserScrolling && "animate-pulse")}
+                      stroke={1.5}
+                    />
+                    {isUserScrolling ? "Sync Now" : "Synced"}
+                  </>
+                ) : (
+                  "Text"
+                )}
+              </Badge>
+            </button>
           )}
           <motion.button
             onClick={toggleLyrics}
@@ -113,7 +112,7 @@ export function LyricsSidebar({ isCollapsed }: LyricsSidebarProps) {
       <div
         ref={lyricsContainerRef}
         className={cn(
-          "flex-1 overflow-y-auto custom-scrollbar transition-all",
+          "flex-1 overflow-y-auto custom-scrollbar transition-all relative",
           isCollapsed ? "p-2" : "p-4 lg:p-3"
         )}
       >
@@ -144,28 +143,22 @@ export function LyricsSidebar({ isCollapsed }: LyricsSidebarProps) {
             </p>
           </div>
         ) : lyrics.isSynchronized && lyrics.synced ? (
-          <div className="space-y-3">
-            <AnimatePresence mode="sync">
-              {lyrics.synced.map((line, index) => (
-                <motion.div
-                  key={`${line.time}-${index}`}
-                  ref={index === currentLineIndex ? currentLineRef : null}
-                  variants={itemVariants}
-                  initial="hidden"
-                  animate="visible"
-                  exit="exit"
-                  onClick={() => handleLineClick(line.time)}
-                  className={cn(
-                    "transition-all duration-300 py-3 px-4 rounded-lg text-center cursor-pointer",
-                    index === currentLineIndex
-                      ? "bg-accent/10 text-accent font-bold text-base scale-105 shadow-lg"
-                      : "text-text-muted text-sm opacity-60 hover:opacity-100 hover:bg-surface-elevated hover:scale-102"
-                  )}
-                >
-                  <div className="leading-relaxed">{line.text}</div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
+          <div className="space-y-4 pt-4 pb-[50dvh]">
+            {lyrics.synced.map((line, index) => (
+              <div
+                key={`${line.time}-${index}`}
+                ref={index === currentLineIndex ? currentLineRef : null}
+                onClick={() => handleLineClick(line.time)}
+                className={cn(
+                  "transition-all duration-300 py-4 px-6 rounded-2xl text-center cursor-pointer select-none",
+                  index === currentLineIndex
+                    ? "bg-accent/20 text-accent font-bold text-xl scale-110 shadow-xl blur-0"
+                    : "text-text-muted text-base opacity-30 hover:opacity-60 hover:bg-surface-elevated blur-[0.5px] hover:blur-0 scale-95"
+                )}
+              >
+                <div className="leading-relaxed">{line.text}</div>
+              </div>
+            ))}
           </div>
         ) : (
           <div className="whitespace-pre-wrap text-text-muted leading-relaxed text-sm">

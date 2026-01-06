@@ -13,7 +13,7 @@ import {
   IconSortAscending,
   IconSortDescending,
 } from "@tabler/icons-react";
-import { AlphabetNavigator, Button } from "@sonantica/ui";
+import { AlphabetNavigator, Button, useUIStore } from "@sonantica/ui";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 
@@ -29,14 +29,15 @@ const containerVariants = {
 
 const ITEMS_PER_PAGE = 20;
 
-type SortField = "name" | "artist" | "year" | "trackCount";
+type SortField = "title" | "artist" | "year" | "trackCount";
 type SortOrder = "asc" | "desc";
 
 export function AlbumsPage() {
   const { stats, searchQuery, getFilteredAlbums } = useLibraryStore();
+  const isCramped = useUIStore((state) => state.isCramped);
   const [, setLocation] = useLocation();
 
-  const [sortField, setSortField] = useState<SortField>("name");
+  const [sortField, setSortField] = useState<SortField>("title");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
 
   const filteredAlbums = getFilteredAlbums();
@@ -50,9 +51,9 @@ export function AlbumsPage() {
       let bVal: any;
 
       switch (sortField) {
-        case "name":
-          aVal = a.name.toLowerCase();
-          bVal = b.name.toLowerCase();
+        case "title":
+          aVal = a.title.toLowerCase();
+          bVal = b.title.toLowerCase();
           break;
         case "artist":
           aVal = a.artist.toLowerCase();
@@ -63,8 +64,8 @@ export function AlbumsPage() {
           bVal = b.year || 0;
           break;
         case "trackCount":
-          aVal = a.tracks.length;
-          bVal = b.tracks.length;
+          aVal = a.trackCount || 0;
+          bVal = b.trackCount || 0;
           break;
         default:
           return 0;
@@ -122,8 +123,10 @@ export function AlbumsPage() {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         const element = document.getElementById(`album-${index}`);
-        if (element) {
-          element.scrollIntoView({ behavior: "smooth", block: "center" });
+        const main = document.getElementById("main-content");
+        if (element && main) {
+          const top = element.offsetTop - 100; // Account for grid gap and sticky header
+          main.scrollTo({ top, behavior: "smooth" });
         }
       });
     });
@@ -156,7 +159,7 @@ export function AlbumsPage() {
                 onChange={(e) => setSortField(e.target.value as SortField)}
                 className="px-3 py-2 bg-surface-elevated border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent/50"
               >
-                <option value="name">Name</option>
+                <option value="title">Name</option>
                 <option value="artist">Artist</option>
                 <option value="year">Year</option>
                 <option value="trackCount">Track Count</option>
@@ -240,12 +243,16 @@ export function AlbumsPage() {
         </div>
       )}
       {/* Navigator */}
-      {sortedAlbums.length > 50 && (
-        <AlphabetNavigator
-          items={sortedAlbums}
-          onLetterClick={handleLetterClick}
-        />
-      )}
+      {sortedAlbums.length > 50 &&
+        (sortField === "title" || sortField === "artist") && (
+          <AlphabetNavigator
+            items={sortedAlbums.map((a) => ({
+              name: sortField === "title" ? a.title : a.artist,
+            }))}
+            onLetterClick={handleLetterClick}
+            forceScrollOnly={isCramped}
+          />
+        )}
     </div>
   );
 }

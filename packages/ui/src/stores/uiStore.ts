@@ -27,6 +27,7 @@ export interface UIState {
   lyricsSidebarWidth: number;
   eqSidebarWidth: number;
   recommendationsSidebarWidth: number;
+  isCramped: boolean;
   
   // Actions
   togglePlayerExpanded: () => void;
@@ -52,6 +53,8 @@ export interface UIState {
   setLyricsSidebarWidth: (width: number) => void;
   setEQSidebarWidth: (width: number) => void;
   setRecommendationsSidebarWidth: (width: number) => void;
+  setIsCramped: (isCramped: boolean) => void;
+  closeLeftSidebarOnPlay: () => void; // Auto-close left sidebar when playing
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -70,6 +73,7 @@ export const useUIStore = create<UIState>((set) => ({
   lyricsSidebarWidth: 320,
   eqSidebarWidth: 320,
   recommendationsSidebarWidth: 320,
+  isCramped: false,
 
   togglePlayerExpanded: () => {
     set((state) => ({ isPlayerExpanded: !state.isPlayerExpanded }));
@@ -167,5 +171,12 @@ export const useUIStore = create<UIState>((set) => ({
 
   setRecommendationsSidebarWidth: (width: number) => {
     set({ recommendationsSidebarWidth: width });
+  },
+  setIsCramped: (isCramped: boolean) => {
+    set({ isCramped });
+  },
+
+  closeLeftSidebarOnPlay: () => {
+    set({ isLeftSidebarOpen: false });
   },
 }));

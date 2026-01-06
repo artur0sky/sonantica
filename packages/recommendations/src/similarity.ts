@@ -9,7 +9,7 @@
  * Security: Hardened against ReDoS and resource exhaustion.
  */
 
-import type { Track } from '@sonantica/media-library';
+import type { Track } from '@sonantica/shared';
 import type { SimilarityWeights } from './types';
 
 /**
@@ -82,10 +82,10 @@ function jaccardSimilarity(set1: string[], set2: string[]): number {
  * Calculate artist similarity
  */
 export function calculateArtistSimilarity(track1: Track, track2: Track): number {
-  if (!track1?.metadata || !track2?.metadata) return 0;
+  if (!track1 || !track2) return 0;
 
-  const artists1 = toArray(track1.metadata.artist);
-  const artists2 = toArray(track2.metadata.artist);
+  const artists1 = toArray(track1.artist);
+  const artists2 = toArray(track2.artist);
   
   if (artists1.length === 0 || artists2.length === 0) return 0;
   
@@ -105,8 +105,8 @@ export function calculateArtistSimilarity(track1: Track, track2: Track): number 
  * Calculate album similarity
  */
 export function calculateAlbumSimilarity(track1: Track, track2: Track): number {
-  const album1 = track1.metadata?.album;
-  const album2 = track2.metadata?.album;
+  const album1 = track1.album;
+  const album2 = track2.album;
   
   if (!album1 || !album2) return 0;
   
@@ -122,8 +122,8 @@ export function calculateAlbumSimilarity(track1: Track, track2: Track): number {
  * Calculate genre similarity
  */
 export function calculateGenreSimilarity(track1: Track, track2: Track): number {
-  const genres1 = toArray(track1.metadata?.genre);
-  const genres2 = toArray(track2.metadata?.genre);
+  const genres1 = toArray(track1.genre);
+  const genres2 = toArray(track2.genre);
   
   if (genres1.length === 0 || genres2.length === 0) return 0;
   
@@ -134,8 +134,8 @@ export function calculateGenreSimilarity(track1: Track, track2: Track): number {
  * Calculate year similarity (closer years = higher similarity)
  */
 export function calculateYearSimilarity(track1: Track, track2: Track): number {
-  const year1 = track1.metadata?.year;
-  const year2 = track2.metadata?.year;
+  const year1 = track1.year;
+  const year2 = track2.year;
   
   if (typeof year1 !== 'number' || typeof year2 !== 'number') return 0;
   
@@ -171,25 +171,25 @@ export function calculateTrackSimilarity(
   
   // Artist similarity
   const artistScore = calculateArtistSimilarity(track1, track2);
-  if (artistScore > 0 || (track1.metadata?.artist && track2.metadata?.artist)) {
+  if (artistScore > 0 || (track1.artist && track2.artist)) {
     similarities.push({ score: artistScore, weight: mergedWeights.artist });
   }
   
   // Album similarity
   const albumScore = calculateAlbumSimilarity(track1, track2);
-  if (albumScore > 0 || (track1.metadata?.album && track2.metadata?.album)) {
+  if (albumScore > 0 || (track1.album && track2.album)) {
     similarities.push({ score: albumScore, weight: mergedWeights.album });
   }
   
   // Genre similarity
   const genreScore = calculateGenreSimilarity(track1, track2);
-  if (genreScore > 0 || (track1.metadata?.genre && track2.metadata?.genre)) {
+  if (genreScore > 0 || (track1.genre && track2.genre)) {
     similarities.push({ score: genreScore, weight: mergedWeights.genre });
   }
   
   // Year similarity
   const yearScore = calculateYearSimilarity(track1, track2);
-  if (yearScore > 0 || (track1.metadata?.year && track2.metadata?.year)) {
+  if (yearScore > 0 || (track1.year && track2.year)) {
     similarities.push({ score: yearScore, weight: mergedWeights.year });
   }
   
@@ -218,7 +218,7 @@ export function getSimilarityReasons(track1: Track, track2: Track): Array<{ type
   
   const artistScore = calculateArtistSimilarity(track1, track2);
   if (artistScore > 0.5) {
-    const artists = toArray(track1.metadata?.artist);
+    const artists = toArray(track1.artist);
     
     // Sanitize output description
     const safeDesc = artists.join(', ').slice(0, 100);
@@ -232,7 +232,7 @@ export function getSimilarityReasons(track1: Track, track2: Track): Array<{ type
   
   const albumScore = calculateAlbumSimilarity(track1, track2);
   if (albumScore > 0.5) {
-     const safeAlbum = (track1.metadata?.album || 'Unknown').slice(0, 100);
+     const safeAlbum = (track1.album || 'Unknown').slice(0, 100);
     reasons.push({
       type: 'album',
       weight: albumScore,
@@ -242,7 +242,7 @@ export function getSimilarityReasons(track1: Track, track2: Track): Array<{ type
   
   const genreScore = calculateGenreSimilarity(track1, track2);
   if (genreScore > 0.3) {
-    const genres = toArray(track1.metadata?.genre);
+    const genres = toArray(track1.genre);
     const safeGenres = genres.join(', ').slice(0, 100);
     reasons.push({
       type: 'genre',
@@ -252,11 +252,11 @@ export function getSimilarityReasons(track1: Track, track2: Track): Array<{ type
   }
   
   const yearScore = calculateYearSimilarity(track1, track2);
-  if (yearScore > 0.5 && track1.metadata?.year) {
+  if (yearScore > 0.5 && track1.year) {
     reasons.push({
       type: 'year',
       weight: yearScore,
-      description: `From ${track1.metadata.year}`,
+      description: `From ${track1.year}`,
     });
   }
   

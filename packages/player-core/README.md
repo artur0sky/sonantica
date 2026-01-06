@@ -6,15 +6,16 @@ The professional audio engine at the heart of Sonántica. This package is respon
 
 ## 🧠 Philosophy
 
-The Player Core follows the **Non-negotiable Principle**: It must be able to run without a UI. It doesn't know about buttons, sliders, or React. It only knows about signal, state, and intention.
+> "The core must be able to run without a UI."
 
-## 📦 Features
+The Player Core acts as the **subconscious** of Sonántica. It does not know about pixels, interactions, or frameworks. It deals strictly with **Time**, **State**, and **Signal**. It guarantees that the listening experience remains unbroken, regardless of what happens on the surface.
 
-- **Platform-Agnostic**: Pure TypeScript core that can be wrapped for Web, Desktop (Electron/Tauri), or Mobile.
-- **Contract-Based**: Strictly defined interfaces (`IPlayerEngine`) ensure technical transparency.
-- **State Management**: Encapsulated Zustand store for predictable playback state across components.
-- **Event-Driven**: Complete observer pattern implementation for time updates, state changes, and errors.
-- **Queue Logic**: Integrated queue management with shuffle and repeat support.
+## 📦 Capabilities
+
+- **Platform-Agnostic**: A pure TypeScript kernel adaptable to Web, Desktop (Electron/Tauri), or Mobile scopes.
+- **Contract-First Design**: Architecture defined by strict interfaces (`IPlayerEngine`), ensuring modularity and clarity.
+- **Encapsulated State**: A predictable state machine (via Zustand) that acts as the single source of truth for playback.
+- **Event-Driven Lifecycle**: A robust observer pattern (`on('timeupdate')`, `on('ended')`) that allows the UI to react, not poll.
 
 ## 🛡️ Security & Reliability
 

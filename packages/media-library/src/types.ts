@@ -1,46 +1,39 @@
 /**
  * Media Library Types
  * 
- * Domain types for media library management.
+ * Re-exports types from @sonantica/shared for consistency.
+ * Following architecture principle: packages use shared types.
  */
 
-import type { MediaMetadata } from '@sonantica/shared';
+import {
+  Track as SharedTrack,
+  Artist,
+  Album,
+  AudioFormat,
+} from '@sonantica/shared';
 
-/**
- * Represents a track in the library
- */
-export interface Track {
-  id: string;
-  path: string;
-  filename: string;
-  mimeType: string;
-  size: number;
-  metadata: MediaMetadata;
-  addedAt: Date;
-  lastModified: Date;
-}
+export type { Artist, Album, AudioFormat };
 
-/**
- * Represents an album
- */
-export interface Album {
-  id: string;
-  name: string;
-  artist: string;
-  artistId?: string;
-  year?: number;
-  coverArt?: string;
-  tracks: Track[];
-}
-
-/**
- * Represents an artist
- */
-export interface Artist {
-  id: string;
-  name: string;
-  albums: Album[];
-  trackCount: number;
+export interface Track extends SharedTrack {
+  filename?: string;
+  path?: string; // Legacy/Internal path
+  size?: number;
+  lastModified?: Date;
+  mimeType?: string;
+  // Keep metadata property for now to avoid massive refactor if other components rely on it,
+  // but mark it as optional or try to move away from it.
+  // Actually MetadataFactory constructs it.
+  metadata?: {
+    title?: string;
+    artist?: string | string[];
+    album?: string;
+    year?: number;
+    trackNumber?: number;
+    coverArt?: string;
+    genre?: string | string[];
+    albumArtist?: string;
+    duration?: number;
+  };
 }
 
 /**

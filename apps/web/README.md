@@ -7,7 +7,8 @@ The flagship interface for the Sonántica ecosystem. A Progressive Web App desig
 Following our **Acoustic Aesthetics** philosophy, the web application avoids visual clutter. It serves as a window into your library, providing:
 
 - **Immersive Playback**: Dual-view player (Mini and Expanded) with real-time audio visualization.
-- **Fast Navigation**: Infinite scrolling and instant search across tracks, albums, and artists.
+- **Fast Navigation**: Infinite scrolling, instant search, and adaptive Alphabet Navigator.
+- **Scan Control**: Integrated interface for managing library scans and remote triggers.
 - **Responsive Layout**: Designed for the desktop but ready for the palm of your hand.
 - **Technical Transparency**: Direct access to track quality, bitrates, and waveform data.
 
@@ -34,7 +35,7 @@ The application architecture prioritizes audio integrity and UI responsiveness.
 
 ### 2. Memory & Network
 - **Lazy Loading**:
-  - **Images**: `LazyAlbumArt` with LRU cache (200 items) + blur-up effect.
+  - **Images**: `LazyAlbumArt` with LRU cache (200 items) + blur-up effect. Normalized remote URLs.
   - **Code**: `EQSidebar`, `LyricsSidebar`, `RecommendationsSidebar` loaded on-demand.
 - **Result**: 30-40% smaller initial bundle, 50% less memory usage.
 

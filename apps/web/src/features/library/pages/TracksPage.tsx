@@ -1,17 +1,16 @@
 /**
  * Tracks Page
  *
- * Main library view showing all tracks.
- * Default landing page.
- *
- * PERFORMANCE: Uses virtual scrolling for large libraries (>1000 tracks)
+ * Displays all tracks in the library with sorting and filtering.
+ * Supports virtual scrolling for large libraries.
  */
 
-import { useState, useRef, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Link } from "wouter";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Button } from "@sonantica/ui";
 import { useLibraryStore } from "@sonantica/media-library";
+import { useUIStore } from "@sonantica/ui";
 import { TrackItem } from "../components/TrackItem";
 import {
   IconMusic,
@@ -28,6 +27,7 @@ import {
   playAll,
   playAllShuffled,
 } from "../../../utils/playContext";
+import { trackToMediaSource } from "../../../utils/streamingUrl";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -47,6 +47,7 @@ type SortOrder = "asc" | "desc";
 
 export function TracksPage() {
   const { stats, searchQuery, getFilteredTracks } = useLibraryStore();
+  const isCramped = useUIStore((state) => state.isCramped);
 
   const [sortField, setSortField] = useState<SortField>("title");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
@@ -55,52 +56,36 @@ export function TracksPage() {
 
   // Sort tracks
   const sortedTracks = useMemo(() => {
-    const tracks = [...filteredTracks];
+    const tracksToSort = [...filteredTracks];
 
-    tracks.sort((a, b) => {
+    tracksToSort.sort((a, b) => {
       let aVal: any;
       let bVal: any;
 
       switch (sortField) {
         case "title":
-          aVal = a.metadata?.title?.toLowerCase() || "";
-          bVal = b.metadata?.title?.toLowerCase() || "";
+          aVal = a.title?.toLowerCase() || "";
+          bVal = b.title?.toLowerCase() || "";
           break;
         case "artist":
-          aVal =
-            (Array.isArray(a.metadata?.artist)
-              ? a.metadata.artist[0]
-              : a.metadata?.artist
-            )?.toLowerCase() || "";
-          bVal =
-            (Array.isArray(b.metadata?.artist)
-              ? b.metadata.artist[0]
-              : b.metadata?.artist
-            )?.toLowerCase() || "";
+          aVal = a.artist?.toLowerCase() || "";
+          bVal = b.artist?.toLowerCase() || "";
           break;
         case "album":
-          aVal = a.metadata?.album?.toLowerCase() || "";
-          bVal = b.metadata?.album?.toLowerCase() || "";
+          aVal = a.album?.toLowerCase() || "";
+          bVal = b.album?.toLowerCase() || "";
           break;
         case "year":
-          aVal = a.metadata?.year || 0;
-          bVal = b.metadata?.year || 0;
+          aVal = a.year || 0;
+          bVal = b.year || 0;
           break;
         case "duration":
-          aVal = a.metadata?.duration || 0;
-          bVal = b.metadata?.duration || 0;
+          aVal = a.duration || 0;
+          bVal = b.duration || 0;
           break;
         case "genre":
-          aVal =
-            (Array.isArray(a.metadata?.genre)
-              ? a.metadata.genre[0]
-              : a.metadata?.genre
-            )?.toLowerCase() || "";
-          bVal =
-            (Array.isArray(b.metadata?.genre)
-              ? b.metadata.genre[0]
-              : b.metadata?.genre
-            )?.toLowerCase() || "";
+          aVal = a.genre?.toLowerCase() || "";
+          bVal = b.genre?.toLowerCase() || "";
           break;
         default:
           return 0;
@@ -111,30 +96,25 @@ export function TracksPage() {
       return 0;
     });
 
-    return tracks;
+    return tracksToSort;
   }, [filteredTracks, sortField, sortOrder]);
 
   // PERFORMANCE: Virtual scrolling for large lists
-  const parentRef = useRef<HTMLDivElement>(null);
   const useVirtualScroll = sortedTracks.length > VIRTUAL_SCROLL_THRESHOLD;
 
   const virtualizer = useVirtualizer({
     count: sortedTracks.length,
-    getScrollElement: () => parentRef.current,
+    getScrollElement: () =>
+      document.getElementById("main-content") as HTMLDivElement,
     estimateSize: () => 76, // Estimated height of TrackItem
-    overscan: 5, // Render 5 extra items above/below viewport
+    overscan: 10, // Increased overscan for smoother scrolling on mobile
     enabled: useVirtualScroll,
   });
 
   const handleTrackClick = async (_track: any, index: number) => {
     try {
       // Create context from ALL sorted tracks (not just visible ones)
-      const mediaSources = sortedTracks.map((t) => ({
-        id: t.id,
-        url: t.path,
-        mimeType: t.mimeType,
-        metadata: t.metadata,
-      }));
+      const mediaSources = sortedTracks.map(trackToMediaSource);
 
       // Play from context with all tracks, starting at clicked track
       await playFromContext(mediaSources, index);
@@ -145,23 +125,23 @@ export function TracksPage() {
 
   const handleLetterClick = (index: number) => {
     if (useVirtualScroll) {
-      virtualizer.scrollToIndex(index, { align: "center", behavior: "smooth" });
+      virtualizer.scrollToIndex(index, { align: "start", behavior: "smooth" });
     } else {
       const element = document.getElementById(`track-${index}`);
       if (element) {
-        element.scrollIntoView({ behavior: "smooth", block: "center" });
+        // Find main container to scroll relative to it
+        const main = document.getElementById("main-content");
+        if (main) {
+          const top = element.offsetTop - 80; // Offset for sticky header
+          main.scrollTo({ top, behavior: "smooth" });
+        }
       }
     }
   };
 
   const handlePlayAll = async () => {
     try {
-      const mediaSources = sortedTracks.map((t) => ({
-        id: t.id,
-        url: t.path,
-        mimeType: t.mimeType,
-        metadata: t.metadata,
-      }));
+      const mediaSources = sortedTracks.map(trackToMediaSource);
       await playAll(mediaSources);
     } catch (error) {
       console.error("Failed to play all:", error);
@@ -170,12 +150,7 @@ export function TracksPage() {
 
   const handleShuffle = async () => {
     try {
-      const mediaSources = sortedTracks.map((t) => ({
-        id: t.id,
-        url: t.path,
-        mimeType: t.mimeType,
-        metadata: t.metadata,
-      }));
+      const mediaSources = sortedTracks.map(trackToMediaSource);
       await playAllShuffled(mediaSources);
     } catch (error) {
       console.error("Failed to shuffle:", error);
@@ -318,17 +293,14 @@ export function TracksPage() {
             </p>
           </motion.div>
         ) : useVirtualScroll ? (
-          // PERFORMANCE: Virtual scrolling for large lists
-          <div
-            ref={parentRef}
-            className="h-[calc(100vh-300px)] overflow-auto"
-            style={{ contain: "strict" }}
-          >
+          // PERFORMANCE: Virtual scrolling for large lists - Using main container for scrolling
+          <>
             <div
               style={{
                 height: `${virtualizer.getTotalSize()}px`,
                 width: "100%",
                 position: "relative",
+                contain: "strict",
               }}
             >
               {virtualizer.getVirtualItems().map((virtualItem) => {
@@ -357,7 +329,7 @@ export function TracksPage() {
             <div className="py-3 sm:py-4 text-center text-xs text-text-muted/30">
               Showing {sortedTracks.length} tracks (Virtual Scrolling)
             </div>
-          </div>
+          </>
         ) : (
           // Standard rendering for small lists
           <motion.div
@@ -392,14 +364,13 @@ export function TracksPage() {
             items={sortedTracks.map((t) => ({
               name:
                 sortField === "title"
-                  ? t.metadata?.title || t.filename
+                  ? t.title
                   : sortField === "artist"
-                  ? (Array.isArray(t.metadata?.artist)
-                      ? t.metadata.artist[0]
-                      : t.metadata?.artist) || "Unknown Artist"
-                  : t.metadata?.album || "Unknown Album",
+                  ? t.artist
+                  : t.album,
             }))}
             onLetterClick={handleLetterClick}
+            forceScrollOnly={isCramped}
           />
         )}
     </div>

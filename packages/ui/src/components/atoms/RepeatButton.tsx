@@ -2,59 +2,40 @@
  * Repeat Button Component
  *
  * Cycles through repeat modes: off → all → one
- * Follows Sonántica's "User Autonomy" principle
+ * Atomic design: built on top of PlayerButton.
  */
 
-import { motion } from "framer-motion";
 import { IconRepeat, IconRepeatOnce } from "@tabler/icons-react";
-import { cn } from "../../utils";
+import { PlayerButton } from "./PlayerButton";
 
 export type RepeatMode = "off" | "all" | "one";
 
 interface RepeatButtonProps {
   mode: RepeatMode;
   onClick: () => void;
-  size?: number;
+  size?: number | "xs" | "sm" | "md" | "lg" | "xl";
   className?: string;
 }
 
 export function RepeatButton({
   mode,
   onClick,
-  size = 20,
+  size = "sm",
   className,
 }: RepeatButtonProps) {
-  // const { repeatMode, toggleRepeat } = useQueueStore(); // Removed
-
-  const getColor = () => {
-    switch (mode) {
-      case "one":
-        return "text-accent";
-      case "all":
-        return "text-accent";
-      default:
-        return "text-text-muted";
-    }
-  };
-
-  const getIcon = () => {
-    return mode === "one" ? IconRepeatOnce : IconRepeat;
-  };
-
-  const Icon = getIcon();
+  const Icon = mode === "one" ? IconRepeatOnce : IconRepeat;
+  const isActive = mode !== "off";
 
   return (
-    <motion.button
+    <PlayerButton
+      icon={Icon}
       onClick={onClick}
-      whileHover={{ scale: 1.1 }}
-      whileTap={{ scale: 0.9 }}
-      className={cn("transition-colors", getColor(), className)}
-      aria-label={`Repeat: ${mode}`}
+      isActive={isActive}
+      size={size}
+      className={className}
       title={`Repeat: ${
         mode === "off" ? "Off" : mode === "all" ? "All" : "One"
       }`}
-    >
-      <Icon size={size} stroke={1.5} />
-    </motion.button>
+    />
   );
 }

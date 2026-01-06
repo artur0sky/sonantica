@@ -60,30 +60,32 @@ export function useLyricsDisplayLogic() {
     }
   }, [currentLineIndex, isUserScrolling]);
 
-  // Detect user scroll and pause auto-scroll
+  // Detect user interaction with the lyrics container
   useEffect(() => {
     const container = lyricsContainerRef.current;
     if (!container) return;
 
-    const handleScroll = () => {
-      // User is scrolling
+    const startUserInteraction = () => {
       setIsUserScrolling(true);
 
-      // Clear existing timeout
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current);
       }
 
-      // Resume auto-scroll after 3 seconds of no scrolling
-      scrollTimeoutRef.current = setTimeout(() => {
+      scrollTimeoutRef.current = window.setTimeout(() => {
         setIsUserScrolling(false);
-      }, 3000);
+      }, 5000); // 5 seconds of no interaction to resume auto-scroll
     };
 
-    container.addEventListener("scroll", handleScroll, { passive: true });
+    // Events that definitely indicate user intent to scroll/move
+    container.addEventListener("wheel", startUserInteraction, { passive: true });
+    container.addEventListener("touchmove", startUserInteraction, { passive: true });
+    container.addEventListener("mousedown", startUserInteraction, { passive: true });
 
     return () => {
-      container.removeEventListener("scroll", handleScroll);
+      container.removeEventListener("wheel", startUserInteraction);
+      container.removeEventListener("touchmove", startUserInteraction);
+      container.removeEventListener("mousedown", startUserInteraction);
       if (scrollTimeoutRef.current) {
         clearTimeout(scrollTimeoutRef.current);
       }
@@ -95,15 +97,27 @@ export function useLyricsDisplayLogic() {
     const timeInSeconds = timeMs / 1000;
     seek(timeInSeconds);
     // Resume auto-scroll after seeking
+    scrollToCurrentLine();
+  };
+
+  const scrollToCurrentLine = () => {
     setIsUserScrolling(false);
+    if (currentLineRef.current && lyricsContainerRef.current) {
+      currentLineRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }
   };
   
     return {
         currentTrack,
         lyrics,
         currentLineIndex,
+        isUserScrolling,
         lyricsContainerRef,
         currentLineRef,
         handleLineClick,
+        scrollToCurrentLine,
     };
 }
