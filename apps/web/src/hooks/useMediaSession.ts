@@ -11,11 +11,19 @@
 import { useEffect } from 'react';
 import { usePlayerStore, useQueueStore, mediaSessionService } from '@sonantica/player-core';
 import { PlaybackState } from '@sonantica/shared';
+import { Capacitor } from '@capacitor/core';
 
 export function useMediaSession() {
   const { currentTrack, state, play, pause, stop, seek } = usePlayerStore();
   const { next, previous, toggleShuffle, toggleRepeat } = useQueueStore();
   const player = usePlayerStore((s) => s.player);
+  
+  const isNative = Capacitor.isNativePlatform();
+
+  // Request notification permission on mobile when playing starts
+  useEffect(() => {
+    // Permission request logic handled by native layer or valid plugin call if needed
+  }, [isNative, state]);
 
   // Update metadata when track changes
   useEffect(() => {

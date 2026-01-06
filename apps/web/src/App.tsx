@@ -59,12 +59,14 @@ const PageLoader = () => (
   </div>
 );
 
+import { ErrorBoundary } from "./components/ErrorBoundary";
+
 function App() {
   useDSPIntegration();
   useAutoScan();
 
   return (
-    <>
+    <ErrorBoundary>
       <ServerGuard>
         <Suspense fallback={<PageLoader />}>
           <Switch>
@@ -121,7 +123,7 @@ function App() {
 
       {/* PWA Update Prompt */}
       <PWAUpdatePrompt />
-    </>
+    </ErrorBoundary>
   );
 }
 
