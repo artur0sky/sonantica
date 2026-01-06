@@ -191,7 +191,7 @@ export function MiniPlayer({ actionButtons }: MiniPlayerProps = {}) {
 
         {/* Section 2: Playback Controls (Center) */}
         <div className="flex items-center justify-center gap-2 md:gap-4 mx-4">
-          <div className="hidden lg:flex">
+          <div className="flex">
             <RepeatButton mode={repeatMode} onClick={toggleRepeat} size="xs" />
           </div>
 
@@ -206,7 +206,7 @@ export function MiniPlayer({ actionButtons }: MiniPlayerProps = {}) {
 
           <SkipButton direction="next" onClick={next} size="sm" />
 
-          <div className="hidden lg:flex">
+          <div className="flex">
             <ShuffleButton
               isShuffled={isShuffled}
               onClick={toggleShuffle}

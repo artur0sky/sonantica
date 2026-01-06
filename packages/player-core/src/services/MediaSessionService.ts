@@ -21,6 +21,8 @@ export interface MediaSessionHandlers {
   onPreviousTrack?: () => void;
   onNextTrack?: () => void;
   onSeekTo?: (time: number) => void;
+  onToggleShuffle?: () => void;
+  onToggleRepeat?: () => void;
 }
 
 export class MediaSessionService {
@@ -130,14 +132,16 @@ export class MediaSessionService {
         'nexttrack': handlers.onNextTrack,
         'seekbackward': handlers.onSeekBackward,
         'seekforward': handlers.onSeekForward,
+        'toggleshuffle': handlers.onToggleShuffle,
+        'togglerepeat': handlers.onToggleRepeat,
       };
 
       Object.entries(actionMap).forEach(([action, handler]) => {
         try {
           if (handler) {
-            navigator.mediaSession.setActionHandler(action as MediaSessionAction, handler);
+            navigator.mediaSession.setActionHandler(action as any, handler);
           } else {
-            navigator.mediaSession.setActionHandler(action as MediaSessionAction, null);
+            navigator.mediaSession.setActionHandler(action as any, null);
           }
         } catch (e) {
           console.debug(`Action ${action} not supported by this browser`);
@@ -174,7 +178,7 @@ export class MediaSessionService {
       navigator.mediaSession.playbackState = 'none';
 
       // Clear all possible action handlers
-      const actions: MediaSessionAction[] = [
+      const actions: any[] = [
         'play',
         'pause',
         'stop',
@@ -184,11 +188,13 @@ export class MediaSessionService {
         'nexttrack',
         'seekto',
         'skipad',
+        'toggleshuffle',
+        'togglerepeat',
       ];
 
       actions.forEach((action) => {
         try {
-          navigator.mediaSession.setActionHandler(action, null);
+          navigator.mediaSession.setActionHandler(action as any, null);
         } catch (e) {
           // ignore unsupported
         }

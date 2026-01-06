@@ -14,7 +14,7 @@ import { PlaybackState } from '@sonantica/shared';
 
 export function useMediaSession() {
   const { currentTrack, state, play, pause, stop, seek } = usePlayerStore();
-  const { next, previous } = useQueueStore();
+  const { next, previous, toggleShuffle, toggleRepeat } = useQueueStore();
   const player = usePlayerStore((s) => s.player);
 
   // Update metadata when track changes
@@ -106,13 +106,21 @@ export function useMediaSession() {
         console.log(`⏩ Media Session: Seek to ${time}s`);
         seek(time);
       },
-    });
+      onToggleShuffle: () => {
+        console.log('🔀 Media Session: Shuffle toggle');
+        toggleShuffle();
+      },
+      onToggleRepeat: () => {
+        console.log('🔁 Media Session: Repeat toggle');
+        toggleRepeat();
+      },
+    } as any);
 
     // Cleanup on unmount
     return () => {
       mediaSessionService.clear();
     };
-  }, [play, pause, stop, next, previous, seek, player]);
+  }, [play, pause, stop, next, previous, seek, player, toggleShuffle, toggleRepeat]);
 
   return {
     isSupported: mediaSessionService.isMediaSessionSupported(),
