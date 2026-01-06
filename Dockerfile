@@ -22,6 +22,7 @@ COPY packages/lyrics/package.json ./packages/lyrics/
 COPY packages/ui/package.json ./packages/ui/
 COPY packages/recommendations/package.json ./packages/recommendations/
 COPY packages/offline-manager/package.json ./packages/offline-manager/
+COPY apps/mobile/package.json ./apps/mobile/
 COPY apps/web/package.json ./apps/web/
 
 # Install dependencies
@@ -38,6 +39,7 @@ COPY packages/lyrics ./packages/lyrics
 COPY packages/ui ./packages/ui
 COPY packages/recommendations ./packages/recommendations
 COPY packages/offline-manager ./packages/offline-manager
+COPY apps/mobile ./apps/mobile
 COPY apps/web ./apps/web
 
 # Build packages (in dependency order)
