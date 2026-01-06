@@ -11,6 +11,7 @@ import {
   IconDisc,
   IconMicrophone,
   IconPlaylist,
+  IconChartBar,
 } from "@tabler/icons-react";
 import { motion } from "framer-motion";
 import type { Variants } from "framer-motion";
@@ -28,6 +29,7 @@ const navItems: NavItem[] = [
   { path: "/albums", label: "Albums", Icon: IconDisc },
   { path: "/artists", label: "Artists", Icon: IconMicrophone },
   { path: "/playlists", label: "Playlists", Icon: IconPlaylist },
+  { path: "/analytics", label: "Analytics", Icon: IconChartBar },
 ];
 
 const containerVariants: Variants = {

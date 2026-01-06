@@ -28,16 +28,30 @@ export function AlphabetNavigator({
   const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Map letters to their first index in the items list
+  // Optimized for large collections
   const letterIndices = useMemo(() => {
     const indices: Record<string, number> = {};
-    items.forEach((item, index) => {
-      let firstChar = item.name?.charAt(0).toUpperCase();
-      if (!firstChar || !/[A-Z]/.test(firstChar)) firstChar = "#";
 
+    // Early return for empty items
+    if (items.length === 0) return indices;
+
+    items.forEach((item, index) => {
+      // Handle missing or invalid names
+      if (!item?.name) return;
+
+      let firstChar = item.name.charAt(0).toUpperCase();
+
+      // Map non-alphabetic characters to #
+      if (!firstChar || !/[A-Z]/.test(firstChar)) {
+        firstChar = "#";
+      }
+
+      // Only store the first occurrence of each letter
       if (indices[firstChar] === undefined) {
         indices[firstChar] = index;
       }
     });
+
     return indices;
   }, [items]);
 
@@ -96,7 +110,8 @@ export function AlphabetNavigator({
       onLetterClick(index, letter);
 
       if (timerRef.current) clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(() => setActiveLetter(null), 1000);
+      // Increased timeout for better visual feedback during navigation
+      timerRef.current = setTimeout(() => setActiveLetter(null), 2000);
     }
   };
 

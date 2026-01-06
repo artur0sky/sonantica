@@ -9,7 +9,10 @@ import (
 	"path/filepath"
 	"time"
 
+	"sonantica-core/analytics"
+	"sonantica-core/analytics/handlers"
 	"sonantica-core/api"
+	"sonantica-core/cache"
 	"sonantica-core/database"
 	"sonantica-core/scanner"
 
@@ -41,16 +44,32 @@ func main() {
 	}
 	defer database.Close()
 
-	// Initialize Redis for Scanner
+	// Initialize Analytics Logger
+	analytics.InitLogger("sonantica-analytics")
+
+	// Run Analytics Migrations
+	log.Printf("📊 Running analytics database migrations...\n")
+	if err := analytics.RunMigrations(); err != nil {
+		log.Printf("⚠️ Analytics migrations failed: %v\n", err)
+		log.Printf("⚠️ Analytics features may not work correctly\n")
+	} else {
+		log.Printf("✅ Analytics migrations completed successfully\n")
+	}
+
+	// Initialize Shared Redis Cache (Secure & Optimized)
 	redisHost := os.Getenv("REDIS_HOST")
 	redisPort := os.Getenv("REDIS_PORT")
+	redisPass := os.Getenv("REDIS_PASSWORD") // Support password
+
 	if redisHost == "" {
 		redisHost = "redis"
 	}
 	if redisPort == "" {
 		redisPort = "6379"
 	}
-	scanner.InitRedis(redisHost, redisPort)
+
+	cache.Init(redisHost, redisPort, redisPass)
+	scanner.InitRedis(redisHost, redisPort, redisPass) // TODO: Refactor scanner to use shared cache
 
 	// Start Scanner (Non-blocking)
 	mediaPath := os.Getenv("MEDIA_PATH")
@@ -92,6 +111,10 @@ func main() {
 		r.Post("/start", api.ScanLibrary)
 		r.Get("/status", api.GetScanStatus)
 	})
+
+	// Analytics Routes
+	analyticsHandler := handlers.NewAnalyticsHandler()
+	analyticsHandler.RegisterRoutes(r)
 
 	// Static Assets
 	workDir, _ := os.Getwd()

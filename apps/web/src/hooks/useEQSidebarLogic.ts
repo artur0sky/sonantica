@@ -1,5 +1,6 @@
 import { useDSPStore, type IEQBand } from "@sonantica/dsp";
 import { useUIStore } from "@sonantica/ui";
+import { useAnalytics } from "@sonantica/analytics";
 
 export function useEQSidebarLogic() {
   const {
@@ -9,11 +10,22 @@ export function useEQSidebarLogic() {
     applyPreset,
     updateBand,
     setPreamp,
-    setEnabled,
-    reset,
+    setEnabled: dspSetEnabled,
+    reset: dspReset,
   } = useDSPStore();
 
   const { eqOpen, toggleEQ, eqSidebarWidth } = useUIStore();
+  const analytics = useAnalytics();
+
+  const setEnabled = (enabled: boolean) => {
+    dspSetEnabled(enabled);
+    analytics.trackDSPChange("dsp_toggle", { enabled });
+  };
+
+  const reset = () => {
+    dspReset();
+    analytics.trackDSPChange("dsp_reset", { preset: "flat" });
+  };
 
   const currentPreset = presets.find((p: any) => p.id === config.currentPreset);
   const currentBands = getCurrentBands();
@@ -33,6 +45,7 @@ export function useEQSidebarLogic() {
       reset();
     } else {
       applyPreset(presetId);
+      analytics.trackDSPChange("preset_applied", { presetId });
     }
   }
 

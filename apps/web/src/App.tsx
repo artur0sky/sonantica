@@ -15,6 +15,9 @@ import { PWAUpdatePrompt } from "./components/PWAUpdatePrompt";
 import { IconLoader } from "@tabler/icons-react";
 import { useDSPIntegration } from "./hooks/useDSPIntegration";
 import { useAutoScan } from "./hooks/useAutoScan";
+import { useAnalyticsIntegration } from "./hooks/useAnalyticsIntegration";
+import { usePlaybackAnalytics } from "./hooks/usePlaybackAnalytics";
+import { useVersionManager } from "./hooks/useVersionManager";
 
 // Lazy load pages
 const ServerSetupPage = lazy(() =>
@@ -52,6 +55,11 @@ const SettingsPage = lazy(() =>
     default: m.SettingsPage,
   }))
 );
+const AnalyticsDashboard = lazy(() =>
+  import("./features/analytics/pages/AnalyticsDashboard").then((m) => ({
+    default: m.AnalyticsDashboard,
+  }))
+);
 
 const PageLoader = () => (
   <div className="flex items-center justify-center min-h-[50vh] text-text-muted">
@@ -62,8 +70,11 @@ const PageLoader = () => (
 import { ErrorBoundary } from "./components/ErrorBoundary";
 
 function App() {
+  useVersionManager(); // Checks version and wipes data if needed
   useDSPIntegration();
   useAutoScan();
+  useAnalyticsIntegration();
+  usePlaybackAnalytics();
 
   return (
     <ErrorBoundary>
@@ -91,6 +102,9 @@ function App() {
 
                   {/* Settings */}
                   <Route path="/settings" component={SettingsPage} />
+
+                  {/* Analytics Dashboard */}
+                  <Route path="/analytics" component={AnalyticsDashboard} />
 
                   {/* Playlists - Coming soon */}
                   <Route path="/playlists">

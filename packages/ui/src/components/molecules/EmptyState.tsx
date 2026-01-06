@@ -3,7 +3,7 @@ import { ReactNode } from "react";
 import { cn, gpuAnimations } from "@sonantica/shared";
 
 interface EmptyStateProps {
-  icon?: React.ElementType;
+  icon?: React.ElementType | React.ReactNode;
   title?: string;
   description?: string;
   action?: ReactNode;
@@ -27,7 +27,11 @@ export function EmptyState({
     >
       {Icon && (
         <div className="mb-4 text-text-muted/30 p-4 bg-surface-elevated/50 rounded-full">
-          <Icon size={48} stroke={1.5} />
+          {typeof Icon === 'function' ? (
+            <Icon size={48} stroke={1.5} />
+          ) : (
+            Icon
+          )}
         </div>
       )}
       {title && (

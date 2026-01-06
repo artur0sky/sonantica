@@ -222,7 +222,7 @@ export function ServersSection() {
                 <Input
                   value={newServerUrl}
                   onChange={(e) => setNewServerUrl(e.target.value)}
-                  placeholder="http://192.168.1.100:8080"
+                  placeholder="http://localhost:8090"
                   autoFocus
                   disabled={isConnecting}
                 />

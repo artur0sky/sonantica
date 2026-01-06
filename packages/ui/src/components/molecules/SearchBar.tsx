@@ -11,6 +11,7 @@ import { IconSearch, IconX } from "@tabler/icons-react";
 import { cn } from "../../utils";
 import { useLibraryStore } from "@sonantica/media-library";
 import { formatArtists } from "@sonantica/shared";
+import type { Track, Artist, Album } from "@sonantica/media-library";
 
 interface SearchResult {
   type: "track" | "artist" | "album" | "genre" | "year";
@@ -47,7 +48,7 @@ export function SearchBar({ onResultSelect, className }: GlobalSearchBarProps) {
     const foundResults: SearchResult[] = [];
 
     // Search tracks
-    tracks.forEach((track) => {
+    tracks.forEach((track: Track) => {
       const title = track.title?.toLowerCase() || "";
       const artist = formatArtists(track.artist).toLowerCase();
       const album = track.album?.toLowerCase() || "";
@@ -75,7 +76,7 @@ export function SearchBar({ onResultSelect, className }: GlobalSearchBarProps) {
     });
 
     // Search artists
-    artists.forEach((artist) => {
+    artists.forEach((artist: Artist) => {
       if (artist.name.toLowerCase().includes(searchTerm)) {
         foundResults.push({
           type: "artist",
@@ -91,7 +92,7 @@ export function SearchBar({ onResultSelect, className }: GlobalSearchBarProps) {
     });
 
     // Search albums
-    albums.forEach((album) => {
+    albums.forEach((album: Album) => {
       if (
         album.title.toLowerCase().includes(searchTerm) ||
         album.artist.toLowerCase().includes(searchTerm)

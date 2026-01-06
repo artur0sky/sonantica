@@ -57,6 +57,8 @@ export function Header() {
         animate={{
           y: isPlayerExpanded ? -80 : 0,
           opacity: isPlayerExpanded ? 0 : 1,
+          height: isPlayerExpanded ? 0 : undefined,
+          minHeight: isPlayerExpanded ? 0 : undefined,
         }}
         transition={{ duration: 0.3, ease: "easeInOut" }}
         className={`h-14 sm:h-16 flex items-center px-3 sm:px-4 md:px-6 gap-2 sm:gap-4 select-none transition-all duration-300 ${

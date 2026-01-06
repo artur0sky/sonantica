@@ -40,7 +40,8 @@ export function PlayButton({
   };
 
   const variantClasses = {
-    accent: "bg-accent hover:bg-accent-hover text-white shadow-xl",
+    accent:
+      "bg-accent hover:bg-accent-hover text-[var(--color-accent-foreground,white)] shadow-lg",
     ghost: "bg-transparent text-text hover:bg-white/5",
   };
 

@@ -91,7 +91,7 @@ export function ServerSetupPage() {
                 type="url"
                 value={serverUrl}
                 onChange={(e) => setServerUrl(e.target.value)}
-                placeholder="http://192.168.1.100:8080"
+                placeholder="http://localhost:8090"
                 className="w-full px-4 py-3 bg-gray-900/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 disabled={testing}
                 autoFocus

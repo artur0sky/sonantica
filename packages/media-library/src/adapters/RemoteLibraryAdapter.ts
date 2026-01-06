@@ -48,6 +48,7 @@ export class RemoteLibraryAdapter implements ILibraryAdapter {
 
   /**
    * Normalize Track: prepend server URL to coverArt if path is relative
+   * AND add serverId for streaming
    */
   private normalizeTrack(track: any): Track {
     let coverArt = track.coverArt;
@@ -61,9 +62,14 @@ export class RemoteLibraryAdapter implements ILibraryAdapter {
       coverArt = `${this.serverUrl}/api/cover/${track.albumId}`;
     }
 
+    // Use serverUrl as serverId (it's unique per server)
+    // This allows buildStreamingUrl to find the correct server
+    const serverId = this.serverUrl;
+
     return {
       ...track,
-      coverArt
+      coverArt,
+      serverId, // Add serverId for streaming
     };
   }
 

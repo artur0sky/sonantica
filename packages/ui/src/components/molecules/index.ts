@@ -20,3 +20,4 @@ export * from './Tabs';
 export type { Tab } from './Tabs';
 export * from './settings/SettingRow';
 export * from './settings/SettingSection';
+export { StatCard } from './StatCard';

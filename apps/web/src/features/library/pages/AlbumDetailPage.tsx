@@ -17,6 +17,7 @@ import { motion } from "framer-motion";
 import { Button } from "@sonantica/ui";
 import { useAlbumSimilarAlbums } from "@sonantica/recommendations";
 import { AlbumCard } from "../components/AlbumCard";
+import { AlbumAnalyticsSection } from "../../analytics/components/AlbumAnalyticsSection";
 import { playFromContext } from "../../../utils/playContext";
 import { trackToMediaSource } from "../../../utils/streamingUrl";
 
@@ -171,6 +172,13 @@ export function AlbumDetailPage() {
         ))}
       </div>
 
+      {/* Analytics Section */}
+      <AlbumAnalyticsSection 
+        albumTitle={album.title} 
+        artistName={album.artist} 
+        albumId={album.id} 
+      />
+
       {/* Similar Albums Section */}
       {similarAlbums.length > 0 && (
         <div className="mt-16 pt-12 border-t border-border">
@@ -178,7 +186,7 @@ export function AlbumDetailPage() {
             You Might Also Like
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
-            {similarAlbums.map((rec) => (
+            {similarAlbums.map((rec: any) => (
               <AlbumCard
                 key={rec.item.id}
                 album={rec.item}

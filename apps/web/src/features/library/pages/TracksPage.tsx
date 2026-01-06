@@ -124,19 +124,50 @@ export function TracksPage() {
   };
 
   const handleLetterClick = (index: number) => {
+    const main = document.getElementById("main-content");
+    if (!main) return;
+
     if (useVirtualScroll) {
-      virtualizer.scrollToIndex(index, { align: "start", behavior: "smooth" });
+      // For virtual scrolling, use the virtualizer's scrollToIndex method
+      // This automatically handles rendering the necessary items
+      virtualizer.scrollToIndex(index, {
+        align: "start",
+        behavior: "smooth",
+      });
     } else {
-      const element = document.getElementById(`track-${index}`);
-      if (element) {
-        // Find main container to scroll relative to it
-        const main = document.getElementById("main-content");
-        if (main) {
-          const top = element.offsetTop - 80; // Offset for sticky header
-          main.scrollTo({ top, behavior: "smooth" });
-        }
-      }
+      // For regular scrolling, ensure element is rendered first
+      scrollToTrack(index, main);
     }
+  };
+
+  const scrollToTrack = (index: number, main: HTMLElement) => {
+    // Try multiple times with increasing delays to ensure element is rendered
+    let attempts = 0;
+    const maxAttempts = 5;
+
+    const tryScroll = () => {
+      const element = document.getElementById(`track-${index}`);
+
+      if (element) {
+        // Element found, scroll to it
+        const top = element.offsetTop - 80; // Account for sticky header
+        main.scrollTo({ top, behavior: "smooth" });
+      } else if (attempts < maxAttempts) {
+        // Element not found yet, try again
+        attempts++;
+        setTimeout(tryScroll, 50 * attempts); // Exponential backoff
+      } else {
+        // Fallback: estimate scroll position based on track item height
+        const trackHeight = 76; // Height of TrackItem
+        const estimatedTop = index * trackHeight;
+        main.scrollTo({ top: estimatedTop, behavior: "smooth" });
+      }
+    };
+
+    // Start scrolling attempt
+    requestAnimationFrame(() => {
+      requestAnimationFrame(tryScroll);
+    });
   };
 
   const handlePlayAll = async () => {

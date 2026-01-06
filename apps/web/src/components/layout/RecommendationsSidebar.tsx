@@ -76,7 +76,7 @@ export function RecommendationsSidebar() {
           </h3>
           <div className="space-y-1">
             <AnimatePresence mode="popLayout">
-              {trackRecommendations.map((rec) => (
+              {trackRecommendations.map((rec: any) => (
                 <motion.div
                   key={rec.item.id}
                   initial={{ opacity: 0, y: 10 }}
@@ -116,7 +116,7 @@ export function RecommendationsSidebar() {
               <IconDisc size={12} /> Related Albums
             </h3>
             <div className="grid grid-cols-2 gap-3">
-              {albumRecommendations.map((rec) => (
+              {albumRecommendations.map((rec: any) => (
                 // Using a simplified view or existing card
                 <div
                   key={rec.item.id}
@@ -127,7 +127,7 @@ export function RecommendationsSidebar() {
                       const albums = useLibraryStore.getState().albums;
                       const coverArt =
                         rec.item.coverArt ||
-                        albums.find((a) => a.id === rec.item.id)?.coverArt;
+                        albums.find((a: any) => a.id === rec.item.id)?.coverArt;
 
                       return coverArt ? (
                         <img
@@ -167,7 +167,7 @@ export function RecommendationsSidebar() {
               <IconMicrophone size={12} /> Similar Artists
             </h3>
             <div className="space-y-2">
-              {artistRecommendations.map((rec) => (
+              {artistRecommendations.map((rec: any) => (
                 <div
                   key={rec.item.id}
                   className="flex items-center gap-3 p-2 rounded-lg hover:bg-surface-elevated transition-colors cursor-pointer"

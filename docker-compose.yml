@@ -32,11 +32,11 @@ services:
       - ./data/psql/logs:/var/log/postgresql
     networks:
       - sonantica-net
-    command: [ "postgres", "-p", "${PSQL_PORT}" ]
+    command: [ "postgres", "-p", "${PSQL_PORT:-5432}" ]
     ports:
-      - "${PSQL_PORT}:${PSQL_PORT}"
+      - "${PSQL_PORT:-5432}:${PSQL_PORT:-5432}"
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${PSQL_USER} -p ${PSQL_PORT}" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${PSQL_USER:-sonantica} -p ${PSQL_PORT:-5432}" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -49,9 +49,10 @@ services:
       context: ./data/redis
       dockerfile: Dockerfile
     environment:
-      TZ: ${TZ}
+      TZ: ${TZ:-UTC}
       REDIS_HOST: redis
-      REDIS_PORT: ${REDIS_PORT}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-sonantica}
     container_name: sonantica-redis
     restart: always
     volumes:
@@ -62,10 +63,10 @@ services:
     networks:
       - sonantica-net
     ports:
-      - "${REDIS_PORT}:${REDIS_PORT}"
-    command: [ "redis-server", "/usr/local/etc/redis/redis.conf", "--port", "${REDIS_PORT}" ]
+      - "${REDIS_PORT:-6379}:${REDIS_PORT:-6379}"
+    command: [ "redis-server", "/usr/local/etc/redis/redis.conf", "--port", "${REDIS_PORT:-6379}", "--requirepass", "${REDIS_PASSWORD:-sonantica}" ]
     healthcheck:
-      test: [ "CMD", "redis-cli", "-p", "${REDIS_PORT}", "ping" ]
+      test: [ "CMD", "redis-cli", "-p", "${REDIS_PORT:-6379}", "-a", "${REDIS_PASSWORD:-sonantica}", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -83,14 +84,17 @@ services:
     ports:
       - "${CORE_PORT:-8090}:8080"
     environment:
-      - POSTGRES_URL=postgres://${PSQL_USER}:${PSQL_PASSWORD}@postgres:${PSQL_PORT}/${PSQL_NAME}?sslmode=disable
-      - REDIS_HOST=${REDIS_HOST}
-      - REDIS_PORT=${REDIS_PORT}
+      - POSTGRES_URL=postgres://${PSQL_USER:-sonantica}:${PSQL_PASSWORD:-sonantica}@postgres:${PSQL_PORT:-5432}/${PSQL_NAME:-sonantica}?sslmode=disable
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-sonantica}
       - MEDIA_PATH=/media
+      - ANALYTICS_ENABLED=${ANALYTICS_ENABLED:-true}
+      - ANALYTICS_RETENTION_DAYS=${ANALYTICS_RETENTION_DAYS:-90}
     volumes:
       - ${MEDIA_PATH:-./media}:/media:ro
       - ${BUCKETS_PATH:-./buckets}:/buckets:ro
-      - ./media:/media:ro
+      - F:\Music:/media:ro
       - ./config:/config:ro
       - ./logs/core:/var/log/sonantica
       - sonantica_cache:/covers
@@ -102,7 +106,7 @@ services:
     networks:
       - sonantica-net
     labels:
-      com.sonantica.description: "High-Performance Streaming Core (Go)"
+      com.sonantica.description: "High-Performance Streaming & Analytics Core (Go)"
 
   audio-worker:
     build:
@@ -110,14 +114,15 @@ services:
       dockerfile: Dockerfile
     container_name: sonantica-worker
     environment:
-      - POSTGRES_URL=postgres://${PSQL_USER}:${PSQL_PASSWORD}@postgres:${PSQL_PORT}/${PSQL_NAME}?sslmode=disable
-      - REDIS_HOST=${REDIS_HOST}
-      - REDIS_PORT=${REDIS_PORT}
+      - POSTGRES_URL=postgres://${PSQL_USER:-sonantica}:${PSQL_PASSWORD:-sonantica}@postgres:${PSQL_PORT:-5432}/${PSQL_NAME:-sonantica}?sslmode=disable
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-sonantica}
       - MEDIA_PATH=/media
     volumes:
       - ${MEDIA_PATH:-./media}:/media:ro
       - ${BUCKETS_PATH:-./buckets}:/buckets:ro
-      - ./media:/media:ro
+      - F:\Music:/media:ro
       - ./logs/worker:/var/log/sonantica
       - sonantica_cache:/covers
     depends_on:
@@ -142,7 +147,7 @@ services:
     volumes:
       - ${MEDIA_PATH:-./media}:/media:ro
       - ${BUCKETS_PATH:-./buckets}:/buckets:ro
-      - ./media:/media:ro
+      - F:/Music:/media:ro
       - ${CONFIG_PATH:-./config}:/config:rw
     environment:
       - NODE_ENV=production

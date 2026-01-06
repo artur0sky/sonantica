@@ -46,7 +46,7 @@ export function TrackItem({ track, onClick }: TrackItemProps) {
   const isPlaying = iscurrentTrack && state === PlaybackState.PLAYING;
 
   // Offline state
-  const offlineItem = useOfflineStore((state) => state.items[track.id]);
+  const offlineItem = useOfflineStore((state: any) => state.items[track.id]);
   const { offlineMode, hideUnavailableOffline } = useSettingsStore();
 
   const isOfflineAvailable = offlineItem?.status === OfflineStatus.COMPLETED;
