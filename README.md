@@ -104,15 +104,20 @@ Configure your library paths in `.env`:
 - `MEDIA_PATH`: Your high-fidelity music collection.
 - `CONFIG_PATH`: Where Sonántica remembers your preferences.
 
-## 📦 Core Packages
+## 📦 Core Packages & Services
 
-*   **[@sonantica/player-core](./packages/player-core)**: The heartbeat of the system. A framework-agnostic audio engine.
-*   **[@sonantica/media-library](./packages/media-library)**: The librarian. Organized indexing and fast search.
-*   **[@sonantica/ui](./packages/ui)**: The aesthetic interface. Built with React and Framer Motion.
-*   **[@sonantica/audio-analyzer](./packages/audio-analyzer)**: The scientific eye. Visualizing sound with precision.
-*   **[@sonantica/dsp](./packages/dsp)**: The studio. Advanced EQ and signal processing.
-*   **[@sonantica/api-server](./packages/api-server)**: The tower. Streaming and sync for your personal cloud.
-*   **[@sonantica/recommendations](./packages/recommendations)**: The guide. Intelligent discovery based on acoustic features.
+### Shared Libraries (`/packages`)
+*   **[@sonantica/player-core](./packages/player-core)**: The heartbeat. A UI-agnostic audio engine that manages the playback lifecycle.
+*   **[@sonantica/media-library](./packages/media-library)**: The librarian. Handles indexing, browsing, and search with zero-latency.
+*   **[@sonantica/ui](./packages/ui)**: The face. A token-based design system implementing our "Acoustic Aesthetics".
+*   **[@sonantica/dsp](./packages/dsp)**: The studio. Professional 10-band EQ and signal processing chain.
+*   **[@sonantica/audio-analyzer](./packages/audio-analyzer)**: The scope. Real-time visualization and metric extraction.
+*   **[@sonantica/recommendations](./packages/recommendations)**: The guide. Acoustically-aware discovery engine.
+*   **[@sonantica/shared](./packages/shared)**: The foundation. Universal types and contracts.
+
+### Active Services (`/services`)
+*   **[Stream Core (Go)](./services/go-core)**: The engine room. High-performance, concurrent streaming server and library manager.
+*   **[Audio Worker (Python)](./services/python-worker)**: The analyst. Background process for deep metadata extraction and waveform generation.
 
 ## 🛠️ Built With
 

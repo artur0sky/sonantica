@@ -36,7 +36,7 @@ services:
     ports:
       - "${PSQL_PORT}:${PSQL_PORT}"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${PSQL_USER} -p ${PSQL_PORT}"]
+      test: [ "CMD-SHELL", "pg_isready -U ${PSQL_USER} -p ${PSQL_PORT}" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -65,7 +65,7 @@ services:
       - "${REDIS_PORT}:${REDIS_PORT}"
     command: [ "redis-server", "/usr/local/etc/redis/redis.conf", "--port", "${REDIS_PORT}" ]
     healthcheck:
-      test: ["CMD", "redis-cli", "-p", "${REDIS_PORT}", "ping"]
+      test: [ "CMD", "redis-cli", "-p", "${REDIS_PORT}", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -90,7 +90,7 @@ services:
     volumes:
       - ${MEDIA_PATH:-./media}:/media:ro
       - ${BUCKETS_PATH:-./buckets}:/buckets:ro
-      - F:\Music:/media:ro
+      - ./media:/media:ro
       - ./config:/config:ro
       - ./logs/core:/var/log/sonantica
       - sonantica_cache:/covers
@@ -117,7 +117,7 @@ services:
     volumes:
       - ${MEDIA_PATH:-./media}:/media:ro
       - ${BUCKETS_PATH:-./buckets}:/buckets:ro
-      - F:\Music:/media:ro
+      - ./media:/media:ro
       - ./logs/worker:/var/log/sonantica
       - sonantica_cache:/covers
     depends_on:
@@ -142,7 +142,7 @@ services:
     volumes:
       - ${MEDIA_PATH:-./media}:/media:ro
       - ${BUCKETS_PATH:-./buckets}:/buckets:ro
-      - F:\Music:/media:ro
+      - ./media:/media:ro
       - ${CONFIG_PATH:-./config}:/config:rw
     environment:
       - NODE_ENV=production

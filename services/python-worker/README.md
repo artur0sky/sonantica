@@ -6,7 +6,9 @@ The analytical engine of Sonántica. Built with **Python** to leverage its rich 
 
 ## 🧠 Philosophy
 
-The Audio Worker follows the **Craftsman Principle**: It takes its time to do things right. It doesn't rush the user experience but ensures that when data is ready, it is accurate, complete, and rich. It respects the raw material.
+## 🧠 Philosophy
+
+The Audio Worker embodies the **Craftsman**. It does not rush. It takes the time necessary to understand the material deeply. Whether extracting intricate tags from a classical piece or generating a waveform for a jazz improvisation, it ensures that the data returned is accurate, complete, and respectful of the source.
 
 ## 📦 Features
 

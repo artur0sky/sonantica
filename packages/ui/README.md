@@ -6,10 +6,13 @@ The official design system and component library for Sonántica. This package pr
 
 ## 🎨 Identity & Principles
 
-Our UI is designed to be **invisible but present**. We prioritize:
-- **Calmness**: Neutral tones and ample whitespace to let cover art speak.
-- **Precision**: Clean lines and tabular numerals for technical data.
-- **Subtlety**: Micro-animations that guide rather than distract.
+> "Visual silence allows the sound to speak."
+
+Our UI follows the principle of **Acoustic Aesthetics**. It is designed to behave like a high-end audio component—precise, substantial, and free of unnecessary noise.
+
+- **Calmness**: We use deep, neutral tones and deliberate whitespace. The interface recedes; the cover art emerges.
+- **Precision**: Data is presented with tabular numerals and clear hierarchies. We respect the technical details of the audio.
+- **Intention**: Every animation has a purpose. We do not animate for delight; we animate to guide the eye and explain state changes.
 
 ## 📦 What's Inside
 

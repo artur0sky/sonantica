@@ -6,7 +6,9 @@ The high-performance backend service of Sonántica. Built with **Go (Golang)** f
 
 ## 🧠 Philosophy
 
-The Go Core follows the **Single Responsibility Principle**: It serves data and streams audio. It does not render UI, nor does it perform heavy DSP analysis (delegated to workers). It is designed to be the rock-solid foundation that never crashes seamlessly serving your music.
+## 🧠 Philosophy
+
+The Go Core is the **Engine Room**. It operates unseen, adhering to the **Single Responsibility Principle**: it serves data and streams audio. It does not concern itself with presentation. Its only goal is **stability**—to be the rock-solid foundation that serves the listener's library without interruption, latency, or error.
 
 ## 📦 Features
 
