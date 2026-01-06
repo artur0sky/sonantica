@@ -453,7 +453,26 @@ export function MainLayout({ children }: MainLayoutProps) {
             animate={{ x: 0 }}
             exit={{ x: "-100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-y-0 left-0 w-[280px] bg-surface z-[70] shadow-2xl border-r border-border overflow-y-auto pt-[max(env(safe-area-inset-top),2rem)]"
+            className="fixed inset-y-0 left-0 w-[280px] z-[70] shadow-2xl border-r border-white/10 overflow-y-auto pt-[max(env(safe-area-inset-top),2rem)]"
+            style={
+              {
+                backgroundColor: dominantColor,
+                color: contrastColor,
+                "--color-text": contrastColor,
+                "--color-text-muted": mutedColor,
+                "--color-border":
+                  contrastColor === "#ffffff"
+                    ? "rgba(255,255,255,0.1)"
+                    : "rgba(0,0,0,0.1)",
+                "--color-surface": "transparent",
+                "--color-surface-elevated":
+                  contrastColor === "#ffffff"
+                    ? "rgba(255,255,255,0.1)"
+                    : "rgba(0,0,0,0.1)",
+                "--color-accent": contrastColor,
+                "--color-accent-hover": contrastColor,
+              } as React.CSSProperties
+            }
           >
             <LeftSidebar isCollapsed={false} />
           </motion.aside>
@@ -468,7 +487,26 @@ export function MainLayout({ children }: MainLayoutProps) {
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-y-0 right-0 w-[320px] bg-accent text-white z-[70] shadow-2xl border-l border-white/10 overflow-y-auto pt-[max(env(safe-area-inset-top),2rem)] [--color-text-muted:rgba(255,255,255,0.7)] [--color-border:rgba(255,255,255,0.1)] [--color-surface-elevated:rgba(255,255,255,0.15)] [--color-accent:white]"
+            className="fixed inset-y-0 right-0 w-[320px] z-[70] shadow-2xl border-l border-white/10 overflow-y-auto pt-[max(env(safe-area-inset-top),2rem)]"
+            style={
+              {
+                backgroundColor: dominantColor,
+                color: contrastColor,
+                "--color-text": contrastColor,
+                "--color-text-muted": mutedColor,
+                "--color-border":
+                  contrastColor === "#ffffff"
+                    ? "rgba(255,255,255,0.1)"
+                    : "rgba(0,0,0,0.1)",
+                "--color-surface": "transparent",
+                "--color-surface-elevated":
+                  contrastColor === "#ffffff"
+                    ? "rgba(255,255,255,0.1)"
+                    : "rgba(0,0,0,0.1)",
+                "--color-accent": contrastColor,
+                "--color-accent-hover": contrastColor,
+              } as React.CSSProperties
+            }
           >
             <RightSidebar isCollapsed={false} />
           </motion.aside>
@@ -483,7 +521,26 @@ export function MainLayout({ children }: MainLayoutProps) {
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-y-0 right-0 w-[320px] bg-accent text-white z-[70] shadow-2xl border-l border-white/10 overflow-y-auto pt-[max(env(safe-area-inset-top),2rem)] [--color-text-muted:rgba(255,255,255,0.7)] [--color-border:rgba(255,255,255,0.1)] [--color-surface-elevated:rgba(255,255,255,0.15)] [--color-accent:white]"
+            className="fixed inset-y-0 right-0 w-[320px] z-[70] shadow-2xl border-l border-white/10 overflow-y-auto pt-[max(env(safe-area-inset-top),2rem)]"
+            style={
+              {
+                backgroundColor: dominantColor,
+                color: contrastColor,
+                "--color-text": contrastColor,
+                "--color-text-muted": mutedColor,
+                "--color-border":
+                  contrastColor === "#ffffff"
+                    ? "rgba(255,255,255,0.1)"
+                    : "rgba(0,0,0,0.1)",
+                "--color-surface": "transparent",
+                "--color-surface-elevated":
+                  contrastColor === "#ffffff"
+                    ? "rgba(255,255,255,0.1)"
+                    : "rgba(0,0,0,0.1)",
+                "--color-accent": contrastColor,
+                "--color-accent-hover": contrastColor,
+              } as React.CSSProperties
+            }
           >
             <Suspense fallback={<SidebarLoader />}>
               <LyricsSidebar isCollapsed={false} />
@@ -500,7 +557,26 @@ export function MainLayout({ children }: MainLayoutProps) {
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-y-0 right-0 w-[320px] bg-accent text-white z-[70] shadow-2xl border-l border-white/10 overflow-y-auto pt-[max(env(safe-area-inset-top),2rem)] [--color-text-muted:rgba(255,255,255,0.7)] [--color-border:rgba(255,255,255,0.1)] [--color-surface-elevated:rgba(255,255,255,0.15)] [--color-accent:white]"
+            className="fixed inset-y-0 right-0 w-[320px] z-[70] shadow-2xl border-l border-white/10 overflow-y-auto pt-[max(env(safe-area-inset-top),2rem)]"
+            style={
+              {
+                backgroundColor: dominantColor,
+                color: contrastColor,
+                "--color-text": contrastColor,
+                "--color-text-muted": mutedColor,
+                "--color-border":
+                  contrastColor === "#ffffff"
+                    ? "rgba(255,255,255,0.1)"
+                    : "rgba(0,0,0,0.1)",
+                "--color-surface": "transparent",
+                "--color-surface-elevated":
+                  contrastColor === "#ffffff"
+                    ? "rgba(255,255,255,0.1)"
+                    : "rgba(0,0,0,0.1)",
+                "--color-accent": contrastColor,
+                "--color-accent-hover": contrastColor,
+              } as React.CSSProperties
+            }
           >
             <Suspense fallback={<SidebarLoader />}>
               <EQSidebar isCollapsed={false} />
@@ -517,7 +593,26 @@ export function MainLayout({ children }: MainLayoutProps) {
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-y-0 right-0 w-[320px] bg-accent text-white z-[70] shadow-2xl border-l border-white/10 overflow-y-auto pt-[max(env(safe-area-inset-top),2rem)] [--color-text-muted:rgba(255,255,255,0.7)] [--color-border:rgba(255,255,255,0.1)] [--color-surface-elevated:rgba(255,255,255,0.15)] [--color-accent:white]"
+            className="fixed inset-y-0 right-0 w-[320px] z-[70] shadow-2xl border-l border-white/10 overflow-y-auto pt-[max(env(safe-area-inset-top),2rem)]"
+            style={
+              {
+                backgroundColor: dominantColor,
+                color: contrastColor,
+                "--color-text": contrastColor,
+                "--color-text-muted": mutedColor,
+                "--color-border":
+                  contrastColor === "#ffffff"
+                    ? "rgba(255,255,255,0.1)"
+                    : "rgba(0,0,0,0.1)",
+                "--color-surface": "transparent",
+                "--color-surface-elevated":
+                  contrastColor === "#ffffff"
+                    ? "rgba(255,255,255,0.1)"
+                    : "rgba(0,0,0,0.1)",
+                "--color-accent": contrastColor,
+                "--color-accent-hover": contrastColor,
+              } as React.CSSProperties
+            }
           >
             <Suspense fallback={<SidebarLoader />}>
               <RecommendationsSidebar />
