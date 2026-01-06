@@ -1,0 +1,191 @@
+# Sonántica - Docker Compose Configuration
+# Philosophy: "User autonomy" - flexible volume mounting
+#
+# Usage:
+#   Production:  docker compose up -d
+#   Stop:        docker compose down
+
+services:
+  # ============================================
+  # PERSISTENCE LAYER
+  # ============================================
+  postgres:
+    # Use custom build context from data/psql (contains pgvector & init scripts)
+    build:
+      context: ./data/psql
+      dockerfile: Dockerfile
+    container_name: sonantica-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sonantica}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sonantica}
+      POSTGRES_DB: ${POSTGRES_DB:-sonantica}
+      # Variables for custom entrypoint.sh in data/psql
+      PSQL_NAME: ${POSTGRES_DB:-sonantica}
+      PSQL_USER: ${POSTGRES_USER:-sonantica}
+      PSQL_PASSWORD: ${POSTGRES_PASSWORD:-sonantica}
+      ENCODING: UTF8
+    volumes:
+      # Data persistence - Uses named volume for safety
+      - postgres_data:/var/lib/postgresql/data
+      - ./data/psql/init.d:/config
+      - ./data/psql/logs:/var/log/postgresql
+    networks:
+      - sonantica-net
+    command: [ "postgres", "-p", "${PSQL_PORT}" ]
+    ports:
+      - "${PSQL_PORT}:${PSQL_PORT}"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${PSQL_USER} -p ${PSQL_PORT}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    labels:
+      com.sonantica.description: "Primary Data Store"
+
+  redis:
+    # Use custom build context from data/redis (contains redis.conf)
+    build:
+      context: ./data/redis
+      dockerfile: Dockerfile
+    environment:
+      TZ: ${TZ}
+      REDIS_HOST: redis
+      REDIS_PORT: ${REDIS_PORT}
+    container_name: sonantica-redis
+    restart: always
+    volumes:
+      # Data persistence - Uses named volume for safety
+      - redis_data:/data
+      - ./data/redis/dump:/dump
+      - ./data/redis/logs:/var/log/redis
+    networks:
+      - sonantica-net
+    ports:
+      - "${REDIS_PORT}:${REDIS_PORT}"
+    command: [ "redis-server", "/usr/local/etc/redis/redis.conf", "--port", "${REDIS_PORT}" ]
+    healthcheck:
+      test: [ "CMD", "redis-cli", "-p", "${REDIS_PORT}", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    labels:
+      com.sonantica.description: "Cache & Message Broker"
+
+  # ============================================
+  # CORE SERVICES (High Performance)
+  # ============================================
+  stream-core:
+    build:
+      context: ./services/go-core
+      dockerfile: Dockerfile
+    container_name: sonantica-core
+    ports:
+      - "${CORE_PORT:-8090}:8080"
+    environment:
+      - POSTGRES_URL=postgres://${PSQL_USER}:${PSQL_PASSWORD}@postgres:${PSQL_PORT}/${PSQL_NAME}?sslmode=disable
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - MEDIA_PATH=/media
+    volumes:
+      - ${MEDIA_PATH:-./media}:/media:ro
+      - ${BUCKETS_PATH:-./buckets}:/buckets:ro
+      - ./media:/media:ro
+      - ./config:/config:ro
+      - ./logs/core:/var/log/sonantica
+      - sonantica_cache:/covers
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - sonantica-net
+    labels:
+      com.sonantica.description: "High-Performance Streaming Core (Go)"
+
+  audio-worker:
+    build:
+      context: ./services/python-worker
+      dockerfile: Dockerfile
+    container_name: sonantica-worker
+    environment:
+      - POSTGRES_URL=postgres://${PSQL_USER}:${PSQL_PASSWORD}@postgres:${PSQL_PORT}/${PSQL_NAME}?sslmode=disable
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - MEDIA_PATH=/media
+    volumes:
+      - ${MEDIA_PATH:-./media}:/media:ro
+      - ${BUCKETS_PATH:-./buckets}:/buckets:ro
+      - ./media:/media:ro
+      - ./logs/worker:/var/log/sonantica
+      - sonantica_cache:/covers
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - sonantica-net
+    labels:
+      com.sonantica.description: "Audio Analysis Worker (Python)"
+
+  # ============================================
+  # FRONTEND & PROXY
+  # ============================================
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: sonantica-web
+    ports:
+      - "${WEB_PORT:-3000}:80"
+    volumes:
+      - ${MEDIA_PATH:-./media}:/media:ro
+      - ${BUCKETS_PATH:-./buckets}:/buckets:ro
+      - ./media:/media:ro
+      - ${CONFIG_PATH:-./config}:/config:rw
+    environment:
+      - NODE_ENV=production
+      - SONANTICA_VERSION=${SONANTICA_VERSION:-0.1.0}
+    restart: unless-stopped
+    depends_on:
+      - stream-core
+    networks:
+      - sonantica-net
+    labels:
+      com.sonantica.description: "Audio-first multimedia player"
+
+  nginx-proxy:
+    image: nginx:alpine
+    container_name: sonantica-proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx-proxy.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - web
+    networks:
+      - sonantica-net
+    labels:
+      com.sonantica.description: "Reverse proxy for Sonántica services"
+
+networks:
+  sonantica-net:
+    driver: bridge
+    name: sonantica-network
+
+volumes:
+  node_modules:
+    driver: local
+  shared_dist:
+    driver: local
+  core_dist:
+    driver: local
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  sonantica_cache:
+    driver: local

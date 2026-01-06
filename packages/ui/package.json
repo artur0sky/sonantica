@@ -1,0 +1,60 @@
+{
+    "name": "@sonantica/ui",
+    "version": "0.1.0",
+    "description": "Shared UI components for Sonántica - Audio-first multimedia player",
+    "main": "./dist/index.js",
+    "module": "./dist/index.mjs",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.mjs",
+            "require": "./dist/index.js"
+        }
+    },
+    "files": [
+        "dist"
+    ],
+    "scripts": {
+        "build": "tsup src/index.ts --format cjs,esm --dts",
+        "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
+        "clean": "rimraf dist"
+    },
+    "peerDependencies": {
+        "@tabler/icons-react": "3.36.0",
+        "framer-motion": "12.23.26",
+        "react": "19.2.3",
+        "react-dom": "19.2.3"
+    },
+    "dependencies": {
+        "@sonantica/audio-analyzer": "workspace:*",
+        "@sonantica/media-library": "workspace:*",
+        "@sonantica/player-core": "workspace:*",
+        "@sonantica/shared": "workspace:*",
+        "clsx": "2.1.1",
+        "react-lazy-load-image-component": "1.6.3",
+        "tailwind-merge": "3.4.0",
+        "zustand": "5.0.9"
+    },
+    "devDependencies": {
+        "@tabler/icons-react": "3.36.0",
+        "@types/react": "19.2.3",
+        "@types/react-dom": "19.2.3",
+        "@types/react-lazy-load-image-component": "1.6.5",
+        "autoprefixer": "10.4.20",
+        "postcss": "8.5.6",
+        "tailwindcss": "4.1.18",
+        "tsup": "8.5.1",
+        "typescript": "5.9.3"
+    },
+    "keywords": [
+        "sonantica",
+        "ui",
+        "components",
+        "react",
+        "audio",
+        "player"
+    ],
+    "author": "Sonántica Team",
+    "license": "Apache-2.0"
+}
