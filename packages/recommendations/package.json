@@ -1,0 +1,42 @@
+{
+    "name": "@sonantica/recommendations",
+    "version": "0.1.0",
+    "description": "Intelligent music recommendation engine for Sonántica",
+    "main": "./dist/index.js",
+    "module": "./dist/index.mjs",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.mjs",
+            "require": "./dist/index.js"
+        }
+    },
+    "scripts": {
+        "build": "tsup src/index.ts --format cjs,esm --dts --external react",
+        "dev": "tsup src/index.ts --format cjs,esm --dts --watch --external react",
+        "clean": "rm -rf dist"
+    },
+    "dependencies": {
+        "@sonantica/shared": "workspace:*",
+        "@sonantica/media-library": "workspace:*",
+        "@sonantica/player-core": "workspace:*"
+    },
+    "devDependencies": {
+        "typescript": "5.9.3",
+        "tsup": "8.5.1",
+        "@types/react": "19.2.3"
+    },
+    "peerDependencies": {
+        "react": "19.2.3"
+    },
+    "keywords": [
+        "audio",
+        "music",
+        "recommendations",
+        "similarity",
+        "metadata"
+    ],
+    "author": "Sonántica Team",
+    "license": "Apache-2.0"
+}
