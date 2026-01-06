@@ -46,6 +46,15 @@ func main() {
 	// Initialize Analytics Logger
 	analytics.InitLogger("sonantica-analytics")
 
+	// Run Analytics Migrations
+	log.Printf("📊 Running analytics database migrations...\n")
+	if err := analytics.RunMigrations(); err != nil {
+		log.Printf("⚠️ Analytics migrations failed: %v\n", err)
+		log.Printf("⚠️ Analytics features may not work correctly\n")
+	} else {
+		log.Printf("✅ Analytics migrations completed successfully\n")
+	}
+
 	// Initialize Redis for Scanner
 	redisHost := os.Getenv("REDIS_HOST")
 	redisPort := os.Getenv("REDIS_PORT")

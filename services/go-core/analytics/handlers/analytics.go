@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"sonantica-core/analytics"
 	"sonantica-core/analytics/models"
 	"sonantica-core/analytics/storage"
 
@@ -180,6 +181,22 @@ func (h *AnalyticsHandler) GetListeningPatterns(w http.ResponseWriter, r *http.R
 	json.NewEncoder(w).Encode(models.ListeningPattern{})
 }
 
+// GetMigrationStatus returns the status of database migrations
+func (h *AnalyticsHandler) GetMigrationStatus(w http.ResponseWriter, r *http.Request) {
+	status, err := analytics.GetMigrationStatus()
+	if err != nil {
+		log.Printf("Error getting migration status: %v", err)
+		http.Error(w, "Failed to get migration status", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"migrations": status,
+		"timestamp":  time.Now().Format(time.RFC3339),
+	})
+}
+
 // Helper functions
 
 func (h *AnalyticsHandler) handleSessionEvent(event *models.AnalyticsEvent) error {
@@ -296,5 +313,8 @@ func (h *AnalyticsHandler) RegisterRoutes(r chi.Router) {
 		r.Get("/tracks/top", h.GetTopTracks)
 		r.Get("/platform-stats", h.GetPlatformStats)
 		r.Get("/listening-patterns", h.GetListeningPatterns)
+
+		// System
+		r.Get("/migrations/status", h.GetMigrationStatus)
 	})
 }
