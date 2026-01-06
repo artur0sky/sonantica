@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"sonantica-core/analytics"
+	"sonantica-core/analytics/handlers"
 	"sonantica-core/api"
 	"sonantica-core/database"
 	"sonantica-core/scanner"
@@ -40,6 +42,9 @@ func main() {
 		log.Printf("❌ Failed to connect to database: %v\n", err)
 	}
 	defer database.Close()
+
+	// Initialize Analytics Logger
+	analytics.InitLogger("sonantica-analytics")
 
 	// Initialize Redis for Scanner
 	redisHost := os.Getenv("REDIS_HOST")
@@ -92,6 +97,10 @@ func main() {
 		r.Post("/start", api.ScanLibrary)
 		r.Get("/status", api.GetScanStatus)
 	})
+
+	// Analytics Routes
+	analyticsHandler := handlers.NewAnalyticsHandler()
+	analyticsHandler.RegisterRoutes(r)
 
 	// Static Assets
 	workDir, _ := os.Getwd()

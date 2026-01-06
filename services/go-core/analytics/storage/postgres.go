@@ -2,7 +2,6 @@ package storage
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -11,6 +10,7 @@ import (
 	"sonantica-core/database"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -39,7 +39,7 @@ func (s *AnalyticsStorage) CreateSession(ctx context.Context, session *models.Se
 	session.ID = uuid.New().String()
 	session.CreatedAt = time.Now()
 
-	_, err := s.db.ExecContext(ctx, query,
+	_, err := s.db.Exec(ctx, query,
 		session.ID, session.SessionID, session.UserID, session.Platform,
 		session.Browser, session.BrowserVersion, session.OS, session.OSVersion,
 		session.Locale, session.Timezone, session.IPHash, session.StartedAt,
@@ -57,7 +57,7 @@ func (s *AnalyticsStorage) UpdateSessionEnd(ctx context.Context, sessionID strin
 		WHERE session_id = $2
 	`
 
-	_, err := s.db.ExecContext(ctx, query, endedAt, sessionID)
+	_, err := s.db.Exec(ctx, query, endedAt, sessionID)
 	return err
 }
 
@@ -69,7 +69,7 @@ func (s *AnalyticsStorage) UpdateSessionHeartbeat(ctx context.Context, sessionID
 		WHERE session_id = $2
 	`
 
-	_, err := s.db.ExecContext(ctx, query, heartbeat, sessionID)
+	_, err := s.db.Exec(ctx, query, heartbeat, sessionID)
 	return err
 }
 
@@ -90,7 +90,7 @@ func (s *AnalyticsStorage) InsertEvent(ctx context.Context, event *models.Analyt
 	timestamp := time.Unix(0, event.Timestamp*int64(time.Millisecond))
 	createdAt := time.Now()
 
-	_, err = s.db.ExecContext(ctx, query,
+	_, err = s.db.Exec(ctx, query,
 		event.EventID, event.SessionID, event.EventType,
 		timestamp, dataJSON, createdAt,
 	)
@@ -100,11 +100,11 @@ func (s *AnalyticsStorage) InsertEvent(ctx context.Context, event *models.Analyt
 
 // InsertEventBatch inserts multiple events in a transaction
 func (s *AnalyticsStorage) InsertEventBatch(ctx context.Context, events []models.AnalyticsEvent) error {
-	tx, err := s.db.BeginTx(ctx, nil)
+	tx, err := s.db.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer tx.Rollback(ctx)
 
 	query := `
 		INSERT INTO analytics_events (
@@ -112,12 +112,7 @@ func (s *AnalyticsStorage) InsertEventBatch(ctx context.Context, events []models
 		) VALUES ($1, $2, $3, $4, $5, $6)
 	`
 
-	stmt, err := tx.PrepareContext(ctx, query)
-	if err != nil {
-		return fmt.Errorf("failed to prepare statement: %w", err)
-	}
-	defer stmt.Close()
-
+	batch := &pgx.Batch{}
 	for _, event := range events {
 		dataJSON, err := json.Marshal(event.Data)
 		if err != nil {
@@ -127,16 +122,24 @@ func (s *AnalyticsStorage) InsertEventBatch(ctx context.Context, events []models
 		timestamp := time.Unix(0, event.Timestamp*int64(time.Millisecond))
 		createdAt := time.Now()
 
-		_, err = stmt.ExecContext(ctx,
+		batch.Queue(query,
 			event.EventID, event.SessionID, event.EventType,
 			timestamp, dataJSON, createdAt,
 		)
+	}
+
+	br := tx.SendBatch(ctx, batch)
+	defer br.Close()
+
+	// Execute all batched queries
+	for i := 0; i < len(events); i++ {
+		_, err := br.Exec()
 		if err != nil {
-			return fmt.Errorf("failed to insert event: %w", err)
+			return fmt.Errorf("failed to insert event %d: %w", i, err)
 		}
 	}
 
-	return tx.Commit()
+	return tx.Commit(ctx)
 }
 
 // GetTopTracks retrieves the top played tracks
@@ -144,9 +147,9 @@ func (s *AnalyticsStorage) GetTopTracks(ctx context.Context, filters *models.Que
 	query := `
 		SELECT 
 			ts.track_id,
-			t.title as track_title,
-			ar.name as artist_name,
-			al.title as album_title,
+			COALESCE(t.title, '') as track_title,
+			COALESCE(ar.name, '') as artist_name,
+			COALESCE(al.title, '') as album_title,
 			al.cover_path as album_art,
 			ts.play_count,
 			ts.total_play_time as play_time,
@@ -189,7 +192,7 @@ func (s *AnalyticsStorage) GetTopTracks(ctx context.Context, filters *models.Que
 		args = append(args, filters.Offset)
 	}
 
-	rows, err := s.db.QueryContext(ctx, query, args...)
+	rows, err := s.db.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query top tracks: %w", err)
 	}
@@ -200,7 +203,7 @@ func (s *AnalyticsStorage) GetTopTracks(ctx context.Context, filters *models.Que
 
 	for rows.Next() {
 		var track models.TopTrack
-		var lastPlayed sql.NullTime
+		var lastPlayed *time.Time
 
 		err := rows.Scan(
 			&track.TrackID, &track.TrackTitle, &track.ArtistName,
@@ -211,8 +214,8 @@ func (s *AnalyticsStorage) GetTopTracks(ctx context.Context, filters *models.Que
 			return nil, fmt.Errorf("failed to scan track: %w", err)
 		}
 
-		if lastPlayed.Valid {
-			track.LastPlayed = lastPlayed.Time.Format(time.RFC3339)
+		if lastPlayed != nil {
+			track.LastPlayed = lastPlayed.Format(time.RFC3339)
 		}
 
 		track.Rank = rank
@@ -220,6 +223,10 @@ func (s *AnalyticsStorage) GetTopTracks(ctx context.Context, filters *models.Que
 
 		tracks = append(tracks, track)
 		rank++
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
 	}
 
 	return tracks, nil
@@ -258,7 +265,7 @@ func (s *AnalyticsStorage) GetPlatformStats(ctx context.Context, filters *models
 	query += " GROUP BY platform, browser, browser_version, os, os_version"
 	query += " ORDER BY session_count DESC"
 
-	rows, err := s.db.QueryContext(ctx, query, args...)
+	rows, err := s.db.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query platform stats: %w", err)
 	}
@@ -285,6 +292,10 @@ func (s *AnalyticsStorage) GetPlatformStats(ctx context.Context, filters *models
 		totalSessions += stat.SessionCount
 	}
 
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
+	}
+
 	// Second pass: calculate percentages
 	for i := range stats {
 		if totalSessions > 0 {
@@ -302,7 +313,7 @@ func (s *AnalyticsStorage) GetListeningHeatmap(ctx context.Context, filters *mod
 			date,
 			hour,
 			play_count,
-			EXTRACT(DOW FROM date) as day_of_week
+			EXTRACT(DOW FROM date)::int as day_of_week
 		FROM listening_heatmap
 		WHERE 1=1
 	`
@@ -324,7 +335,7 @@ func (s *AnalyticsStorage) GetListeningHeatmap(ctx context.Context, filters *mod
 
 	query += " ORDER BY date, hour"
 
-	rows, err := s.db.QueryContext(ctx, query, args...)
+	rows, err := s.db.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query heatmap: %w", err)
 	}
@@ -352,6 +363,10 @@ func (s *AnalyticsStorage) GetListeningHeatmap(ctx context.Context, filters *mod
 		heatmap = append(heatmap, data)
 	}
 
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
+	}
+
 	return heatmap, nil
 }
 
@@ -374,7 +389,7 @@ func (s *AnalyticsStorage) UpdateTrackStatistics(ctx context.Context, trackID st
 
 	now := time.Now()
 
-	_, err := s.db.ExecContext(ctx, query,
+	_, err := s.db.Exec(ctx, query,
 		trackID, playCount, completeCount, skipCount,
 		totalPlayTime, avgCompletion, now, now,
 	)
