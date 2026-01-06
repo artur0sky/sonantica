@@ -63,6 +63,7 @@ const defaultConfig: AnalyticsConfig = {
   
   collectPlaybackData: true,
   collectUIInteractions: true,
+  collectSearchData: true,
   collectPlatformInfo: true,
   shareAnonymousStats: false,
   

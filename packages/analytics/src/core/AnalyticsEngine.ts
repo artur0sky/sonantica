@@ -347,6 +347,10 @@ export class AnalyticsEngine {
       return false;
     }
     
+    if (eventType.startsWith('search.') && !this.config.collectSearchData) {
+      return false;
+    }
+    
     return true;
   }
   

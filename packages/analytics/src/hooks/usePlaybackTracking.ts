@@ -38,8 +38,11 @@ export function usePlaybackTracking(
   options: PlaybackTrackingOptions,
   state: PlaybackState
 ) {
-  const { trackEvent, startPlaybackTracking, updatePlaybackPosition, endPlaybackTracking } = 
-    useAnalyticsStore();
+  const trackEvent = useAnalyticsStore(s => s.trackEvent);
+  const startPlaybackTracking = useAnalyticsStore(s => s.startPlaybackTracking);
+  const updatePlaybackPosition = useAnalyticsStore(s => s.updatePlaybackPosition);
+  const endPlaybackTracking = useAnalyticsStore(s => s.endPlaybackTracking);
+  const enabled = useAnalyticsStore(s => s.config.enabled);
   
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastProgressRef = useRef<number>(0);
@@ -117,8 +120,8 @@ export function usePlaybackTracking(
   
   // Track progress (periodic updates)
   const trackProgress = useCallback(() => {
-    // Only track if position changed significantly (>5 seconds)
-    if (Math.abs(state.position - lastProgressRef.current) < 5) {
+    // Only track if position changed significantly (>15 seconds)
+    if (Math.abs(state.position - lastProgressRef.current) < 15) {
       return;
     }
     
@@ -175,7 +178,7 @@ export function usePlaybackTracking(
   // Set up progress tracking interval
   useEffect(() => {
     if (state.isPlaying) {
-      progressIntervalRef.current = setInterval(trackProgress, 10000);
+      progressIntervalRef.current = setInterval(trackProgress, 30000);
     } else {
       if (progressIntervalRef.current) {
         clearInterval(progressIntervalRef.current);

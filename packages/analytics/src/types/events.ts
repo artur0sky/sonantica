@@ -271,6 +271,7 @@ export interface AnalyticsConfig {
   // Privacy Settings
   collectPlaybackData: boolean;
   collectUIInteractions: boolean;
+  collectSearchData: boolean;
   collectPlatformInfo: boolean;
   shareAnonymousStats: boolean;
   
@@ -295,11 +296,12 @@ export const DEFAULT_ANALYTICS_CONFIG: AnalyticsConfig = {
   
   collectPlaybackData: true,
   collectUIInteractions: true,
+  collectSearchData: true,
   collectPlatformInfo: true,
   shareAnonymousStats: false,
   
-  batchSize: 50,
-  flushInterval: 30000, // 30 seconds
+  batchSize: 100,
+  flushInterval: 60000, // 60 seconds
   maxBufferSize: 500,
   
   dataRetentionDays: 90,
