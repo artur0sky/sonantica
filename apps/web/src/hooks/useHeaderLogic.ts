@@ -3,6 +3,7 @@ import { useUIStore } from "@sonantica/ui";
 import { useLibraryStore } from "@sonantica/media-library";
 import { usePlayerStore, useQueueStore } from "@sonantica/player-core";
 import { trackToMediaSource } from "../utils/streamingUrl";
+import { useAnalytics } from "@sonantica/analytics";
 
 export function useHeaderLogic() {
   const { toggleLeftSidebar } = useUIStore();
@@ -10,8 +11,12 @@ export function useHeaderLogic() {
   const { loadTrack, play } = usePlayerStore();
   const { setQueue } = useQueueStore();
   const { albums } = useLibraryStore();
+  const analytics = useAnalytics();
 
   const handleSearchResultSelect = async (result: any) => {
+    // Track search result selection
+    analytics.trackSearch(result.title, result.type);
+    
     switch (result.type) {
       case "track": {
         const track = result.data;

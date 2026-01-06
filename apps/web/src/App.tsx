@@ -15,6 +15,8 @@ import { PWAUpdatePrompt } from "./components/PWAUpdatePrompt";
 import { IconLoader } from "@tabler/icons-react";
 import { useDSPIntegration } from "./hooks/useDSPIntegration";
 import { useAutoScan } from "./hooks/useAutoScan";
+import { useAnalyticsIntegration } from "./hooks/useAnalyticsIntegration";
+import { usePlaybackAnalytics } from "./hooks/usePlaybackAnalytics";
 
 // Lazy load pages
 const ServerSetupPage = lazy(() =>
@@ -64,6 +66,8 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 function App() {
   useDSPIntegration();
   useAutoScan();
+  useAnalyticsIntegration();
+  usePlaybackAnalytics();
 
   return (
     <ErrorBoundary>
