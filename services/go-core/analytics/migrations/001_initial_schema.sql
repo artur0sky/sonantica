@@ -227,7 +227,7 @@ SELECT
     COALESCE(t.title, 'Unknown') as track_title,
     COALESCE(ar.name, 'Unknown Artist') as artist_name,
     COALESCE(al.title, 'Unknown Album') as album_title,
-    al.cover_path as album_art,
+    al.cover_art_path as album_art,
     ts.play_count,
     ts.total_play_time,
     ts.average_completion,

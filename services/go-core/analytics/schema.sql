@@ -203,7 +203,7 @@ SELECT
     t.title as track_title,
     ar.name as artist_name,
     al.title as album_title,
-    al.cover_path as album_art,
+    al.cover_art_path as album_art,
     ts.play_count,
     ts.total_play_time,
     ts.average_completion,
