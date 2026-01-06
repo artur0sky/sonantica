@@ -88,27 +88,8 @@ export function ExpandedPlayer({
       className="fixed inset-0 lg:relative lg:inset-auto h-[100dvh] lg:h-full z-[100] lg:z-10 flex flex-col bg-[var(--dominant-color,black)] lg:bg-transparent overflow-hidden overscroll-none"
     >
       {/* Premium Background Ambience - Blurred Cover Art (Mobile Only) */}
-      <AnimatePresence>
-        {!window.matchMedia("(min-width: 1024px)").matches && (
-          <motion.div
-            key={currentTrack.id}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 0.3 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 pointer-events-none"
-          >
-            {coverArt ? (
-              <div
-                className="w-full h-full bg-cover bg-center blur-[120px] scale-150 transform-gpu"
-                style={{ backgroundImage: `url(${coverArt})` }}
-              />
-            ) : (
-              <div className="w-full h-full bg-gradient-to-br from-accent/20 to-black blur-[100px]" />
-            )}
-            <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black" />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Solid Background handled by MainLayout wrapper passing CSS variables */}
+      <div />
 
       {/* Main Content - Responsive Layouts */}
       <div className="relative z-10 h-full w-full">

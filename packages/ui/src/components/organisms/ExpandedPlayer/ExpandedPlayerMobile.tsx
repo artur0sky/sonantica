@@ -110,7 +110,7 @@ export function ExpandedPlayerMobile({
         {/* SCROLLING OVER: Content Area */}
         <div className="relative z-10 flex flex-col">
           {/* Main Info & Controls Overlay (Initially reveals the cover art, then overlays it) */}
-          <div className="flex flex-col gap-8 px-6 md:px-16 lg:px-24 pb-12 bg-gradient-to-t from-black via-black/95 to-transparent pt-32 -mt-32">
+          <div className="flex flex-col gap-8 px-6 md:px-16 lg:px-24 pb-12 bg-gradient-to-t from-[var(--dominant-color)] via-[var(--dominant-color)] to-transparent pt-32 -mt-32">
             {/* Track Info */}
             <div className="flex flex-col gap-4">
               <div className="text-center w-full">
@@ -179,7 +179,7 @@ export function ExpandedPlayerMobile({
           </div>
 
           {/* WIDGETS Section (Scrolling Over) */}
-          <div className="bg-black flex flex-col gap-12 px-6 md:px-16 lg:px-24 py-12 border-t border-white/5 shadow-[0_-20px_40px_rgba(0,0,0,0.5)]">
+          <div className="bg-[var(--dominant-color)] flex flex-col gap-12 px-6 md:px-16 lg:px-24 py-12 border-t border-[var(--color-border)] shadow-[0_-20px_40px_rgba(0,0,0,0.5)]">
             <ArtistPhotoSection />
             <WidgetsSection />
 
