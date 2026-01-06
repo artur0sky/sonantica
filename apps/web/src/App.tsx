@@ -54,6 +54,11 @@ const SettingsPage = lazy(() =>
     default: m.SettingsPage,
   }))
 );
+const AnalyticsDashboard = lazy(() =>
+  import("./features/analytics/pages/AnalyticsDashboard").then((m) => ({
+    default: m.AnalyticsDashboard,
+  }))
+);
 
 const PageLoader = () => (
   <div className="flex items-center justify-center min-h-[50vh] text-text-muted">
@@ -95,6 +100,9 @@ function App() {
 
                   {/* Settings */}
                   <Route path="/settings" component={SettingsPage} />
+
+                  {/* Analytics Dashboard */}
+                  <Route path="/analytics" component={AnalyticsDashboard} />
 
                   {/* Playlists - Coming soon */}
                   <Route path="/playlists">
