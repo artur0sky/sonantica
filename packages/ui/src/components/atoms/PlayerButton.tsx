@@ -31,6 +31,10 @@ export interface PlayerButtonProps {
   disabled?: boolean;
   /** Layout ID for Framer Motion transitions */
   layoutId?: string;
+  /** Right click handler */
+  onContextMenu?: (e: React.MouseEvent) => void;
+  /** Pointer down handler */
+  onPointerDown?: (e: React.PointerEvent) => void;
 }
 
 const sizeMap = {
@@ -52,6 +56,8 @@ export function PlayerButton({
   variant = "ghost",
   disabled = false,
   layoutId,
+  onContextMenu,
+  onPointerDown,
 }: PlayerButtonProps) {
   const iconSize = typeof size === "number" ? size : sizeMap[size];
 
@@ -67,6 +73,8 @@ export function PlayerButton({
     <motion.button
       layoutId={layoutId}
       onClick={onClick}
+      onContextMenu={onContextMenu}
+      onPointerDown={onPointerDown}
       disabled={disabled}
       whileHover={
         !disabled

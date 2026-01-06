@@ -27,10 +27,10 @@ export class MediaSessionService {
   private isSupported: boolean;
 
   constructor() {
-    this.isSupported = 'mediaSession' in navigator;
+    this.isSupported = typeof navigator !== 'undefined' && 'mediaSession' in navigator;
     
     if (!this.isSupported) {
-      console.warn('⚠️ Media Session API not supported in this browser');
+      console.warn('⚠️ Media Session API not supported in this environment');
     } else {
       console.log('✅ Media Session API initialized');
     }
@@ -41,23 +41,27 @@ export class MediaSessionService {
    */
   updateMetadata(track: MediaSource | null): void {
     if (!this.isSupported || !track) {
+      if (!track && this.isSupported) {
+        navigator.mediaSession.metadata = null;
+      }
       return;
     }
 
     try {
       const metadata = track.metadata;
+      const artworkUrl = this.getAbsoluteUrl(metadata?.coverArt);
       
       navigator.mediaSession.metadata = new MediaMetadata({
         title: metadata?.title || 'Unknown Track',
         artist: this.formatArtists(metadata?.artist),
         album: metadata?.album || 'Unknown Album',
-        artwork: metadata?.coverArt ? [
-          { src: metadata.coverArt, sizes: '96x96', type: 'image/jpeg' },
-          { src: metadata.coverArt, sizes: '128x128', type: 'image/jpeg' },
-          { src: metadata.coverArt, sizes: '192x192', type: 'image/jpeg' },
-          { src: metadata.coverArt, sizes: '256x256', type: 'image/jpeg' },
-          { src: metadata.coverArt, sizes: '384x384', type: 'image/jpeg' },
-          { src: metadata.coverArt, sizes: '512x512', type: 'image/jpeg' },
+        artwork: artworkUrl ? [
+          { src: artworkUrl, sizes: '96x96' },
+          { src: artworkUrl, sizes: '128x128' },
+          { src: artworkUrl, sizes: '192x192' },
+          { src: artworkUrl, sizes: '256x256' },
+          { src: artworkUrl, sizes: '384x384' },
+          { src: artworkUrl, sizes: '512x512' },
         ] : [],
       });
 
@@ -77,6 +81,7 @@ export class MediaSessionService {
 
     try {
       navigator.mediaSession.playbackState = state;
+      console.debug(`State updated to: ${state}`);
     } catch (error) {
       console.error('Failed to update playback state:', error);
     }
@@ -92,16 +97,18 @@ export class MediaSessionService {
 
     try {
       if ('setPositionState' in navigator.mediaSession) {
+        // Ensure values are finite and valid
+        const safeDuration = isFinite(duration) && duration > 0 ? duration : 0;
+        const safePosition = isFinite(currentTime) && currentTime >= 0 ? Math.min(currentTime, safeDuration) : 0;
+        
         navigator.mediaSession.setPositionState({
-          duration: duration || 0,
-          playbackRate,
-          position: Math.min(currentTime, duration) || 0,
+          duration: safeDuration,
+          playbackRate: playbackRate || 1.0,
+          position: safePosition,
         });
       }
     } catch (error) {
-      // Position state might not be supported on all browsers
-      // This is not critical, so we just log it
-      console.debug('Position state not supported:', error);
+      console.debug('Position state update failed:', error);
     }
   }
 
@@ -115,42 +122,37 @@ export class MediaSessionService {
 
     try {
       // Basic playback controls
-      if (handlers.onPlay) {
-        navigator.mediaSession.setActionHandler('play', handlers.onPlay);
-      }
+      const actionMap: Record<string, (() => void) | undefined> = {
+        'play': handlers.onPlay,
+        'pause': handlers.onPause,
+        'stop': handlers.onStop,
+        'previoustrack': handlers.onPreviousTrack,
+        'nexttrack': handlers.onNextTrack,
+        'seekbackward': handlers.onSeekBackward,
+        'seekforward': handlers.onSeekForward,
+      };
 
-      if (handlers.onPause) {
-        navigator.mediaSession.setActionHandler('pause', handlers.onPause);
-      }
+      Object.entries(actionMap).forEach(([action, handler]) => {
+        try {
+          if (handler) {
+            navigator.mediaSession.setActionHandler(action as MediaSessionAction, handler);
+          } else {
+            navigator.mediaSession.setActionHandler(action as MediaSessionAction, null);
+          }
+        } catch (e) {
+          console.debug(`Action ${action} not supported by this browser`);
+        }
+      });
 
-      if (handlers.onStop) {
-        navigator.mediaSession.setActionHandler('stop', handlers.onStop);
-      }
-
-      // Track navigation
-      if (handlers.onPreviousTrack) {
-        navigator.mediaSession.setActionHandler('previoustrack', handlers.onPreviousTrack);
-      }
-
-      if (handlers.onNextTrack) {
-        navigator.mediaSession.setActionHandler('nexttrack', handlers.onNextTrack);
-      }
-
-      // Seeking
-      if (handlers.onSeekBackward) {
-        navigator.mediaSession.setActionHandler('seekbackward', handlers.onSeekBackward);
-      }
-
-      if (handlers.onSeekForward) {
-        navigator.mediaSession.setActionHandler('seekforward', handlers.onSeekForward);
-      }
-
+      // Special case for seekto
       if (handlers.onSeekTo) {
         navigator.mediaSession.setActionHandler('seekto', (details) => {
           if (details.seekTime !== undefined && handlers.onSeekTo) {
             handlers.onSeekTo(details.seekTime);
           }
         });
+      } else {
+        navigator.mediaSession.setActionHandler('seekto', null);
       }
 
       console.log('✅ Media Session action handlers registered');
@@ -171,7 +173,7 @@ export class MediaSessionService {
       navigator.mediaSession.metadata = null;
       navigator.mediaSession.playbackState = 'none';
 
-      // Clear all action handlers
+      // Clear all possible action handlers
       const actions: MediaSessionAction[] = [
         'play',
         'pause',
@@ -181,13 +183,14 @@ export class MediaSessionService {
         'previoustrack',
         'nexttrack',
         'seekto',
+        'skipad',
       ];
 
       actions.forEach((action) => {
         try {
           navigator.mediaSession.setActionHandler(action, null);
         } catch (e) {
-          // Some actions might not be supported
+          // ignore unsupported
         }
       });
 
@@ -210,6 +213,21 @@ export class MediaSessionService {
     }
 
     return artist;
+  }
+
+  /**
+   * Ensure URL is absolute for system notifications
+   */
+  private getAbsoluteUrl(url?: string): string | undefined {
+    if (!url) return undefined;
+    if (url.startsWith('http') || url.startsWith('data:') || url.startsWith('blob:')) return url;
+    
+    // Resolve relative URL
+    try {
+      return new URL(url, window.location.origin).href;
+    } catch (e) {
+      return url;
+    }
   }
 
   /**

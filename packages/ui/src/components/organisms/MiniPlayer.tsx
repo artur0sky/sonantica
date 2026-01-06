@@ -1,11 +1,4 @@
-/**
- * Mini Player Component
- *
- * Sticky bottom player inspired by SoundCloud.
- * "Functional elegance" - minimal but complete controls.
- * Consistent with Sonántica's premium atomic system.
- */
-
+import React from "react";
 import { usePlayerStore, useQueueStore } from "@sonantica/player-core";
 import { useUIStore } from "../../stores/uiStore";
 import { useAnalyzerStore, useWaveformStore } from "@sonantica/audio-analyzer";
@@ -66,6 +59,52 @@ export function MiniPlayer({ actionButtons }: MiniPlayerProps = {}) {
 
   const { repeatMode, toggleRepeat, isShuffled, toggleShuffle } =
     useQueueStore();
+  const [featuredButtonIndex, setFeaturedButtonIndex] = React.useState(3); // Default to Queue (index 3)
+  const [showAllButtons, setShowAllButtons] = React.useState(false);
+
+  const sidebarButtons = [
+    {
+      id: "visualizer",
+      icon: IconActivityHeartbeat,
+      label: "Visualizer",
+      action: toggleVisualization,
+      isActive: isVisualizationEnabled,
+    },
+    {
+      id: "eq",
+      icon: IconAdjustmentsHorizontal,
+      label: "Equalizer",
+      action: toggleEQ,
+    },
+    {
+      id: "lyrics",
+      icon: IconMicrophone,
+      label: "Lyrics",
+      action: toggleLyrics,
+    },
+    {
+      id: "queue",
+      icon: IconPlaylist,
+      label: "Queue",
+      action: toggleQueue,
+    },
+    {
+      id: "discovery",
+      icon: IconSparkles,
+      label: "Discovery",
+      action: toggleRecommendations,
+    },
+  ];
+
+  const handleNextButton = () => {
+    setFeaturedButtonIndex((prev) => (prev + 1) % sidebarButtons.length);
+  };
+
+  const handlePrevButton = () => {
+    setFeaturedButtonIndex(
+      (prev) => (prev - 1 + sidebarButtons.length) % sidebarButtons.length
+    );
+  };
   const getWaveform = useWaveformStore((state) => state.getWaveform);
   const spectrum = useAnalyzerStore((state) => state.spectrum);
   const bands = spectrum ? spectrum.bands.map((b) => b.amplitude) : undefined;
@@ -104,7 +143,15 @@ export function MiniPlayer({ actionButtons }: MiniPlayerProps = {}) {
       {/* Player Controls */}
       <div className="flex items-center px-4 md:px-6 h-16 relative z-10">
         {/* Section 1: Track Info (Left) */}
-        <div className="flex-1 min-w-0 flex items-center gap-3">
+        <motion.div
+          drag="x"
+          dragConstraints={{ left: 0, right: 0 }}
+          onDragEnd={(_, info) => {
+            if (info.offset.x > 80) previous();
+            else if (info.offset.x < -80) next();
+          }}
+          className="flex-1 min-w-0 flex items-center gap-3 relative cursor-grab active:cursor-grabbing"
+        >
           <motion.div
             layoutId="player-artwork"
             onClick={togglePlayerExpanded}
@@ -140,7 +187,7 @@ export function MiniPlayer({ actionButtons }: MiniPlayerProps = {}) {
               {actionButtons}
             </div>
           )}
-        </div>
+        </motion.div>
 
         {/* Section 2: Playback Controls (Center) */}
         <div className="flex items-center justify-center gap-2 md:gap-4 mx-4">
@@ -182,41 +229,85 @@ export function MiniPlayer({ actionButtons }: MiniPlayerProps = {}) {
             />
           </div>
 
-          <ActionIconButton
-            icon={IconActivityHeartbeat}
-            onClick={toggleVisualization}
-            isActive={isVisualizationEnabled}
-            size="xs"
-            title="Visualizer"
-          />
+          {/* Mobile Swipeable Button / Extended Menu */}
+          <div className="flex items-center gap-1 md:gap-2 relative">
+            <motion.div
+              layout
+              className={cn(
+                "flex items-center gap-1 transition-all duration-300",
+                showAllButtons
+                  ? "bg-white/5 rounded-full p-1 border border-white/10 pr-2"
+                  : ""
+              )}
+            >
+              {sidebarButtons.map((btn, idx) => {
+                const isFeatured = idx === featuredButtonIndex;
+                const shouldShow = showAllButtons || isFeatured;
 
-          <ActionIconButton
-            icon={IconAdjustmentsHorizontal}
-            onClick={toggleEQ}
-            size="xs"
-            title="Equalizer"
-          />
+                if (!shouldShow) return null;
 
-          <ActionIconButton
-            icon={IconMicrophone}
-            onClick={toggleLyrics}
-            size="xs"
-            title="Lyrics"
-          />
+                return (
+                  <motion.div
+                    key={btn.id}
+                    layout
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.8, opacity: 0 }}
+                    {...(isFeatured && !showAllButtons
+                      ? {
+                          drag: "x",
+                          dragConstraints: { left: 0, right: 0 },
+                          onDragEnd: (_: any, info: any) => {
+                            if (info.offset.x > 30) handlePrevButton();
+                            else if (info.offset.x < -30) handleNextButton();
+                          },
+                        }
+                      : {})}
+                  >
+                    <ActionIconButton
+                      icon={btn.icon}
+                      onClick={() => {
+                        btn.action();
+                        if (showAllButtons) setShowAllButtons(false);
+                      }}
+                      onContextMenu={(e: React.MouseEvent) => {
+                        e.preventDefault();
+                        setShowAllButtons(true);
+                      }}
+                      onPointerDown={() => {
+                        const timer = setTimeout(
+                          () => setShowAllButtons(true),
+                          600
+                        );
+                        const clearTimer = () => {
+                          clearTimeout(timer);
+                          window.removeEventListener("pointerup", clearTimer);
+                        };
+                        window.addEventListener("pointerup", clearTimer);
+                      }}
+                      isActive={"isActive" in btn ? btn.isActive : false}
+                      size="xs"
+                      title={btn.label}
+                      className={cn(
+                        "transition-all",
+                        isFeatured && !showAllButtons
+                          ? "scale-110 bg-white/10"
+                          : "opacity-60 hover:opacity-100"
+                      )}
+                    />
+                  </motion.div>
+                );
+              })}
+            </motion.div>
 
-          <ActionIconButton
-            icon={IconPlaylist}
-            onClick={toggleQueue}
-            size="xs"
-            title="Queue"
-          />
-
-          <ActionIconButton
-            icon={IconSparkles}
-            onClick={toggleRecommendations}
-            size="xs"
-            title="Discovery"
-          />
+            {/* Backdrop to close menu */}
+            {showAllButtons && (
+              <div
+                className="fixed inset-0 z-[-1]"
+                onClick={() => setShowAllButtons(false)}
+              />
+            )}
+          </div>
         </div>
       </div>
     </motion.div>

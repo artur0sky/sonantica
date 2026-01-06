@@ -8,7 +8,7 @@
 import { PlayerButton, PlayerButtonProps } from "./PlayerButton";
 
 interface ActionIconButtonProps extends Omit<PlayerButtonProps, "onClick"> {
-  onClick: () => void;
+  onClick: (e?: React.MouseEvent) => void;
 }
 
 export function ActionIconButton(props: ActionIconButtonProps) {
