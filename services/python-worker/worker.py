@@ -159,6 +159,8 @@ class AudioRepository:
                 track.duration_seconds = meta["duration"]
                 track.track_number = meta["track_number"]
                 track.genre = meta["genre"]
+                track.format = meta["format"]  # Should update format if it somehow changes (e.g. re-rip)
+                track.bitrate = meta["bitrate"] # Should update quality stats too
                 track.updated_at = datetime.datetime.now(datetime.timezone.utc)
                 action = "Updated"
             else:
@@ -169,7 +171,7 @@ class AudioRepository:
                     artist_id=artist_id,
                     album_id=album_id,
                     duration_seconds=meta["duration"],
-                    format="file",
+                    format=meta["format"],
                     bitrate=meta["bitrate"],
                     sample_rate=meta["sample_rate"],
                     channels=meta["channels"],
@@ -288,6 +290,7 @@ def analyze_audio(file_path):
             "bitrate": 0,
             "sample_rate": 0,
             "channels": 0,
+            "format": path.suffix.lower().lstrip('.'), # Correct format extraction
             "title": path.stem, # Default to filename
             "artist": "Unknown Artist",
             "album": "Unknown Album",
