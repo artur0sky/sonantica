@@ -11,17 +11,17 @@ import type { PlaybackEventData } from '../types';
 
 interface PlaybackTrackingOptions {
   trackId: string;
-  albumId: string;
-  artistId: string;
+  albumId?: string;
+  artistId?: string;
   duration: number;
-  codec: string;
-  bitrate: number;
-  sampleRate: number;
-  source: 'library' | 'playlist' | 'queue' | 'recommendation' | 'search';
+  codec?: string;
+  bitrate?: number;
+  sampleRate?: number;
+  source?: 'library' | 'playlist' | 'queue' | 'recommendation' | 'search';
   sourceId?: string;
-  eqEnabled: boolean;
+  eqEnabled?: boolean;
   eqPreset?: string;
-  dspEffects: string[];
+  dspEffects?: string[];
 }
 
 interface PlaybackState {
@@ -32,6 +32,7 @@ interface PlaybackState {
 
 /**
  * Hook for tracking playback events
+ * Automatically tracks start/pause/resume based on state changes
  */
 export function usePlaybackTracking(
   options: PlaybackTrackingOptions,
@@ -42,161 +43,77 @@ export function usePlaybackTracking(
   
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastProgressRef = useRef<number>(0);
-  const playbackStartTimeRef = useRef<number | null>(null);
+  const lastStateRef = useRef<boolean>(false);
+  const lastTrackIdRef = useRef<string | null>(null);
+  const isCompletedRef = useRef<boolean>(false);
   
+  // Common data for events
+  const getEventData = useCallback((action: string): PlaybackEventData => ({
+    type: 'playback',
+    action: action as any,
+    trackId: options.trackId,
+    albumId: options.albumId || 'unknown',
+    artistId: options.artistId || 'unknown',
+    position: state.position,
+    duration: options.duration,
+    volume: state.volume,
+    codec: options.codec || 'unknown',
+    bitrate: options.bitrate || 0,
+    sampleRate: options.sampleRate || 0,
+    source: options.source || 'library',
+    sourceId: options.sourceId,
+    eqEnabled: options.eqEnabled || false,
+    eqPreset: options.eqPreset,
+    dspEffects: options.dspEffects || [],
+  }), [options, state]);
+
   // Track playback start
   const trackPlaybackStart = useCallback(() => {
-    playbackStartTimeRef.current = Date.now();
     startPlaybackTracking(options.trackId);
-    
-    const data: PlaybackEventData = {
-      type: 'playback',
-      action: 'start',
-      trackId: options.trackId,
-      albumId: options.albumId,
-      artistId: options.artistId,
-      position: state.position,
-      duration: options.duration,
-      volume: state.volume,
-      codec: options.codec,
-      bitrate: options.bitrate,
-      sampleRate: options.sampleRate,
-      source: options.source,
-      sourceId: options.sourceId,
-      eqEnabled: options.eqEnabled,
-      eqPreset: options.eqPreset,
-      dspEffects: options.dspEffects,
-    };
-    
-    trackEvent('playback.start', data);
-  }, [options, state.position, state.volume, trackEvent, startPlaybackTracking]);
+    trackEvent('playback.start', getEventData('start'));
+    isCompletedRef.current = false;
+  }, [options.trackId, getEventData, startPlaybackTracking, trackEvent]);
   
   // Track playback pause
   const trackPlaybackPause = useCallback(() => {
-    const data: PlaybackEventData = {
-      type: 'playback',
-      action: 'pause',
-      trackId: options.trackId,
-      albumId: options.albumId,
-      artistId: options.artistId,
-      position: state.position,
-      duration: options.duration,
-      volume: state.volume,
-      codec: options.codec,
-      bitrate: options.bitrate,
-      sampleRate: options.sampleRate,
-      source: options.source,
-      sourceId: options.sourceId,
-      eqEnabled: options.eqEnabled,
-      eqPreset: options.eqPreset,
-      dspEffects: options.dspEffects,
-    };
-    
-    trackEvent('playback.pause', data);
-  }, [options, state.position, state.volume, trackEvent]);
+    trackEvent('playback.pause', getEventData('pause'));
+  }, [getEventData, trackEvent]);
   
   // Track playback resume
   const trackPlaybackResume = useCallback(() => {
-    const data: PlaybackEventData = {
-      type: 'playback',
-      action: 'resume',
-      trackId: options.trackId,
-      albumId: options.albumId,
-      artistId: options.artistId,
-      position: state.position,
-      duration: options.duration,
-      volume: state.volume,
-      codec: options.codec,
-      bitrate: options.bitrate,
-      sampleRate: options.sampleRate,
-      source: options.source,
-      sourceId: options.sourceId,
-      eqEnabled: options.eqEnabled,
-      eqPreset: options.eqPreset,
-      dspEffects: options.dspEffects,
-    };
-    
-    trackEvent('playback.resume', data);
-  }, [options, state.position, state.volume, trackEvent]);
+    trackEvent('playback.resume', getEventData('resume'));
+  }, [getEventData, trackEvent]);
   
   // Track playback complete
   const trackPlaybackComplete = useCallback(() => {
+    if (isCompletedRef.current) return;
+    isCompletedRef.current = true;
+    
     endPlaybackTracking();
-    
-    const data: PlaybackEventData = {
-      type: 'playback',
-      action: 'complete',
-      trackId: options.trackId,
-      albumId: options.albumId,
-      artistId: options.artistId,
+    trackEvent('playback.complete', {
+      ...getEventData('complete'),
       position: options.duration,
-      duration: options.duration,
-      volume: state.volume,
-      codec: options.codec,
-      bitrate: options.bitrate,
-      sampleRate: options.sampleRate,
-      source: options.source,
-      sourceId: options.sourceId,
-      eqEnabled: options.eqEnabled,
-      eqPreset: options.eqPreset,
-      dspEffects: options.dspEffects,
-    };
-    
-    trackEvent('playback.complete', data);
-  }, [options, state.volume, trackEvent, endPlaybackTracking]);
+    });
+  }, [options.duration, getEventData, trackEvent, endPlaybackTracking]);
   
   // Track seek
   const trackSeek = useCallback((from: number, to: number) => {
-    const data: PlaybackEventData = {
-      type: 'playback',
-      action: 'seek',
-      trackId: options.trackId,
-      albumId: options.albumId,
-      artistId: options.artistId,
+    trackEvent('playback.seek', {
+      ...getEventData('seek'),
       position: to,
-      duration: options.duration,
-      volume: state.volume,
-      codec: options.codec,
-      bitrate: options.bitrate,
-      sampleRate: options.sampleRate,
-      source: options.source,
-      sourceId: options.sourceId,
-      eqEnabled: options.eqEnabled,
-      eqPreset: options.eqPreset,
-      dspEffects: options.dspEffects,
       seekFrom: from,
       seekTo: to,
-    };
-    
-    trackEvent('playback.seek', data);
-  }, [options, state.volume, trackEvent]);
+    });
+  }, [getEventData, trackEvent]);
   
   // Track skip
   const trackSkip = useCallback((reason: 'user' | 'error' | 'next_track' = 'user') => {
     endPlaybackTracking();
-    
-    const data: PlaybackEventData = {
-      type: 'playback',
-      action: 'skip',
-      trackId: options.trackId,
-      albumId: options.albumId,
-      artistId: options.artistId,
-      position: state.position,
-      duration: options.duration,
-      volume: state.volume,
-      codec: options.codec,
-      bitrate: options.bitrate,
-      sampleRate: options.sampleRate,
-      source: options.source,
-      sourceId: options.sourceId,
-      eqEnabled: options.eqEnabled,
-      eqPreset: options.eqPreset,
-      dspEffects: options.dspEffects,
+    trackEvent('playback.skip', {
+      ...getEventData('skip'),
       skipReason: reason,
-    };
-    
-    trackEvent('playback.skip', data);
-  }, [options, state.position, state.volume, trackEvent, endPlaybackTracking]);
+    });
+  }, [getEventData, trackEvent, endPlaybackTracking]);
   
   // Track progress (periodic updates)
   const trackProgress = useCallback(() => {
@@ -207,33 +124,57 @@ export function usePlaybackTracking(
     
     lastProgressRef.current = state.position;
     updatePlaybackPosition(state.position);
-    
-    const data: PlaybackEventData = {
-      type: 'playback',
-      action: 'progress',
-      trackId: options.trackId,
-      albumId: options.albumId,
-      artistId: options.artistId,
-      position: state.position,
-      duration: options.duration,
-      volume: state.volume,
-      codec: options.codec,
-      bitrate: options.bitrate,
-      sampleRate: options.sampleRate,
-      source: options.source,
-      sourceId: options.sourceId,
-      eqEnabled: options.eqEnabled,
-      eqPreset: options.eqPreset,
-      dspEffects: options.dspEffects,
-    };
-    
-    trackEvent('playback.progress', data);
-  }, [options, state.position, state.volume, trackEvent, updatePlaybackPosition]);
+    trackEvent('playback.progress', getEventData('progress'));
+  }, [state.position, getEventData, trackEvent, updatePlaybackPosition]);
   
+  // Auto-track state changes
+  useEffect(() => {
+    if (!options.trackId) return;
+
+    // 1. Handle Track Change
+    if (options.trackId !== lastTrackIdRef.current) {
+      lastTrackIdRef.current = options.trackId;
+      lastProgressRef.current = 0;
+      isCompletedRef.current = false;
+      
+      if (state.isPlaying) {
+        trackPlaybackStart();
+      }
+    }
+
+    // 2. Handle Play/Pause transitions
+    if (state.isPlaying !== lastStateRef.current) {
+      if (state.isPlaying) {
+        if (state.position < 1) {
+          trackPlaybackStart();
+        } else {
+          trackPlaybackResume();
+        }
+      } else {
+        // Check if actually finished or just paused
+        const isNearEnd = options.duration > 0 && state.position >= options.duration - 1;
+        if (isNearEnd) {
+          trackPlaybackComplete();
+        } else {
+          trackPlaybackPause();
+        }
+      }
+      lastStateRef.current = state.isPlaying;
+    }
+  }, [
+    state.isPlaying, 
+    options.trackId, 
+    options.duration,
+    state.position,
+    trackPlaybackStart, 
+    trackPlaybackResume, 
+    trackPlaybackPause, 
+    trackPlaybackComplete
+  ]);
+
   // Set up progress tracking interval
   useEffect(() => {
     if (state.isPlaying) {
-      // Track progress every 10 seconds
       progressIntervalRef.current = setInterval(trackProgress, 10000);
     } else {
       if (progressIntervalRef.current) {
