@@ -145,7 +145,7 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   return (
     <div
-      className="h-[100dvh] pt-[max(env(safe-area-inset-top),2rem)] flex flex-col bg-bg text-text overflow-hidden relative"
+      className="h-[100dvh] pt-[max(env(safe-area-inset-top),2rem)] lg:pt-[env(safe-area-inset-top)] flex flex-col bg-bg text-text overflow-hidden relative"
       style={
         {
           "--alphabet-right": `${totalRightOffset}px`,
