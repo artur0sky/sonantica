@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 
@@ -17,6 +18,9 @@ import (
 // GetTracks returns all tracks from the database with artist and album names
 func GetTracks(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+
+	// TODO: Add pagination
+	slog.Info("Fetching all tracks", "client_ip", r.RemoteAddr)
 
 	query := `
 		SELECT 
@@ -34,6 +38,7 @@ func GetTracks(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := database.DB.Query(r.Context(), query)
 	if err != nil {
+		slog.Error("Failed to query tracks", "error", err)
 		http.Error(w, fmt.Sprintf("Query error: %v", err), http.StatusInternalServerError)
 		return
 	}
@@ -41,6 +46,7 @@ func GetTracks(w http.ResponseWriter, r *http.Request) {
 
 	tracks, err := pgx.CollectRows(rows, pgx.RowToStructByName[models.Track])
 	if err != nil {
+		slog.Error("Failed to scan tracks rows", "error", err)
 		http.Error(w, fmt.Sprintf("Row scan error: %v", err), http.StatusInternalServerError)
 		return
 	}
@@ -56,6 +62,7 @@ func GetArtists(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := database.DB.Query(r.Context(), "SELECT id, name, bio, image_url, created_at FROM artists")
 	if err != nil {
+		slog.Error("Failed to query artists", "error", err)
 		http.Error(w, fmt.Sprintf("Query error: %v", err), http.StatusInternalServerError)
 		return
 	}
@@ -63,6 +70,7 @@ func GetArtists(w http.ResponseWriter, r *http.Request) {
 
 	artists, err := pgx.CollectRows(rows, pgx.RowToStructByName[models.Artist])
 	if err != nil {
+		slog.Error("Failed to scan artists rows", "error", err)
 		http.Error(w, fmt.Sprintf("Row scan error: %v", err), http.StatusInternalServerError)
 		return
 	}
@@ -87,6 +95,7 @@ func GetAlbums(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := database.DB.Query(r.Context(), query)
 	if err != nil {
+		slog.Error("Failed to query albums", "error", err)
 		http.Error(w, fmt.Sprintf("Query error: %v", err), http.StatusInternalServerError)
 		return
 	}
@@ -94,6 +103,7 @@ func GetAlbums(w http.ResponseWriter, r *http.Request) {
 
 	albums, err := pgx.CollectRows(rows, pgx.RowToStructByName[models.Album])
 	if err != nil {
+		slog.Error("Failed to scan albums rows", "error", err)
 		http.Error(w, fmt.Sprintf("Row scan error: %v", err), http.StatusInternalServerError)
 		return
 	}
@@ -115,6 +125,7 @@ func ScanLibrary(w http.ResponseWriter, r *http.Request) {
 		mediaPath = "/media"
 	}
 
+	slog.Info("Manual scan triggered via API", "path", mediaPath)
 	scanner.TriggerScan(mediaPath)
 
 	w.WriteHeader(http.StatusAccepted)
@@ -149,6 +160,8 @@ func GetTracksByArtist(w http.ResponseWriter, r *http.Request) {
 	artistID := chi.URLParam(r, "id")
 	w.Header().Set("Content-Type", "application/json")
 
+	slog.Info("Fetching tracks by artist", "artist_id", artistID)
+
 	query := `
 		SELECT 
 			t.id, t.title, t.album_id, t.artist_id, t.file_path, t.duration_seconds, 
@@ -166,6 +179,7 @@ func GetTracksByArtist(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := database.DB.Query(r.Context(), query, artistID)
 	if err != nil {
+		slog.Error("Failed to query tracks by artist", "error", err, "artist_id", artistID)
 		http.Error(w, fmt.Sprintf("Query error: %v", err), http.StatusInternalServerError)
 		return
 	}
@@ -173,6 +187,7 @@ func GetTracksByArtist(w http.ResponseWriter, r *http.Request) {
 
 	tracks, err := pgx.CollectRows(rows, pgx.RowToStructByName[models.Track])
 	if err != nil {
+		slog.Error("Failed to scan artist tracks rows", "error", err)
 		http.Error(w, fmt.Sprintf("Row scan error: %v", err), http.StatusInternalServerError)
 		return
 	}
@@ -186,6 +201,8 @@ func GetTracksByArtist(w http.ResponseWriter, r *http.Request) {
 func GetTracksByAlbum(w http.ResponseWriter, r *http.Request) {
 	albumID := chi.URLParam(r, "id")
 	w.Header().Set("Content-Type", "application/json")
+
+	slog.Info("Fetching tracks by album", "album_id", albumID)
 
 	query := `
 		SELECT 
@@ -204,6 +221,7 @@ func GetTracksByAlbum(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := database.DB.Query(r.Context(), query, albumID)
 	if err != nil {
+		slog.Error("Failed to query tracks by album", "error", err, "album_id", albumID)
 		http.Error(w, fmt.Sprintf("Query error: %v", err), http.StatusInternalServerError)
 		return
 	}
@@ -211,6 +229,7 @@ func GetTracksByAlbum(w http.ResponseWriter, r *http.Request) {
 
 	tracks, err := pgx.CollectRows(rows, pgx.RowToStructByName[models.Track])
 	if err != nil {
+		slog.Error("Failed to scan album tracks rows", "error", err)
 		http.Error(w, fmt.Sprintf("Row scan error: %v", err), http.StatusInternalServerError)
 		return
 	}
