@@ -22,6 +22,7 @@ COPY packages/lyrics/package.json ./packages/lyrics/
 COPY packages/ui/package.json ./packages/ui/
 COPY packages/recommendations/package.json ./packages/recommendations/
 COPY packages/offline-manager/package.json ./packages/offline-manager/
+COPY packages/analytics/package.json ./packages/analytics/
 COPY apps/mobile/package.json ./apps/mobile/
 COPY apps/web/package.json ./apps/web/
 
@@ -39,11 +40,13 @@ COPY packages/lyrics ./packages/lyrics
 COPY packages/ui ./packages/ui
 COPY packages/recommendations ./packages/recommendations
 COPY packages/offline-manager ./packages/offline-manager
+COPY packages/analytics ./packages/analytics
 COPY apps/mobile ./apps/mobile
 COPY apps/web ./apps/web
 
 # Build packages (in dependency order)
 RUN pnpm --filter @sonantica/shared build
+RUN pnpm --filter @sonantica/analytics build
 RUN pnpm --filter @sonantica/lyrics build
 RUN pnpm --filter @sonantica/metadata build
 RUN pnpm --filter @sonantica/player-core build
