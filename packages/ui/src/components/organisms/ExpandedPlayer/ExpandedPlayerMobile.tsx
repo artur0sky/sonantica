@@ -68,7 +68,7 @@ export function ExpandedPlayerMobile({
   return (
     <div className="lg:hidden flex flex-col h-[100dvh] bg-black overflow-hidden overscroll-none select-none">
       {/* Mobile Sticky Header - Always on top */}
-      <header className="h-14 flex flex-none justify-between items-center px-4 border-b border-white/5 bg-black/40 backdrop-blur-xl z-30">
+      <header className="h-14 flex flex-none justify-between items-center px-6 md:px-12 border-b border-white/5 bg-black/40 backdrop-blur-xl z-30">
         <PlayerButton
           icon={IconChevronDown}
           onClick={onClose}
@@ -110,19 +110,19 @@ export function ExpandedPlayerMobile({
         {/* SCROLLING OVER: Content Area */}
         <div className="relative z-10 flex flex-col">
           {/* Main Info & Controls Overlay (Initially reveals the cover art, then overlays it) */}
-          <div className="flex flex-col gap-6 px-4 pb-8 bg-gradient-to-t from-black via-black/95 to-transparent pt-32 -mt-32">
+          <div className="flex flex-col gap-8 px-6 md:px-16 lg:px-24 pb-12 bg-gradient-to-t from-black via-black/95 to-transparent pt-32 -mt-32">
             {/* Track Info */}
             <div className="flex flex-col gap-4">
               <div className="text-center w-full">
                 <motion.h1
                   layoutId="player-title-mobile"
-                  className="text-2xl font-black tracking-tight line-clamp-2"
+                  className="text-2xl md:text-4xl font-black tracking-tight line-clamp-2"
                 >
                   {currentTrack.metadata?.title || "Unknown Title"}
                 </motion.h1>
                 <motion.p
                   layoutId="player-artist-mobile"
-                  className="text-lg text-text-muted font-bold mt-1"
+                  className="text-lg md:text-2xl text-text-muted font-bold mt-1"
                 >
                   {formatArtists(currentTrack.metadata?.artist)}
                 </motion.p>
@@ -179,7 +179,7 @@ export function ExpandedPlayerMobile({
           </div>
 
           {/* WIDGETS Section (Scrolling Over) */}
-          <div className="bg-black flex flex-col gap-10 px-4 py-10 border-t border-white/5 shadow-[0_-20px_40px_rgba(0,0,0,0.5)]">
+          <div className="bg-black flex flex-col gap-12 px-6 md:px-16 lg:px-24 py-12 border-t border-white/5 shadow-[0_-20px_40px_rgba(0,0,0,0.5)]">
             <ArtistPhotoSection />
             <WidgetsSection />
 

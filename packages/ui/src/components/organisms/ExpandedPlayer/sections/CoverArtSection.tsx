@@ -37,10 +37,10 @@ export function CoverArtSection({
   // Desktop: Pure gallery style (no interactions)
   if (!enableGestures) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex items-center justify-center h-full max-h-full min-h-0 overflow-hidden">
         <motion.div
           layoutId="player-artwork-desktop"
-          className="relative aspect-square w-full h-full"
+          className="relative aspect-square w-full h-full max-h-full max-w-full"
           whileHover={{ scale: 1.005 }}
           transition={{ type: "spring", stiffness: 300, damping: 20 }}
         >

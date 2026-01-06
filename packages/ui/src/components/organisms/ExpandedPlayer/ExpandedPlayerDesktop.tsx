@@ -63,7 +63,7 @@ export function ExpandedPlayerDesktop({
   onToggleQueue,
 }: DesktopLayoutProps) {
   return (
-    <div className="hidden lg:grid lg:grid-cols-[1.618fr_1fr] lg:gap-8 xl:gap-12 h-full p-8 xl:p-12 max-w-screen-2xl mx-auto">
+    <div className="hidden lg:grid lg:grid-cols-[1.618fr_1fr] lg:gap-12 xl:gap-20 h-full p-8 xl:p-12 2xl:p-16 max-w-screen-2xl mx-auto items-stretch overflow-hidden">
       {/* LEFT: Pure Cover Art - Fibonacci's Largest Square (φ²) */}
       <CoverArtSection
         coverArt={currentTrack.metadata?.coverArt}
@@ -71,8 +71,8 @@ export function ExpandedPlayerDesktop({
         enableGestures={false}
       />
 
-      {/* RIGHT: Fibonacci Spiral - Two rectangles (φ top, 1 bottom) */}
-      <div className="grid grid-rows-[1.618fr_1fr] gap-6 xl:gap-8 min-h-0">
+      {/* RIGHT: Content Column */}
+      <div className="grid grid-rows-[auto_1fr] gap-8 min-h-0 overflow-hidden">
         {/* TOP RIGHT: Info Section (φ rectangle) */}
         <div className="flex flex-col gap-4 xl:gap-6 min-h-0">
           {/* Header */}
