@@ -84,9 +84,9 @@ The current logging implementation is **insufficient** for the requested "strong
 - [x] **Tracing:** Inject `X-Request-ID` in Go middleware and pass it to consumers.
 
 ### Phase 2: Core Stability
-- [ ] Add **Pagination** to `GetTracks`, `GetAlbums`, `GetArtists`.
-- [ ] Add **Gzip Compression**.
-- [ ] Fix **CORS** restrictions.
+- [x] Add **Pagination** to `GetTracks`, `GetAlbums`, `GetArtists`.
+- [x] Add **Gzip Compression**.
+- [x] Fix **CORS** restrictions.
 
 ### Phase 3: Security
 - [ ] Implement **JWT Middleware**.

@@ -19,8 +19,23 @@ import (
 func GetTracks(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	// TODO: Add pagination
-	slog.Info("Fetching all tracks", "client_ip", r.RemoteAddr)
+	limit := 50
+	offset := 0
+
+	// Parse pagination params
+	if l := r.URL.Query().Get("limit"); l != "" {
+		fmt.Sscanf(l, "%d", &limit)
+	}
+	if o := r.URL.Query().Get("offset"); o != "" {
+		fmt.Sscanf(o, "%d", &offset)
+	}
+
+	// Cap limit to avoid massive queries
+	if limit > 100 {
+		limit = 100
+	}
+
+	slog.Info("Fetching tracks", "limit", limit, "offset", offset, "client_ip", r.RemoteAddr)
 
 	query := `
 		SELECT 
@@ -34,9 +49,10 @@ func GetTracks(w http.ResponseWriter, r *http.Request) {
 		LEFT JOIN artists a ON t.artist_id = a.id
 		LEFT JOIN albums al ON t.album_id = al.id
 		ORDER BY t.created_at DESC
+		LIMIT $1 OFFSET $2
 	`
 
-	rows, err := database.DB.Query(r.Context(), query)
+	rows, err := database.DB.Query(r.Context(), query, limit, offset)
 	if err != nil {
 		slog.Error("Failed to query tracks", "error", err)
 		http.Error(w, fmt.Sprintf("Query error: %v", err), http.StatusInternalServerError)
@@ -53,6 +69,8 @@ func GetTracks(w http.ResponseWriter, r *http.Request) {
 
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"tracks": tracks,
+		"limit":  limit,
+		"offset": offset,
 	})
 }
 
@@ -60,7 +78,23 @@ func GetTracks(w http.ResponseWriter, r *http.Request) {
 func GetArtists(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	rows, err := database.DB.Query(r.Context(), "SELECT id, name, bio, image_url, created_at FROM artists")
+	limit := 50
+	offset := 0
+
+	if l := r.URL.Query().Get("limit"); l != "" {
+		fmt.Sscanf(l, "%d", &limit)
+	}
+	if o := r.URL.Query().Get("offset"); o != "" {
+		fmt.Sscanf(o, "%d", &offset)
+	}
+
+	if limit > 100 {
+		limit = 100
+	}
+
+	query := "SELECT id, name, bio, image_url, created_at FROM artists LIMIT $1 OFFSET $2"
+
+	rows, err := database.DB.Query(r.Context(), query, limit, offset)
 	if err != nil {
 		slog.Error("Failed to query artists", "error", err)
 		http.Error(w, fmt.Sprintf("Query error: %v", err), http.StatusInternalServerError)
@@ -77,12 +111,28 @@ func GetArtists(w http.ResponseWriter, r *http.Request) {
 
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"artists": artists,
+		"limit":   limit,
+		"offset":  offset,
 	})
 }
 
 // GetAlbums returns all albums from the database with artist names
 func GetAlbums(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+
+	limit := 50
+	offset := 0
+
+	if l := r.URL.Query().Get("limit"); l != "" {
+		fmt.Sscanf(l, "%d", &limit)
+	}
+	if o := r.URL.Query().Get("offset"); o != "" {
+		fmt.Sscanf(o, "%d", &offset)
+	}
+
+	if limit > 100 {
+		limit = 100
+	}
 
 	query := `
 		SELECT 
@@ -91,9 +141,10 @@ func GetAlbums(w http.ResponseWriter, r *http.Request) {
 		FROM albums al
 		LEFT JOIN artists a ON al.artist_id = a.id
 		ORDER BY al.title ASC
+		LIMIT $1 OFFSET $2
 	`
 
-	rows, err := database.DB.Query(r.Context(), query)
+	rows, err := database.DB.Query(r.Context(), query, limit, offset)
 	if err != nil {
 		slog.Error("Failed to query albums", "error", err)
 		http.Error(w, fmt.Sprintf("Query error: %v", err), http.StatusInternalServerError)
@@ -110,6 +161,8 @@ func GetAlbums(w http.ResponseWriter, r *http.Request) {
 
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"albums": albums,
+		"limit":  limit,
+		"offset": offset,
 	})
 }
 

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"sonantica-core/analytics"
@@ -96,11 +97,18 @@ func main() {
 	// Middleware Stack
 	r.Use(middleware.RequestID) // Inject X-Request-Id
 	r.Use(middleware.RealIP)
-	r.Use(middleware.Logger) // Default logger is okay, but structured is better. We'll keep it for now for simple console view, or replace it.
-	// Ideally we replace middleware.Logger with a custom slog middleware.
+	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+	r.Use(middleware.Compress(5)) // Enable Gzip compression
+
+	// Configurable CORS
+	allowedOrigins := os.Getenv("ALLOWED_ORIGINS")
+	if allowedOrigins == "" {
+		allowedOrigins = "http://localhost:5173,http://localhost:3000,http://localhost:8080" // Defaults for dev
+	}
+
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"*"}, // TODO: tightened in production
+		AllowedOrigins:   strings.Split(allowedOrigins, ","),
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token", "Range"},
 		ExposedHeaders:   []string{"Link", "Content-Length", "Content-Range", "Accept-Ranges"},
