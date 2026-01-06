@@ -145,7 +145,7 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   return (
     <div
-      className="h-[100dvh] flex flex-col bg-bg text-text overflow-hidden relative"
+      className="h-[100dvh] pt-[max(env(safe-area-inset-top),2rem)] flex flex-col bg-bg text-text overflow-hidden relative"
       style={
         {
           "--alphabet-right": `${totalRightOffset}px`,
@@ -338,7 +338,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             animate={{ x: 0 }}
             exit={{ x: "-100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-y-0 left-0 w-[280px] bg-surface z-[70] shadow-2xl border-r border-border overflow-y-auto"
+            className="fixed inset-y-0 left-0 w-[280px] bg-surface z-[70] shadow-2xl border-r border-border overflow-y-auto pt-[max(env(safe-area-inset-top),2rem)]"
           >
             <LeftSidebar isCollapsed={false} />
           </motion.aside>
@@ -353,7 +353,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-y-0 right-0 w-[320px] bg-surface z-[70] shadow-2xl border-l border-border overflow-y-auto"
+            className="fixed inset-y-0 right-0 w-[320px] bg-surface z-[70] shadow-2xl border-l border-border overflow-y-auto pt-[max(env(safe-area-inset-top),2rem)]"
           >
             <RightSidebar isCollapsed={false} />
           </motion.aside>
@@ -368,7 +368,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-y-0 right-0 w-[320px] bg-surface z-[70] shadow-2xl border-l border-border overflow-y-auto"
+            className="fixed inset-y-0 right-0 w-[320px] bg-surface z-[70] shadow-2xl border-l border-border overflow-y-auto pt-[max(env(safe-area-inset-top),2rem)]"
           >
             <Suspense fallback={<SidebarLoader />}>
               <LyricsSidebar isCollapsed={false} />
@@ -385,7 +385,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-y-0 right-0 w-[320px] bg-surface z-[70] shadow-2xl border-l border-border overflow-y-auto"
+            className="fixed inset-y-0 right-0 w-[320px] bg-surface z-[70] shadow-2xl border-l border-border overflow-y-auto pt-[max(env(safe-area-inset-top),2rem)]"
           >
             <Suspense fallback={<SidebarLoader />}>
               <EQSidebar isCollapsed={false} />
@@ -402,7 +402,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-y-0 right-0 w-[320px] bg-surface z-[70] shadow-2xl border-l border-border overflow-y-auto"
+            className="fixed inset-y-0 right-0 w-[320px] bg-surface z-[70] shadow-2xl border-l border-border overflow-y-auto pt-[max(env(safe-area-inset-top),2rem)]"
           >
             <Suspense fallback={<SidebarLoader />}>
               <RecommendationsSidebar />

@@ -53,18 +53,21 @@ export class MediaSessionService {
       const metadata = track.metadata;
       const artworkUrl = this.getAbsoluteUrl(metadata?.coverArt);
       
+      // Ensure we have a valid URL before creating the object
+      const artwork = artworkUrl ? [
+          { src: artworkUrl, sizes: '96x96', type: 'image/png' },
+          { src: artworkUrl, sizes: '128x128', type: 'image/png' },
+          { src: artworkUrl, sizes: '192x192', type: 'image/png' },
+          { src: artworkUrl, sizes: '256x256', type: 'image/png' },
+          { src: artworkUrl, sizes: '384x384', type: 'image/png' },
+          { src: artworkUrl, sizes: '512x512', type: 'image/png' },
+        ] : [];
+
       navigator.mediaSession.metadata = new MediaMetadata({
         title: metadata?.title || 'Unknown Track',
         artist: this.formatArtists(metadata?.artist),
         album: metadata?.album || 'Unknown Album',
-        artwork: artworkUrl ? [
-          { src: artworkUrl, sizes: '96x96' },
-          { src: artworkUrl, sizes: '128x128' },
-          { src: artworkUrl, sizes: '192x192' },
-          { src: artworkUrl, sizes: '256x256' },
-          { src: artworkUrl, sizes: '384x384' },
-          { src: artworkUrl, sizes: '512x512' },
-        ] : [],
+        artwork: artwork,
       });
 
       console.log(`🎵 Media Session updated: ${metadata?.title || 'Unknown'}`);

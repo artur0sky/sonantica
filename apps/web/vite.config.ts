@@ -3,13 +3,17 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
+import path from 'path';
+
 // https://vite.dev/config/
 export default defineConfig({
   base: './',
   resolve: {
       alias: {
-        'react': 'react',
-        'react-dom': 'react-dom',
+        'react': path.resolve(__dirname, './node_modules/react'),
+        'react-dom': path.resolve(__dirname, './node_modules/react-dom'),
+        // Force resolution to the source to avoid double-bundling issues if symlinks are weird
+        '@sonantica/mobile': path.resolve(__dirname, '../mobile/src/index.ts'),
       },
   },
   plugins: [
