@@ -174,16 +174,38 @@ type ListeningPattern struct {
 	AverageBitrate       int      `json:"averageBitrate"`
 }
 
+// ArtistMetrics represents analytics for a specific artist
+type ArtistMetrics struct {
+	ArtistID         string          `json:"artistId"`
+	ArtistName       string          `json:"artistName"`
+	Overview         OverviewStats   `json:"overview"`
+	TopTracks        []TopTrack      `json:"topTracks"`
+	PlaybackTimeline []TimelineData  `json:"playbackTimeline"`
+	FanDemographics  []PlatformStats `json:"fanDemographics"`
+}
+
+// AlbumMetrics represents analytics for a specific album
+type AlbumMetrics struct {
+	AlbumID          string         `json:"albumId"`
+	AlbumTitle       string         `json:"albumTitle"`
+	ArtistName       string         `json:"artistName"`
+	Overview         OverviewStats  `json:"overview"`
+	TrackPerformance []TopTrack     `json:"trackPerformance"`
+	PlaybackTimeline []TimelineData `json:"playbackTimeline"`
+}
+
 // QueryFilters represents filters for analytics queries
 type QueryFilters struct {
-	StartDate *time.Time `json:"startDate,omitempty"`
-	EndDate   *time.Time `json:"endDate,omitempty"`
-	Period    *string    `json:"period,omitempty"` // day, week, month, year, all
-	Platform  *string    `json:"platform,omitempty"`
-	Genre     *string    `json:"genre,omitempty"`
-	ArtistID  *string    `json:"artistId,omitempty"`
-	AlbumID   *string    `json:"albumId,omitempty"`
-	GroupBy   *string    `json:"groupBy,omitempty"` // hour, day, week, month
-	Limit     int        `json:"limit,omitempty"`
-	Offset    int        `json:"offset,omitempty"`
+	StartDate  *time.Time `json:"startDate,omitempty"`
+	EndDate    *time.Time `json:"endDate,omitempty"`
+	Period     *string    `json:"period,omitempty"` // day, week, month, year, all
+	Platform   *string    `json:"platform,omitempty"`
+	Genre      *string    `json:"genre,omitempty"`
+	ArtistID   *string    `json:"artistId,omitempty"`
+	AlbumID    *string    `json:"albumId,omitempty"`
+	ArtistName *string    `json:"artistName,omitempty"`
+	AlbumTitle *string    `json:"albumTitle,omitempty"`
+	GroupBy    *string    `json:"groupBy,omitempty"` // hour, day, week, month
+	Limit      int        `json:"limit,omitempty"`
+	Offset     int        `json:"offset,omitempty"`
 }

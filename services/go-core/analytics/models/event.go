@@ -74,11 +74,13 @@ type AnalyticsEvent struct {
 	BrowserVersion string   `json:"browserVersion" db:"browser_version"`
 	OS             string   `json:"os" db:"os"`
 	OSVersion      string   `json:"osVersion" db:"os_version"`
+	DeviceModel    string   `json:"deviceModel" db:"device_model"`
 
 	// Location Context (Privacy-conscious)
-	Locale   string  `json:"locale" db:"locale"`
-	Timezone string  `json:"timezone" db:"timezone"`
-	IPHash   *string `json:"ipHash,omitempty" db:"ip_hash"`
+	Locale    string  `json:"locale" db:"locale"`
+	Timezone  string  `json:"timezone" db:"timezone"`
+	IPHash    *string `json:"ipHash,omitempty" db:"ip_hash"`
+	IPAddress *string `json:"ipAddress,omitempty" db:"ip_address"`
 
 	// Event-specific Data (stored as JSONB)
 	Data map[string]interface{} `json:"data" db:"data"`
@@ -94,9 +96,11 @@ type Session struct {
 	BrowserVersion string     `json:"browserVersion" db:"browser_version"`
 	OS             string     `json:"os" db:"os"`
 	OSVersion      string     `json:"osVersion" db:"os_version"`
+	DeviceModel    string     `json:"deviceModel" db:"device_model"`
 	Locale         string     `json:"locale" db:"locale"`
 	Timezone       string     `json:"timezone" db:"timezone"`
 	IPHash         *string    `json:"ipHash,omitempty" db:"ip_hash"`
+	IPAddress      *string    `json:"ipAddress,omitempty" db:"ip_address"`
 	StartedAt      time.Time  `json:"startedAt" db:"started_at"`
 	EndedAt        *time.Time `json:"endedAt,omitempty" db:"ended_at"`
 	LastHeartbeat  *time.Time `json:"lastHeartbeat,omitempty" db:"last_heartbeat"`

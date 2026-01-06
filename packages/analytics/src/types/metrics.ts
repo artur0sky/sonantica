@@ -32,6 +32,30 @@ export interface DashboardMetrics {
   listeningStreak: StreakData;
 }
 
+/**
+ * Artist specific metrics
+ */
+export interface ArtistMetrics {
+  artistId?: string;
+  artistName: string;
+  overview: OverviewStats;
+  topTracks: TopTrack[];
+  playbackTimeline: TimelineData[];
+  fanDemographics: PlatformStats[];
+}
+
+/**
+ * Album specific metrics
+ */
+export interface AlbumMetrics {
+  albumId?: string;
+  albumTitle: string;
+  artistName: string;
+  overview: OverviewStats;
+  trackPerformance: TopTrack[];
+  playbackTimeline: TimelineData[];
+}
+
 // ============================================================================
 // Overview Statistics
 // ============================================================================
@@ -271,6 +295,8 @@ export interface AnalyticsFilters {
   genre?: string;
   artistId?: string;
   albumId?: string;
+  artistName?: string;
+  albumTitle?: string;
   
   // Aggregation
   groupBy?: 'hour' | 'day' | 'week' | 'month';

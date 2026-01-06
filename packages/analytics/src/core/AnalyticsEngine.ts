@@ -103,6 +103,25 @@ class PlatformDetector {
   static getTimezone(): string {
     return Intl.DateTimeFormat().resolvedOptions().timeZone;
   }
+
+  static getDeviceModel(): string {
+    if (typeof window === 'undefined') return 'unknown';
+    const userAgent = window.navigator.userAgent;
+    
+    // Very basic detection
+    if (/iPhone/.test(userAgent)) return 'iPhone';
+    if (/iPad/.test(userAgent)) return 'iPad';
+    if (/Android/.test(userAgent)) {
+         // Try to extract model: "Android 10; SM-G960F"
+         const match = userAgent.match(/Android[^;]+;\s*([^;]+)/);
+         if (match && match[1]) return match[1].trim(); 
+         return 'Android Device';
+    }
+    if (/Macintosh/.test(userAgent)) return 'Macintosh';
+    if (/Windows/.test(userAgent)) return 'PC';
+    
+    return 'unknown';
+  }
 }
 
 /**
@@ -135,6 +154,7 @@ export class AnalyticsEngine {
     browserVersion: string;
     os: string;
     osVersion: string;
+    deviceModel: string;
     locale: string;
     timezone: string;
   };
@@ -152,6 +172,7 @@ export class AnalyticsEngine {
       browserVersion,
       os,
       osVersion,
+      deviceModel: PlatformDetector.getDeviceModel(),
       locale: PlatformDetector.getLocale(),
       timezone: PlatformDetector.getTimezone(),
     };

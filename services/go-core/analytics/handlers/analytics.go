@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	"sonantica-core/analytics"
@@ -34,6 +36,10 @@ func (h *AnalyticsHandler) IngestEvent(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
+
+	// Capture IP Address
+	ip := getIP(r)
+	event.IPAddress = &ip
 
 	// Create or update session if it's a session event
 	if err := h.handleSessionEvent(&event); err != nil {
@@ -69,7 +75,12 @@ func (h *AnalyticsHandler) IngestEventBatch(w http.ResponseWriter, r *http.Reque
 
 	if len(batch.Events) == 0 {
 		http.Error(w, "Empty event batch", http.StatusBadRequest)
-		return
+	}
+
+	// Capture IP Address for all events in batch
+	ip := getIP(r)
+	for i := range batch.Events {
+		batch.Events[i].IPAddress = &ip
 	}
 
 	// Handle session events
@@ -141,6 +152,13 @@ func (h *AnalyticsHandler) GetDashboard(w http.ResponseWriter, r *http.Request) 
 		genres = []models.GenreStats{}
 	}
 
+	// Get overview stats
+	overview, err := h.storage.GetOverviewStats(ctx, filters)
+	if err != nil {
+		log.Printf("Error getting overview: %v", err)
+		overview = models.OverviewStats{}
+	}
+
 	// Build dashboard response
 	dashboard := models.DashboardMetrics{
 		StartDate:         filters.StartDate.Format("2006-01-02"),
@@ -148,7 +166,7 @@ func (h *AnalyticsHandler) GetDashboard(w http.ResponseWriter, r *http.Request) 
 		TopTracks:         topTracks,
 		PlatformStats:     platformStats,
 		ListeningHeatmap:  heatmap,
-		Overview:          models.OverviewStats{}, // TODO: Calculate overview stats
+		Overview:          overview,
 		PlaybackTimeline:  timeline,
 		GenreDistribution: genres,
 		RecentSessions:    []models.SessionSummary{},
@@ -196,6 +214,61 @@ func (h *AnalyticsHandler) GetListeningPatterns(w http.ResponseWriter, r *http.R
 	json.NewEncoder(w).Encode(models.ListeningPattern{})
 }
 
+// GetArtistAnalytics returns analytics for a specific artist
+func (h *AnalyticsHandler) GetArtistAnalytics(w http.ResponseWriter, r *http.Request) {
+	artistName := chi.URLParam(r, "name")
+	if artistName == "" {
+		artistName = r.URL.Query().Get("name")
+	}
+
+	filters := h.parseFilters(r)
+	filters.ArtistName = &artistName
+
+	ctx := r.Context()
+
+	// For now, let's reuse storage methods filtering by artist name
+	topTracks, _ := h.storage.GetTopTracks(ctx, filters)
+	timeline, _ := h.storage.GetPlaybackTimeline(ctx, filters)
+	overview, _ := h.storage.GetOverviewStats(ctx, filters)
+
+	metrics := models.ArtistMetrics{
+		ArtistName:       artistName,
+		TopTracks:        topTracks,
+		PlaybackTimeline: timeline,
+		Overview:         overview,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(metrics)
+}
+
+// GetAlbumAnalytics returns analytics for a specific album
+func (h *AnalyticsHandler) GetAlbumAnalytics(w http.ResponseWriter, r *http.Request) {
+	albumTitle := chi.URLParam(r, "title")
+	artistName := r.URL.Query().Get("artist")
+
+	filters := h.parseFilters(r)
+	filters.AlbumTitle = &albumTitle
+	filters.ArtistName = &artistName
+
+	ctx := r.Context()
+
+	topTracks, _ := h.storage.GetTopTracks(ctx, filters)
+	timeline, _ := h.storage.GetPlaybackTimeline(ctx, filters)
+	overview, _ := h.storage.GetOverviewStats(ctx, filters)
+
+	metrics := models.AlbumMetrics{
+		AlbumTitle:       albumTitle,
+		ArtistName:       artistName,
+		TrackPerformance: topTracks,
+		PlaybackTimeline: timeline,
+		Overview:         overview,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(metrics)
+}
+
 // GetMigrationStatus returns the status of database migrations
 func (h *AnalyticsHandler) GetMigrationStatus(w http.ResponseWriter, r *http.Request) {
 	status, err := analytics.GetMigrationStatus()
@@ -227,9 +300,11 @@ func (h *AnalyticsHandler) handleSessionEvent(event *models.AnalyticsEvent) erro
 			BrowserVersion: event.BrowserVersion,
 			OS:             event.OS,
 			OSVersion:      event.OSVersion,
+			DeviceModel:    event.DeviceModel,
 			Locale:         event.Locale,
 			Timezone:       event.Timezone,
 			IPHash:         event.IPHash,
+			IPAddress:      event.IPAddress,
 			StartedAt:      time.Unix(0, event.Timestamp*int64(time.Millisecond)),
 		}
 		return h.storage.CreateSession(ctx, session)
@@ -278,6 +353,22 @@ func (h *AnalyticsHandler) processEventForAggregation(event *models.AnalyticsEve
 	}
 }
 
+func getIP(r *http.Request) string {
+	forwarded := r.Header.Get("X-Forwarded-For")
+	if forwarded != "" {
+		// X-Forwarded-For: client, proxy1, proxy2
+		ips := strings.Split(forwarded, ",")
+		return strings.TrimSpace(ips[0])
+	}
+
+	// RemoteAddr contains port, need to strip it (IPv4 and IPv6)
+	ip, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+	return ip
+}
+
 func (h *AnalyticsHandler) parseFilters(r *http.Request) *models.QueryFilters {
 	filters := &models.QueryFilters{
 		Limit:  20,
@@ -313,6 +404,14 @@ func (h *AnalyticsHandler) parseFilters(r *http.Request) *models.QueryFilters {
 		filters.Platform = &platform
 	}
 
+	if artistId := r.URL.Query().Get("artistId"); artistId != "" {
+		filters.ArtistID = &artistId
+	}
+
+	if albumId := r.URL.Query().Get("albumId"); albumId != "" {
+		filters.AlbumID = &albumId
+	}
+
 	return filters
 }
 
@@ -328,6 +427,10 @@ func (h *AnalyticsHandler) RegisterRoutes(r chi.Router) {
 		r.Get("/tracks/top", h.GetTopTracks)
 		r.Get("/platform-stats", h.GetPlatformStats)
 		r.Get("/listening-patterns", h.GetListeningPatterns)
+
+		// Artist and Album analytics
+		r.Get("/artists/{name}", h.GetArtistAnalytics)
+		r.Get("/albums/{title}", h.GetAlbumAnalytics)
 
 		// System
 		r.Get("/migrations/status", h.GetMigrationStatus)

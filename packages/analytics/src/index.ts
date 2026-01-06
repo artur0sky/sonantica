@@ -10,6 +10,8 @@
 
 // Core Engine
 export { AnalyticsEngine, getAnalyticsEngine, resetAnalyticsEngine } from './core/AnalyticsEngine';
+export * from './core/aggregation';
+export * from './core/entityAggregation';
 
 // Store
 export { 
@@ -23,6 +25,7 @@ export {
 // Hooks
 export { useAnalytics } from './hooks/useAnalytics';
 export { usePlaybackTracking } from './hooks/usePlaybackTracking';
+export { useEntityAnalytics } from './hooks/useEntityAnalytics';
 
 // Types
 export type {
@@ -43,6 +46,8 @@ export type {
   
   // Metrics
   DashboardMetrics,
+  ArtistMetrics,
+  AlbumMetrics,
   OverviewStats,
   TopTrack,
   HeatmapData,

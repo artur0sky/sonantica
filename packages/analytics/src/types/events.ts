@@ -92,11 +92,13 @@ export interface AnalyticsEvent {
   browserVersion: string;
   os: string;
   osVersion: string;
+  deviceModel: string;
   
   // Location Context (Privacy-conscious)
   locale: string; // e.g., "en-US"
   timezone: string;
   ipHash?: string; // Hashed IP for privacy
+  ipAddress?: string;
   
   // Event-specific Data
   data: EventData;

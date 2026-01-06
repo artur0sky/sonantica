@@ -166,6 +166,18 @@ func (s *AnalyticsStorage) GetTopTracks(ctx context.Context, filters *models.Que
 		argCount++
 	}
 
+	if filters.ArtistName != nil && *filters.ArtistName != "" {
+		query += fmt.Sprintf(" AND ar.name = $%d", argCount)
+		args = append(args, *filters.ArtistName)
+		argCount++
+	}
+
+	if filters.AlbumTitle != nil && *filters.AlbumTitle != "" {
+		query += fmt.Sprintf(" AND al.title = $%d", argCount)
+		args = append(args, *filters.AlbumTitle)
+		argCount++
+	}
+
 	query += " ORDER BY ts.play_count DESC"
 
 	if filters.Limit > 0 {
@@ -388,12 +400,97 @@ func (s *AnalyticsStorage) UpdateTrackStatistics(ctx context.Context, trackID st
 
 // GetPlaybackTimeline retrieves playback timeline data
 func (s *AnalyticsStorage) GetPlaybackTimeline(ctx context.Context, filters *models.QueryFilters) ([]models.TimelineData, error) {
-	// For now, return empty slice instead of null
-	return []models.TimelineData{}, nil
+	query := `
+		SELECT 
+			date,
+			SUM(play_count) as play_count,
+			SUM(total_duration) as play_time,
+			SUM(unique_tracks) as unique_tracks
+		FROM listening_heatmap
+		WHERE 1=1
+	`
+
+	args := []interface{}{}
+	argCount := 1
+
+	if filters.StartDate != nil {
+		query += fmt.Sprintf(" AND date >= $%d", argCount)
+		args = append(args, filters.StartDate)
+		argCount++
+	}
+
+	if filters.EndDate != nil {
+		query += fmt.Sprintf(" AND date <= $%d", argCount)
+		args = append(args, filters.EndDate)
+		argCount++
+	}
+
+	query += " GROUP BY date ORDER BY date ASC"
+
+	rows, err := s.db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query playback timeline: %w", err)
+	}
+	defer rows.Close()
+
+	timeline := []models.TimelineData{}
+
+	for rows.Next() {
+		var data models.TimelineData
+		var date time.Time
+
+		err := rows.Scan(&date, &data.PlayCount, &data.PlayTime, &data.UniqueTracks)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan timeline data: %w", err)
+		}
+
+		data.Date = date.Format("2006-01-02")
+		data.Timestamp = date.Format(time.RFC3339)
+		timeline = append(timeline, data)
+	}
+
+	return timeline, nil
 }
 
 // GetGenreDistribution retrieves genre distribution statistics
 func (s *AnalyticsStorage) GetGenreDistribution(ctx context.Context, filters *models.QueryFilters) ([]models.GenreStats, error) {
-	// For now, return empty slice instead of null
-	return []models.GenreStats{}, nil
+	query := `
+		SELECT 
+			genre,
+			play_count,
+			total_play_time,
+			unique_tracks
+		FROM genre_statistics
+		WHERE play_count > 0
+		ORDER BY play_count DESC
+		LIMIT 10
+	`
+
+	rows, err := s.db.Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query genre statistics: %w", err)
+	}
+	defer rows.Close()
+
+	genres := []models.GenreStats{}
+	totalPlays := 0
+
+	for rows.Next() {
+		var g models.GenreStats
+		err := rows.Scan(&g.Genre, &g.PlayCount, &g.PlayTime, &g.TrackCount)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan genre stat: %w", err)
+		}
+		genres = append(genres, g)
+		totalPlays += g.PlayCount
+	}
+
+	// Calculate percentages
+	for i := range genres {
+		if totalPlays > 0 {
+			genres[i].Percentage = float64(genres[i].PlayCount) / float64(totalPlays) * 100
+		}
+	}
+
+	return genres, nil
 }
