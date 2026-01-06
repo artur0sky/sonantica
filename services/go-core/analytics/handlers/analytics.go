@@ -104,26 +104,41 @@ func (h *AnalyticsHandler) IngestEventBatch(w http.ResponseWriter, r *http.Reque
 // GetDashboard returns dashboard metrics
 func (h *AnalyticsHandler) GetDashboard(w http.ResponseWriter, r *http.Request) {
 	filters := h.parseFilters(r)
+	ctx := r.Context()
 
 	// Get top tracks
-	topTracks, err := h.storage.GetTopTracks(r.Context(), filters)
+	topTracks, err := h.storage.GetTopTracks(ctx, filters)
 	if err != nil {
 		log.Printf("Error getting top tracks: %v", err)
 		topTracks = []models.TopTrack{}
 	}
 
 	// Get platform stats
-	platformStats, err := h.storage.GetPlatformStats(r.Context(), filters)
+	platformStats, err := h.storage.GetPlatformStats(ctx, filters)
 	if err != nil {
 		log.Printf("Error getting platform stats: %v", err)
 		platformStats = []models.PlatformStats{}
 	}
 
 	// Get listening heatmap
-	heatmap, err := h.storage.GetListeningHeatmap(r.Context(), filters)
+	heatmap, err := h.storage.GetListeningHeatmap(ctx, filters)
 	if err != nil {
 		log.Printf("Error getting heatmap: %v", err)
 		heatmap = []models.HeatmapData{}
+	}
+
+	// Get playback timeline
+	timeline, err := h.storage.GetPlaybackTimeline(ctx, filters)
+	if err != nil {
+		log.Printf("Error getting timeline: %v", err)
+		timeline = []models.TimelineData{}
+	}
+
+	// Get genre distribution
+	genres, err := h.storage.GetGenreDistribution(ctx, filters)
+	if err != nil {
+		log.Printf("Error getting genres: %v", err)
+		genres = []models.GenreStats{}
 	}
 
 	// Build dashboard response
@@ -134,8 +149,8 @@ func (h *AnalyticsHandler) GetDashboard(w http.ResponseWriter, r *http.Request) 
 		PlatformStats:     platformStats,
 		ListeningHeatmap:  heatmap,
 		Overview:          models.OverviewStats{}, // TODO: Calculate overview stats
-		PlaybackTimeline:  []models.TimelineData{},
-		GenreDistribution: []models.GenreStats{},
+		PlaybackTimeline:  timeline,
+		GenreDistribution: genres,
 		RecentSessions:    []models.SessionSummary{},
 		ListeningStreak:   models.StreakData{},
 	}

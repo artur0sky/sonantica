@@ -187,7 +187,7 @@ func (s *AnalyticsStorage) GetTopTracks(ctx context.Context, filters *models.Que
 	}
 	defer rows.Close()
 
-	var tracks []models.TopTrack
+	tracks := []models.TopTrack{}
 	rank := 1
 
 	for rows.Next() {
@@ -260,7 +260,7 @@ func (s *AnalyticsStorage) GetPlatformStats(ctx context.Context, filters *models
 	}
 	defer rows.Close()
 
-	var stats []models.PlatformStats
+	stats := []models.PlatformStats{}
 	totalSessions := 0
 
 	// First pass: collect data and calculate total
@@ -330,7 +330,7 @@ func (s *AnalyticsStorage) GetListeningHeatmap(ctx context.Context, filters *mod
 	}
 	defer rows.Close()
 
-	var heatmap []models.HeatmapData
+	heatmap := []models.HeatmapData{}
 
 	for rows.Next() {
 		var data models.HeatmapData
@@ -384,4 +384,16 @@ func (s *AnalyticsStorage) UpdateTrackStatistics(ctx context.Context, trackID st
 	)
 
 	return err
+}
+
+// GetPlaybackTimeline retrieves playback timeline data
+func (s *AnalyticsStorage) GetPlaybackTimeline(ctx context.Context, filters *models.QueryFilters) ([]models.TimelineData, error) {
+	// For now, return empty slice instead of null
+	return []models.TimelineData{}, nil
+}
+
+// GetGenreDistribution retrieves genre distribution statistics
+func (s *AnalyticsStorage) GetGenreDistribution(ctx context.Context, filters *models.QueryFilters) ([]models.GenreStats, error) {
+	// For now, return empty slice instead of null
+	return []models.GenreStats{}, nil
 }
