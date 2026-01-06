@@ -36,11 +36,45 @@ export function getServersConfig(): ServersConfig {
       return { servers: [], activeServerId: null };
     }
     
-    return JSON.parse(stored);
+    let config: ServersConfig = JSON.parse(stored);
+    
+    // Auto-repair common misconfigurations (localhost:8080 -> localhost:8090)
+    const { config: repairedConfig, changed } = autoRepairConfig(config);
+    config = repairedConfig;
+
+    if (changed) {
+      saveServersConfig(config);
+    }
+    
+    return config;
   } catch (error) {
     console.error('Failed to load servers config:', error);
     return { servers: [], activeServerId: null };
   }
+}
+
+/**
+ * Auto-repair common configuration mistakes
+ */
+function autoRepairConfig(config: ServersConfig): { config: ServersConfig, changed: boolean } {
+  let changed = false;
+  const newServers = config.servers.map(server => {
+    // Port 8080 is common internal port, but host uses 8090 by default
+    if (server.serverUrl.includes('localhost:8080') || server.serverUrl.includes('127.0.0.1:8080')) {
+      console.warn(`🔧 Auto-repairing server URL: ${server.serverUrl} -> http://localhost:8090`);
+      changed = true;
+      return {
+        ...server,
+        serverUrl: server.serverUrl.replace(':8080', ':8090')
+      };
+    }
+    return server;
+  });
+
+  return {
+    config: { ...config, servers: newServers },
+    changed
+  };
 }
 
 /**
@@ -230,4 +264,3 @@ export async function testServerConnectionById(serverId: string): Promise<boolea
     return false;
   }
 }
-
