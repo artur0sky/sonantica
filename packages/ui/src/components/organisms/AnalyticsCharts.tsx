@@ -48,9 +48,9 @@ interface ChartProps {
 /**
  * Playback Timeline (Line/Area Chart)
  */
-export const PlaybackLineChart: React.FC<ChartProps> = ({ title, data, height = 300, className }) => {
+export const PlaybackLineChart: React.FC<ChartProps> = ({ title, data, height = 300, className, loading }) => {
   return (
-    <AnalyticsCard title={title} height={height} className={className}>
+    <AnalyticsCard title={title} height={height} className={className} loading={loading}>
       <ResponsiveLine
         data={data}
         theme={getNivoTheme()}
@@ -85,8 +85,8 @@ export const PlaybackLineChart: React.FC<ChartProps> = ({ title, data, height = 
 /**
  * Genre Distribution (Bar Chart)
  */
-export const GenreBarChart: React.FC<ChartProps> = ({ title, data, height = 300, className }) => (
-  <AnalyticsCard title={title} height={height} className={className}>
+export const GenreBarChart: React.FC<ChartProps> = ({ title, data, height = 300, className, loading }) => (
+  <AnalyticsCard title={title} height={height} className={className} loading={loading}>
     <ResponsiveBar
       data={data}
       keys={['count']}
@@ -115,8 +115,8 @@ export const GenreBarChart: React.FC<ChartProps> = ({ title, data, height = 300,
 /**
  * Platform Distribution (Pie Chart)
  */
-export const PlatformPieChart: React.FC<ChartProps> = ({ title, data, height = 300, className }) => (
-  <AnalyticsCard title={title} height={height} className={className}>
+export const PlatformPieChart: React.FC<ChartProps> = ({ title, data, height = 300, className, loading }) => (
+  <AnalyticsCard title={title} height={height} className={className} loading={loading}>
     <ResponsivePie
       data={data}
       theme={getNivoTheme()}
@@ -141,8 +141,8 @@ export const PlatformPieChart: React.FC<ChartProps> = ({ title, data, height = 3
 /**
  * Activity Heatmap (Hour vs Day)
  */
-export const ActivityHeatmap: React.FC<ChartProps> = ({ title, data, height = 350, className }) => (
-  <AnalyticsCard title={title} height={height} className={className}>
+export const ActivityHeatmap: React.FC<ChartProps> = ({ title, data, height = 350, className, loading }) => (
+  <AnalyticsCard title={title} height={height} className={className} loading={loading}>
     <ResponsiveHeatMap
       data={data}
       theme={getNivoTheme()}
@@ -177,8 +177,8 @@ export const ActivityHeatmap: React.FC<ChartProps> = ({ title, data, height = 35
 /**
  * Consistency Calendar
  */
-export const ListeningCalendar: React.FC<ChartProps & { from: string, to: string }> = ({ title, data, from, to, height = 200, className }) => (
-  <AnalyticsCard title={title} height={height} className={className}>
+export const ListeningCalendar: React.FC<ChartProps & { from: string, to: string }> = ({ title, data, from, to, height = 200, className, loading }) => (
+  <AnalyticsCard title={title} height={height} className={className} loading={loading}>
     <ResponsiveCalendar
       data={data}
       from={from}

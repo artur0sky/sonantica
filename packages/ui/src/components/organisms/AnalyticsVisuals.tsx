@@ -19,6 +19,7 @@ interface TopListProps {
   height?: number | string;
   className?: string;
   itemTypeLabel?: string;
+  loading?: boolean;
 }
 
 /**
@@ -31,10 +32,11 @@ export const TopList: React.FC<TopListProps> = ({
   icon,
   height = 'auto',
   className,
-  itemTypeLabel = 'Plays'
+  itemTypeLabel = 'Plays',
+  loading = false,
 }) => {
   return (
-    <AnalyticsCard title={title} icon={icon} height={height} className={className}>
+    <AnalyticsCard title={title} icon={icon} height={height} className={className} loading={loading}>
       <div className="space-y-4 mt-2">
         <div className="flex justify-between px-1 mb-1 text-[10px] uppercase tracking-widest text-text-muted font-bold opacity-40">
           <span>Item</span>

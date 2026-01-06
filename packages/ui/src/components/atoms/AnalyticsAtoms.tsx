@@ -9,6 +9,7 @@ interface AnalyticsCardProps {
   icon?: React.ReactNode;
   height?: string | number;
   glassmorphism?: boolean;
+  loading?: boolean;
 }
 
 /**
@@ -23,6 +24,7 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
   icon,
   height,
   glassmorphism = true,
+  loading = false,
 }) => {
   return (
     <motion.div
@@ -52,7 +54,12 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
         </div>
       )}
       <div className="flex-1 p-5 pt-2">
-        {children}
+        {loading ? (
+          <div className="w-full h-full flex flex-col gap-4">
+             <div className="h-4 w-3/4 bg-border/20 animate-pulse rounded" />
+             <div className="flex-1 w-full bg-border/10 animate-pulse rounded-xl" />
+          </div>
+        ) : children}
       </div>
     </motion.div>
   );
