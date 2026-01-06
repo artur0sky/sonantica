@@ -17,6 +17,7 @@ import { useDSPIntegration } from "./hooks/useDSPIntegration";
 import { useAutoScan } from "./hooks/useAutoScan";
 import { useAnalyticsIntegration } from "./hooks/useAnalyticsIntegration";
 import { usePlaybackAnalytics } from "./hooks/usePlaybackAnalytics";
+import { useVersionManager } from "./hooks/useVersionManager";
 
 // Lazy load pages
 const ServerSetupPage = lazy(() =>
@@ -69,6 +70,7 @@ const PageLoader = () => (
 import { ErrorBoundary } from "./components/ErrorBoundary";
 
 function App() {
+  useVersionManager(); // Checks version and wipes data if needed
   useDSPIntegration();
   useAutoScan();
   useAnalyticsIntegration();
