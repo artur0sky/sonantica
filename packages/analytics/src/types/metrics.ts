@@ -81,6 +81,25 @@ export interface OverviewStats {
   playsChange: number; // percentage
   playTimeChange: number; // percentage
   sessionsChange: number; // percentage
+  
+  // Library Stats
+  totalTracksInLibrary: number;
+  totalAlbumsInLibrary: number;
+  totalArtistsInLibrary: number;
+  formats: FormatStat[];
+  coverArtStats: CoverArtSummary;
+}
+
+export interface FormatStat {
+  format: string;
+  count: number;
+  size?: string;
+}
+
+export interface CoverArtSummary {
+  withCover: number;
+  withoutCover: number;
+  percentage: number;
 }
 
 // ============================================================================

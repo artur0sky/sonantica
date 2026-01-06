@@ -29,7 +29,12 @@ export function aggregateOverview(stats: OverviewStats[]): OverviewStats {
     skipRate: 0,
     playsChange: 0,
     playTimeChange: 0,
-    sessionsChange: 0
+    sessionsChange: 0,
+    totalTracksInLibrary: 0,
+    totalAlbumsInLibrary: 0,
+    totalArtistsInLibrary: 0,
+    formats: [],
+    coverArtStats: { withCover: 0, withoutCover: 0, percentage: 0 }
   };
 
   let totalSessionTime = 0;
@@ -49,6 +54,23 @@ export function aggregateOverview(stats: OverviewStats[]): OverviewStats {
     
     result.completionRate += (s.completionRate || 0);
     result.skipRate += (s.skipRate || 0);
+
+    result.totalTracksInLibrary += (s.totalTracksInLibrary || 0);
+    result.totalAlbumsInLibrary += (s.totalAlbumsInLibrary || 0);
+    result.totalArtistsInLibrary += (s.totalArtistsInLibrary || 0);
+    result.coverArtStats.withCover += (s.coverArtStats?.withCover || 0);
+    result.coverArtStats.withoutCover += (s.coverArtStats?.withoutCover || 0);
+
+    if (s.formats && Array.isArray(s.formats)) {
+       s.formats.forEach(f => {
+         const existing = result.formats.find(rf => rf.format === f.format);
+         if (existing) {
+           existing.count += f.count;
+         } else {
+           result.formats.push({ ...f });
+         }
+       });
+    }
   });
 
   const validStats = stats.filter(Boolean);
@@ -56,6 +78,11 @@ export function aggregateOverview(stats: OverviewStats[]): OverviewStats {
   if (result.totalSessions > 0) {
     result.averageSessionDuration = Math.round(totalSessionTime / result.totalSessions);
     result.averageTracksPerSession = Number((totalTracksPlayed / result.totalSessions).toFixed(2));
+  }
+
+  const totalAlbums = result.coverArtStats.withCover + result.coverArtStats.withoutCover;
+  if (totalAlbums > 0) {
+    result.coverArtStats.percentage = (result.coverArtStats.withCover / totalAlbums) * 100;
   }
 
   if (validStats.length > 0) {

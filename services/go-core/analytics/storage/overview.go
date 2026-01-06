@@ -125,5 +125,42 @@ func (s *AnalyticsStorage) GetOverviewStats(ctx context.Context, filters *models
 		}
 	}
 
+	// 3. Library Stats (Counts)
+	// Only fetch if no filters are applied (Dashboard view), or filter if possible (but library stats are usually global or hard to filter by play date)
+	// We'll fetch global library stats for now when in Dashboard mode (no artist/album filter)
+	if filters.ArtistName == nil && filters.AlbumTitle == nil {
+		// Total Counts
+		s.db.QueryRow(ctx, "SELECT COUNT(*) FROM tracks").Scan(&stats.TotalTracksInLibrary)
+		s.db.QueryRow(ctx, "SELECT COUNT(*) FROM albums").Scan(&stats.TotalAlbumsInLibrary)
+		s.db.QueryRow(ctx, "SELECT COUNT(*) FROM artists").Scan(&stats.TotalArtistsInLibrary)
+
+		// Format Distribution
+		rows, err := s.db.Query(ctx, "SELECT COALESCE(format, 'unknown'), COUNT(*) FROM tracks GROUP BY format")
+		if err == nil {
+			defer rows.Close()
+			for rows.Next() {
+				var f string
+				var c int
+				if err := rows.Scan(&f, &c); err == nil {
+					stats.Formats = append(stats.Formats, models.FormatStat{Format: f, Count: c})
+				}
+			}
+		}
+
+		// Cover Art Stats
+		var withCover, totalAlbums int
+		s.db.QueryRow(ctx, "SELECT COUNT(*) FROM albums WHERE cover_art_path IS NOT NULL AND cover_art_path != ''").Scan(&withCover)
+		// Re-read total albums ensures consistency
+		s.db.QueryRow(ctx, "SELECT COUNT(*) FROM albums").Scan(&totalAlbums)
+
+		stats.CoverArtStats = models.CoverArtSummary{
+			WithCover:    withCover,
+			WithoutCover: totalAlbums - withCover,
+		}
+		if totalAlbums > 0 {
+			stats.CoverArtStats.Percentage = float64(withCover) / float64(totalAlbums) * 100
+		}
+	}
+
 	return stats, nil
 }

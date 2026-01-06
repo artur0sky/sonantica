@@ -31,6 +31,26 @@ type OverviewStats struct {
 	PlaysChange             float64 `json:"playsChange"`
 	PlayTimeChange          float64 `json:"playTimeChange"`
 	SessionsChange          float64 `json:"sessionsChange"`
+	// Library Stats
+	TotalTracksInLibrary  int             `json:"totalTracksInLibrary"`
+	TotalAlbumsInLibrary  int             `json:"totalAlbumsInLibrary"`
+	TotalArtistsInLibrary int             `json:"totalArtistsInLibrary"`
+	Formats               []FormatStat    `json:"formats"`
+	CoverArtStats         CoverArtSummary `json:"coverArtStats"`
+}
+
+// FormatStat represents distribution of file formats
+type FormatStat struct {
+	Format string `json:"format"`
+	Count  int    `json:"count"`
+	Size   string `json:"size,omitempty"` // simplified
+}
+
+// CoverArtSummary represents cover art statistics
+type CoverArtSummary struct {
+	WithCover    int     `json:"withCover"`
+	WithoutCover int     `json:"withoutCover"`
+	Percentage   float64 `json:"percentage"`
 }
 
 // TopTrack represents a top played track

@@ -15,10 +15,12 @@ import {
   IconHeadphones, 
   IconClock, 
   IconFlame, 
-  IconDisc, 
   IconChartBar,
   IconAlertCircle,
-  IconRefresh
+  IconRefresh,
+  IconMusic,
+  IconUsers,
+  IconAlbum
 } from '@tabler/icons-react';
 import { useAnalyticsDashboard } from '../hooks/useAnalyticsDashboard';
 
@@ -45,8 +47,10 @@ export const AnalyticsDashboard = () => {
     return [
       { label: 'Total Plays', value: data.overview.totalPlays.toLocaleString(), trend: data.overview.playsChange, icon: <IconHeadphones size={18} /> },
       { label: 'Listening Time', value: formatDuration(data.overview.totalPlayTime), unit: 'hrs', trend: data.overview.playTimeChange, icon: <IconClock size={18} /> },
+      { label: 'Total Tracks', value: (data.overview.totalTracksInLibrary || data.overview.uniqueTracks).toLocaleString(), unit: 'tracks', trend: 0, icon: <IconMusic size={18} /> },
+      { label: 'Total Artists', value: (data.overview.totalArtistsInLibrary || data.overview.uniqueArtists).toLocaleString(), unit: 'artists', trend: 0, icon: <IconUsers size={18} /> },
+      { label: 'Total Albums', value: (data.overview.totalAlbumsInLibrary || data.overview.uniqueAlbums).toLocaleString(), unit: 'albums', trend: 0, icon: <IconAlbum size={18} /> },
       { label: 'Daily Streak', value: data.listeningStreak.currentStreak.toString(), unit: 'days', trend: 0, icon: <IconFlame size={18} /> },
-      { label: 'Library Size', value: data.overview.uniqueTracks.toLocaleString(), unit: 'tracks', trend: 0, icon: <IconDisc size={18} /> },
     ];
   }, [data]);
 
@@ -87,6 +91,27 @@ export const AnalyticsDashboard = () => {
       genre: g.genre || 'Unknown',
       count: g.playCount || 0
     }));
+  }, [data]);
+
+
+
+  const formatData = useMemo(() => {
+    if (!data?.overview.formats || data.overview.formats.length === 0) return [];
+
+    return data.overview.formats.map(f => ({
+      id: f.format || 'unknown',
+      label: f.format.toUpperCase(),
+      value: f.count
+    }));
+  }, [data]);
+
+  const coverArtData = useMemo(() => {
+    if (!data?.overview.coverArtStats) return [];
+    
+    return [
+      { id: 'Cover', label: 'With Cover', value: data.overview.coverArtStats.withCover },
+      { id: 'Missing', label: 'Missing', value: data.overview.coverArtStats.withoutCover }
+    ];
   }, [data]);
 
   const platformData = useMemo(() => {
@@ -158,8 +183,18 @@ export const AnalyticsDashboard = () => {
       },
       {
         id: 'platforms',
-        colSpan: 2 as const,
+        colSpan: 1 as const,
         component: <PlatformPieChart title="Device Usage" data={platformData} height={350} loading={loading} />
+      },
+      {
+        id: 'formats',
+        colSpan: 1 as const,
+        component: <PlatformPieChart title="File Formats" data={formatData} height={350} innerRadius={0.5} padAngle={1} cornerRadius={3} loading={loading} />
+      },
+      {
+        id: 'coverart',
+        colSpan: 2 as const,
+        component: <PlatformPieChart title="Cover Art Status" data={coverArtData} height={350} innerRadius={0.7} padAngle={2} cornerRadius={3} loading={loading} />
       },
       {
         id: 'heatmap',

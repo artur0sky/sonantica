@@ -43,6 +43,10 @@ interface ChartProps {
   height?: number;
   className?: string;
   loading?: boolean;
+  innerRadius?: number;
+  padAngle?: number;
+  cornerRadius?: number;
+  colors?: any;
 }
 
 /**
@@ -131,9 +135,19 @@ export const GenreBarChart: React.FC<ChartProps> = ({ title, data, height = 300,
 };
 
 /**
- * Platform Distribution (Pie Chart)
+ * Generic Pie Chart (Platform, Formats, etc)
  */
-export const PlatformPieChart: React.FC<ChartProps> = ({ title, data, height = 300, className, loading }) => {
+export const PlatformPieChart: React.FC<ChartProps> = ({ 
+  title, 
+  data, 
+  height = 300, 
+  className, 
+  loading,
+  innerRadius = 0.6,
+  padAngle = 2,
+  cornerRadius = 8,
+  colors = { scheme: 'category10' }
+}) => {
   const hasData = data && data.length > 0;
 
   return (
@@ -143,11 +157,11 @@ export const PlatformPieChart: React.FC<ChartProps> = ({ title, data, height = 3
           data={data}
           theme={getNivoTheme()}
           margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
-          innerRadius={0.6}
-          padAngle={2}
-          cornerRadius={8}
+          innerRadius={innerRadius}
+          padAngle={padAngle}
+          cornerRadius={cornerRadius}
           activeOuterRadiusOffset={8}
-          colors={{ scheme: 'category10' }}
+          colors={colors}
           borderWidth={1}
           borderColor={{ from: 'color', modifiers: [['darker', 0.2]] }}
           arcLinkLabelsSkipAngle={10}
@@ -159,7 +173,7 @@ export const PlatformPieChart: React.FC<ChartProps> = ({ title, data, height = 3
         />
       ) : !loading && (
         <div className="w-full h-full flex items-center justify-center text-text-muted opacity-50 text-xs text-center p-4">
-           No platform/device usage data
+           No data available
         </div>
       )}
     </AnalyticsCard>
