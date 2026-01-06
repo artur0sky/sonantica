@@ -35,76 +35,140 @@ The previously defined brand identity is **canonical** and must be used in:
 
 ---
 
-## 3. Initial Structure of the Monorepo
+## 3. System Architecture Diagram
+
+This diagram represents the **Hybrid Architecture** of Sonántica, combining specific high-performance services with a shared TypeScript monorepo for domain logic and UI.
+
+```mermaid
+graph TD
+    subgraph "Clients (Apps)"
+        WEB[Web / PWA]
+        MOB[Mobile (Capacitor)]
+        DESK[Desktop (Wrapper)]
+    end
+
+    subgraph "Frontend Packages (Typescript)"
+        UI[UI Components]
+        PC[Player Core]
+        ML[Media Library (Client)]
+        DSP[DSP Engine]
+        REC[Recommendations]
+        OFF[Offline Manager]
+        SHARED[Shared Types]
+    end
+
+    subgraph "Backend Services (Docker)"
+        subgraph "Stream Core (Go)"
+            API[API Layer]
+            STREAM[Stream Engine]
+            IDX[Library Indexer]
+        end
+
+        subgraph "Audio Worker (Python)"
+            META[Metadata Extractor]
+            WAVE[Waveform Gen]
+        end
+        
+        DB[(PostgreSQL)]
+        REDIS[(Redis)]
+        Nginx[Nginx Proxy]
+    end
+
+    %% Client Dependencies
+    WEB --> UI
+    WEB --> PC
+    WEB --> ML
+    WEB --> SHARED
+
+    %% Package Inter-dependencies
+    UI --> SHARED
+    PC --> SHARED
+    ML --> SHARED
+    DSP --> PC
+    
+    %% Client to Backend
+    ML -- "Sync / Metadata" --> Nginx
+    PC -- "Audio Stream" --> Nginx
+
+    %% Backend Routing
+    Nginx --> API
+    Nginx --> STREAM
+
+    %% Service Logic
+    API --> DB
+    IDX --> DB
+    IDX -- "Jobs" --> REDIS
+    REDIS -- "Tasks" --> META
+    META --> DB
+    
+    %% Storage
+    STREAM -- "Read" --> FS[File System / Media]
+    META -- "Read" --> FS
+```
+
+### 3.1 Textual Architecture (ASCII)
+
+For environments that do not render Mermaid diagrams:
 
 ```text
-repo-root/
-├─ apps/
-│ ├─ web/ # Main PWA
-│ ├─ mobile/ # Capacitor (Android / iOS)
-│ └─ desktop/ # PWA / WebView2 / Tauri
-│
-├─ packages/
-│ ├─ player-core/ # Playback engine (core)
-│ ├─ dsp/ # Audio processing (EQ, filters)
-│ ├─ media-library/ # Indexing, metadata, tags
-│ ├─ ui/ # Shared components (no logic)
-│ └─ shared/ # Types, utils, constants
-│
-├─ docs/
-├─ .agents/
-├─ .github/
-└─ README.md
-## 4. Responsibilities by Layer
+[ CLIENTS ]
+    │
+    ├─► Web / PWA
+    ├─► Mobile (Capacitor)
+    └─► Desktop (Wrapper)
+           │
+           ▼
+[ FRONTEND PACKAGES ] (TypeScript)
+    │
+    ├── UI Components ──┐
+    ├── Player Core ────┼──► [ Shared Types ]
+    ├── Media Library ──┘
+    └── DSP Engine ────► Player Core
+           │
+           │ (HTTP / WebSocket)
+           ▼
+[ BACKEND SERVICES ] (Docker)
+    │
+    ├── Nginx Proxy
+    │     │
+    │     ├──► [ Stream Core (Go) ] ───────────┐
+    │     │      ├── Streaming Engine ──► [File System]
+    │     │      └── Library Indexer ───┐
+    │     │                             │
+    │     └──► [ Audio Worker (Python) ]◄─── [ Redis Queue ]
+    │            ├── Metadata Extract ──► [File System]
+    │            └── Waveform Gen ──────┘
+    │
+    └─► [ PostgreSQL ] ◄── (Metadata Storage)
+```
 
-### 4.1 player-core
-**Responsibilities:**
-- Audio playback
-- State management
-- Buffering
-- Codec control
-- Playback events
+## 4. Components & Responsibilities
 
-**Prohibited:**
-- UI
-- Frameworks
-- Direct access to platform-specific APIs
+### 4.1 Frontend Layer (`/packages`)
+A shared library of TypeScript packages that power all client applications (Web, Mobile, Desktop).
 
-### 4.2 dsp
-**Responsibilities:**
-- Advanced EQ
-- Filters
-- Gain
-- Signal processing
+*   **`player-core`**: The brain. Manages the `<audio>` element, queue state, and playback lifecycle. UI-agnostic.
+*   **`media-library`**: The client-side cache. Stores a lightweight index of the user's library in IndexedDB for instant UI filtering.
+*   **`ui`**: The face. React components built with our "Acoustic Aesthetics" design system.
+*   **`dsp`**: The sound engineer. Web Audio API node graph for Equalization and Effects.
 
-**Must be able to:**
-- be enabled or disabled
-- function without a UI
-- be replaceable
+### 4.2 Backend Layer (`/services`)
+High-performance services deployed via Docker to handle heavy lifting.
 
-### 4.3 media-library
-**Responsibilities:**
-- Index files
-- Read metadata
-- Organize by artist / album / genre / era
-- Manage playlists and ratings
+*   **`stream-core` (Go)**:
+    *   **Streaming**: Serves audio files with support for HTTP Range requests (seeking).
+    *   **Indexing**: Scans the file system efficiently.
+    *   **API**: Provides endpoints for library synchronization.
+*   **`audio-worker` (Python)**:
+    *   **Analysis**: Deep inspection of audio files (mutagen, librosa).
+    *   **Extraction**: Generates waveforms and extracts high-res cover art.
 
-### 4.4 ui
-**Responsibilities:**
-- Components Visuals
-- Themes
-- Layouts
+### 4.3 Data Persistence
+*   **PostgreSQL**: Stores the canonical library state (Tracks, Albums, Artists).
+*   **Redis**: Manage job queues for background analysis tasks.
+*   **File System**: Your raw media files (read-only mount).
 
-**Rules:**
-- The UI never decides what to play, it only reflects the state.
 
-### 4.5 apps/*
-**Responsibility:**
-- Wiring
-- Navigation
-- Platform Integration
-- Permissions
-- App Store Publishing
 
 ## 5. Dependency Rules
 
