@@ -17,6 +17,8 @@ import type { ExpandedPlayerProps } from "./types";
 export function ExpandedPlayer({
   actionButtons,
   onLongPressArt,
+  dominantColor,
+  contrastColor,
 }: ExpandedPlayerProps = {}) {
   // Player state
   const {
@@ -77,6 +79,8 @@ export function ExpandedPlayer({
     onToggleLyrics: toggleLyrics,
     onToggleQueue: toggleQueue,
     onLongPressArt,
+    dominantColor,
+    contrastColor,
   };
 
   return (
@@ -86,6 +90,11 @@ export function ExpandedPlayer({
       exit={{ y: "100%", opacity: 0 }}
       transition={{ type: "spring", damping: 30, stiffness: 200 }}
       className="fixed inset-0 lg:relative lg:inset-auto h-[100dvh] lg:h-full z-[100] lg:z-10 flex flex-col bg-[var(--dominant-color)] lg:bg-transparent overflow-hidden overscroll-none"
+      style={
+        dominantColor
+          ? { backgroundColor: dominantColor, color: contrastColor }
+          : undefined
+      }
     >
       {/* Premium Background Ambience - Blurred Cover Art (Mobile Only) */}
       {/* Solid Background handled by MainLayout wrapper passing CSS variables */}

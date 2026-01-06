@@ -64,6 +64,8 @@ export function ExpandedPlayerMobile({
   onToggleLyrics,
   onToggleQueue,
   onLongPressArt,
+  dominantColor,
+  contrastColor,
 }: MobileLayoutProps) {
   return (
     <div className="lg:hidden flex flex-col h-full bg-transparent overflow-hidden overscroll-none select-none pt-[max(env(safe-area-inset-top),2rem)] lg:pt-[env(safe-area-inset-top)]">
@@ -110,7 +112,16 @@ export function ExpandedPlayerMobile({
         {/* SCROLLING OVER: Content Area */}
         <div className="relative z-10 flex flex-col">
           {/* Main Info & Controls Overlay (Initially reveals the cover art, then overlays it) */}
-          <div className="flex flex-col gap-8 px-6 md:px-16 lg:px-24 pb-12 bg-gradient-to-t from-[var(--dominant-color)] via-[var(--dominant-color)] to-transparent pt-32 -mt-32">
+          <div
+            className="flex flex-col gap-8 px-6 md:px-16 lg:px-24 pb-12 pt-12 -mt-12"
+            style={{
+              background: `linear-gradient(to top, ${
+                dominantColor ?? "var(--dominant-color)"
+              } 0%, ${
+                dominantColor ?? "var(--dominant-color)"
+              } 60%, transparent 100%)`,
+            }}
+          >
             {/* Track Info */}
             <div className="flex flex-col gap-4">
               <div className="text-center w-full">

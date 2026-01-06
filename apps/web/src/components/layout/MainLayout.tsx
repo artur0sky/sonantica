@@ -223,6 +223,8 @@ export function MainLayout({ children }: MainLayoutProps) {
               >
                 <ExpandedPlayer
                   key="expanded"
+                  dominantColor={dominantColor}
+                  contrastColor={contrastColor}
                   actionButtons={
                     fullTrack && (
                       <div className="flex items-center gap-2">
