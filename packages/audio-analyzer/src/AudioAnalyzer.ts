@@ -16,8 +16,12 @@ import type {
   SpectrumData,
   WaveformData,
   AudioQualityInfo,
+  AudioQualityInfo,
   FrequencyBand,
+  StereoAnalysisData,
+  StereoWaveform,
 } from './contracts';
+import { StereoScope } from './analyzers/StereoScope';
 
 /**
  * Security constants
@@ -88,6 +92,7 @@ export class AudioAnalyzer implements IAudioAnalyzer {
   private connected: boolean = false;
   private qualityInfo: AudioQualityInfo | null = null;
   private isDisposed: boolean = false;
+  private stereoScope: StereoScope | null = null;
 
   // Reusable buffers to avoid allocations
   private frequencyData: Uint8Array<ArrayBuffer> | null = null;
@@ -162,6 +167,10 @@ export class AudioAnalyzer implements IAudioAnalyzer {
       // Connect: source -> analyser -> destination
       this.sourceNode.connect(this.analyserNode);
       this.analyserNode.connect(this.audioContext.destination);
+
+      // Setup Stereo Scope (Parallel connection)
+      this.stereoScope = new StereoScope();
+      this.stereoScope.setup(this.audioContext, this.sourceNode);
 
       // Initialize buffers
       this.frequencyData = new Uint8Array(new ArrayBuffer(this.analyserNode.frequencyBinCount));
@@ -326,6 +335,44 @@ export class AudioAnalyzer implements IAudioAnalyzer {
   }
 
   /**
+   * Get advanced stereo metrics
+   */
+  getStereoMetrics(): StereoAnalysisData {
+    if (!this.stereoScope || !this.connected) {
+      return {
+        correlation: 0,
+        width: 0,
+        balance: 0,
+        peakL: 0,
+        peakR: 0,
+        dynamicRange: 0,
+        clipping: false
+      };
+    }
+    return this.stereoScope.getMetrics();
+  }
+
+  /**
+   * Get raw stereo waveform data
+   */
+  getStereoWaveform(): StereoWaveform {
+    if (!this.stereoScope || !this.connected) {
+        const empty = new Float32Array(0);
+        return { left: empty, right: empty, length: 0 };
+    }
+    const buffers = this.stereoScope.getBuffers();
+    if (!buffers) {
+        const empty = new Float32Array(0);
+        return { left: empty, right: empty, length: 0 };
+    }
+    return {
+        left: buffers.left,
+        right: buffers.right,
+        length: buffers.left.length
+    };
+  }
+
+  /**
    * Get audio quality information
    */
   getQualityInfo(): AudioQualityInfo | null {
@@ -419,6 +466,11 @@ export class AudioAnalyzer implements IAudioAnalyzer {
     if (this.isDisposed) return;
     
     this.disconnect();
+    
+    if (this.stereoScope) {
+      this.stereoScope.dispose();
+      this.stereoScope = null;
+    }
 
     if (this.audioContext && this.audioContext.state !== 'closed') {
       this.audioContext.close().catch(e => console.warn('Error closing AudioContext:', e));

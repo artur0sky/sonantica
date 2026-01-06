@@ -10,20 +10,20 @@ The goal is to elevate the project from a "Player" to an "Active Listening Stati
 **Objective:** Provide immediate, tangible "Audiophile Quality" feedback in the UI using Web Audio API (Client-side).
 **Why:** Low latency visualization, builds trust with the user ("Technical Transparency").
 
-- [ ] **Architecture**
-  - [ ] Extend `AudioAnalyzer` in `@sonantica/audio-analyzer`.
-  - [ ] Create dedicated efficient processors (Worklets if needed) for math-heavy tasks.
+- [x] **Architecture**
+  - [x] Extend `AudioAnalyzer` in `@sonantica/audio-analyzer`.
+  - [x] Create dedicated efficient processors (Worklets if needed) for math-heavy tasks.
 
-- [ ] **Metrics Implementation**
-  - [ ] **Phase Correlation:** Detect mono compatibility issues (-1 to +1).
-  - [ ] **Stereo Width:** Mid/Side processing to measure width percentage.
-  - [ ] **Dynamic Range (DR):** Real-time Crest Factor (Peak vs RMS) measurement.
-  - [ ] **Clipping Detection:** Sample-peak monitoring (> 0dBFS).
+- [x] **Metrics Implementation**
+  - [x] **Phase Correlation:** Detect mono compatibility issues (-1 to +1).
+  - [x] **Stereo Width:** Mid/Side processing to measure width percentage.
+  - [x] **Dynamic Range (DR):** Real-time Crest Factor (Peak vs RMS) measurement.
+  - [x] **Clipping Detection:** Sample-peak monitoring (> 0dBFS).
 
-- [ ] **UI Components**
-  - [ ] `Goniometer` (Vectorscope) component (Lissajous figures).
-  - [ ] `CorrelationMeter` bar.
-  - [ ] `DynamicRangeMeter` (Audiophile-style DR meter).
+- [x] **UI Components**
+  - [x] `Goniometer` (Vectorscope) component (Lissajous figures).
+  - [x] `CorrelationMeter` bar.
+  - [x] `DynamicRangeMeter` (Audiophile-style DR meter).
 
 ---
 
@@ -82,9 +82,9 @@ The goal is to elevate the project from a "Player" to an "Active Listening Stati
 ## 📈 Status Tracking
 
 ### Phase 1: Real-time Analysis
-- [ ] Implement `PhaseCorrelation` logic `packages/audio-analyzer`
-- [ ] Implement `CrestFactor/DR` logic
-- [ ] Create `Goniometer` visualizer `packages/ui`
+- [x] Implement `PhaseCorrelation` logic `packages/audio-analyzer`
+- [x] Implement `CrestFactor/DR` logic
+- [x] Create `Goniometer` visualizer `packages/ui`
 
 ### Phase 2: AI Backend
 - [ ] Add PyTorch/Demucs to `python-worker`
