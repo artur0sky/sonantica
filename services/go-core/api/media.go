@@ -32,20 +32,25 @@ func StreamTrack(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	fmt.Printf("🎵 Streaming request for track ID: [%s]\n", trackID)
+
 	var filePath string
 	query := `SELECT file_path FROM tracks WHERE id = $1`
 
 	err := database.DB.QueryRow(r.Context(), query, trackID).Scan(&filePath)
 	if err != nil {
 		if err == pgx.ErrNoRows {
+			fmt.Printf("❌ Track not found in database: [%s]\n", trackID)
 			http.NotFound(w, r)
 			return
 		}
+		fmt.Printf("❌ Database error during streaming: %v\n", err)
 		http.Error(w, fmt.Sprintf("Database error: %v", err), http.StatusInternalServerError)
 		return
 	}
 
 	fullPath := resolveMediaPath(filePath)
+	fmt.Printf("📂 Serving file: %s\n", fullPath)
 	http.ServeFile(w, r, fullPath)
 }
 

@@ -365,30 +365,60 @@ func (h *AnalyticsHandler) processEventForAggregation(event *models.AnalyticsEve
 
 	// Process playback events for track statistics
 	if event.EventType == models.EventPlaybackComplete {
-		if trackID, ok := event.Data["trackId"].(string); ok {
-			// Update track statistics
-			h.storage.UpdateTrackStatistics(
-				ctx,
-				trackID,
-				1,     // play count
-				1,     // complete count
-				0,     // skip count
-				0,     // TODO: get duration from event data
-				100.0, // 100% completion
-			)
+		// Extract trackId from Data map
+		trackID, ok := event.Data["trackId"].(string)
+		if !ok || trackID == "" {
+			return
 		}
+
+		// Extract duration (optional)
+		duration := 0
+		if durationVal, ok := event.Data["duration"].(float64); ok {
+			duration = int(durationVal)
+		}
+
+		// Update track statistics
+		h.storage.UpdateTrackStatistics(
+			ctx,
+			trackID,
+			1,     // play count
+			1,     // complete count
+			0,     // skip count
+			duration,
+			100.0, // 100% completion
+		)
 	} else if event.EventType == models.EventPlaybackSkip {
-		if trackID, ok := event.Data["trackId"].(string); ok {
-			h.storage.UpdateTrackStatistics(
-				ctx,
-				trackID,
-				1,   // play count
-				0,   // complete count
-				1,   // skip count
-				0,   // TODO: get duration from event data
-				0.0, // 0% completion (skipped)
-			)
+		// Extract trackId from Data map
+		trackID, ok := event.Data["trackId"].(string)
+		if !ok || trackID == "" {
+			return
 		}
+
+		// Extract position and duration for completion percentage
+		position := 0.0
+		duration := 0.0
+		completionPct := 0.0
+
+		if posVal, ok := event.Data["position"].(float64); ok {
+			position = posVal
+		}
+		if durVal, ok := event.Data["duration"].(float64); ok {
+			duration = durVal
+		}
+
+		if duration > 0 {
+			completionPct = (position / duration) * 100.0
+		}
+
+		h.storage.UpdateTrackStatistics(
+			ctx,
+			trackID,
+			1,   // play count
+			0,   // complete count
+			1,   // skip count
+			int(position),
+			completionPct,
+		)
 	}
 }
 

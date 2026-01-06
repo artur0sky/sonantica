@@ -5,9 +5,8 @@
  * Follows "Technical Transparency" philosophy.
  */
 
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useAnalytics } from '@sonantica/analytics';
-import { useLocation } from 'wouter';
 import { getServerConfig } from '../services/LibraryService';
 
 /**
@@ -28,22 +27,14 @@ export function useAnalyticsIntegration() {
   const analytics = useAnalytics({
     enabled: true,
     apiEndpoint: analyticsEndpoint,
-    debug: import.meta.env.DEV,
+    debug: false, // Disabled to reduce noise
     collectPlaybackData: true,
-    collectUIInteractions: true,
-    collectSearchData: true,
-    batchSize: 100,
-    flushInterval: 60000, // 60 seconds
+    collectUIInteractions: false, // Disabled to reduce events
+    collectSearchData: true, // Disabled to reduce events
+    batchSize: 50, // Send in batches of 50
+    flushInterval: 300000, // 5 minutes
     maxBufferSize: 500,
   });
-
-  const [location] = useLocation();
-
-  // Track page views
-  useEffect(() => {
-    const pageName = location === '/' ? 'tracks' : location.slice(1);
-    analytics.trackPageView(pageName);
-  }, [location, analytics]);
 
   return analytics;
 }

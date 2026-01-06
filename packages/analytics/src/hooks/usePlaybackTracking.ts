@@ -178,7 +178,7 @@ export function usePlaybackTracking(
   // Set up progress tracking interval
   useEffect(() => {
     if (state.isPlaying) {
-      progressIntervalRef.current = setInterval(trackProgress, 30000);
+      progressIntervalRef.current = setInterval(trackProgress, 60000); // Every 60 seconds
     } else {
       if (progressIntervalRef.current) {
         clearInterval(progressIntervalRef.current);
