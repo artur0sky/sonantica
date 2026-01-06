@@ -49,7 +49,7 @@ export function useMediaSession() {
       mediaSessionService.updatePositionState(
         audio.duration || 0,
         audio.currentTime || 0,
-        1.0
+        audio.playbackRate || 1.0
       );
     };
 
