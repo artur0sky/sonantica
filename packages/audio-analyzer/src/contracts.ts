@@ -48,6 +48,35 @@ export interface WaveformData {
 }
 
 /**
+ * Advanced Stereo Analysis (Audiophile Metrics)
+ */
+export interface StereoAnalysisData {
+  /** Phase correlation (-1.0 to 1.0, where +1 is mono, 0 is wide stereo, -1 is out of phase) */
+  correlation: number;
+  /** Stereo width (0.0 to 1.0) calculated from M/S ratio */
+  width: number;
+  /** Balance (-1.0 Left to 1.0 Right) */
+  balance: number;
+  /** True Peak L (linear) */
+  peakL: number;
+  /** True Peak R (linear) */
+  peakR: number;
+  /** Dynamic Range / Crest Factor (dB) - measures "punchiness" */
+  dynamicRange: number;
+  /** Clipping detected (samples hitting 0dBFS) */
+  clipping: boolean;
+}
+
+/**
+ * Stereo Waveform Data for Visualizations (Goniometer)
+ */
+export interface StereoWaveform {
+  left: Float32Array;
+  right: Float32Array;
+  length: number;
+}
+
+/**
  * Audio quality metadata based on analysis
  */
 export interface AudioQualityInfo {
@@ -106,6 +135,17 @@ export interface IAudioAnalyzer {
    * Get current waveform data
    */
   getWaveform(): WaveformData;
+
+  /**
+   * Get advanced stereo metrics (Phase, DR, Clipping)
+   * Only active if configured
+   */
+  getStereoMetrics(): StereoAnalysisData;
+
+  /**
+   * Get raw stereo waveform data (Left/Right) for Goniometer/Vectorscope
+   */
+  getStereoWaveform(): StereoWaveform;
 
   /**
    * Get audio quality information
