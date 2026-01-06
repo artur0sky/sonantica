@@ -13,6 +13,7 @@
     "generate-icons": "node scripts/generate-icons.mjs"
   },
   "dependencies": {
+    "@sonantica/analytics": "workspace:*",
     "@sonantica/audio-analyzer": "workspace:*",
     "@sonantica/dsp": "workspace:*",
     "@sonantica/lyrics": "workspace:*",

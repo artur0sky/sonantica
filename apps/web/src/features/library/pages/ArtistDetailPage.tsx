@@ -13,6 +13,7 @@ import { motion } from "framer-motion";
 import { Button } from "@sonantica/ui";
 import { useArtistSimilarArtists } from "@sonantica/recommendations";
 import { ArtistCard } from "../components/ArtistCard";
+import { ArtistAnalyticsSection } from "../../analytics/components/ArtistAnalyticsSection";
 
 export function ArtistDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -120,6 +121,9 @@ export function ArtistDetailPage() {
           />
         ))}
       </div>
+      
+      {/* Analytics Section */}
+      <ArtistAnalyticsSection artistName={artist.name} artistId={artist.id} />
 
       {/* Similar Artists Section */}
       {similarArtists.length > 0 && (

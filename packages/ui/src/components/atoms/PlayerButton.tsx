@@ -66,7 +66,8 @@ export function PlayerButton({
     ghost: "bg-transparent text-text-muted hover:text-text",
     elevated:
       "bg-surface-elevated hover:bg-surface border border-border text-text-muted hover:text-text",
-    accent: "bg-accent hover:bg-accent-hover text-white shadow-lg",
+    accent:
+      "bg-accent hover:bg-accent-hover text-[var(--color-accent-foreground,white)] shadow-lg",
   };
 
   return (

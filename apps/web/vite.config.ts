@@ -16,6 +16,9 @@ export default defineConfig({
         '@sonantica/mobile': path.resolve(__dirname, '../mobile/src/index.ts'),
       },
   },
+  define: {
+    '__APP_VERSION__': JSON.stringify(process.env.npm_package_version),
+  },
   plugins: [
     react(),
     tailwindcss(),
