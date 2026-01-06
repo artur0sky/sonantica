@@ -116,19 +116,67 @@ export function AlbumsPage() {
   };
 
   const handleLetterClick = (index: number) => {
-    if (index >= displayedCount) {
-      setDisplayedCount(Math.min(index + 50, sortedAlbums.length));
-    }
+    const main = document.getElementById("main-content");
+    if (!main) return;
 
+    // 1. Calculate how many items we need to render
+    const targetIndex = index;
+    const bufferSize = 50; // Extra items to render for smooth scrolling
+    const requiredCount = Math.min(
+      targetIndex + bufferSize,
+      sortedAlbums.length
+    );
+
+    // 2. If we need to render more items, do it first
+    if (requiredCount > displayedCount) {
+      setDisplayedCount(requiredCount);
+
+      // Wait for React to render the new items
+      setTimeout(() => {
+        scrollToAlbum(targetIndex, main);
+      }, 100); // Give React time to render
+    } else {
+      // Items already rendered, scroll immediately
+      scrollToAlbum(targetIndex, main);
+    }
+  };
+
+  const scrollToAlbum = (index: number, main: HTMLElement) => {
+    // Try multiple times with increasing delays to ensure element is rendered
+    let attempts = 0;
+    const maxAttempts = 5;
+
+    const tryScroll = () => {
+      const element = document.getElementById(`album-${index}`);
+
+      if (element) {
+        // Element found, scroll to it
+        const top = element.offsetTop - 100; // Account for sticky header and padding
+        main.scrollTo({ top, behavior: "smooth" });
+      } else if (attempts < maxAttempts) {
+        // Element not found yet, try again
+        attempts++;
+        setTimeout(tryScroll, 50 * attempts); // Exponential backoff
+      } else {
+        // Fallback: estimate scroll position based on grid layout
+        const itemsPerRow =
+          window.innerWidth >= 1280
+            ? 5
+            : window.innerWidth >= 1024
+            ? 4
+            : window.innerWidth >= 768
+            ? 3
+            : 2;
+        const rowHeight = 320; // Approximate height of album card + gap
+        const row = Math.floor(index / itemsPerRow);
+        const estimatedTop = row * rowHeight;
+        main.scrollTo({ top: estimatedTop, behavior: "smooth" });
+      }
+    };
+
+    // Start scrolling attempt
     requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        const element = document.getElementById(`album-${index}`);
-        const main = document.getElementById("main-content");
-        if (element && main) {
-          const top = element.offsetTop - 100; // Account for grid gap and sticky header
-          main.scrollTo({ top, behavior: "smooth" });
-        }
-      });
+      requestAnimationFrame(tryScroll);
     });
   };
 
