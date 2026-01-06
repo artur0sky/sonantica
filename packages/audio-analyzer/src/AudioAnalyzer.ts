@@ -16,7 +16,6 @@ import type {
   SpectrumData,
   WaveformData,
   AudioQualityInfo,
-  AudioQualityInfo,
   FrequencyBand,
   StereoAnalysisData,
   StereoWaveform,
