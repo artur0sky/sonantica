@@ -27,9 +27,10 @@ var (
 )
 
 // InitRedis initializes the Redis client for the scanner
-func InitRedis(host, port string) {
+func InitRedis(host, port, password string) {
 	rdb = redis.NewClient(&redis.Options{
-		Addr: fmt.Sprintf("%s:%s", host, port),
+		Addr:     fmt.Sprintf("%s:%s", host, port),
+		Password: password,
 	})
 }
 

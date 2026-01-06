@@ -31,6 +31,7 @@ logger = logging.getLogger("AudioWorker")
 # Configuration
 REDIS_HOST = os.environ.get("REDIS_HOST", "redis")
 REDIS_PORT = int(os.environ.get("REDIS_PORT", 6379))
+REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD", None)
 POSTGRES_URL = os.environ.get("POSTGRES_URL")
 MEDIA_PATH = os.environ.get("MEDIA_PATH", "/media")
 
@@ -367,7 +368,7 @@ def main():
     r = None
     while True:
         try:
-            r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0)
+            r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, password=REDIS_PASSWORD, db=0)
             r.ping()
             logger.info(f"✅ Connected to Redis at {REDIS_HOST}:{REDIS_PORT}")
             break

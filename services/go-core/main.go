@@ -12,6 +12,7 @@ import (
 	"sonantica-core/analytics"
 	"sonantica-core/analytics/handlers"
 	"sonantica-core/api"
+	"sonantica-core/cache"
 	"sonantica-core/database"
 	"sonantica-core/scanner"
 
@@ -55,16 +56,20 @@ func main() {
 		log.Printf("✅ Analytics migrations completed successfully\n")
 	}
 
-	// Initialize Redis for Scanner
+	// Initialize Shared Redis Cache (Secure & Optimized)
 	redisHost := os.Getenv("REDIS_HOST")
 	redisPort := os.Getenv("REDIS_PORT")
+	redisPass := os.Getenv("REDIS_PASSWORD") // Support password
+
 	if redisHost == "" {
 		redisHost = "redis"
 	}
 	if redisPort == "" {
 		redisPort = "6379"
 	}
-	scanner.InitRedis(redisHost, redisPort)
+
+	cache.Init(redisHost, redisPort, redisPass)
+	scanner.InitRedis(redisHost, redisPort, redisPass) // TODO: Refactor scanner to use shared cache
 
 	// Start Scanner (Non-blocking)
 	mediaPath := os.Getenv("MEDIA_PATH")

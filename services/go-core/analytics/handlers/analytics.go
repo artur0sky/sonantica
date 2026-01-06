@@ -9,9 +9,12 @@ import (
 	"strings"
 	"time"
 
+	"crypto/sha256"
+	"fmt"
 	"sonantica-core/analytics"
 	"sonantica-core/analytics/models"
 	"sonantica-core/analytics/storage"
+	"sonantica-core/cache"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -117,6 +120,17 @@ func (h *AnalyticsHandler) GetDashboard(w http.ResponseWriter, r *http.Request) 
 	filters := h.parseFilters(r)
 	ctx := r.Context()
 
+	// 1. Try Cache
+	cacheKey := fmt.Sprintf("dashboard:%s", hashFilters(filters))
+	var dashboard models.DashboardMetrics
+	if err := cache.Get(ctx, cacheKey, &dashboard); err == nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("X-Cache", "HIT") // Debug header
+		json.NewEncoder(w).Encode(dashboard)
+		return
+	}
+
+	// 2. Compute (Cache Miss)
 	// Get top tracks
 	topTracks, err := h.storage.GetTopTracks(ctx, filters)
 	if err != nil {
@@ -160,7 +174,7 @@ func (h *AnalyticsHandler) GetDashboard(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Build dashboard response
-	dashboard := models.DashboardMetrics{
+	dashboard = models.DashboardMetrics{
 		StartDate:         filters.StartDate.Format("2006-01-02"),
 		EndDate:           filters.EndDate.Format("2006-01-02"),
 		TopTracks:         topTracks,
@@ -173,7 +187,16 @@ func (h *AnalyticsHandler) GetDashboard(w http.ResponseWriter, r *http.Request) 
 		ListeningStreak:   models.StreakData{},
 	}
 
+	// 3. Save to Cache (Async)
+	go func() {
+		// TTL: 5 minutes. Dashboard is "near real-time" but doesn't need to be instant.
+		if err := cache.Set(context.Background(), cacheKey, dashboard, 5*time.Minute); err != nil {
+			log.Printf("Failed to cache dashboard: %v", err)
+		}
+	}()
+
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("X-Cache", "MISS")
 	json.NewEncoder(w).Encode(dashboard)
 }
 
@@ -226,19 +249,35 @@ func (h *AnalyticsHandler) GetArtistAnalytics(w http.ResponseWriter, r *http.Req
 
 	ctx := r.Context()
 
+	// Cache Check
+	cacheKey := fmt.Sprintf("artist:%s:%s", artistName, hashFilters(filters))
+	var metrics models.ArtistMetrics
+	if err := cache.Get(ctx, cacheKey, &metrics); err == nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("X-Cache", "HIT")
+		json.NewEncoder(w).Encode(metrics)
+		return
+	}
+
 	// For now, let's reuse storage methods filtering by artist name
 	topTracks, _ := h.storage.GetTopTracks(ctx, filters)
 	timeline, _ := h.storage.GetPlaybackTimeline(ctx, filters)
 	overview, _ := h.storage.GetOverviewStats(ctx, filters)
 
-	metrics := models.ArtistMetrics{
+	metrics = models.ArtistMetrics{
 		ArtistName:       artistName,
 		TopTracks:        topTracks,
 		PlaybackTimeline: timeline,
 		Overview:         overview,
 	}
 
+	// Cache Set
+	go func() {
+		cache.Set(context.Background(), cacheKey, metrics, 10*time.Minute)
+	}()
+
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("X-Cache", "MISS")
 	json.NewEncoder(w).Encode(metrics)
 }
 
@@ -435,4 +474,30 @@ func (h *AnalyticsHandler) RegisterRoutes(r chi.Router) {
 		// System
 		r.Get("/migrations/status", h.GetMigrationStatus)
 	})
+}
+
+// Helper to hash filters for cache keys
+func hashFilters(f *models.QueryFilters) string {
+	// Simple string representation. For better collision resistance, use real hashing.
+	// Considering the low cardinality of concurrent filters per user usually, this is "okay" but let's be safe.
+	raw := fmt.Sprintf("%v-%v-%v-%v-%v-%v-%d-%d",
+		f.StartDate,
+		f.EndDate,
+		strPtr(f.Period),
+		strPtr(f.Platform),
+		strPtr(f.ArtistID),
+		strPtr(f.AlbumID),
+		f.Limit,
+		f.Offset,
+	)
+	h := sha256.New()
+	h.Write([]byte(raw))
+	return fmt.Sprintf("%x", h.Sum(nil))
+}
+
+func strPtr(s *string) string {
+	if s == nil {
+		return "nil"
+	}
+	return *s
 }
