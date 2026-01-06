@@ -54,6 +54,9 @@ graph TD
         DSP["DSP Engine"]
         REC["Recommendations"]
         OFF["Offline Manager"]
+        LYR["Lyrics Engine"]
+        MET["Metadata"]
+        ANA["Analytics"]
         SHARED["Shared Types"]
     end
 
@@ -79,16 +82,19 @@ graph TD
     WEB --> PC
     WEB --> ML
     WEB --> SHARED
-
+    WEB --> ANA
+    
     %% Package Inter-dependencies
     UI --> SHARED
     PC --> SHARED
     ML --> SHARED
     DSP --> PC
+    LYR --> PC
     
     %% Client to Backend
     ML -- "Sync / Metadata" --> Nginx
     PC -- "Audio Stream" --> Nginx
+    ANA -- "Telemetry" --> Nginx
 
     %% Backend Routing
     Nginx --> API
@@ -123,7 +129,10 @@ For environments that do not render Mermaid diagrams:
     ├── UI Components ──┐
     ├── Player Core ────┼──► [ Shared Types ]
     ├── Media Library ──┘
-    └── DSP Engine ────► Player Core
+    ├── DSP Engine ────► Player Core
+    ├── Lyrics ────────► Player Core
+    ├── Analytics ─────► Shared
+    └── Offline Manager
            │
            │ (HTTP / WebSocket)
            ▼
@@ -148,24 +157,32 @@ For environments that do not render Mermaid diagrams:
 A shared library of TypeScript packages that power all client applications (Web, Mobile, Desktop).
 
 *   **`player-core`**: The brain. Manages the `<audio>` element, queue state, and playback lifecycle. UI-agnostic.
-*   **`media-library`**: The client-side cache. Stores a lightweight index of the user's library in IndexedDB for instant UI filtering.
+*   **`media-library`**: The client-side cache/manager. Manages indexing (web), searching, and organizing the user's library.
 *   **`ui`**: The face. React components built with our "Acoustic Aesthetics" design system.
-*   **`dsp`**: The sound engineer. Web Audio API node graph for Equalization and Effects.
+*   **`dsp`**: The sound engineer. Web Audio API node graph for Equalization (10-band) and Effects.
+*   **`lyrics`**: The interpreter. Extracts, parses, and synchronizes lyrics (LRC/ID3/Vorbis).
+*   **`metadata`**: The archivist. Deep metadata extraction and batch processing (ID3, Vorbis, FLAC).
+*   **`offline-manager`**: The guardian. Orchestrates downloads and manages local cache storage.
+*   **`recommendations`**: The guide. Intelligent discovery engine based on acoustic features.
+*   **`analytics`**: The observer. Privacy-first telemetry for playback patterns and system health.
+*   **`audio-analyzer`**: The scope. Real-time FFT spectrum visualization and metrics.
+*   **`shared`**: The foundation. Universal types, constants, and utilities.
 
 ### 4.2 Backend Layer (`/services`)
 High-performance services deployed via Docker to handle heavy lifting.
 
 *   **`stream-core` (Go)**:
     *   **Streaming**: Serves audio files with support for HTTP Range requests (seeking).
-    *   **Indexing**: Scans the file system efficiently.
-    *   **API**: Provides endpoints for library synchronization.
+    *   **Indexing**: Fast directory traversal and change detection.
+    *   **API**: RESTful endpoints for library management and scan control.
 *   **`audio-worker` (Python)**:
     *   **Analysis**: Deep inspection of audio files (mutagen, librosa).
     *   **Extraction**: Generates waveforms and extracts high-res cover art.
+    *   **Persistence**: "Get or Create" logic for database integrity.
 
 ### 4.3 Data Persistence
 *   **PostgreSQL**: Stores the canonical library state (Tracks, Albums, Artists).
-*   **Redis**: Manage job queues for background analysis tasks.
+*   **Redis**: Manage job queues for background analysis tasks (Go -> Python).
 *   **File System**: Your raw media files (read-only mount).
 
 ## 5. Dependency Rules
