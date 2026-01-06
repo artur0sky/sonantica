@@ -13,8 +13,8 @@ import type {
   EventType,
   EventData,
   Platform,
-  DEFAULT_ANALYTICS_CONFIG,
 } from '../types';
+import { DEFAULT_ANALYTICS_CONFIG } from '../types';
 
 /**
  * Platform detection utilities
