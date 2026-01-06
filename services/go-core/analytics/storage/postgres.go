@@ -98,22 +98,11 @@ func (s *AnalyticsStorage) InsertEvent(ctx context.Context, event *models.Analyt
 	return err
 }
 
-// InsertEventBatch inserts multiple events in a transaction
+// InsertEventBatch inserts multiple events using CopyFrom for high performance
 func (s *AnalyticsStorage) InsertEventBatch(ctx context.Context, events []models.AnalyticsEvent) error {
-	tx, err := s.db.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %w", err)
-	}
-	defer tx.Rollback(ctx)
-
-	query := `
-		INSERT INTO analytics_events (
-			event_id, session_id, event_type, timestamp, data, created_at
-		) VALUES ($1, $2, $3, $4, $5, $6)
-	`
-
-	batch := &pgx.Batch{}
-	for _, event := range events {
+	// Create rows for CopyFrom
+	rows := make([][]interface{}, len(events))
+	for i, event := range events {
 		dataJSON, err := json.Marshal(event.Data)
 		if err != nil {
 			return fmt.Errorf("failed to marshal event data: %w", err)
@@ -122,24 +111,24 @@ func (s *AnalyticsStorage) InsertEventBatch(ctx context.Context, events []models
 		timestamp := time.Unix(0, event.Timestamp*int64(time.Millisecond))
 		createdAt := time.Now()
 
-		batch.Queue(query,
-			event.EventID, event.SessionID, event.EventType,
-			timestamp, dataJSON, createdAt,
-		)
-	}
-
-	br := tx.SendBatch(ctx, batch)
-	defer br.Close()
-
-	// Execute all batched queries
-	for i := 0; i < len(events); i++ {
-		_, err := br.Exec()
-		if err != nil {
-			return fmt.Errorf("failed to insert event %d: %w", i, err)
+		rows[i] = []interface{}{
+			event.EventID,
+			event.SessionID,
+			event.EventType,
+			timestamp,
+			dataJSON,
+			createdAt,
 		}
 	}
 
-	return tx.Commit(ctx)
+	_, err := s.db.CopyFrom(
+		ctx,
+		pgx.Identifier{"analytics_events"},
+		[]string{"event_id", "session_id", "event_type", "timestamp", "data", "created_at"},
+		pgx.CopyFromRows(rows),
+	)
+
+	return err
 }
 
 // GetTopTracks retrieves the top played tracks
