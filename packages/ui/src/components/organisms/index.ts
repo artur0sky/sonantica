@@ -11,3 +11,4 @@ export * from './AnalyticsVisuals';
 
 // Analytics Components - Layout
 export * from './DashboardGrid';
+export * from './RealtimeTicker';

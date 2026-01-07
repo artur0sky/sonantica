@@ -2,7 +2,6 @@ package scanner
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io/fs"
 	"log/slog"
@@ -140,22 +139,12 @@ type JobPayload struct {
 }
 
 func dispatchAnalysisJob(relPath, root, traceID string) error {
-	if rdb == nil {
-		return fmt.Errorf("redis client not initialized")
-	}
-
 	payload := JobPayload{
 		FilePath: relPath,
 		Root:     root,
 		TraceID:  traceID,
 	}
 
-	data, err := json.Marshal(payload)
-	if err != nil {
-		return err
-	}
-
-	// Security: Use a dedicated queue
-	// We use RPUSH to add to the tail of the queue
-	return rdb.RPush(context.Background(), "analysis_queue", data).Err()
+	// Security: Use Celery for scalability
+	return cache.EnqueueCeleryTask(context.Background(), "sonantica.analyze_audio", payload)
 }

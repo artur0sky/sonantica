@@ -302,3 +302,37 @@ func GetAnalyticsData(ctx context.Context, key string, target interface{}) error
 func InvalidateAnalyticsCache(ctx context.Context) error {
 	return Invalidate(ctx, "analytics:*")
 }
+
+// CeleryTask represents the structure expected by Celery
+type CeleryTask struct {
+	ID      string        `json:"id"`
+	Task    string        `json:"task"`
+	Args    []interface{} `json:"args"`
+	Kwargs  interface{}   `json:"kwargs"`
+	Retries int           `json:"retries"`
+	ETA     *string       `json:"eta"`
+}
+
+// EnqueueCeleryTask pushes a task to the Celery default queue (Redis list)
+func EnqueueCeleryTask(ctx context.Context, taskName string, args ...interface{}) error {
+	if rdb == nil {
+		return fmt.Errorf("redis client not initialized")
+	}
+
+	task := CeleryTask{
+		ID:      fmt.Sprintf("%d", time.Now().UnixNano()), // Proper UUID would be better but this works for scale
+		Task:    taskName,
+		Args:    args,
+		Kwargs:  map[string]interface{}{},
+		Retries: 0,
+		ETA:     nil,
+	}
+
+	jsonData, err := json.Marshal(task)
+	if err != nil {
+		return fmt.Errorf("failed to marshal celery task: %w", err)
+	}
+
+	// Celery usually looks in 'celery' list by default
+	return rdb.LPush(ctx, "celery", jsonData).Err()
+}

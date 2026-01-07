@@ -49,15 +49,17 @@ func (h *AnalyticsHandler) IngestEvent(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Error handling session event: %v", err)
 	}
 
-	// Insert event
+	// Insert raw event to Postgres (Historical log)
 	if err := h.storage.InsertEvent(r.Context(), &event); err != nil {
 		log.Printf("Error inserting event: %v", err)
-		http.Error(w, "Failed to store event", http.StatusInternalServerError)
-		return
 	}
 
-	// Process event for aggregation
-	go h.processEventForAggregation(&event)
+	// OFFLOAD TO CELERY: Aggregate stats & Update real-time cache
+	go func() {
+		if err := cache.EnqueueCeleryTask(context.Background(), "sonantica.process_analytics", event); err != nil {
+			log.Printf("Failed to enqueue analytics task: %v", err)
+		}
+	}()
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -93,17 +95,17 @@ func (h *AnalyticsHandler) IngestEventBatch(w http.ResponseWriter, r *http.Reque
 		}
 	}
 
-	// Insert events in batch
+	// Insert events in batch to Postgres
 	if err := h.storage.InsertEventBatch(r.Context(), batch.Events); err != nil {
 		log.Printf("Error inserting event batch: %v", err)
-		http.Error(w, "Failed to store events", http.StatusInternalServerError)
-		return
 	}
 
-	// Process events for aggregation asynchronously
+	// OFFLOAD TO CELERY: Aggregate stats & Update real-time cache
 	go func() {
 		for i := range batch.Events {
-			h.processEventForAggregation(&batch.Events[i])
+			if err := cache.EnqueueCeleryTask(context.Background(), "sonantica.process_analytics", batch.Events[i]); err != nil {
+				log.Printf("Failed to enqueue analytics task for batch event: %v", err)
+			}
 		}
 	}()
 
@@ -208,6 +210,61 @@ func (h *AnalyticsHandler) GetDashboard(w http.ResponseWriter, r *http.Request) 
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("X-Cache", "MISS")
 	json.NewEncoder(w).Encode(dashboard)
+}
+
+// GetRealtimeStats returns live stats from Redis
+func (h *AnalyticsHandler) GetRealtimeStats(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	now := time.Now().Unix()
+	// Get last 15 minutes of data
+	buckets := []int64{}
+	for i := 0; i < 15; i++ {
+		buckets = append(buckets, ((now-int64(i*60))/60)*60)
+	}
+
+	type RealtimePoint struct {
+		Timestamp int64 `json:"timestamp"`
+		Plays     int   `json:"plays"`
+		Events    int   `json:"events"`
+	}
+
+	results := []RealtimePoint{}
+
+	// Collect from Redis
+	red := cache.GetClient()
+	for _, b := range buckets {
+		plays, _ := red.Get(ctx, fmt.Sprintf("stats:realtime:plays:%d", b)).Int()
+		events, _ := red.Get(ctx, fmt.Sprintf("stats:realtime:events:%d", b)).Int()
+
+		results = append(results, RealtimePoint{
+			Timestamp: b * 1000, // Frontend expects ms
+			Plays:     plays,
+			Events:    events,
+		})
+	}
+
+	// Trending Tracks (Last 10 minutes)
+	currentBucket := (now / 60) * 60
+	trending, _ := red.ZRevRangeWithScores(ctx, fmt.Sprintf("stats:trending:tracks:%d", currentBucket), 0, 4).Result()
+
+	trendingTracks := []map[string]interface{}{}
+	for _, z := range trending {
+		trendingTracks = append(trendingTracks, map[string]interface{}{
+			"trackId": z.Member,
+			"score":   z.Score,
+		})
+	}
+
+	// Active Users (Count in zset)
+	activeCount, _ := red.ZCard(ctx, "stats:realtime:active_sessions").Result()
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"timeline": results,
+		"trending": trendingTracks,
+		"active":   activeCount,
+	})
 }
 
 // GetTopTracks returns top played tracks
@@ -581,6 +638,7 @@ func (h *AnalyticsHandler) RegisterRoutes(r chi.Router) {
 		r.Get("/tracks/top", h.GetTopTracks)
 		r.Get("/platform-stats", h.GetPlatformStats)
 		r.Get("/listening-patterns", h.GetListeningPatterns)
+		r.Get("/realtime", h.GetRealtimeStats)
 
 		// Artist and Album analytics
 		r.Get("/artists/{name}", h.GetArtistAnalytics)
