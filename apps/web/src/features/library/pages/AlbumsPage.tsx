@@ -4,7 +4,7 @@
  * Browse library by albums.
  */
 
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useLibraryStore } from "@sonantica/media-library";
 import { AlbumCard } from "../components/AlbumCard";
 import {
@@ -16,6 +16,7 @@ import {
 import { AlphabetNavigator, Button, useUIStore } from "@sonantica/ui";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
+import { useMultiServerLibrary } from "../../../hooks/useMultiServerLibrary";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -27,8 +28,6 @@ const containerVariants = {
   },
 };
 
-const ITEMS_PER_PAGE = 20;
-
 type SortField = "title" | "artist" | "year" | "trackCount";
 type SortOrder = "asc" | "desc";
 
@@ -39,6 +38,7 @@ export function AlbumsPage() {
 
   const [sortField, setSortField] = useState<SortField>("title");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
+  const { scanServer } = useMultiServerLibrary();
 
   const filteredAlbums = getFilteredAlbums();
 
@@ -79,105 +79,48 @@ export function AlbumsPage() {
     return albums;
   }, [filteredAlbums, sortField, sortOrder]);
 
-  // Infinite Scroll State
-  const [displayedCount, setDisplayedCount] = useState(ITEMS_PER_PAGE);
-  const observerTarget = useRef<HTMLDivElement>(null);
-
+  // Reload from server when sort changes
   useEffect(() => {
-    setDisplayedCount(ITEMS_PER_PAGE);
-  }, [searchQuery, sortField, sortOrder]); // Reset on search or sort change
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          setDisplayedCount((prev) =>
-            Math.min(prev + ITEMS_PER_PAGE, filteredAlbums.length)
-          );
+    const timeout = setTimeout(() => {
+      import("../../../services/LibraryService").then(
+        ({ getServersConfig }) => {
+          const config = getServersConfig();
+          config.servers.forEach((s) => {
+            scanServer(s.id, false, "albums", 0, {
+              sort: sortField,
+              order: sortOrder,
+            });
+          });
         }
-      },
-      { threshold: 0.1, rootMargin: "100px" }
-    );
-
-    if (observerTarget.current) {
-      observer.observe(observerTarget.current);
-    }
-
-    return () => observer.disconnect();
-  }, [sortedAlbums.length]);
-
-  const visibleAlbums = useMemo(
-    () => sortedAlbums.slice(0, displayedCount),
-    [sortedAlbums, displayedCount]
-  );
+      );
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [sortField, sortOrder, scanServer]);
 
   const handleAlbumClick = (album: any) => {
     setLocation(`/album/${album.id}`);
   };
 
-  const handleLetterClick = (index: number) => {
-    const main = document.getElementById("main-content");
-    if (!main) return;
+  const handleLetterClick = (index: number, _letter: string) => {
+    // Local navigation - we have all data loaded
+    const element = document.getElementById(`album-${index}`);
+    const container = document.getElementById("main-content");
 
-    // 1. Calculate how many items we need to render
-    const targetIndex = index;
-    const bufferSize = 50; // Extra items to render for smooth scrolling
-    const requiredCount = Math.min(
-      targetIndex + bufferSize,
-      sortedAlbums.length
-    );
+    if (element && container) {
+      // Calculate exact position accounting for sticky header
+      const elementTop = element.offsetTop;
+      const headerOffset = 120; // Adjust based on your header height
+      const scrollPosition = elementTop - headerOffset;
 
-    // 2. If we need to render more items, do it first
-    if (requiredCount > displayedCount) {
-      setDisplayedCount(requiredCount);
-
-      // Wait for React to render the new items
-      setTimeout(() => {
-        scrollToAlbum(targetIndex, main);
-      }, 100); // Give React time to render
-    } else {
-      // Items already rendered, scroll immediately
-      scrollToAlbum(targetIndex, main);
+      // Scroll directly to position
+      container.scrollTo({
+        top: scrollPosition,
+        behavior: "smooth",
+      });
+    } else if (element) {
+      // Fallback to scrollIntoView
+      element.scrollIntoView({ behavior: "smooth", block: "start" });
     }
-  };
-
-  const scrollToAlbum = (index: number, main: HTMLElement) => {
-    // Try multiple times with increasing delays to ensure element is rendered
-    let attempts = 0;
-    const maxAttempts = 5;
-
-    const tryScroll = () => {
-      const element = document.getElementById(`album-${index}`);
-
-      if (element) {
-        // Element found, scroll to it
-        const top = element.offsetTop - 100; // Account for sticky header and padding
-        main.scrollTo({ top, behavior: "smooth" });
-      } else if (attempts < maxAttempts) {
-        // Element not found yet, try again
-        attempts++;
-        setTimeout(tryScroll, 50 * attempts); // Exponential backoff
-      } else {
-        // Fallback: estimate scroll position based on grid layout
-        const itemsPerRow =
-          window.innerWidth >= 1280
-            ? 5
-            : window.innerWidth >= 1024
-            ? 4
-            : window.innerWidth >= 768
-            ? 3
-            : 2;
-        const rowHeight = 320; // Approximate height of album card + gap
-        const row = Math.floor(index / itemsPerRow);
-        const estimatedTop = row * rowHeight;
-        main.scrollTo({ top: estimatedTop, behavior: "smooth" });
-      }
-    };
-
-    // Start scrolling attempt
-    requestAnimationFrame(() => {
-      requestAnimationFrame(tryScroll);
-    });
   };
 
   return (
@@ -200,7 +143,7 @@ export function AlbumsPage() {
           </div>
 
           {/* Sort Controls */}
-          {sortedAlbums.length > 0 && (
+          {stats.totalAlbums > 0 && (
             <div className="flex items-center gap-2">
               <select
                 value={sortField}
@@ -234,32 +177,27 @@ export function AlbumsPage() {
 
       {/* Content */}
       <AnimatePresence mode="wait">
-        {sortedAlbums.length === 0 ? (
+        {filteredAlbums.length === 0 && searchQuery ? (
           <motion.div
             key="empty"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="text-center py-20"
           >
-            {searchQuery ? (
-              <>
-                <IconSearch
-                  size={48}
-                  className="mx-auto text-text-muted/30 mb-4"
-                />
-                <p className="text-text-muted">
-                  No albums found matching "{searchQuery}"
-                </p>
-              </>
-            ) : (
-              <>
-                <IconDisc
-                  size={48}
-                  className="mx-auto text-text-muted/30 mb-4"
-                />
-                <p className="text-text-muted">No albums in library</p>
-              </>
-            )}
+            <IconSearch size={48} className="mx-auto text-text-muted/30 mb-4" />
+            <p className="text-text-muted">
+              No albums found matching "{searchQuery}"
+            </p>
+          </motion.div>
+        ) : filteredAlbums.length === 0 ? (
+          <motion.div
+            key="empty-library"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center py-20"
+          >
+            <IconDisc size={48} className="mx-auto text-text-muted/30 mb-4" />
+            <p className="text-text-muted">No albums in library</p>
           </motion.div>
         ) : (
           <motion.div
@@ -269,7 +207,7 @@ export function AlbumsPage() {
             animate="visible"
             className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"
           >
-            {visibleAlbums.map((album: any, index: number) => (
+            {sortedAlbums.map((album: any, index: number) => (
               <div key={album.id} id={`album-${index}`}>
                 <AlbumCard
                   album={album}
@@ -281,15 +219,6 @@ export function AlbumsPage() {
         )}
       </AnimatePresence>
 
-      {/* Sentinel for Infinite Scroll */}
-      {displayedCount < sortedAlbums.length && (
-        <div
-          ref={observerTarget}
-          className="py-8 text-center text-text-muted/50 text-sm"
-        >
-          Loading more albums...
-        </div>
-      )}
       {/* Navigator */}
       {sortedAlbums.length > 50 &&
         (sortField === "title" || sortField === "artist") && (
@@ -299,6 +228,7 @@ export function AlbumsPage() {
             }))}
             onLetterClick={handleLetterClick}
             forceScrollOnly={isCramped}
+            mode="local"
           />
         )}
     </div>

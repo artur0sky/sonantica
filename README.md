@@ -27,16 +27,20 @@ sonantica/
 │
 ├─ packages/
 │  ├─ player-core/      # Audio engine & playback logic (UI-agnostic)
-│  ├─ media-library/    # Indexing, metadata management & search
+│  ├─ media-library/    # Client-side library index & manager
 │  ├─ metadata/         # Low-level metadata extraction (ID3, Vorbis, FLAC)
-│  ├─ api-server/       # Self-hosted API for streaming and library sync
 │  ├─ audio-analyzer/   # FFT Analysis & waveform generation
 │  ├─ dsp/              # Audio processing (EQ, Presets, Gain)
 │  ├─ recommendations/  # Discovery engine (similar tracks, artists)
 │  ├─ lyrics/           # Synchronized lyrics parsing and management
-│  ├─ offline-manager/  # Offline playback and synchronization logic
+│  ├─ offline-manager/  # Offline playback, downloads & cache
+│  ├─ analytics/        # Privacy-first telemetry & metrics
 │  ├─ ui/               # Shared Design System & Components
 │  └─ shared/           # Fundamental types & utilities
+│
+├─ services/
+│  ├─ go-core/          # Stream Core (API, Streaming, Indexing)
+│  └─ python-worker/    # Audio Worker (Analysis, Waveforms)
 │
 └─ docs/                # Identity, Architecture & Roadmap
 ```
@@ -153,11 +157,15 @@ pnpm dev
 
 ### Shared Libraries (`/packages`)
 *   **[@sonantica/player-core](./packages/player-core)**: The heartbeat. A UI-agnostic audio engine that manages the playback lifecycle.
-*   **[@sonantica/media-library](./packages/media-library)**: The librarian. Handles indexing, browsing, and search with zero-latency.
+*   **[@sonantica/media-library](./packages/media-library)**: The librarian (client). Smart indexing, fuzzy search, and instant library management.
 *   **[@sonantica/ui](./packages/ui)**: The face. A token-based design system implementing our "Acoustic Aesthetics".
-*   **[@sonantica/dsp](./packages/dsp)**: The studio. Professional 10-band EQ and signal processing chain.
-*   **[@sonantica/audio-analyzer](./packages/audio-analyzer)**: The scope. Real-time visualization and metric extraction.
+*   **[@sonantica/dsp](./packages/dsp)**: The studio. Professional 10-band EQ, preamp, and signal processing chain.
+*   **[@sonantica/lyrics](./packages/lyrics)**: The interpreter. Synchronized lyrics parsing (LRC) and metadata extraction.
+*   **[@sonantica/metadata](./packages/metadata)**: The archivist. High-performance batch metadata extraction.
+*   **[@sonantica/offline-manager](./packages/offline-manager)**: The guardian. Robust download orchestration and cache management.
 *   **[@sonantica/recommendations](./packages/recommendations)**: The guide. Acoustically-aware discovery engine.
+*   **[@sonantica/audio-analyzer](./packages/audio-analyzer)**: The scope. Real-time visualization and metric extraction.
+*   **[@sonantica/analytics](./packages/analytics)**: The observer. Privacy-first telemetry and playback insights.
 *   **[@sonantica/shared](./packages/shared)**: The foundation. Universal types and contracts.
 
 ### Active Services (`/services`)
