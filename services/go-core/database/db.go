@@ -11,8 +11,8 @@ import (
 	_ "embed"
 )
 
-//go:embed schema_playlists.sql
-var playlistSchema string
+//go:embed schema.sql
+var databaseSchema string
 
 var DB *pgxpool.Pool
 
@@ -53,9 +53,9 @@ func RunMigrations() error {
 
 	fmt.Println("📦 Running database migrations...")
 
-	// Execute Playlist Schema
-	if _, err := DB.Exec(ctx, playlistSchema); err != nil {
-		return fmt.Errorf("failed to execute playlist schema: %v", err)
+	// Execute Complete Database Schema
+	if _, err := DB.Exec(ctx, databaseSchema); err != nil {
+		return fmt.Errorf("failed to execute database schema: %v", err)
 	}
 
 	fmt.Println("✅ Database migrations completed")

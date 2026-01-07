@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"time"
 
@@ -31,6 +32,9 @@ func CreatePlaylist(w http.ResponseWriter, r *http.Request) {
 	playlistID := uuid.New()
 	now := time.Now()
 
+	// Log incoming request
+	log.Printf("[CreatePlaylist] Creating playlist: name=%s, type=%s, trackCount=%d", req.Name, req.Type, len(req.TrackIDs))
+
 	// 1. Insert Playlist
 	_, err := database.DB.Exec(r.Context(), `
 		INSERT INTO playlists (id, name, type, description, created_at, updated_at)
@@ -38,22 +42,38 @@ func CreatePlaylist(w http.ResponseWriter, r *http.Request) {
 	`, playlistID, req.Name, req.Type, req.Description, now, now)
 
 	if err != nil {
+		log.Printf("[CreatePlaylist] Failed to insert playlist: %v", err)
 		http.Error(w, "Failed to create playlist: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	// 2. Insert Tracks if provided
+	insertedTracks := 0
 	if len(req.TrackIDs) > 0 {
 		for i, trackIDStr := range req.TrackIDs {
+			// Parse track ID as UUID
 			trackID, err := uuid.Parse(trackIDStr)
-			if err == nil {
-				_, _ = database.DB.Exec(r.Context(), `
-					INSERT INTO playlist_tracks (playlist_id, track_id, position, added_at)
-					VALUES ($1, $2, $3, $4)
-				`, playlistID, trackID, i, now)
+			if err != nil {
+				log.Printf("[CreatePlaylist] Invalid track UUID at position %d: %s (error: %v)", i, trackIDStr, err)
+				continue
+			}
+
+			// Insert track into playlist
+			_, err = database.DB.Exec(r.Context(), `
+				INSERT INTO playlist_tracks (playlist_id, track_id, position, added_at)
+				VALUES ($1, $2, $3, $4)
+				ON CONFLICT (playlist_id, track_id) DO NOTHING
+			`, playlistID, trackID, i, now)
+
+			if err != nil {
+				log.Printf("[CreatePlaylist] Failed to insert track %s at position %d: %v", trackID, i, err)
+			} else {
+				insertedTracks++
 			}
 		}
 	}
+
+	log.Printf("[CreatePlaylist] Playlist created successfully: id=%s, insertedTracks=%d/%d", playlistID, insertedTracks, len(req.TrackIDs))
 
 	// Return created playlist
 	w.Header().Set("Content-Type", "application/json")
@@ -64,7 +84,7 @@ func CreatePlaylist(w http.ResponseWriter, r *http.Request) {
 		Description: &req.Description,
 		CreatedAt:   now,
 		UpdatedAt:   now,
-		TrackCount:  len(req.TrackIDs),
+		TrackCount:  insertedTracks,
 	})
 }
 
