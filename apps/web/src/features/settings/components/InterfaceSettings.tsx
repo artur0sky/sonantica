@@ -2,7 +2,7 @@ import { SettingSection, SettingRow, Switch } from "@sonantica/ui";
 import { useSettingsStore } from "../../../stores/settingsStore";
 
 export function InterfaceSettings() {
-  const { animations, showSidebarOnStartup, minimizeToTray, toggle, theme } =
+  const { animations, showSidebarOnStartup, toggle, theme } =
     useSettingsStore();
 
   return (
@@ -46,16 +46,6 @@ export function InterfaceSettings() {
           <Switch
             checked={showSidebarOnStartup}
             onChange={() => toggle("showSidebarOnStartup")}
-          />
-        </SettingRow>
-
-        <SettingRow
-          label="System Tray"
-          description="Minimize to tray instead of closing (Desktop only)."
-        >
-          <Switch
-            checked={minimizeToTray}
-            onChange={() => toggle("minimizeToTray")}
           />
         </SettingRow>
       </SettingSection>

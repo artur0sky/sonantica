@@ -22,7 +22,8 @@ interface SettingsState {
   theme: 'dark' | 'light' | 'system';
   animations: boolean;
   showSidebarOnStartup: boolean;
-  minimizeToTray: boolean;
+  crossfadeDuration: number; // in seconds
+  fadeOutDuration: number; // in seconds
 
   // Offline
   offlineMode: boolean;
@@ -32,7 +33,7 @@ interface SettingsState {
   // Actions
   toggle: (key: keyof Omit<SettingsState, 'theme' | 'toggle' | 'setTheme' | 'setNumber'>) => void;
   setTheme: (theme: 'dark' | 'light' | 'system') => void;
-  setNumber: (key: 'playbackBufferSize' | 'scanFileSizeLimit' | 'coverArtSizeLimit', value: number) => void;
+  setNumber: (key: 'playbackBufferSize' | 'scanFileSizeLimit' | 'coverArtSizeLimit' | 'crossfadeDuration' | 'fadeOutDuration', value: number) => void;
   setDownloadQuality: (quality: 'original' | 'high' | 'normal' | 'low') => void;
 }
 
@@ -57,7 +58,8 @@ export const useSettingsStore = create<SettingsState>()(
       theme: 'dark',
       animations: true,
       showSidebarOnStartup: true,
-      minimizeToTray: false,
+      crossfadeDuration: 0, // Disabled by default
+      fadeOutDuration: 0, // Disabled by default
 
       offlineMode: false,
       hideUnavailableOffline: false,

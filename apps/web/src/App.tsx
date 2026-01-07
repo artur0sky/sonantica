@@ -13,6 +13,8 @@ import { MainLayout } from "./components/layout/MainLayout";
 import { ServerGuard } from "./components/ServerGuard";
 import { PWAUpdatePrompt } from "./components/PWAUpdatePrompt";
 import { IconLoader } from "@tabler/icons-react";
+import { MotionConfig } from "framer-motion";
+import { useSettingsStore } from "./stores/settingsStore";
 import { useDSPIntegration } from "./hooks/useDSPIntegration";
 import { useAutoScan } from "./hooks/useAutoScan";
 import { useAnalyticsIntegration } from "./hooks/useAnalyticsIntegration";
@@ -76,67 +78,73 @@ function App() {
   useAnalyticsIntegration();
   usePlaybackAnalytics();
 
+  const animationsEnabled = useSettingsStore((s) => s.animations);
+
   return (
     <ErrorBoundary>
-      <ServerGuard>
-        <Suspense fallback={<PageLoader />}>
-          <Switch>
-            {/* Server Setup - No layout */}
-            <Route path="/setup" component={ServerSetupPage} />
+      <MotionConfig
+        transition={animationsEnabled ? undefined : { duration: 0 }}
+      >
+        <ServerGuard>
+          <Suspense fallback={<PageLoader />}>
+            <Switch>
+              {/* Server Setup - No layout */}
+              <Route path="/setup" component={ServerSetupPage} />
 
-            {/* Main app with layout - requires server */}
-            <Route>
-              <MainLayout>
-                <Switch>
-                  {/* Default view: Tracks */}
-                  <Route path="/" component={TracksPage} />
+              {/* Main app with layout - requires server */}
+              <Route>
+                <MainLayout>
+                  <Switch>
+                    {/* Default view: Tracks */}
+                    <Route path="/" component={TracksPage} />
 
-                  {/* Library views */}
-                  <Route path="/library" component={TracksPage} />
-                  <Route path="/albums" component={AlbumsPage} />
-                  <Route path="/artists" component={ArtistsPage} />
+                    {/* Library views */}
+                    <Route path="/library" component={TracksPage} />
+                    <Route path="/albums" component={AlbumsPage} />
+                    <Route path="/artists" component={ArtistsPage} />
 
-                  {/* Detail views */}
-                  <Route path="/album/:id" component={AlbumDetailPage} />
-                  <Route path="/artist/:id" component={ArtistDetailPage} />
+                    {/* Detail views */}
+                    <Route path="/album/:id" component={AlbumDetailPage} />
+                    <Route path="/artist/:id" component={ArtistDetailPage} />
 
-                  {/* Settings */}
-                  <Route path="/settings" component={SettingsPage} />
+                    {/* Settings */}
+                    <Route path="/settings" component={SettingsPage} />
 
-                  {/* Analytics Dashboard */}
-                  <Route path="/analytics" component={AnalyticsDashboard} />
+                    {/* Analytics Dashboard */}
+                    <Route path="/analytics" component={AnalyticsDashboard} />
 
-                  {/* Playlists - Coming soon */}
-                  <Route path="/playlists">
-                    <div className="max-w-6xl mx-auto p-6">
-                      <div className="text-center py-20">
-                        <div className="text-6xl mb-4">📋</div>
-                        <h2 className="text-2xl font-semibold mb-2">
-                          Playlists
-                        </h2>
-                        <p className="text-text-muted">Coming soon...</p>
+                    {/* Playlists - Coming soon */}
+                    <Route path="/playlists">
+                      <div className="max-w-6xl mx-auto p-6">
+                        <div className="text-center py-20">
+                          <div className="text-6xl mb-4">📋</div>
+                          <h2 className="text-2xl font-semibold mb-2">
+                            Playlists
+                          </h2>
+                          <p className="text-text-muted">Coming soon...</p>
+                        </div>
                       </div>
-                    </div>
-                  </Route>
+                    </Route>
 
-                  {/* 404 */}
-                  <Route>
-                    <div className="max-w-6xl mx-auto p-6">
-                      <div className="text-center py-20">
-                        <h1 className="text-4xl font-bold mb-2">404</h1>
-                        <p className="text-text-muted">Page not found</p>
+                    {/* 404 */}
+                    <Route>
+                      <div className="max-w-6xl mx-auto p-6">
+                        <div className="text-center py-20">
+                          <h1 className="text-4xl font-bold mb-2">404</h1>
+                          <p className="text-text-muted">Page not found</p>
+                        </div>
                       </div>
-                    </div>
-                  </Route>
-                </Switch>
-              </MainLayout>
-            </Route>
-          </Switch>
-        </Suspense>
-      </ServerGuard>
+                    </Route>
+                  </Switch>
+                </MainLayout>
+              </Route>
+            </Switch>
+          </Suspense>
+        </ServerGuard>
 
-      {/* PWA Update Prompt */}
-      <PWAUpdatePrompt />
+        {/* PWA Update Prompt */}
+        <PWAUpdatePrompt />
+      </MotionConfig>
     </ErrorBoundary>
   );
 }

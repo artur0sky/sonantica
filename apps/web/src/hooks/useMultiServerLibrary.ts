@@ -344,7 +344,9 @@ export function useMultiServerLibrary() {
         
         await adapter.startScan({
            scanFileSizeLimit: settings.scanFileSizeLimit,
-           coverArtSizeLimit: settings.coverArtSizeLimit
+           coverArtSizeLimit: settings.coverArtSizeLimit,
+           watchFolders: settings.watchFolders,
+           parallelScanning: settings.parallelScanning
         });
         
         // Optionally follow up with a sync (scanServer) if desired, 

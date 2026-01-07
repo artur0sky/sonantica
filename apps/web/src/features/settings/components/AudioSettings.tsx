@@ -1,5 +1,6 @@
 import { SettingSection, SettingRow, Switch, Select } from "@sonantica/ui";
 import { useSettingsStore } from "../../../stores/settingsStore";
+import { usePlayerStore } from "@sonantica/player-core";
 
 export function AudioSettings() {
   const {
@@ -11,6 +12,8 @@ export function AudioSettings() {
     toggle,
     setNumber,
   } = useSettingsStore();
+
+  const playerUpdateBufferConfig = usePlayerStore((s) => s.updateBufferConfig);
 
   const bufferOptions = [
     { value: (10 * 1024 * 1024).toString(), label: "10 MB (Low RAM)" },
@@ -50,26 +53,16 @@ export function AudioSettings() {
           label="Playback Buffer"
           description="Amount of audio to cache ahead. Higher values reduce stuttering but use more RAM."
         >
-          <div className="w-full sm:w-64">
+          <div className="w-full sm:w-56">
             <Select
               options={bufferOptions}
               value={playbackBufferSize.toString()}
-              onChange={(e) =>
-                setNumber("playbackBufferSize", parseInt(e.target.value))
-              }
+              onChange={(e) => {
+                const val = parseInt(e.target.value);
+                setNumber("playbackBufferSize", val);
+                playerUpdateBufferConfig({ maxCacheSize: val / (1024 * 1024) });
+              }}
             />
-          </div>
-        </SettingRow>
-
-        <SettingRow
-          label="Crossfade"
-          description="Smoothly fade between tracks."
-        >
-          <div className="w-full sm:w-32">
-            {/* Mock Select for now */}
-            <div className="bg-surface p-2 rounded text-sm text-center border border-border">
-              Disabled
-            </div>
           </div>
         </SettingRow>
       </SettingSection>
