@@ -103,5 +103,9 @@ export interface Playlist {
   // For HISTORY_SNAPSHOT
   snapshotDate?: Date;
   // For SMART playlists
-  rules?: Record<string, any>; 
+  rules?: string; // JSON string for smart playlists
+  
+  // Enriched fields (from API)
+  trackCount?: number;
+  coverArts?: string[]; // Up to 4 covers for grid display
 }
