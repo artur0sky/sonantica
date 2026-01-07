@@ -9,7 +9,7 @@
  */
 
 import { create } from 'zustand';
-import type { Track, Artist, Album } from '../types';
+import type { Track, Artist, Album, Playlist } from '../types';
 
 export interface LibraryStats {
   totalTracks: number;
@@ -24,6 +24,7 @@ interface LibraryState {
   tracks: Track[];
   artists: Artist[];
   albums: Album[];
+  playlists: Playlist[];
   stats: LibraryStats;
   loading: boolean;
   error: string | null;
@@ -38,6 +39,10 @@ interface LibraryState {
   setTracks: (tracks: Track[]) => void;
   setArtists: (artists: Artist[]) => void;
   setAlbums: (albums: Album[]) => void;
+  setPlaylists: (playlists: Playlist[]) => void;
+  addPlaylist: (playlist: Playlist) => void;
+  updatePlaylist: (id: string, updates: Partial<Playlist>) => void;
+  deletePlaylist: (id: string) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   clearLibrary: () => void;
@@ -55,6 +60,7 @@ interface LibraryState {
   getAlbumById: (id: string) => Album | undefined;
   getArtistById: (id: string) => Artist | undefined;
   getTrackById: (id: string) => Track | undefined;
+  getPlaylistById: (id: string) => Playlist | undefined;
 }
 
 const calculateStats = (tracks: Track[], artists: Artist[], albums: Album[]): LibraryStats => {
@@ -74,6 +80,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   tracks: [],
   artists: [],
   albums: [],
+  playlists: [],
   stats: {
     totalTracks: 0,
     totalArtists: 0,
@@ -197,6 +204,18 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     set({ albums: updatedAlbums, stats });
   },
 
+  setPlaylists: (playlists) => set({ playlists }),
+
+  addPlaylist: (playlist) => set((state) => ({ playlists: [playlist, ...state.playlists] })),
+
+  updatePlaylist: (id, updates) => set((state) => ({
+    playlists: state.playlists.map(p => p.id === id ? { ...p, ...updates } : p)
+  })),
+
+  deletePlaylist: (id) => set((state) => ({
+    playlists: state.playlists.filter(p => p.id !== id)
+  })),
+
   setLoading: (loading) => set({ loading }),
   setError: (error) => set({ error }),
 
@@ -205,6 +224,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
       tracks: [],
       artists: [],
       albums: [],
+      playlists: [],
       stats: {
         totalTracks: 0,
         totalArtists: 0,
@@ -309,5 +329,9 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
 
   getTrackById: (id: string) => {
     return get().tracks.find(t => t.id === id);
+  },
+
+  getPlaylistById: (id: string) => {
+    return get().playlists.find(p => p.id === id);
   },
 }));

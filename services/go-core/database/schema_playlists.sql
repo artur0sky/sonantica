@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS playlists (
 -- Playlist Tracks (Many-to-Many)
 CREATE TABLE IF NOT EXISTS playlist_tracks (
     playlist_id UUID REFERENCES playlists(id) ON DELETE CASCADE,
-    track_id UUID REFERENCES tracks(id) ON DELETE CASCADE,
+    track_id TEXT REFERENCES tracks(id) ON DELETE CASCADE,
     position INTEGER NOT NULL,
     added_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     PRIMARY KEY (playlist_id, track_id)
