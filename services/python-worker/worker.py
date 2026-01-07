@@ -20,12 +20,28 @@ from mutagen.oggvorbis import OggVorbis
 log_dir = "/var/log/sonantica"
 os.makedirs(log_dir, exist_ok=True)
 
-logging.basicConfig(level=logging.INFO, 
-                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    handlers=[
-                        logging.FileHandler(os.path.join(log_dir, "worker.log")),
-                        logging.StreamHandler()
-                    ])
+class JSONFormatter(logging.Formatter):
+    def format(self, record):
+        log_record = {
+            "timestamp": self.formatTime(record, self.datefmt),
+            "level": record.levelname,
+            "message": record.getMessage(),
+            "logger": record.name,
+            "module": record.module,
+            "line": record.lineno,
+            "trace_id": getattr(record, "trace_id", None)
+        }
+        if record.exc_info:
+            log_record["exception"] = self.formatException(record.exc_info)
+        return json.dumps(log_record)
+
+json_handler = logging.FileHandler(os.path.join(log_dir, "worker.log"))
+json_handler.setFormatter(JSONFormatter())
+
+console_handler = logging.StreamHandler()
+console_handler.setFormatter(JSONFormatter())
+
+logging.basicConfig(level=logging.INFO, handlers=[json_handler, console_handler])
 logger = logging.getLogger("AudioWorker")
 
 # Configuration
@@ -34,6 +50,16 @@ REDIS_PORT = int(os.environ.get("REDIS_PORT", 6379))
 REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD", None)
 POSTGRES_URL = os.environ.get("POSTGRES_URL")
 MEDIA_PATH = os.environ.get("MEDIA_PATH", "/media")
+
+
+# --- DOMAIN MODELS (ORM) ---
+# ... (keeping existing models) ...
+# I cannot easily skip lines with replace_file_content if I want to update multiple chunks.
+# I will just update the formatter first, then process_job in a separate call or chunks.
+# Wait, I can use multi_replace?
+# Yes, checking tool definitions... "multi_replace_file_content".
+# I'll use multi_replace_file_content.
+
 
 
 # --- DOMAIN MODELS (ORM) ---
@@ -339,20 +365,21 @@ def analyze_audio(file_path):
 def process_job(job_data):
     rel_path = job_data.get("file_path")
     full_path = os.path.join(job_data.get("root", MEDIA_PATH), rel_path)
+    trace_id = job_data.get("trace_id", "N/A")
     
-    logger.info(f"🎧 Analyzing: {rel_path}")
+    logger.info(f"🎧 Analyzing: {rel_path}", extra={"trace_id": trace_id})
     
     meta = analyze_audio(full_path)
     if meta:
-        logger.debug(f"Metadata extracted: {meta}")
+        logger.debug(f"Metadata extracted: {meta}", extra={"trace_id": trace_id})
         try:
             r = get_repo()
             if r:
                 r.save_track(meta, rel_path)
         except Exception as e:
-            logger.error(f"DB Error: {e}")
+            logger.error(f"DB Error: {e}", extra={"trace_id": trace_id})
     else:
-        logger.warning(f"❌ Failed to extract metadata for {rel_path}")
+        logger.warning(f"❌ Failed to extract metadata for {rel_path}", extra={"trace_id": trace_id})
 
 
 def main():

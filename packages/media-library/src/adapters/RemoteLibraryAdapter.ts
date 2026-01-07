@@ -101,8 +101,15 @@ export class RemoteLibraryAdapter implements ILibraryAdapter {
   /**
    * Get all tracks
    */
-  async getTracks(): Promise<Track[]> {
-    const response = await this.fetch('/api/library/tracks');
+  async getTracks(options?: { limit?: number; offset?: number; sort?: string; order?: 'asc' | 'desc' }): Promise<Track[]> {
+    const params = new URLSearchParams();
+    if (options?.limit) params.append('limit', options.limit.toString());
+    if (options?.offset) params.append('offset', options.offset.toString());
+    if (options?.sort) params.append('sort', options.sort);
+    if (options?.order) params.append('order', options.order);
+    
+    const queryString = params.toString() ? `?${params.toString()}` : '';
+    const response = await this.fetch(`/api/library/tracks${queryString}`);
     const data = await response.json();
     return (data.tracks || []).map((t: any) => this.normalizeTrack(t));
   }
@@ -119,8 +126,15 @@ export class RemoteLibraryAdapter implements ILibraryAdapter {
   /**
    * Get all artists
    */
-  async getArtists(): Promise<Artist[]> {
-    const response = await this.fetch('/api/library/artists');
+  async getArtists(options?: { limit?: number; offset?: number; sort?: string; order?: 'asc' | 'desc' }): Promise<Artist[]> {
+    const params = new URLSearchParams();
+    if (options?.limit) params.append('limit', options.limit.toString());
+    if (options?.offset) params.append('offset', options.offset.toString());
+    if (options?.sort) params.append('sort', options.sort);
+    if (options?.order) params.append('order', options.order);
+
+    const queryString = params.toString() ? `?${params.toString()}` : '';
+    const response = await this.fetch(`/api/library/artists${queryString}`);
     const data = await response.json();
     return data.artists;
   }
@@ -137,8 +151,15 @@ export class RemoteLibraryAdapter implements ILibraryAdapter {
   /**
    * Get all albums
    */
-  async getAlbums(): Promise<Album[]> {
-    const response = await this.fetch('/api/library/albums');
+  async getAlbums(options?: { limit?: number; offset?: number; sort?: string; order?: 'asc' | 'desc' }): Promise<Album[]> {
+    const params = new URLSearchParams();
+    if (options?.limit) params.append('limit', options.limit.toString());
+    if (options?.offset) params.append('offset', options.offset.toString());
+    if (options?.sort) params.append('sort', options.sort);
+    if (options?.order) params.append('order', options.order);
+
+    const queryString = params.toString() ? `?${params.toString()}` : '';
+    const response = await this.fetch(`/api/library/albums${queryString}`);
     const data = await response.json();
     return (data.albums || []).map((album: any) => this.normalizeAlbum(album));
   }
@@ -192,6 +213,14 @@ export class RemoteLibraryAdapter implements ILibraryAdapter {
       isScanning: data.isScanning,
       filesScanned: data.stats?.tracks,
     };
+  }
+
+  /**
+   * Get alphabet index
+   */
+  async getAlphabetIndex(type: 'tracks' | 'artists' | 'albums'): Promise<Record<string, number>> {
+      const response = await this.fetch(`/api/library/alphabet-index?type=${type}`);
+      return response.json();
   }
 
   /**

@@ -5,7 +5,7 @@
  * Supports virtual scrolling for large libraries.
  */
 
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "wouter";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Button } from "@sonantica/ui";
@@ -28,6 +28,7 @@ import {
   playAllShuffled,
 } from "../../../utils/playContext";
 import { trackToMediaSource } from "../../../utils/streamingUrl";
+import { useMultiServerLibrary } from "../../../hooks/useMultiServerLibrary";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -54,7 +55,7 @@ export function TracksPage() {
 
   const filteredTracks = getFilteredTracks();
 
-  // Sort tracks
+  // Sort tracks (Client-side sort of loaded tracks to maintain consistency)
   const sortedTracks = useMemo(() => {
     const tracksToSort = [...filteredTracks];
 
@@ -102,6 +103,41 @@ export function TracksPage() {
   // PERFORMANCE: Virtual scrolling for large lists
   const useVirtualScroll = sortedTracks.length > VIRTUAL_SCROLL_THRESHOLD;
 
+  const { scanServer } = useMultiServerLibrary();
+
+  // Reload from server when sort changes
+  useEffect(() => {
+    // Debounce sort reload to avoid double fetch on mount if default matches
+    const timeout = setTimeout(() => {
+      // We need to reload ALL servers with the new sort to get the correct "First Page"
+      // We cannot use 'scanAllServers' because it doesn't accept options yet easily.
+      // Let's iterate manually or add helper.
+      // For now, assume 1 server or iterate manually.
+
+      // Access services to get config directly or use hook helper?
+      // Hook doesn't expose config.
+      // Let's use a simple heuristic: trigger loadMore logic but with reset?
+      // No, loadMore appends. We need REPLACE.
+      // scanServer(..., false) replacs.
+
+      // Helper to reload all
+      // This is a bit hacky accessing internal logic from UI but valid for now.
+      import("../../../services/LibraryService").then(
+        ({ getServersConfig }) => {
+          const config = getServersConfig();
+          config.servers.forEach((s) => {
+            scanServer(s.id, false, "tracks", 0, {
+              sort: sortField,
+              order: sortOrder,
+            });
+          });
+        }
+      );
+    }, 300);
+
+    return () => clearTimeout(timeout);
+  }, [sortField, sortOrder, scanServer]);
+
   const virtualizer = useVirtualizer({
     count: sortedTracks.length,
     getScrollElement: () =>
@@ -123,19 +159,34 @@ export function TracksPage() {
     }
   };
 
-  const handleLetterClick = (index: number) => {
+  const handleLetterClick = (index: number, _letter: string) => {
+    // Local navigation - we have all data loaded
     const main = document.getElementById("main-content");
     if (!main) return;
 
     if (useVirtualScroll) {
       // For virtual scrolling, use the virtualizer's scrollToIndex method
-      // This automatically handles rendering the necessary items
+      // This ensures the item is rendered and visible
       virtualizer.scrollToIndex(index, {
         align: "start",
-        behavior: "smooth",
+        behavior: "auto", // Use "auto" for instant scroll, then smooth scroll to fine-tune
       });
+
+      // Small delay to ensure rendering, then smooth scroll to exact position
+      setTimeout(() => {
+        const element = document.getElementById(`track-${index}`);
+        if (element) {
+          const elementTop = element.offsetTop;
+          const headerOffset = 100;
+          const scrollPosition = elementTop - headerOffset;
+          main.scrollTo({
+            top: scrollPosition,
+            behavior: "smooth",
+          });
+        }
+      }, 50);
     } else {
-      // For regular scrolling, ensure element is rendered first
+      // For regular scrolling, scroll to element
       scrollToTrack(index, main);
     }
   };
@@ -222,7 +273,8 @@ export function TracksPage() {
 
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             {/* Sort Controls */}
-            {sortedTracks.length > 0 && (
+            {/* Hide controls if no tracks unless searching? Actually keep them. */}
+            {stats.totalTracks > 0 && (
               <div className="flex items-center gap-2 flex-1 sm:flex-initial">
                 <select
                   value={sortField}
@@ -402,6 +454,7 @@ export function TracksPage() {
             }))}
             onLetterClick={handleLetterClick}
             forceScrollOnly={isCramped}
+            mode="local"
           />
         )}
     </div>

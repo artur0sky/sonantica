@@ -9,6 +9,11 @@ interface AlphabetNavigatorProps {
   vertical?: boolean;
   scrollContainerId?: string;
   forceScrollOnly?: boolean;
+  /**
+   * If 'remote', all letters are available and onLetterClick
+   * returns -1 for index. Used for server-side index navigation.
+   */
+  mode?: "local" | "remote";
 }
 
 const ALPHABET = "#ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
@@ -20,6 +25,7 @@ export function AlphabetNavigator({
   vertical = true,
   scrollContainerId,
   forceScrollOnly = false,
+  mode = "local",
 }: AlphabetNavigatorProps) {
   const [activeLetter, setActiveLetter] = useState<string | null>(null);
   const [isHovering, setIsHovering] = useState(false);
@@ -30,6 +36,8 @@ export function AlphabetNavigator({
   // Map letters to their first index in the items list
   // Optimized for large collections
   const letterIndices = useMemo(() => {
+    if (mode === "remote") return {}; // Not needed for remote
+
     const indices: Record<string, number> = {};
 
     // Early return for empty items
@@ -53,11 +61,12 @@ export function AlphabetNavigator({
     });
 
     return indices;
-  }, [items]);
+  }, [items, mode]);
 
   const availableLetters = useMemo(() => {
+    if (mode === "remote") return ALPHABET;
     return ALPHABET.filter((l) => letterIndices[l] !== undefined);
-  }, [letterIndices]);
+  }, [letterIndices, mode]);
 
   // Detect scroll for visibility
   useEffect(() => {
@@ -104,6 +113,15 @@ export function AlphabetNavigator({
   }, [scrollContainerId]);
 
   const handleLetterInteraction = (letter: string) => {
+    if (mode === "remote") {
+      setActiveLetter(letter);
+      onLetterClick(-1, letter);
+
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => setActiveLetter(null), 2000);
+      return;
+    }
+
     const index = letterIndices[letter];
     if (index !== undefined) {
       setActiveLetter(letter);
@@ -136,7 +154,8 @@ export function AlphabetNavigator({
       onMouseLeave={() => setIsHovering(false)}
     >
       {ALPHABET.map((letter) => {
-        const isAvailable = letterIndices[letter] !== undefined;
+        const isAvailable =
+          mode === "remote" || letterIndices[letter] !== undefined;
         return (
           <button
             key={letter}

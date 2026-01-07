@@ -8,7 +8,7 @@
  * Philosophy: "User Autonomy" - Multiple self-hosted instances
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { 
   getServersConfig, 
   createLibraryAdapterForServer
@@ -54,6 +54,9 @@ export function useMultiServerLibrary() {
     error: null,
     scanningServers: new Set()
   });
+
+  // Polling interval ref
+  const pollingIntervalRef = useRef<number | null>(null);
 
   // Sync with store on mount
   useEffect(() => {
@@ -168,10 +171,21 @@ export function useMultiServerLibrary() {
     loadOfflineContent();
   }, [loadOfflineContent]);
 
+  /* Pagination State */
+  // const [serverOffsets, setServerOffsets] = useState<Record<string, { tracks: number, artists: number, albums: number }>>({});
+  // const LIMIT = 50;
+
   /**
    * Scan a specific server (Sync metadata to client)
+   * Now loads ALL data at once for virtual scrolling (cached by Redis)
    */
-  const scanServer = useCallback(async (serverId: string) => {
+  const scanServer = useCallback(async (
+    serverId: string, 
+    isLoadMore = false, 
+    type: 'all' | 'tracks' | 'artists' | 'albums' = 'all', 
+    offsetOverride?: number,
+    sortOptions?: { sort: string; order: 'asc' | 'desc' }
+  ) => {
     const config = getServersConfig();
     const server = config.servers.find(s => s.id === serverId);
     
@@ -191,63 +205,101 @@ export function useMultiServerLibrary() {
         throw new Error('Failed to create adapter');
       }
 
-      // Test connection
-      const connected = await adapter.testConnection();
-      if (!connected) {
-        throw new Error(`Unable to connect to ${server.name}`);
+      // Test connection (only on initial scan)
+      if (!isLoadMore && offsetOverride === undefined) {
+        const connected = await adapter.testConnection();
+        if (!connected) {
+          throw new Error(`Unable to connect to ${server.name}`);
+        }
       }
 
-      // Load data from this server
-      const [tracks, artists, albums] = await Promise.all([
-        adapter.getTracks(),
-        adapter.getArtists(),
-        adapter.getAlbums()
-      ]);
+      // Load ALL data at once (limit=-1) for virtual scrolling
+      // Redis will cache this for super fast subsequent loads
+      let fetchedTracks: Track[] = [];
+      let fetchedArtists: Artist[] = [];
+      let fetchedAlbums: Album[] = [];
+
+      const promises = [];
+      
+      const shouldFetchTracks = type === 'all' || type === 'tracks';
+      const shouldFetchArtists = type === 'all' || type === 'artists';
+      const shouldFetchAlbums = type === 'all' || type === 'albums';
+
+      console.log(`🚀 Loading FULL library from ${server.name} (Virtual Scrolling Mode)`);
+      
+      if (shouldFetchTracks) {
+        // limit=-1 means "get everything"
+        promises.push(adapter.getTracks({ limit: -1, offset: 0, ...sortOptions }).then(res => fetchedTracks = res));
+      }
+      if (shouldFetchArtists) {
+        promises.push(adapter.getArtists({ limit: -1, offset: 0, ...sortOptions }).then(res => fetchedArtists = res));
+      }
+      if (shouldFetchAlbums) {
+        promises.push(adapter.getAlbums({ limit: -1, offset: 0, ...sortOptions }).then(res => fetchedAlbums = res));
+      }
+
+      await Promise.all(promises);
 
       // Normalize and tag data
       const baseUrl = server.serverUrl.endsWith('/') ? server.serverUrl : `${server.serverUrl}/`;
       
       const normalizeArt = (art?: string) => {
         if (!art || art.startsWith('http') || art.startsWith('data:') || art.startsWith('blob:')) return art;
-        // If relative path, prefix with server base URL
         return `${baseUrl}${art.startsWith('/') ? art.slice(1) : art}`;
       };
 
-      const taggedTracks = tracks.map(track => ({
+      const taggedTracks = fetchedTracks.map(track => ({
         ...track,
         serverId: server.id,
         serverName: server.name,
         coverArt: normalizeArt(track.coverArt)
       }));
 
-      const taggedArtists = artists.map(artist => ({
+      const taggedArtists = fetchedArtists.map(artist => ({
         ...artist,
         serverId: server.id,
         imageUrl: normalizeArt(artist.imageUrl) 
       }));
 
-      const taggedAlbums = albums.map(album => ({
+      const taggedAlbums = fetchedAlbums.map(album => ({
         ...album,
         serverId: server.id,
         coverArt: normalizeArt(album.coverArt)
       }));
 
-      console.log(`🏷️ Tagged data from ${server.name}`);
+      console.log(`✅ Loaded FULL library from ${server.name}`, {
+        tracks: taggedTracks.length,
+        artists: taggedArtists.length,
+        albums: taggedAlbums.length
+      });
 
-      // Merge with existing data (remove old data from this server first)
+      // Replace data for this server (no pagination, we have everything)
       setState(prev => {
-        const otherTracks = prev.tracks.filter(t => t.serverId !== serverId);
-        const otherArtists = prev.artists.filter(a => (a as any).serverId !== serverId);
-        const otherAlbums = prev.albums.filter(a => (a as any).serverId !== serverId);
+        // Prepare new state
+        let newTracks = prev.tracks;
+        let newArtists = prev.artists;
+        let newAlbums = prev.albums;
 
-        const newTracks = [...otherTracks, ...taggedTracks];
-        const newArtists = [...otherArtists, ...taggedArtists];
-        const newAlbums = [...otherAlbums, ...taggedAlbums];
+        if (shouldFetchTracks) {
+            const otherTracks = prev.tracks.filter(t => t.serverId !== serverId);
+            newTracks = [...otherTracks, ...taggedTracks];
+        }
+
+        if (shouldFetchArtists) {
+            const otherArtists = prev.artists.filter(a => (a as any).serverId !== serverId);
+            newArtists = [...otherArtists, ...taggedArtists];
+        }
+        
+        if (shouldFetchAlbums) {
+            const otherAlbums = prev.albums.filter(a => (a as any).serverId !== serverId);
+            newAlbums = [...otherAlbums, ...taggedAlbums];
+        }
 
         // Sync with library store
-        setTracks(newTracks);
-        setArtists(newArtists);
-        setAlbums(newAlbums);
+        // We only update the store with the things we changed
+        if (shouldFetchTracks) setTracks(newTracks);
+        if (shouldFetchArtists) setArtists(newArtists);
+        if (shouldFetchAlbums) setAlbums(newAlbums);
 
         return {
           ...prev,
@@ -259,11 +311,6 @@ export function useMultiServerLibrary() {
         };
       });
 
-      console.log(`✅ Scanned ${server.name}:`, {
-        tracks: tracks.length,
-        artists: artists.length,
-        albums: albums.length
-      });
     } catch (error) {
       console.error(`Failed to scan ${server.name}:`, error);
       setState(prev => ({
@@ -272,7 +319,7 @@ export function useMultiServerLibrary() {
         error: error instanceof Error ? error.message : 'Scan failed'
       }));
     }
-  }, []);
+  }, [setTracks, setArtists, setAlbums]); // Dependencies
 
   /**
    * Trigger a remote scan on the server (Command server to index files)
@@ -309,6 +356,84 @@ export function useMultiServerLibrary() {
   }, []);
 
   /**
+   * Trigger remote scan on ALL servers
+   */
+  const triggerRescanAll = useCallback(async () => {
+    const config = getServersConfig();
+    await Promise.all(
+      config.servers.map(server => triggerRemoteScan(server.id))
+    );
+    // Start polling after triggering scans
+    startPolling();
+  }, [triggerRemoteScan]);
+
+  /**
+   * Check scan status for all servers and update library
+   */
+  const checkScanStatus = useCallback(async () => {
+    const config = getServersConfig();
+    let anyScanning = false;
+
+    for (const server of config.servers) {
+      try {
+        const adapter = createLibraryAdapterForServer(server.id);
+        if (!adapter) continue;
+
+        const status = await adapter.getScanStatus();
+        if (status.isScanning) {
+          anyScanning = true;
+        }
+      } catch (e) {
+        console.error(`Failed to check scan status for ${server.name}`, e);
+      }
+    }
+
+    // If scanning, refresh library data
+    if (anyScanning) {
+      console.log('📊 Refreshing library data during scan...');
+      // Reload data from all servers to get new tracks
+      for (const server of config.servers) {
+        await scanServer(server.id, false, 'all', 0);
+      }
+    } else {
+      // No servers scanning, stop polling
+      console.log('✅ All scans complete, stopping polling');
+      stopPolling();
+    }
+  }, [scanServer]);
+
+  /**
+   * Start polling for scan status every 15 seconds
+   */
+  const startPolling = useCallback(() => {
+    // Clear any existing interval
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+    }
+
+    console.log('🔄 Starting scan status polling (every 15s)');
+    
+    // Check immediately
+    checkScanStatus();
+
+    // Then check every 15 seconds
+    pollingIntervalRef.current = setInterval(() => {
+      checkScanStatus();
+    }, 15000); // 15 seconds
+  }, [checkScanStatus]);
+
+  /**
+   * Stop polling for scan status
+   */
+  const stopPolling = useCallback(() => {
+    if (pollingIntervalRef.current) {
+      console.log('⏹️ Stopping scan status polling');
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+  }, []);
+
+  /**
    * Scan all configured servers
    */
   const scanAllServers = useCallback(async () => {
@@ -323,21 +448,27 @@ export function useMultiServerLibrary() {
 
     // Scan all servers in parallel
     await Promise.all(
-      config.servers.map(server => scanServer(server.id))
+      config.servers.map(server => scanServer(server.id, false))
     );
 
     setState(prev => ({ ...prev, loading: false }));
   }, [scanServer]);
 
-  /**
-   * Trigger remote scan on ALL servers
-   */
-  const triggerRescanAll = useCallback(async () => {
-    const config = getServersConfig();
-    await Promise.all(
-      config.servers.map(server => triggerRemoteScan(server.id))
-    );
-  }, [triggerRemoteScan]);
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      stopPolling();
+    };
+  }, [stopPolling]);
+
+  // Monitor scanning state and start/stop polling accordingly
+  useEffect(() => {
+    if (state.scanningServers.size > 0 && !pollingIntervalRef.current) {
+      startPolling();
+    } else if (state.scanningServers.size === 0 && pollingIntervalRef.current) {
+      stopPolling();
+    }
+  }, [state.scanningServers.size, startPolling, stopPolling]);
 
   /**
    * Clear all library data
@@ -370,6 +501,8 @@ export function useMultiServerLibrary() {
     triggerRescanAll,
     clearLibrary,
     getTracksByServer,
-    isScanning: state.loading || state.scanningServers.size > 0
+    isScanning: state.loading || state.scanningServers.size > 0,
+    startPolling,
+    stopPolling
   };
 }

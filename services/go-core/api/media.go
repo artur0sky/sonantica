@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -32,7 +33,7 @@ func StreamTrack(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Printf("🎵 Streaming request for track ID: [%s]\n", trackID)
+	slog.Info("Streaming request", "track_id", trackID)
 
 	var filePath string
 	query := `SELECT file_path FROM tracks WHERE id = $1`
@@ -40,17 +41,17 @@ func StreamTrack(w http.ResponseWriter, r *http.Request) {
 	err := database.DB.QueryRow(r.Context(), query, trackID).Scan(&filePath)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			fmt.Printf("❌ Track not found in database: [%s]\n", trackID)
+			slog.Warn("Track not found in database", "track_id", trackID)
 			http.NotFound(w, r)
 			return
 		}
-		fmt.Printf("❌ Database error during streaming: %v\n", err)
+		slog.Error("Database error during streaming", "error", err, "track_id", trackID)
 		http.Error(w, fmt.Sprintf("Database error: %v", err), http.StatusInternalServerError)
 		return
 	}
 
 	fullPath := resolveMediaPath(filePath)
-	fmt.Printf("📂 Serving file: %s\n", fullPath)
+	slog.Info("Serving file", "path", fullPath)
 	http.ServeFile(w, r, fullPath)
 }
 
@@ -67,7 +68,7 @@ func GetAlbumCover(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Printf("🖼️ Requesting cover for album: %s\n", albumID)
+	slog.Info("Requesting cover", "album_id", albumID)
 
 	var coverArtPath *string
 	query := `SELECT cover_art_path FROM albums WHERE id = $1`
@@ -75,26 +76,26 @@ func GetAlbumCover(w http.ResponseWriter, r *http.Request) {
 	err := database.DB.QueryRow(r.Context(), query, albumID).Scan(&coverArtPath)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			fmt.Printf("❌ Album not found: %s\n", albumID)
+			slog.Warn("Album not found", "album_id", albumID)
 			http.NotFound(w, r)
 			return
 		}
-		fmt.Printf("❌ Database error: %v\n", err)
+		slog.Error("Database error fetching cover", "error", err, "album_id", albumID)
 		http.Error(w, fmt.Sprintf("Database error: %v", err), http.StatusInternalServerError)
 		return
 	}
 
 	if coverArtPath == nil || *coverArtPath == "" {
-		fmt.Printf("⚠️ No cover art path for album: %s\n", albumID)
+		slog.Warn("No cover art path for album", "album_id", albumID)
 		http.NotFound(w, r)
 		return
 	}
 
 	fullPath := resolveMediaPath(*coverArtPath)
-	fmt.Printf("📂 Serving cover from: %s\n", fullPath)
+	slog.Info("Serving cover", "path", fullPath)
 
 	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
-		fmt.Printf("❌ File does not exist: %s\n", fullPath)
+		slog.Warn("Cover file does not exist", "path", fullPath, "album_id", albumID)
 		http.NotFound(w, r)
 		return
 	}

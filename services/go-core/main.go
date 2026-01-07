@@ -3,10 +3,11 @@ package main
 import (
 	"fmt"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"sonantica-core/analytics"
@@ -22,25 +23,37 @@ import (
 )
 
 func main() {
-	// Setup Logging
+	// Setup Structured Logging (JSON)
 	logDir := "/var/log/sonantica"
 	if err := os.MkdirAll(logDir, 0755); err != nil {
-		fmt.Printf("⚠️ Failed to create log directory: %v\n", err)
+		// Fallback to stderr if we can't create log dir
+		fmt.Fprintf(os.Stderr, "⚠️ Failed to create log directory: %v\n", err)
 	}
 
 	logFile, err := os.OpenFile(filepath.Join(logDir, "core.log"), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-	if err != nil {
-		fmt.Printf("⚠️ Failed to open log file: %v\n", err)
+	var logOutput io.Writer = os.Stdout
+	if err == nil {
+		logOutput = io.MultiWriter(os.Stdout, logFile)
 	} else {
-		// MultiWriter to print to stdout and file
-		mw := io.MultiWriter(os.Stdout, logFile)
-		log.SetOutput(mw)
-		// Redirect standard fmt output implies using log or fmt.Fprint(mw, ...)
-		// For simplicity we'll keep using fmt.Printf for startup msgs or switch to log.Printf
+		fmt.Fprintf(os.Stderr, "⚠️ Failed to open log file: %v\n", err)
 	}
+
+	// Initialize slog with JSON Handler
+	logger := slog.New(slog.NewJSONHandler(logOutput, &slog.HandlerOptions{
+		Level: slog.LevelInfo,
+		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+			// Optional: Customize timestamp format or keys here
+			return a
+		},
+	}))
+	slog.SetDefault(logger)
+
+	slog.Info("🚀 Starting Sonántica Core", "version", "0.2.0")
+
 	// Initialize Database
 	if err := database.Connect(); err != nil {
-		log.Printf("❌ Failed to connect to database: %v\n", err)
+		slog.Error("Failed to connect to database", "error", err)
+		os.Exit(1) // Critical failure
 	}
 	defer database.Close()
 
@@ -48,18 +61,18 @@ func main() {
 	analytics.InitLogger("sonantica-analytics")
 
 	// Run Analytics Migrations
-	log.Printf("📊 Running analytics database migrations...\n")
+	slog.Info("Running analytics database migrations...")
 	if err := analytics.RunMigrations(); err != nil {
-		log.Printf("⚠️ Analytics migrations failed: %v\n", err)
-		log.Printf("⚠️ Analytics features may not work correctly\n")
+		slog.Error("Analytics migrations failed", "error", err)
+		slog.Warn("Analytics features may not work correctly")
 	} else {
-		log.Printf("✅ Analytics migrations completed successfully\n")
+		slog.Info("Analytics migrations completed successfully")
 	}
 
-	// Initialize Shared Redis Cache (Secure & Optimized)
+	// Initialize Shared Redis Cache
 	redisHost := os.Getenv("REDIS_HOST")
 	redisPort := os.Getenv("REDIS_PORT")
-	redisPass := os.Getenv("REDIS_PASSWORD") // Support password
+	redisPass := os.Getenv("REDIS_PASSWORD")
 
 	if redisHost == "" {
 		redisHost = "redis"
@@ -69,23 +82,33 @@ func main() {
 	}
 
 	cache.Init(redisHost, redisPort, redisPass)
-	scanner.InitRedis(redisHost, redisPort, redisPass) // TODO: Refactor scanner to use shared cache
+	scanner.InitRedis(redisHost, redisPort, redisPass)
 
 	// Start Scanner (Non-blocking)
 	mediaPath := os.Getenv("MEDIA_PATH")
 	if mediaPath == "" {
 		mediaPath = "/media"
 	}
-	// Scan every 1 hour (users can trigger manual scans via API too)
+	slog.Info("Starting Scanner Scheduler", "path", mediaPath, "interval", "1h")
 	scanner.StartScanner(mediaPath, 1*time.Hour)
 
 	r := chi.NewRouter()
 
-	// Middleware
+	// Middleware Stack
+	r.Use(middleware.RequestID) // Inject X-Request-Id
+	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+	r.Use(middleware.Compress(5)) // Enable Gzip compression
+
+	// Configurable CORS
+	allowedOrigins := os.Getenv("ALLOWED_ORIGINS")
+	if allowedOrigins == "" {
+		allowedOrigins = "http://localhost:5173,http://localhost:3000,http://localhost:8080" // Defaults for dev
+	}
+
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"*"},
+		AllowedOrigins:   strings.Split(allowedOrigins, ","),
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token", "Range"},
 		ExposedHeaders:   []string{"Link", "Content-Length", "Content-Range", "Accept-Ranges"},
@@ -105,6 +128,7 @@ func main() {
 		r.Get("/artists/{id}/tracks", api.GetTracksByArtist)
 		r.Get("/albums", api.GetAlbums)
 		r.Get("/albums/{id}/tracks", api.GetTracksByAlbum)
+		r.Get("/alphabet-index", api.GetAlphabetIndex)
 	})
 
 	r.Route("/api/scan", func(r chi.Router) {
@@ -118,15 +142,10 @@ func main() {
 
 	// Static Assets
 	workDir, _ := os.Getwd()
-	fmt.Printf("📂 Working directory: %s\n", workDir)
+	slog.Info("Server Config", "work_dir", workDir, "log_dir", logDir)
 
-	// Serve the /covers directory statically
-	// This is where the audio-worker extracts embedded art
 	r.Handle("/covers/*", http.StripPrefix("/covers/", http.FileServer(http.Dir("/covers"))))
 	r.Handle("/api/covers/*", http.StripPrefix("/api/covers/", http.FileServer(http.Dir("/covers"))))
-
-	// Serve the /media directory statically (optional, for direct file access if needed)
-	// r.Handle("/api/raw/*", http.StripPrefix("/api/raw/", http.FileServer(http.Dir("/media"))))
 
 	// Start Server
 	port := os.Getenv("PORT")
@@ -134,9 +153,9 @@ func main() {
 		port = "8080"
 	}
 
-	log.Printf("🎵 Sonántica High-Performance Core running on port %s\n", port)
+	slog.Info("Sonántica High-Performance Core Listenin", "port", port)
 	if err := http.ListenAndServe(":"+port, r); err != nil {
-		log.Printf("Error starting server: %s\n", err)
+		slog.Error("Server failed to start", "error", err)
 	}
 }
 

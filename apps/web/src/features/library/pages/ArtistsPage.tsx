@@ -4,7 +4,7 @@
  * Browse library by artists.
  */
 
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useLibraryStore } from "@sonantica/media-library";
 import { ArtistCard } from "../components/ArtistCard";
 import { IconMicrophone, IconSearch } from "@tabler/icons-react";
@@ -17,6 +17,7 @@ import {
 } from "@sonantica/ui";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
+import { useMultiServerLibrary } from "../../../hooks/useMultiServerLibrary";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -28,8 +29,6 @@ const containerVariants = {
   },
 };
 
-const ITEMS_PER_PAGE = 20; // 20 grid items per page
-
 type SortField = "name" | "trackCount";
 type SortOrder = "asc" | "desc";
 
@@ -40,6 +39,7 @@ export function ArtistsPage() {
 
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
+  const { scanServer } = useMultiServerLibrary();
 
   const filteredArtists = getFilteredArtists();
 
@@ -72,105 +72,48 @@ export function ArtistsPage() {
     return artists;
   }, [filteredArtists, sortField, sortOrder]);
 
-  // Infinite Scroll State
-  const [displayedCount, setDisplayedCount] = useState(ITEMS_PER_PAGE);
-  const observerTarget = useRef<HTMLDivElement>(null);
-
+  // Reload from server when sort changes
   useEffect(() => {
-    setDisplayedCount(ITEMS_PER_PAGE);
-  }, [searchQuery, sortField, sortOrder]); // Reset on search or sort change
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          setDisplayedCount((prev) =>
-            Math.min(prev + ITEMS_PER_PAGE, filteredArtists.length)
-          );
+    const timeout = setTimeout(() => {
+      import("../../../services/LibraryService").then(
+        ({ getServersConfig }) => {
+          const config = getServersConfig();
+          config.servers.forEach((s) => {
+            scanServer(s.id, false, "artists", 0, {
+              sort: sortField,
+              order: sortOrder,
+            });
+          });
         }
-      },
-      { threshold: 0.1, rootMargin: "100px" }
-    );
-
-    if (observerTarget.current) {
-      observer.observe(observerTarget.current);
-    }
-
-    return () => observer.disconnect();
-  }, [sortedArtists.length]);
-
-  const visibleArtists = useMemo(
-    () => sortedArtists.slice(0, displayedCount),
-    [sortedArtists, displayedCount]
-  );
+      );
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [sortField, sortOrder, scanServer]);
 
   const handleArtistClick = (artist: any) => {
     setLocation(`/artist/${artist.id}`);
   };
 
-  const handleLetterClick = (index: number) => {
-    const main = document.getElementById("main-content");
-    if (!main) return;
+  const handleLetterClick = (index: number, _letter: string) => {
+    // Local navigation - we have all data loaded
+    const element = document.getElementById(`artist-${index}`);
+    const container = document.getElementById("main-content");
 
-    // 1. Calculate how many items we need to render
-    const targetIndex = index;
-    const bufferSize = 50; // Extra items to render for smooth scrolling
-    const requiredCount = Math.min(
-      targetIndex + bufferSize,
-      sortedArtists.length
-    );
+    if (element && container) {
+      // Calculate exact position accounting for sticky header
+      const elementTop = element.offsetTop;
+      const headerOffset = 120; // Adjust based on your header height
+      const scrollPosition = elementTop - headerOffset;
 
-    // 2. If we need to render more items, do it first
-    if (requiredCount > displayedCount) {
-      setDisplayedCount(requiredCount);
-
-      // Wait for React to render the new items
-      setTimeout(() => {
-        scrollToArtist(targetIndex, main);
-      }, 100); // Give React time to render
-    } else {
-      // Items already rendered, scroll immediately
-      scrollToArtist(targetIndex, main);
+      // Scroll directly to position
+      container.scrollTo({
+        top: scrollPosition,
+        behavior: "smooth",
+      });
+    } else if (element) {
+      // Fallback to scrollIntoView
+      element.scrollIntoView({ behavior: "smooth", block: "start" });
     }
-  };
-
-  const scrollToArtist = (index: number, main: HTMLElement) => {
-    // Try multiple times with increasing delays to ensure element is rendered
-    let attempts = 0;
-    const maxAttempts = 5;
-
-    const tryScroll = () => {
-      const element = document.getElementById(`artist-${index}`);
-
-      if (element) {
-        // Element found, scroll to it
-        const top = element.offsetTop - 100; // Account for sticky header and padding
-        main.scrollTo({ top, behavior: "smooth" });
-      } else if (attempts < maxAttempts) {
-        // Element not found yet, try again
-        attempts++;
-        setTimeout(tryScroll, 50 * attempts); // Exponential backoff
-      } else {
-        // Fallback: estimate scroll position based on grid layout
-        const itemsPerRow =
-          window.innerWidth >= 1280
-            ? 5
-            : window.innerWidth >= 1024
-            ? 4
-            : window.innerWidth >= 768
-            ? 3
-            : 2;
-        const rowHeight = 280; // Approximate height of artist card + gap
-        const row = Math.floor(index / itemsPerRow);
-        const estimatedTop = row * rowHeight;
-        main.scrollTo({ top: estimatedTop, behavior: "smooth" });
-      }
-    };
-
-    // Start scrolling attempt
-    requestAnimationFrame(() => {
-      requestAnimationFrame(tryScroll);
-    });
   };
 
   return (
@@ -184,7 +127,7 @@ export function ArtistsPage() {
           } in library`
         }
         actions={
-          sortedArtists.length > 0 && (
+          stats.totalArtists > 0 && (
             <SortControl
               value={sortField}
               options={[
@@ -201,20 +144,18 @@ export function ArtistsPage() {
 
       {/* Content */}
       <AnimatePresence mode="wait">
-        {sortedArtists.length === 0 ? (
-          searchQuery ? (
-            <EmptyState
-              icon={IconSearch}
-              title="No results found"
-              description={`No artists found matching "${searchQuery}"`}
-            />
-          ) : (
-            <EmptyState
-              icon={IconMicrophone}
-              title="Library Empty"
-              description="No artists in your library."
-            />
-          )
+        {filteredArtists.length === 0 && searchQuery ? (
+          <EmptyState
+            icon={IconSearch}
+            title="No results found"
+            description={`No artists found matching "${searchQuery}"`}
+          />
+        ) : filteredArtists.length === 0 ? (
+          <EmptyState
+            icon={IconMicrophone}
+            title="Library Empty"
+            description="No artists in your library."
+          />
         ) : (
           <motion.div
             key="list"
@@ -223,7 +164,7 @@ export function ArtistsPage() {
             animate="visible"
             className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"
           >
-            {visibleArtists.map((artist: any, index: number) => (
+            {sortedArtists.map((artist: any, index: number) => (
               <div key={artist.id} id={`artist-${index}`}>
                 <ArtistCard
                   artist={artist}
@@ -235,21 +176,13 @@ export function ArtistsPage() {
         )}
       </AnimatePresence>
 
-      {/* Sentinel for Infinite Scroll (placed outside AnimatePresence/Grid to ensure visibility) */}
-      {displayedCount < sortedArtists.length && (
-        <div
-          ref={observerTarget}
-          className="py-8 text-center text-text-muted/50 text-sm"
-        >
-          Loading more artists...
-        </div>
-      )}
       {/* Navigator */}
       {sortedArtists.length > 50 && (
         <AlphabetNavigator
           items={sortedArtists}
           onLetterClick={handleLetterClick}
           forceScrollOnly={isCramped}
+          mode="local"
         />
       )}
     </div>
