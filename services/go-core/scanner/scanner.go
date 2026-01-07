@@ -26,8 +26,14 @@ var (
 		".alac": true,
 		".aiff": true,
 	}
-	rdb *redis.Client
+	rdb        *redis.Client
+	isScanning bool
 )
+
+// IsScanning returns whether a scan is currently in progress
+func IsScanning() bool {
+	return isScanning
+}
 
 // InitRedis initializes the Redis client for the scanner
 func InitRedis(host, port, password string) {
@@ -61,6 +67,11 @@ func StartScanner(mediaPath string, interval time.Duration) {
 
 // scan performs the actual directory traversal
 func scan(root string) {
+	isScanning = true
+	defer func() {
+		isScanning = false
+	}()
+
 	scanID := uuid.New().String()
 	slog.Info("Starting library scan", "scan_id", scanID, "root", root)
 
