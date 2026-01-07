@@ -247,7 +247,25 @@ export function useMultiServerLibrary() {
         promises.push(adapter.getAlbums({ limit: -1, offset: 0, ...sortOptions }).then(res => fetchedAlbums = res));
       }
       if (shouldFetchPlaylists && adapter.getPlaylists) {
-         promises.push(adapter.getPlaylists().then(res => fetchedPlaylists = res));
+         promises.push(
+           adapter.getPlaylists()
+             .then(res => {
+               // Validate response is an array
+               if (Array.isArray(res)) {
+                 fetchedPlaylists = res;
+               } else if (res && typeof res === 'object' && Array.isArray((res as any).playlists)) {
+                 // Handle { playlists: [...] } response format
+                 fetchedPlaylists = (res as any).playlists;
+               } else {
+                 console.warn('Invalid playlists response format:', res);
+                 fetchedPlaylists = [];
+               }
+             })
+             .catch(err => {
+               console.warn('Failed to fetch playlists (non-critical):', err);
+               fetchedPlaylists = [];
+             })
+         );
       }
 
       await Promise.all(promises);
