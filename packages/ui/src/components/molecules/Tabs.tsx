@@ -27,7 +27,7 @@ export function Tabs({ tabs, activeTab, onTabChange, className }: TabsProps) {
   return (
     <div
       className={cn(
-        "border-b border-border overflow-x-auto scrollbar-none",
+        "border-b border-border overflow-x-auto [&::-webkit-scrollbar]:hidden",
         className
       )}
     >

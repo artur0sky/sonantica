@@ -96,7 +96,7 @@ export function ExpandedPlayerMobile({
       </header>
 
       {/* Parallax/Scroll Container */}
-      <div className="flex-1 overflow-y-auto scrollbar-none [&::-webkit-scrollbar]:hidden relative">
+      <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden relative">
         {/* STICKY BACK: Cover Art Section */}
         <div className="sticky top-0 h-[46dvh] flex items-start justify-center p-6 z-0">
           <CoverArtSection
