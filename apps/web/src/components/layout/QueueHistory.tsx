@@ -7,6 +7,10 @@
 
 import { useState } from "react";
 import { useLibraryStore } from "@sonantica/media-library";
+import { useQueueStore } from "@sonantica/player-core";
+import { usePlaylistCRUD } from "../../hooks/usePlaylistCRUD";
+import { playFromContext } from "../../utils/playContext";
+import { trackToMediaSource } from "../../utils/streamingUrl";
 import { Button } from "@sonantica/ui";
 import {
   IconPlayerPlay,
@@ -19,7 +23,9 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 
 export function QueueHistory() {
-  const { playlists } = useLibraryStore();
+  const { playlists, tracks } = useLibraryStore();
+  const { addToQueue } = useQueueStore();
+  const { createPlaylist } = usePlaylistCRUD();
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
 
@@ -38,27 +44,43 @@ export function QueueHistory() {
   const displayedHistory = isExpanded ? queueHistory : queueHistory.slice(0, 3);
 
   const handlePlay = (playlist: any) => {
-    console.log("Play queue history:", playlist.id);
-    // TODO: Load tracks and play
+    if (!playlist.trackIds) return;
+    const playlistTracks = playlist.trackIds
+      .map((id: string) => tracks.find((t) => t.id === id))
+      .filter((t: any) => !!t);
+
+    if (playlistTracks.length === 0) return;
+
+    const mediaSources = playlistTracks.map(trackToMediaSource);
+    playFromContext(mediaSources, 0);
     setActiveMenu(null);
   };
 
   const handleAddToQueue = (playlist: any) => {
-    console.log("Add to current queue:", playlist.id);
-    // TODO: Add tracks to queue
+    if (!playlist.trackIds) return;
+    const playlistTracks = playlist.trackIds
+      .map((id: string) => tracks.find((t) => t.id === id))
+      .filter((t: any) => !!t);
+
+    if (playlistTracks.length === 0) return;
+
+    addToQueue(playlistTracks.map(trackToMediaSource));
     setActiveMenu(null);
   };
 
-  const handleConvertToPlaylist = (playlist: any) => {
+  const handleConvertToPlaylist = async (playlist: any) => {
     const newName = prompt(
       "Convert to permanent playlist. Enter name:",
       playlist.name.replace("Queue ", "")
     );
     if (!newName) return;
 
-    console.log("Convert to playlist:", { id: playlist.id, newName });
-    // TODO: Create new MANUAL playlist with same tracks
-    setActiveMenu(null);
+    try {
+      await createPlaylist(newName.trim(), "MANUAL", playlist.trackIds);
+      setActiveMenu(null);
+    } catch (error) {
+      alert("Failed to convert to playlist");
+    }
   };
 
   return (

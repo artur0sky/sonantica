@@ -11,10 +11,10 @@ import { IconSearch, IconX } from "@tabler/icons-react";
 import { cn } from "../../utils";
 import { useLibraryStore } from "@sonantica/media-library";
 import { formatArtists } from "@sonantica/shared";
-import type { Track, Artist, Album } from "@sonantica/media-library";
+import type { Track, Artist, Album, Playlist } from "@sonantica/media-library";
 
 interface SearchResult {
-  type: "track" | "artist" | "album" | "genre" | "year";
+  type: "track" | "artist" | "album" | "genre" | "year" | "playlist";
   id: string;
   title: string;
   subtitle?: string;
@@ -35,7 +35,7 @@ export function SearchBar({ onResultSelect, className }: GlobalSearchBarProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const { tracks, albums, artists } = useLibraryStore();
+  const { tracks, albums, artists, playlists } = useLibraryStore();
 
   // Search logic
   useEffect(() => {
@@ -104,6 +104,20 @@ export function SearchBar({ onResultSelect, className }: GlobalSearchBarProps) {
           subtitle: album.artist,
           coverArt: album.coverArt,
           data: album,
+        });
+      }
+    });
+
+    // Search playlists
+    playlists.forEach((playlist: Playlist) => {
+      if (playlist.name.toLowerCase().includes(searchTerm)) {
+        foundResults.push({
+          type: "playlist",
+          id: playlist.id,
+          title: playlist.name,
+          subtitle: `${playlist.trackCount || 0} tracks`,
+          coverArt: playlist.coverArts?.[0],
+          data: playlist,
         });
       }
     });
@@ -192,6 +206,7 @@ export function SearchBar({ onResultSelect, className }: GlobalSearchBarProps) {
       album: "💿",
       genre: "🎸",
       year: "📅",
+      playlist: "📂",
     };
     return icons[type] || "🔍";
   };

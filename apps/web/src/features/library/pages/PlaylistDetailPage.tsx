@@ -20,11 +20,14 @@ import { Button, CoverArt } from "@sonantica/ui";
 import { playFromContext } from "../../../utils/playContext";
 import { trackToMediaSource } from "../../../utils/streamingUrl";
 
+import { usePlaylistCRUD } from "../../../hooks/usePlaylistCRUD";
+
 export function PlaylistDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
   const { getPlaylistById, tracks } = useLibraryStore();
   const trackAccess = usePlaylistSettingsStore((s) => s.trackAccess);
+  const { deletePlaylist, renamePlaylist } = usePlaylistCRUD();
 
   useEffect(() => {
     if (id) trackAccess(id);
@@ -70,14 +73,26 @@ export function PlaylistDetailPage() {
     playFromContext(tracksAsSources, index);
   };
 
-  const handleDelete = () => {
-    // TODO: Implement delete with confirmation
-    console.log("Delete playlist:", playlist.id);
+  const handleDelete = async () => {
+    if (confirm(`Are you sure you want to delete "${playlist.name}"?`)) {
+      try {
+        await deletePlaylist(playlist.id);
+        setLocation("/playlists");
+      } catch (error) {
+        alert("Failed to delete playlist");
+      }
+    }
   };
 
-  const handleEdit = () => {
-    // TODO: Open edit modal
-    console.log("Edit playlist:", playlist.id);
+  const handleEdit = async () => {
+    const newName = prompt("Rename playlist to:", playlist.name);
+    if (newName && newName !== playlist.name) {
+      try {
+        await renamePlaylist(playlist.id, newName);
+      } catch (error) {
+        alert("Failed to rename playlist");
+      }
+    }
   };
 
   // Determine cover art (4-grid or single)

@@ -28,11 +28,14 @@ const containerVariants = {
   },
 };
 
+import { usePlaylistCRUD } from "../../../hooks/usePlaylistCRUD";
+
 export function PlaylistsPage() {
   const { playlists, searchQuery, tracks } = useLibraryStore();
   const [, setLocation] = useLocation();
   const [filterType, setFilterType] = useState<string>("all");
   const trackAccess = usePlaylistSettingsStore((s) => s.trackAccess);
+  const { createPlaylist } = usePlaylistCRUD();
 
   const {
     isSelectionMode,
@@ -51,7 +54,7 @@ export function PlaylistsPage() {
 
   // Filter playlists
   const filteredPlaylists = useMemo(() => {
-    let filtered = playlists;
+    let filtered = [...playlists];
 
     // Filter by type
     if (filterType !== "all") {
@@ -92,9 +95,17 @@ export function PlaylistsPage() {
     playFromContext(mediaSources, 0);
   };
 
-  const handleCreatePlaylist = () => {
-    // TODO: Open create playlist modal
-    console.log("Create playlist");
+  const handleCreatePlaylist = async () => {
+    const name = prompt("Enter playlist name:");
+    if (name && name.trim()) {
+      try {
+        const playlist = await createPlaylist(name.trim());
+        trackAccess(playlist.id);
+        setLocation(`/playlist/${playlist.id}`);
+      } catch (error) {
+        alert("Failed to create playlist");
+      }
+    }
   };
 
   return (

@@ -18,6 +18,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { AddToPlaylistModal } from "./AddToPlaylistModal";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 import { cn } from "@sonantica/shared";
+import { usePlaylistCRUD } from "../hooks/usePlaylistCRUD";
 
 export function SelectionActionBar() {
   const {
@@ -30,6 +31,7 @@ export function SelectionActionBar() {
 
   const isMobile = useMediaQuery("(max-width: 1023px)");
   const [showPlaylistModal, setShowPlaylistModal] = useState(false);
+  const { deletePlaylist } = usePlaylistCRUD();
 
   if (!isSelectionMode || selectedIds.size === 0) return null;
 
@@ -52,11 +54,19 @@ export function SelectionActionBar() {
     exitSelectionMode();
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (confirm(`Delete ${selectedCount} ${itemType}(s)?`)) {
-      console.log("Delete selected:", selectedArray);
-      // TODO: Delete selected items
-      exitSelectionMode();
+      try {
+        if (itemType === "playlist") {
+          await Promise.all(selectedArray.map((id) => deletePlaylist(id)));
+        } else {
+          console.log(`Delete selected ${itemType}:`, selectedArray);
+          // TODO: Implement delete for tracks/artists
+        }
+        exitSelectionMode();
+      } catch (error) {
+        alert(`Failed to delete ${itemType}(s)`);
+      }
     }
   };
 

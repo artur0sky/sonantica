@@ -38,6 +38,7 @@ import {
   OfflineStatus,
 } from "@sonantica/shared";
 import { useQueueLogic } from "../../hooks/useQueueLogic";
+import { usePlaylistCRUD } from "../../hooks/usePlaylistCRUD";
 import { useOfflineStore } from "@sonantica/offline-manager";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { QueueHistory } from "./QueueHistory";
@@ -88,6 +89,7 @@ export function RightSidebar({ isCollapsed }: RightSidebarProps) {
   // Queue expansion state
   const isQueueExpanded = useUIStore((s) => s.isQueueExpanded);
   const toggleQueueExpanded = useUIStore((s) => s.toggleQueueExpanded);
+  const { createPlaylist } = usePlaylistCRUD();
 
   // Show only next track when not expanded
   const displayQueue = isQueueExpanded
@@ -96,7 +98,6 @@ export function RightSidebar({ isCollapsed }: RightSidebarProps) {
 
   // Save queue as playlist
   const handleSaveAsPlaylist = async () => {
-    // TODO: Open modal to name the playlist
     const playlistName = prompt(
       "Enter playlist name:",
       `Queue ${new Date().toLocaleString()}`
@@ -105,11 +106,11 @@ export function RightSidebar({ isCollapsed }: RightSidebarProps) {
 
     try {
       const trackIds = fullQueue.map((t) => t.id);
-      // This will be implemented when we integrate with the library adapter
-      console.log("Saving queue as playlist:", playlistName, trackIds);
-      // await libraryAdapter.createPlaylist(playlistName, 'MANUAL', trackIds);
+      await createPlaylist(playlistName, "MANUAL", trackIds);
+      alert(`Playlist "${playlistName}" created!`);
     } catch (error) {
       console.error("Failed to save playlist:", error);
+      alert("Failed to create playlist");
     }
   };
 
@@ -332,7 +333,6 @@ function QueueItem({
   // Lazy hydration on appearance
   useEffect(() => {
     if (!track.metadata?.coverArt && !track.coverArt) {
-      // Small timeout to avoid hammering the decoder if scrolling fast
       const timer = setTimeout(() => {
         // Auto-hydration removed
       }, 500);
@@ -352,8 +352,6 @@ function QueueItem({
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => setIsHovered(false)}
       onDrag={(_, info) => {
-        // Track X offset to detect swipe-to-delete
-        // Right sidebar is on the right, dragging LEFT (negative X) means dragging OUTSIDE
         const threshold = -80;
         const progress = Math.min(Math.max(info.offset.x / threshold, 0), 1);
         setDragProgress(progress);
@@ -384,12 +382,11 @@ function QueueItem({
         shouldBeGrayedOut && "opacity-40 grayscale-[0.5]"
       )}
     >
-      {/* Drag Handle - Larger touch target */}
+      {/* Drag Handle */}
       {!isCollapsed && (
         <div
           onPointerDown={(e) => dragControls.start(e)}
           onTouchStart={(e) => {
-            // Explicitly start dragging on touch devices
             dragControls.start(e as any);
           }}
           className="w-8 h-12 -ml-2 flex items-center justify-center text-text-muted/20 group-hover:text-text-muted/60 cursor-grab active:cursor-grabbing transition-colors touch-none"
@@ -398,7 +395,7 @@ function QueueItem({
         </div>
       )}
 
-      {/* Removal Visual Cue (Trash Icon Overlay) */}
+      {/* Removal Visual Cue */}
       <AnimatePresence>
         {dragProgress > 0.2 && (
           <motion.div
@@ -449,7 +446,6 @@ function QueueItem({
           className="w-full h-full"
           iconSize={isCollapsed ? 24 : 16}
         />
-        {/* Play Icon on Hover */}
         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/cover:opacity-100 flex items-center justify-center transition-opacity cursor-pointer">
           <IconPlayerPlay size={18} className="text-white fill-current" />
         </div>
@@ -480,7 +476,7 @@ function QueueItem({
             )}
             <span className="truncate opacity-70">{formatArtists(artist)}</span>
 
-            {/* Bitrate Badge (Compact) */}
+            {/* Bitrate Badge */}
             <motion.span
               initial={{ opacity: 0 }}
               whileHover={{ opacity: 1 }}

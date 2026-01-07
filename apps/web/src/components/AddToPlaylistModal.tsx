@@ -11,6 +11,8 @@ import { IconPlus, IconPlaylist, IconX } from "@tabler/icons-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@sonantica/shared";
 
+import { usePlaylistCRUD } from "../hooks/usePlaylistCRUD";
+
 interface AddToPlaylistModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -27,6 +29,7 @@ export function AddToPlaylistModal({
   batchIds,
 }: AddToPlaylistModalProps) {
   const { playlists } = useLibraryStore();
+  const { createPlaylist, addTracksToPlaylist } = usePlaylistCRUD();
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState("");
 
@@ -39,8 +42,7 @@ export function AddToPlaylistModal({
 
   const handleAddToPlaylist = async (playlistId: string) => {
     try {
-      console.log("Adding tracks to playlist:", { trackIds, playlistId });
-      // TODO: await libraryAdapter.addTracksToPlaylist(playlistId, trackIds);
+      await addTracksToPlaylist(playlistId, trackIds);
       onClose();
     } catch (error) {
       console.error("Failed to add to playlist:", error);
@@ -51,11 +53,7 @@ export function AddToPlaylistModal({
     if (!newPlaylistName.trim()) return;
 
     try {
-      console.log("Creating new playlist and adding tracks:", {
-        name: newPlaylistName,
-        trackIds,
-      });
-      // TODO: const playlist = await libraryAdapter.createPlaylist(newPlaylistName, 'MANUAL', trackIds);
+      await createPlaylist(newPlaylistName, "MANUAL", trackIds);
       onClose();
     } catch (error) {
       console.error("Failed to create playlist:", error);
