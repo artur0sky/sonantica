@@ -16,6 +16,7 @@ interface AddToPlaylistModalProps {
   onClose: () => void;
   trackId: string;
   trackTitle?: string;
+  batchIds?: string[]; // For multi-select operations
 }
 
 export function AddToPlaylistModal({
@@ -23,10 +24,13 @@ export function AddToPlaylistModal({
   onClose,
   trackId,
   trackTitle,
+  batchIds,
 }: AddToPlaylistModalProps) {
   const { playlists } = useLibraryStore();
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState("");
+
+  const trackIds = batchIds || [trackId]; // Use batch if available, otherwise single track
 
   // Filter out history snapshots (read-only)
   const editablePlaylists = playlists.filter(
@@ -35,8 +39,8 @@ export function AddToPlaylistModal({
 
   const handleAddToPlaylist = async (playlistId: string) => {
     try {
-      console.log("Adding track to playlist:", { trackId, playlistId });
-      // TODO: await libraryAdapter.addTracksToPlaylist(playlistId, [trackId]);
+      console.log("Adding tracks to playlist:", { trackIds, playlistId });
+      // TODO: await libraryAdapter.addTracksToPlaylist(playlistId, trackIds);
       onClose();
     } catch (error) {
       console.error("Failed to add to playlist:", error);
@@ -47,11 +51,11 @@ export function AddToPlaylistModal({
     if (!newPlaylistName.trim()) return;
 
     try {
-      console.log("Creating new playlist and adding track:", {
+      console.log("Creating new playlist and adding tracks:", {
         name: newPlaylistName,
-        trackId,
+        trackIds,
       });
-      // TODO: const playlist = await libraryAdapter.createPlaylist(newPlaylistName, 'MANUAL', [trackId]);
+      // TODO: const playlist = await libraryAdapter.createPlaylist(newPlaylistName, 'MANUAL', trackIds);
       onClose();
     } catch (error) {
       console.error("Failed to create playlist:", error);

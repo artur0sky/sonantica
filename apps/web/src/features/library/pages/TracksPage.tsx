@@ -29,6 +29,9 @@ import {
 } from "../../../utils/playContext";
 import { trackToMediaSource } from "../../../utils/streamingUrl";
 import { useMultiServerLibrary } from "../../../hooks/useMultiServerLibrary";
+import { useSelectionStore } from "../../../stores/selectionStore";
+import { SelectionActionBar } from "../../../components/SelectionActionBar";
+import { IconCheckbox } from "@tabler/icons-react";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -52,6 +55,8 @@ export function TracksPage() {
 
   const [sortField, setSortField] = useState<SortField>("title");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
+  const { isSelectionMode, enterSelectionMode, exitSelectionMode } =
+    useSelectionStore();
 
   const filteredTracks = getFilteredTracks();
 
@@ -326,11 +331,31 @@ export function TracksPage() {
                   <IconArrowsShuffle size={18} />
                   <span className="hidden sm:inline">Shuffle</span>
                 </Button>
+
+                {/* Multi-Select Button */}
+                <Button
+                  onClick={() =>
+                    isSelectionMode
+                      ? exitSelectionMode()
+                      : enterSelectionMode("track")
+                  }
+                  variant={isSelectionMode ? "primary" : "ghost"}
+                  className="flex items-center gap-2"
+                  title="Multi-Select"
+                >
+                  <IconCheckbox size={18} />
+                  {isSelectionMode && (
+                    <span className="hidden sm:inline">Done</span>
+                  )}
+                </Button>
               </>
             )}
           </div>
         </div>
       </motion.div>
+
+      {/* Selection Action Bar */}
+      <SelectionActionBar />
 
       {/* Content */}
       <AnimatePresence mode="wait">

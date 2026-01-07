@@ -32,6 +32,7 @@ import { useSettingsStore } from "../../../stores/settingsStore";
 import { OfflineStatus } from "@sonantica/shared";
 import { useOfflineManager } from "../../../hooks/useOfflineManager";
 import { AddToPlaylistModal } from "../../../components/AddToPlaylistModal";
+import { useSelectionStore } from "../../../stores/selectionStore";
 
 interface TrackItemProps {
   track: any;
@@ -60,6 +61,12 @@ export function TrackItem({ track, onClick }: TrackItemProps) {
   // Context menu state
   const contextMenu = useContextMenu();
   const [showPlaylistModal, setShowPlaylistModal] = useState(false);
+
+  // Selection state
+  const { isSelectionMode, itemType, toggleSelection, isSelected } =
+    useSelectionStore();
+  const isInSelectionMode = isSelectionMode && itemType === "track";
+  const selected = isInSelectionMode && isSelected(track.id);
 
   // If we should hide unavailable offline and it's not available, return null
   if (offlineMode && hideUnavailableOffline && !isOfflineAvailable) {
@@ -150,7 +157,13 @@ export function TrackItem({ track, onClick }: TrackItemProps) {
           transition: { duration: 0.1 },
         }}
         whileTap={{ scale: 0.99 }}
-        onClick={onClick}
+        onClick={() => {
+          if (isInSelectionMode) {
+            toggleSelection(track.id);
+          } else {
+            onClick();
+          }
+        }}
         onContextMenu={contextMenu.handleContextMenu}
         onTouchStart={contextMenu.handleLongPressStart}
         onTouchEnd={contextMenu.handleLongPressEnd}
@@ -162,9 +175,26 @@ export function TrackItem({ track, onClick }: TrackItemProps) {
           iscurrentTrack
             ? "bg-surface-elevated"
             : "hover:bg-surface-elevated/50",
-          shouldBeGrayedOut && "opacity-40 grayscale-[0.5] filter"
+          shouldBeGrayedOut && "opacity-40 grayscale-[0.5] filter",
+          selected && "bg-accent/10 border border-accent/30"
         )}
       >
+        {/* Selection Checkbox */}
+        {isInSelectionMode && (
+          <div
+            className={cn(
+              "w-5 h-5 rounded border-2 flex items-center justify-center transition-all flex-shrink-0",
+              selected
+                ? "bg-accent border-accent"
+                : "border-border hover:border-accent/50"
+            )}
+          >
+            {selected && (
+              <IconCircleCheckFilled size={16} className="text-white" />
+            )}
+          </div>
+        )}
+
         {/* Album Art / Icon */}
         <div className="w-12 h-12 flex-shrink-0 relative overflow-hidden bg-surface-elevated">
           {/* PERFORMANCE: Lazy-loaded album art with LRU cache + manual hydration */}
