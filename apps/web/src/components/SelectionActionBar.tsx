@@ -19,6 +19,8 @@ import { AddToPlaylistModal } from "./AddToPlaylistModal";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 import { cn } from "@sonantica/shared";
 import { usePlaylistCRUD } from "../hooks/usePlaylistCRUD";
+import { useDialog } from "../hooks/useDialog";
+import { ConfirmDialog } from "@sonantica/ui";
 
 export function SelectionActionBar() {
   const {
@@ -32,6 +34,7 @@ export function SelectionActionBar() {
   const isMobile = useMediaQuery("(max-width: 1023px)");
   const [showPlaylistModal, setShowPlaylistModal] = useState(false);
   const { deletePlaylist } = usePlaylistCRUD();
+  const { dialogState, showConfirm, handleConfirm, handleCancel } = useDialog();
 
   if (!isSelectionMode || selectedIds.size === 0) return null;
 
@@ -55,7 +58,12 @@ export function SelectionActionBar() {
   };
 
   const handleDelete = async () => {
-    if (confirm(`Delete ${selectedCount} ${itemType}(s)?`)) {
+    const confirmed = await showConfirm(
+      `Delete ${itemType}s`,
+      `Are you sure you want to delete ${selectedCount} ${itemType}(s)? This action cannot be undone.`,
+      "danger"
+    );
+    if (confirmed) {
       try {
         if (itemType === "playlist") {
           await Promise.all(selectedArray.map((id) => deletePlaylist(id)));
@@ -65,7 +73,7 @@ export function SelectionActionBar() {
         }
         exitSelectionMode();
       } catch (error) {
-        alert(`Failed to delete ${itemType}(s)`);
+        console.error(`Failed to delete ${itemType}(s):`, error);
       }
     }
   };
@@ -225,6 +233,16 @@ export function SelectionActionBar() {
           selectedCount !== 1 ? "s" : ""
         }`}
         batchIds={selectedArray}
+      />
+
+      {/* Confirm Dialog for deleting items */}
+      <ConfirmDialog
+        isOpen={dialogState.isOpen && dialogState.type === "confirm"}
+        onClose={handleCancel}
+        onConfirm={handleConfirm}
+        title={dialogState.title}
+        message={dialogState.message}
+        variant={dialogState.variant}
       />
     </>
   );

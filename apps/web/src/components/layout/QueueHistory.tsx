@@ -11,7 +11,8 @@ import { useQueueStore } from "@sonantica/player-core";
 import { usePlaylistCRUD } from "../../hooks/usePlaylistCRUD";
 import { playFromContext } from "../../utils/playContext";
 import { trackToMediaSource } from "../../utils/streamingUrl";
-import { Button } from "@sonantica/ui";
+import { useDialog } from "../../hooks/useDialog";
+import { Button, PromptDialog } from "@sonantica/ui";
 import {
   IconPlayerPlay,
   IconPlaylistAdd,
@@ -26,6 +27,7 @@ export function QueueHistory() {
   const { playlists, tracks } = useLibraryStore();
   const { addToQueue } = useQueueStore();
   const { createPlaylist } = usePlaylistCRUD();
+  const { dialogState, showPrompt, handleConfirm, handleCancel } = useDialog();
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
 
@@ -69,9 +71,11 @@ export function QueueHistory() {
   };
 
   const handleConvertToPlaylist = async (playlist: any) => {
-    const newName = prompt(
-      "Convert to permanent playlist. Enter name:",
-      playlist.name.replace("Queue ", "")
+    const newName = await showPrompt(
+      "Convert to Playlist",
+      "Enter a name for this permanent playlist",
+      playlist.name.replace("Queue ", ""),
+      "Playlist name"
     );
     if (!newName) return;
 
@@ -79,7 +83,7 @@ export function QueueHistory() {
       await createPlaylist(newName.trim(), "MANUAL", playlist.trackIds);
       setActiveMenu(null);
     } catch (error) {
-      alert("Failed to convert to playlist");
+      console.error("Failed to convert to playlist:", error);
     }
   };
 
@@ -196,6 +200,17 @@ export function QueueHistory() {
           Showing last 10 snapshots
         </p>
       )}
+
+      {/* Prompt Dialog for converting to playlist */}
+      <PromptDialog
+        isOpen={dialogState.isOpen && dialogState.type === "prompt"}
+        onClose={handleCancel}
+        onConfirm={handleConfirm}
+        title={dialogState.title}
+        message={dialogState.message}
+        defaultValue={dialogState.defaultValue}
+        placeholder={dialogState.placeholder}
+      />
     </div>
   );
 }

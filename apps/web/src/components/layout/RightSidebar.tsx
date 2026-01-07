@@ -42,6 +42,8 @@ import { usePlaylistCRUD } from "../../hooks/usePlaylistCRUD";
 import { useOfflineStore } from "@sonantica/offline-manager";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { QueueHistory } from "./QueueHistory";
+import { useDialog } from "../../hooks/useDialog";
+import { PromptDialog } from "@sonantica/ui";
 
 const itemVariants: Variants = {
   hidden: { x: 20, opacity: 0 },
@@ -90,6 +92,7 @@ export function RightSidebar({ isCollapsed }: RightSidebarProps) {
   const isQueueExpanded = useUIStore((s) => s.isQueueExpanded);
   const toggleQueueExpanded = useUIStore((s) => s.toggleQueueExpanded);
   const { createPlaylist } = usePlaylistCRUD();
+  const { dialogState, showPrompt, handleConfirm, handleCancel } = useDialog();
 
   // Show only next track when not expanded
   const displayQueue = isQueueExpanded
@@ -98,19 +101,19 @@ export function RightSidebar({ isCollapsed }: RightSidebarProps) {
 
   // Save queue as playlist
   const handleSaveAsPlaylist = async () => {
-    const playlistName = prompt(
-      "Enter playlist name:",
-      `Queue ${new Date().toLocaleString()}`
+    const playlistName = await showPrompt(
+      "Save Queue as Playlist",
+      "Enter a name for this playlist",
+      `Queue ${new Date().toLocaleDateString()}`,
+      "Queue Playlist"
     );
     if (!playlistName) return;
 
     try {
       const trackIds = fullQueue.map((t) => t.id);
       await createPlaylist(playlistName, "MANUAL", trackIds);
-      alert(`Playlist "${playlistName}" created!`);
     } catch (error) {
       console.error("Failed to save playlist:", error);
-      alert("Failed to create playlist");
     }
   };
 
@@ -283,6 +286,17 @@ export function RightSidebar({ isCollapsed }: RightSidebarProps) {
           {!isCollapsed && <QueueHistory />}
         </div>
       </div>
+
+      {/* Prompt Dialog for saving queue as playlist */}
+      <PromptDialog
+        isOpen={dialogState.isOpen && dialogState.type === "prompt"}
+        onClose={handleCancel}
+        onConfirm={handleConfirm}
+        title={dialogState.title}
+        message={dialogState.message}
+        defaultValue={dialogState.defaultValue}
+        placeholder={dialogState.placeholder}
+      />
     </SidebarContainer>
   );
 }

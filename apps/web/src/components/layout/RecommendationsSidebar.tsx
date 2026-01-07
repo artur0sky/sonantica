@@ -10,6 +10,8 @@ import { SidebarContainer, useUIStore, Button, CoverArt } from "@sonantica/ui";
 import { useLibraryStore } from "@sonantica/media-library";
 import { useQueueRecommendations } from "@sonantica/recommendations";
 import { usePlaylistCRUD } from "../../hooks/usePlaylistCRUD";
+import { useDialog } from "../../hooks/useDialog";
+import { PromptDialog } from "@sonantica/ui";
 import { TrackItem } from "../../features/library/components/TrackItem";
 import {
   IconMusic,
@@ -43,22 +45,23 @@ export function RecommendationsSidebar() {
   ];
 
   const { createPlaylist } = usePlaylistCRUD();
+  const { dialogState, showPrompt, handleConfirm, handleCancel } = useDialog();
 
   // Save recommendations as playlist
   const handleSaveAsPlaylist = async () => {
-    const playlistName = prompt(
-      "Enter playlist name:",
-      `Discovery Mix ${new Date().toLocaleString()}`
+    const playlistName = await showPrompt(
+      "Save Discovery Mix",
+      "Enter a name for this playlist",
+      `Discovery Mix ${new Date().toLocaleDateString()}`,
+      "Discovery Mix"
     );
     if (!playlistName) return;
 
     try {
       const trackIds = trackRecommendations.map((rec: any) => rec.item.id);
       await createPlaylist(playlistName, "GENERATED", trackIds);
-      alert(`Playlist "${playlistName}" created!`);
     } catch (error) {
       console.error("Failed to save playlist:", error);
-      alert("Failed to create playlist");
     }
   };
 
@@ -219,6 +222,17 @@ export function RecommendationsSidebar() {
           </div>
         )}
       </div>
+
+      {/* Prompt Dialog for saving recommendations as playlist */}
+      <PromptDialog
+        isOpen={dialogState.isOpen && dialogState.type === "prompt"}
+        onClose={handleCancel}
+        onConfirm={handleConfirm}
+        title={dialogState.title}
+        message={dialogState.message}
+        defaultValue={dialogState.defaultValue}
+        placeholder={dialogState.placeholder}
+      />
     </SidebarContainer>
   );
 }
