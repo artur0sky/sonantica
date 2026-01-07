@@ -8,6 +8,7 @@ import { useMemo, useEffect } from "react";
 import { useParams, useLocation } from "wouter";
 import { useLibraryStore } from "@sonantica/media-library";
 import { TrackItem } from "../components/TrackItem";
+import { PlaylistStats } from "../components/PlaylistStats";
 import { usePlaylistSettingsStore } from "../../../stores/playlistSettingsStore";
 import {
   IconChevronLeft,
@@ -237,22 +238,36 @@ export function PlaylistDetailPage() {
         </div>
       </div>
 
-      {/* Tracks List */}
-      {playlistTracks.length === 0 ? (
-        <div className="text-center py-20 text-text-muted">
-          <p>This playlist is empty</p>
+      {/* Content Grid: Tracks + Stats */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Tracks List */}
+        <div className="lg:col-span-2">
+          {playlistTracks.length === 0 ? (
+            <div className="text-center py-20 text-text-muted">
+              <p>This playlist is empty</p>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {playlistTracks.map((track, index) => (
+                <TrackItem
+                  key={track.id}
+                  track={track}
+                  onClick={() => handleTrackClick(index)}
+                />
+              ))}
+            </div>
+          )}
         </div>
-      ) : (
-        <div className="space-y-1">
-          {playlistTracks.map((track, index) => (
-            <TrackItem
-              key={track.id}
-              track={track}
-              onClick={() => handleTrackClick(index)}
-            />
-          ))}
-        </div>
-      )}
+
+        {/* Playlist Statistics */}
+        {playlistTracks.length > 0 && (
+          <div className="lg:col-span-1">
+            <div className="lg:sticky lg:top-6">
+              <PlaylistStats playlistId={playlist.id} />
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Confirm Dialog for deleting playlist */}
       <ConfirmDialog
