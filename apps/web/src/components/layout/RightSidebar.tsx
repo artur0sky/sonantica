@@ -111,7 +111,21 @@ export function RightSidebar({ isCollapsed }: RightSidebarProps) {
 
     try {
       const trackIds = fullQueue.map((t) => t.id);
-      await createPlaylist(playlistName, "MANUAL", trackIds);
+      console.log("[RightSidebar] Creating playlist from queue:", {
+        name: playlistName,
+        trackCount: trackIds.length,
+        trackIds: trackIds,
+      });
+
+      const createdPlaylist = await createPlaylist(
+        playlistName,
+        "MANUAL",
+        trackIds
+      );
+      console.log(
+        "[RightSidebar] Playlist created successfully:",
+        createdPlaylist
+      );
     } catch (error) {
       console.error("Failed to save playlist:", error);
     }

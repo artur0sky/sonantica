@@ -272,11 +272,17 @@ export class RemoteLibraryAdapter implements ILibraryAdapter {
   // --- Playlist Methods ---
 
   async createPlaylist(name: string, type: PlaylistType, trackIds: string[] = []): Promise<Playlist> {
+    const payload = { name, type, trackIds };
+    console.log('[RemoteLibraryAdapter] POST /api/library/playlists', payload);
+    
     const response = await this.fetch('/api/library/playlists', {
       method: 'POST',
-      body: JSON.stringify({ name, type, trackIds })
+      body: JSON.stringify(payload)
     });
-    return response.json();
+    
+    const result = await response.json();
+    console.log('[RemoteLibraryAdapter] Playlist created response:', result);
+    return result;
   }
 
   async getPlaylists(filter?: { type?: PlaylistType }): Promise<Playlist[]> {

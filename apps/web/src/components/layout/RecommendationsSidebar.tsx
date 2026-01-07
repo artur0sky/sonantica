@@ -49,17 +49,38 @@ export function RecommendationsSidebar() {
 
   // Save recommendations as playlist
   const handleSaveAsPlaylist = async () => {
+    // Get current diversity label
+    const diversityLabel =
+      diversityOptions.find((opt) => opt.value === diversity)?.label ||
+      "Balanced";
+
     const playlistName = await showPrompt(
       "Save Discovery Mix",
       "Enter a name for this playlist",
-      `Discovery Mix ${new Date().toLocaleDateString()}`,
+      `${diversityLabel} Mix ${new Date().toLocaleDateString()}`,
       "Discovery Mix"
     );
     if (!playlistName) return;
 
     try {
       const trackIds = trackRecommendations.map((rec: any) => rec.item.id);
-      await createPlaylist(playlistName, "GENERATED", trackIds);
+      console.log("[RecommendationsSidebar] Creating playlist:", {
+        name: playlistName,
+        diversity: diversityLabel,
+        diversityValue: diversity,
+        trackCount: trackIds.length,
+        trackIds,
+      });
+
+      const createdPlaylist = await createPlaylist(
+        playlistName,
+        "GENERATED",
+        trackIds
+      );
+      console.log(
+        "[RecommendationsSidebar] Playlist created:",
+        createdPlaylist
+      );
     } catch (error) {
       console.error("Failed to save playlist:", error);
     }

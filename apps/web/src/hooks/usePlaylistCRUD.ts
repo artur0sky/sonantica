@@ -17,7 +17,9 @@ export function usePlaylistCRUD() {
     if (!adapter) throw new Error('No active server');
 
     try {
+      console.log('[usePlaylistCRUD] Creating playlist:', { name, type, trackIds });
       const playlist: Playlist = await adapter.createPlaylist(name, type, trackIds);
+      console.log('[usePlaylistCRUD] Playlist created from API:', playlist);
       addPlaylist(playlist);
       return playlist;
     } catch (error) {
