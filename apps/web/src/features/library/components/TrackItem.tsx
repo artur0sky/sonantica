@@ -23,7 +23,7 @@ import { useEffect } from "react";
 import {
   ContextMenu,
   useContextMenu,
-  LazyAlbumArt,
+  CoverArt,
   type ContextMenuItem,
 } from "@sonantica/ui";
 import { trackToMediaSource } from "../../../utils/streamingUrl";
@@ -150,16 +150,15 @@ export function TrackItem({ track, onClick }: TrackItemProps) {
         onMouseUp={contextMenu.handleLongPressEnd}
         onMouseLeave={contextMenu.handleLongPressEnd}
         className={cn(
-          "flex items-center gap-4 p-3 rounded-lg cursor-pointer transition-all group border border-transparent",
+          "flex items-center gap-4 p-3 rounded-lg cursor-pointer transition-all group",
           iscurrentTrack
-            ? "bg-surface-elevated border-accent/20"
+            ? "bg-surface-elevated"
             : "hover:bg-surface-elevated/50",
-          shouldBeGrayedOut &&
-            "opacity-40 grayscale-[0.5] filter border-dashed border-border"
+          shouldBeGrayedOut && "opacity-40 grayscale-[0.5] filter"
         )}
       >
         {/* Album Art / Icon */}
-        <div className="w-12 h-12 flex-shrink-0 relative rounded-md overflow-hidden bg-surface-elevated border border-border">
+        <div className="w-12 h-12 flex-shrink-0 relative overflow-hidden bg-surface-elevated">
           {/* PERFORMANCE: Lazy-loaded album art with LRU cache + manual hydration */}
           {(() => {
             const libraryTracks = useLibraryStore.getState().tracks;
@@ -169,10 +168,10 @@ export function TrackItem({ track, onClick }: TrackItemProps) {
               libraryTracks.find((t) => t.id === track.id)?.coverArt;
 
             return (
-              <LazyAlbumArt
+              <CoverArt
                 src={coverArt}
                 alt="Album Art"
-                className="w-full h-full rounded-md"
+                className="w-full h-full"
                 iconSize={20}
               />
             );

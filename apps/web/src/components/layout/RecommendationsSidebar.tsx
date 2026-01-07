@@ -6,7 +6,7 @@
  */
 
 import { useState } from "react";
-import { SidebarContainer, useUIStore, Button } from "@sonantica/ui";
+import { SidebarContainer, useUIStore, Button, CoverArt } from "@sonantica/ui";
 import { useLibraryStore } from "@sonantica/media-library";
 import { useQueueRecommendations } from "@sonantica/recommendations";
 import { TrackItem } from "../../features/library/components/TrackItem";
@@ -120,27 +120,21 @@ export function RecommendationsSidebar() {
                 // Using a simplified view or existing card
                 <div
                   key={rec.item.id}
-                  className="bg-surface-elevated/30 rounded-lg p-2 hover:bg-surface-elevated transition-colors cursor-pointer group"
+                  className="p-2 hover:bg-surface-elevated transition-colors cursor-pointer group"
                 >
-                  <div className="aspect-square rounded-md overflow-hidden bg-surface-elevated mb-2 relative">
-                    {(() => {
-                      const albums = useLibraryStore.getState().albums;
-                      const coverArt =
+                  <div className="aspect-square overflow-hidden mb-2 relative">
+                    <CoverArt
+                      src={
                         rec.item.coverArt ||
-                        albums.find((a: any) => a.id === rec.item.id)?.coverArt;
-
-                      return coverArt ? (
-                        <img
-                          src={coverArt}
-                          className="w-full h-full object-cover"
-                          alt={rec.item.title}
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-surface-elevated border border-border">
-                          <IconDisc size={20} className="text-text-muted/30" />
-                        </div>
-                      );
-                    })()}
+                        useLibraryStore
+                          .getState()
+                          .albums.find((a: any) => a.id === rec.item.id)
+                          ?.coverArt
+                      }
+                      alt={rec.item.title}
+                      className="w-full h-full"
+                      iconSize={24}
+                    />
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                       <IconPlayerPlay
                         className="text-white drop-shadow-md"
@@ -170,9 +164,9 @@ export function RecommendationsSidebar() {
               {artistRecommendations.map((rec: any) => (
                 <div
                   key={rec.item.id}
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-surface-elevated transition-colors cursor-pointer"
+                  className="flex items-center gap-3 p-2 hover:bg-surface-elevated transition-colors cursor-pointer"
                 >
-                  <div className="w-10 h-10 rounded-full bg-surface-elevated border border-border flex items-center justify-center overflow-hidden">
+                  <div className="w-10 h-10 rounded-full bg-surface-elevated flex items-center justify-center overflow-hidden">
                     <IconMicrophone size={16} className="text-text-muted/50" />
                   </div>
                   <div className="flex-1 min-w-0">

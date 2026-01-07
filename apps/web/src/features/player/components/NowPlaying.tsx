@@ -6,7 +6,7 @@
  */
 
 import { useState } from "react";
-import { Badge, Button, FullPlayerControls } from "@sonantica/ui";
+import { Badge, Button, FullPlayerControls, CoverArt } from "@sonantica/ui";
 import { usePlayerStore } from "@sonantica/player-core";
 import { formatArtists, cn } from "@sonantica/shared";
 import { motion, AnimatePresence } from "framer-motion";
@@ -62,7 +62,7 @@ export function NowPlaying() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <div className="bg-surface-elevated rounded-lg overflow-hidden">
+      <div className="bg-surface-elevated overflow-hidden">
         {/* Desktop/Tablet View - Traditional Layout */}
         <div className="hidden md:block p-6 text-center">
           <Badge variant="accent" className="mb-4">
@@ -105,40 +105,27 @@ export function NowPlaying() {
                   }}
                   className="relative cursor-grab active:cursor-grabbing"
                 >
-                  {/* Cover Art */}
-                  <div className="aspect-square w-full max-w-sm mx-auto rounded-lg overflow-hidden shadow-2xl bg-surface border border-border relative">
-                    {currentTrack.metadata?.coverArt ? (
-                      <img
-                        src={currentTrack.metadata.coverArt}
-                        alt="Album Cover"
-                        className="w-full h-full object-cover"
-                        draggable="false"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <IconMusic
-                          size={80}
-                          className="text-text-muted/30"
-                          stroke={1.5}
-                        />
-                      </div>
-                    )}
+                  <CoverArt
+                    src={currentTrack.metadata?.coverArt}
+                    alt="Album Cover"
+                    className="aspect-square w-full max-w-sm mx-auto"
+                    iconSize={80}
+                  />
 
-                    {/* Swipe Up Indicator */}
-                    {hasLyrics && (
-                      <motion.div
-                        initial={{ opacity: 0.6 }}
-                        animate={{ opacity: [0.6, 1, 0.6] }}
-                        transition={{ duration: 2, repeat: Infinity }}
-                        className="absolute bottom-4 left-0 right-0 flex flex-col items-center gap-1 text-white drop-shadow-lg"
-                      >
-                        <IconChevronUp size={24} stroke={2} />
-                        <span className="text-xs font-medium">
-                          Swipe up for lyrics
-                        </span>
-                      </motion.div>
-                    )}
-                  </div>
+                  {/* Swipe Up Indicator */}
+                  {hasLyrics && (
+                    <motion.div
+                      initial={{ opacity: 0.6 }}
+                      animate={{ opacity: [0.6, 1, 0.6] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                      className="absolute bottom-4 left-0 right-0 flex flex-col items-center gap-1 text-white drop-shadow-lg"
+                    >
+                      <IconChevronUp size={24} stroke={2} />
+                      <span className="text-xs font-medium">
+                        Swipe up for lyrics
+                      </span>
+                    </motion.div>
+                  )}
 
                   {/* Track Info */}
                   <div className="mt-6 text-center">
@@ -187,7 +174,7 @@ export function NowPlaying() {
       </div>
 
       {/* Tabs - Integrated from PlayerPage (Desktop primarily) */}
-      <div className="hidden md:block bg-surface border border-border rounded-lg overflow-hidden">
+      <div className="hidden md:block bg-surface overflow-hidden">
         {/* Tab Headers */}
         <div className="flex border-b border-border bg-surface-elevated">
           <button

@@ -13,7 +13,7 @@ import { motion } from "framer-motion";
 import {
   ContextMenu,
   useContextMenu,
-  LazyAlbumArt,
+  CoverArt,
   type ContextMenuItem,
 } from "@sonantica/ui";
 import { useQueueStore } from "@sonantica/player-core";
@@ -75,14 +75,14 @@ export function AlbumCard({ album, onClick }: AlbumCardProps) {
         onMouseDown={contextMenu.handleLongPressStart}
         onMouseUp={contextMenu.handleLongPressEnd}
         onMouseLeave={contextMenu.handleLongPressEnd}
-        className="group cursor-pointer p-4 bg-surface hover:bg-surface-elevated rounded-xl transition-colors border border-transparent hover:border-border"
+        className="group cursor-pointer p-4 hover:bg-surface-elevated transition-colors"
       >
         {/* Album Art - PERFORMANCE: Lazy loaded with LRU cache */}
-        <div className="aspect-square bg-surface-elevated rounded-lg mb-4 flex items-center justify-center shadow-lg relative overflow-hidden">
-          <LazyAlbumArt
+        <div className="aspect-square mb-4 flex items-center justify-center relative overflow-hidden">
+          <CoverArt
             src={album.coverArt}
             alt={album.name}
-            className="w-full h-full rounded-lg"
+            className="w-full h-full"
             iconSize={64}
           />
 

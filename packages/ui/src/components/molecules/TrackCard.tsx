@@ -4,7 +4,7 @@
  * Unified, reusable track display component.
  * Used in Queue, Track Lists, Search Results, etc.
  * Adapts behavior based on context (draggable, selectable, etc.
- * 
+ *
  * PERFORMANCE: Memoized to prevent unnecessary re-renders in lists
  */
 
@@ -20,7 +20,7 @@ import {
   IconHeart,
   IconHeartFilled,
 } from "@tabler/icons-react";
-import { Badge } from "../atoms";
+import { Badge, CoverArt } from "../atoms";
 
 interface TrackCardProps {
   track: any;
@@ -85,23 +85,26 @@ export const TrackCard = memo(function TrackCard({
   const [isFavorite, setIsFavorite] = useState(false);
 
   // PERFORMANCE: Memoize expensive calculations
-  const ext = useMemo(() => getExtension(track.url), [track.url]);
+  const ext = useMemo(() => getExtension(track.url || ""), [track.url]);
   const badgeClass = useMemo(() => getBadgeClass(ext), [ext]);
 
   // PERFORMANCE: Memoize callbacks to prevent child re-renders
   const handleHoverStart = useCallback(() => setIsHovered(true), []);
   const handleHoverEnd = useCallback(() => setIsHovered(false), []);
-  
+
   const handleFavoriteToggle = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
-    setIsFavorite(prev => !prev);
+    setIsFavorite((prev) => !prev);
   }, []);
 
-  const handleDragStart = useCallback((e: React.PointerEvent) => {
-    if (dragControls) {
-      dragControls.start(e);
-    }
-  }, [dragControls]);
+  const handleDragStart = useCallback(
+    (e: React.PointerEvent) => {
+      if (dragControls) {
+        dragControls.start(e);
+      }
+    },
+    [dragControls]
+  );
 
   return (
     <motion.div
@@ -111,9 +114,9 @@ export const TrackCard = memo(function TrackCard({
       onHoverEnd={handleHoverEnd}
       className={cn(
         "group relative flex items-center gap-3 px-3 py-2 transition-all select-none",
-        "hover:bg-white/[0.02]",
-        isActive && "bg-accent/5",
-        variant === "queue" && "rounded-lg",
+        "hover:bg-white/[0.04]",
+        isActive && "bg-accent/10",
+        variant === "queue" && "rounded-none",
         className
       )}
     >
@@ -147,21 +150,15 @@ export const TrackCard = memo(function TrackCard({
 
       {/* Album Art */}
       <div
-        className="w-10 h-10 flex-shrink-0 rounded-md overflow-hidden bg-surface relative shadow-sm cursor-pointer group/cover"
+        className="w-10 h-10 flex-shrink-0 cursor-pointer group/cover relative"
         onClick={onPlay}
       >
-        {track.metadata?.coverArt ? (
-          <img
-            src={track.metadata.coverArt}
-            alt="Cover"
-            className="w-full h-full object-cover transition-transform group-hover/cover:scale-110 select-none pointer-events-none"
-            draggable="false"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <IconMusic size={16} className="text-text-muted/30" stroke={1.5} />
-          </div>
-        )}
+        <CoverArt
+          src={track.metadata?.coverArt}
+          alt="Cover"
+          className="w-full h-full"
+          iconSize={16}
+        />
 
         {/* Play overlay on hover */}
         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/cover:opacity-100 flex items-center justify-center transition-opacity">
