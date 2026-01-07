@@ -7,7 +7,12 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	_ "embed"
 )
+
+//go:embed schema_playlists.sql
+var playlistSchema string
 
 var DB *pgxpool.Pool
 
@@ -39,6 +44,21 @@ func Connect() error {
 	}
 
 	fmt.Println("✅ Connected to PostgreSQL successfully")
+	return nil
+}
+
+func RunMigrations() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	fmt.Println("📦 Running database migrations...")
+
+	// Execute Playlist Schema
+	if _, err := DB.Exec(ctx, playlistSchema); err != nil {
+		return fmt.Errorf("failed to execute playlist schema: %v", err)
+	}
+
+	fmt.Println("✅ Database migrations completed")
 	return nil
 }
 
