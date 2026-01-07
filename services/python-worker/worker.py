@@ -78,7 +78,8 @@ app.conf.update(
 
 
 
-from sqlalchemy.dialects import postgresql
+from sqlalchemy.dialects.postgresql import insert, UUID
+
 
 # --- DOMAIN MODELS (ORM) ---
 Base = declarative_base()
@@ -303,8 +304,8 @@ class AudioRepository:
 
     def update_event_aggregation(self, event_data: dict):
         """
-        Updates aggregated stats based on a single event.
-        Following the stock-market / high-volume pattern.
+        Updates aggregated stats based on a single event using Atomic Upserts.
+        Robust against race conditions.
         """
         session = self.SessionLocal()
         try:
@@ -313,51 +314,109 @@ class AudioRepository:
             track_id = data.get("trackId")
             timestamp_ms = event_data.get("timestamp", time.time() * 1000)
             dt = datetime.datetime.fromtimestamp(timestamp_ms / 1000.0, tz=datetime.timezone.utc)
-            date = dt.date()
-            hour = dt.hour
+            date_val = dt.date()
+            hour_val = dt.hour
 
             if not track_id:
                 return
 
-            # 1. Update Track Statistics
-            stats = session.query(TrackStatistics).filter(TrackStatistics.track_id == track_id).first()
-            if not stats:
-                stats = TrackStatistics(track_id=track_id)
-                session.add(stats)
-
-            stats.last_played_at = dt
+            # --- 1. Track Statistics Upsert ---
+            # Prepare initial values and update values based on event type
+            stmt_values = {
+                "track_id": track_id,
+                "play_count": 0,
+                "complete_count": 0,
+                "skip_count": 0,
+                "total_play_time": 0,
+                "average_completion": 0.0,
+                "last_played_at": dt,
+                "updated_at": dt
+            }
             
-            # 2. Update Heatmap
-            heatmap = session.query(ListeningHeatmap).filter(
-                ListeningHeatmap.date == date, 
-                ListeningHeatmap.hour == hour
-            ).first()
-            if not heatmap:
-                heatmap = ListeningHeatmap(date=date, hour=hour)
-                session.add(heatmap)
+            update_set = {
+                "last_played_at": dt,
+                "updated_at": dt
+            }
 
             if event_type == "playback.start":
-                stats.play_count += 1
-                heatmap.play_count += 1
-                heatmap.unique_tracks += 1 # Rough estimate per event
+                stmt_values["play_count"] = 1
+                update_set["play_count"] = TrackStatistics.play_count + 1
+                
             elif event_type == "playback.complete":
-                stats.complete_count += 1
-                duration = data.get("duration", 0)
-                stats.total_play_time += int(duration)
-                heatmap.total_duration += int(duration)
-                stats.average_completion = 100.0 # It completed!
+                stmt_values["complete_count"] = 1
+                duration = int(data.get("duration", 0))
+                stmt_values["total_play_time"] = duration
+                stmt_values["average_completion"] = 100.0
+                
+                update_set["complete_count"] = TrackStatistics.complete_count + 1
+                update_set["total_play_time"] = TrackStatistics.total_play_time + duration
+                # Updating average completion on existing row is complex in one query without raw SQL 
+                # or simplified logic. We'll set it to 100 if completed.
+                update_set["average_completion"] = 100.0 
+
             elif event_type == "playback.skip":
-                stats.skip_count += 1
-                pos = data.get("position", 0)
-                dur = data.get("duration", 1)
-                stats.total_play_time += int(pos)
-                heatmap.total_duration += int(pos)
-                stats.average_completion = (pos / dur) * 100.0 if dur > 0 else 0
+                stmt_values["skip_count"] = 1
+                pos = int(data.get("position", 0))
+                dur = int(data.get("duration", 1))
+                stmt_values["total_play_time"] = pos
+                avg = (pos / dur) * 100.0 if dur > 0 else 0
+                stmt_values["average_completion"] = avg
+                
+                update_set["skip_count"] = TrackStatistics.skip_count + 1
+                update_set["total_play_time"] = TrackStatistics.total_play_time + pos
+                # Doing a running average calculation in SQL update is hard without current count.
+                # For simplicity in this robust version:
+                update_set["average_completion"] = avg
+
+            # Execute Track Upsert
+            stmt = insert(TrackStatistics).values(**stmt_values)
+            stmt = stmt.on_conflict_do_update(
+                index_elements=[TrackStatistics.track_id],
+                set_=update_set
+            )
+            session.execute(stmt)
+
+            # --- 2. Heatmap Upsert ---
+            heatmap_values = {
+                "date": date_val,
+                "hour": hour_val,
+                "play_count": 0,
+                "unique_tracks": 0,
+                "total_duration": 0
+            }
+            
+            heatmap_update = {
+                "play_count": ListeningHeatmap.play_count, # Default
+                "unique_tracks": ListeningHeatmap.unique_tracks,
+                "total_duration": ListeningHeatmap.total_duration
+            }
+
+            if event_type == "playback.start":
+                heatmap_values["play_count"] = 1
+                heatmap_values["unique_tracks"] = 1
+                
+                heatmap_update["play_count"] = ListeningHeatmap.play_count + 1
+                heatmap_update["unique_tracks"] = ListeningHeatmap.unique_tracks + 1 # Approx
+                
+            elif event_type in ["playback.complete", "playback.skip"]:
+                dur = int(data.get("duration", 0)) if event_type == "playback.complete" else int(data.get("position", 0))
+                heatmap_values["total_duration"] = dur
+                heatmap_update["total_duration"] = ListeningHeatmap.total_duration + dur
+
+            stmt_hm = insert(ListeningHeatmap).values(**heatmap_values)
+            stmt_hm = stmt_hm.on_conflict_do_update(
+                constraint='uq_date_hour', # Using the explicit constraint name defined in model
+                set_=heatmap_update
+            )
+            session.execute(stmt_hm)
 
             session.commit()
+            logger.info(f"📊 Aggregated {event_type} for track {track_id}")
+
         except Exception as e:
             session.rollback()
             logger.error(f"❌ Failed to aggregate event: {e}")
+            raise e # Propagate to let Celery retry
         finally:
             session.close()
 
@@ -516,8 +575,8 @@ def analyze_audio(file_path):
 
 # --- CELERY TASKS ---
 
-@app.task(name="sonantica.analyze_audio")
-def task_analyze_audio(job_data):
+@app.task(name="sonantica.analyze_audio", bind=True, max_retries=3)
+def task_analyze_audio(self, job_data):
     rel_path = job_data.get("file_path")
     full_path = os.path.join(job_data.get("root", MEDIA_PATH), rel_path)
     trace_id = job_data.get("trace_id", "N/A")
@@ -533,14 +592,15 @@ def task_analyze_audio(job_data):
             return {"status": "success", "track": meta["title"]}
         except Exception as e:
             logger.error(f"DB Error: {e}")
-            return {"status": "error", "message": str(e)}
+            # Retry on database errors
+            raise self.retry(exc=e, countdown=10)
     return {"status": "failed", "path": rel_path}
 
-@app.task(name="sonantica.process_analytics")
-def task_process_analytics(event_data):
+@app.task(name="sonantica.process_analytics", bind=True, max_retries=5)
+def task_process_analytics(self, event_data):
     """
     High-volume analytics processing.
-    1. Updates Postgres for historical data.
+    1. Updates Postgres for historical data (Robust Upsert).
     2. Updates Redis for real-time streaming view.
     """
     try:
@@ -553,37 +613,41 @@ def task_process_analytics(event_data):
         # We store hits per minute in a sorted set or hash to allow "Ticker" style updates
         red = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, password=REDIS_PASSWORD, db=0)
         
-        now_ts = int(time.time())
-        minute_bucket = (now_ts // 60) * 60
-        
-        # Track Active Sessions (Last 5 minutes)
-        session_id = event_data.get("sessionId")
-        if session_id:
-            red.zadd("stats:realtime:active_sessions", {session_id: now_ts})
-            # Cleanup sessions older than 5 mins
-            red.zremrangebyscore("stats:realtime:active_sessions", 0, now_ts - 300)
-            red.expire("stats:realtime:active_sessions", 600)
-        
-        # Real-time Event Counter
-        red.incr(f"stats:realtime:events:{minute_bucket}")
-        red.expire(f"stats:realtime:events:{minute_bucket}", 3600)
-
-        if event_data.get("eventType") == "playback.start":
-            red.incr(f"stats:realtime:plays:{minute_bucket}")
-            red.expire(f"stats:realtime:plays:{minute_bucket}", 3600)
+        try:
+            now_ts = int(time.time())
+            minute_bucket = (now_ts // 60) * 60
             
-            # Update "Trending" Tracks in Redis (Last 10 minutes)
-            track_id = event_data.get("data", {}).get("trackId")
-            if track_id:
-                # Use a sorted set for trending
-                trending_key = f"stats:trending:tracks:{minute_bucket}"
-                red.zincrby(trending_key, 1, track_id)
-                red.expire(trending_key, 600) # Bucket expires in 10 mins
+            # Track Active Sessions (Last 5 minutes)
+            session_id = event_data.get("sessionId")
+            if session_id:
+                red.zadd("stats:realtime:active_sessions", {session_id: now_ts})
+                # Cleanup sessions older than 5 mins
+                red.zremrangebyscore("stats:realtime:active_sessions", 0, now_ts - 300)
+                red.expire("stats:realtime:active_sessions", 600)
+            
+            # Real-time Event Counter
+            red.incr(f"stats:realtime:events:{minute_bucket}")
+            red.expire(f"stats:realtime:events:{minute_bucket}", 3600)
+
+            if event_data.get("eventType") == "playback.start":
+                red.incr(f"stats:realtime:plays:{minute_bucket}")
+                red.expire(f"stats:realtime:plays:{minute_bucket}", 3600)
+                
+                # Update "Trending" Tracks in Redis (Last 10 minutes)
+                track_id = event_data.get("data", {}).get("trackId")
+                if track_id:
+                    # Use a sorted set for trending
+                    trending_key = f"stats:trending:tracks:{minute_bucket}"
+                    red.zincrby(trending_key, 1, track_id)
+                    red.expire(trending_key, 600) # Bucket expires in 10 mins
+        finally:
+            red.close()
 
         return {"status": "processed"}
     except Exception as e:
         logger.error(f"Analytics Task Error: {e}")
-        return {"status": "error", "message": str(e)}
+        # Robust Retry!
+        raise self.retry(exc=e, countdown=5)
 
 @app.task(name="sonantica.sync_cache")
 def task_sync_cache():
