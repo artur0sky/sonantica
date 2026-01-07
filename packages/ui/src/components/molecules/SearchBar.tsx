@@ -146,10 +146,22 @@ export function SearchBar({ onResultSelect, className }: GlobalSearchBarProps) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, results, selectedIndex]);
 
-  // Click outside to close
+  // Click outside or scroll to close
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
+        setIsOpen(false);
+        setQuery("");
+      }
+    };
+
+    const handleScroll = (e: Event) => {
+      // Close dropdown on scroll if it's not scrolling inside the dropdown itself
+      if (
+        isOpen &&
         containerRef.current &&
         !containerRef.current.contains(e.target as Node)
       ) {
@@ -158,8 +170,13 @@ export function SearchBar({ onResultSelect, className }: GlobalSearchBarProps) {
     };
 
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+    window.addEventListener("scroll", handleScroll, true);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("scroll", handleScroll, true);
+    };
+  }, [isOpen]);
 
   const handleResultClick = (result: SearchResult) => {
     onResultSelect?.(result);

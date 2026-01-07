@@ -21,7 +21,7 @@ import logo from "../../assets/logo.png";
 export function Header() {
   const { toggleLeftSidebar, handleSearchResultSelect } = useHeaderLogic();
   const [, setLocation] = useLocation();
-  const contextMenu = useContextMenu();
+  const contextMenu = useContextMenu("user-menu");
   const isPlayerExpanded = useUIStore((s) => s.isPlayerExpanded);
 
   // User menu items
@@ -105,10 +105,18 @@ export function Header() {
           <UserButton
             onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
               e.preventDefault();
+              e.stopPropagation();
               if (contextMenu.isOpen) {
                 contextMenu.close();
               } else {
                 contextMenu.handleContextMenu(e as any);
+              }
+            }}
+            onMouseDown={(e: React.MouseEvent) => {
+              // Prevent mousedown from closing the menu via ContextMenu's click-outside handler
+              // when we actually want to toggle it via the onClick handler
+              if (contextMenu.isOpen) {
+                e.stopPropagation();
               }
             }}
           />

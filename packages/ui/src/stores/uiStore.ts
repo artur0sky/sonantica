@@ -55,6 +55,10 @@ export interface UIState {
   setRecommendationsSidebarWidth: (width: number) => void;
   setIsCramped: (isCramped: boolean) => void;
   closeLeftSidebarOnPlay: () => void; // Auto-close left sidebar when playing
+  
+  // Context Menu state
+  activeContextMenuId: string | null;
+  setActiveContextMenuId: (id: string | null) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -80,7 +84,8 @@ export const useUIStore = create<UIState>((set) => ({
       const isExpanded = !state.isPlayerExpanded;
       return { 
         isPlayerExpanded: isExpanded,
-        isLeftSidebarOpen: isExpanded ? false : state.isLeftSidebarOpen
+        isLeftSidebarOpen: isExpanded ? false : state.isLeftSidebarOpen,
+        activeContextMenuId: null
       };
     });
   },
@@ -89,23 +94,36 @@ export const useUIStore = create<UIState>((set) => ({
     set((state) => ({ 
       isQueueOpen: !state.isQueueOpen,
       isRightSidebarOpen: !state.isQueueOpen, // Sync with sidebar
+      activeContextMenuId: null
     }));
   },
 
   toggleQueueExpanded: () => {
-    set((state) => ({ isQueueExpanded: !state.isQueueExpanded }));
+    set((state) => ({ 
+      isQueueExpanded: !state.isQueueExpanded,
+      activeContextMenuId: null 
+    }));
   },
 
   toggleLyrics: () => {
-    set((state) => ({ lyricsOpen: !state.lyricsOpen }));
+    set((state) => ({ 
+      lyricsOpen: !state.lyricsOpen,
+      activeContextMenuId: null
+    }));
   },
 
   toggleEQ: () => {
-    set((state) => ({ eqOpen: !state.eqOpen }));
+    set((state) => ({ 
+      eqOpen: !state.eqOpen,
+      activeContextMenuId: null
+    }));
   },
 
   toggleRecommendations: () => {
-    set((state) => ({ recommendationsOpen: !state.recommendationsOpen }));
+    set((state) => ({ 
+      recommendationsOpen: !state.recommendationsOpen,
+      activeContextMenuId: null
+    }));
   },
 
   toggleVisualization: () => {
@@ -113,21 +131,31 @@ export const useUIStore = create<UIState>((set) => ({
   },
 
   toggleLeftSidebar: () => {
-    set((state) => ({ isLeftSidebarOpen: !state.isLeftSidebarOpen }));
+    set((state) => ({ 
+      isLeftSidebarOpen: !state.isLeftSidebarOpen,
+      activeContextMenuId: null
+    }));
   },
 
   toggleRightSidebar: () => {
-    set((state) => ({ isRightSidebarOpen: !state.isRightSidebarOpen }));
+    set((state) => ({ 
+      isRightSidebarOpen: !state.isRightSidebarOpen,
+      activeContextMenuId: null
+    }));
   },
 
   toggleMetadataPanel: () => {
-    set((state) => ({ isMetadataPanelOpen: !state.isMetadataPanelOpen }));
+    set((state) => ({ 
+      isMetadataPanelOpen: !state.isMetadataPanelOpen,
+      activeContextMenuId: null
+    }));
   },
 
   setPlayerExpanded: (expanded: boolean) => {
     set((state) => ({ 
       isPlayerExpanded: expanded,
-      isLeftSidebarOpen: expanded ? false : state.isLeftSidebarOpen
+      isLeftSidebarOpen: expanded ? false : state.isLeftSidebarOpen,
+      activeContextMenuId: null
     }));
   },
 
@@ -187,5 +215,10 @@ export const useUIStore = create<UIState>((set) => ({
 
   closeLeftSidebarOnPlay: () => {
     set({ isLeftSidebarOpen: false });
+  },
+
+  activeContextMenuId: null,
+  setActiveContextMenuId: (id: string | null) => {
+    set({ activeContextMenuId: id });
   },
 }));
