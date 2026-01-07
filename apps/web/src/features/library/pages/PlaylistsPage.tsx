@@ -29,6 +29,8 @@ const containerVariants = {
 };
 
 import { usePlaylistCRUD } from "../../../hooks/usePlaylistCRUD";
+import { useDialog } from "../../../hooks/useDialog";
+import { PromptDialog } from "@sonantica/ui";
 
 export function PlaylistsPage() {
   const { playlists, searchQuery, tracks } = useLibraryStore();
@@ -36,6 +38,7 @@ export function PlaylistsPage() {
   const [filterType, setFilterType] = useState<string>("all");
   const trackAccess = usePlaylistSettingsStore((s) => s.trackAccess);
   const { createPlaylist } = usePlaylistCRUD();
+  const { dialogState, showPrompt, handleConfirm, handleCancel } = useDialog();
 
   const {
     isSelectionMode,
@@ -96,7 +99,12 @@ export function PlaylistsPage() {
   };
 
   const handleCreatePlaylist = async () => {
-    const name = prompt("Enter playlist name:");
+    const name = await showPrompt(
+      "Create Playlist",
+      "Enter a name for your new playlist",
+      "",
+      "My Playlist"
+    );
     if (name && name.trim()) {
       try {
         const playlist = await createPlaylist(name.trim());
@@ -253,6 +261,17 @@ export function PlaylistsPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Prompt Dialog for creating playlists */}
+      <PromptDialog
+        isOpen={dialogState.isOpen && dialogState.type === "prompt"}
+        onClose={handleCancel}
+        onConfirm={handleConfirm}
+        title={dialogState.title}
+        message={dialogState.message}
+        defaultValue={dialogState.defaultValue}
+        placeholder={dialogState.placeholder}
+      />
     </div>
   );
 }

@@ -21,6 +21,8 @@ import { playFromContext } from "../../../utils/playContext";
 import { trackToMediaSource } from "../../../utils/streamingUrl";
 
 import { usePlaylistCRUD } from "../../../hooks/usePlaylistCRUD";
+import { useDialog } from "../../../hooks/useDialog";
+import { ConfirmDialog, PromptDialog } from "@sonantica/ui";
 
 export function PlaylistDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -28,6 +30,8 @@ export function PlaylistDetailPage() {
   const { getPlaylistById, tracks } = useLibraryStore();
   const trackAccess = usePlaylistSettingsStore((s) => s.trackAccess);
   const { deletePlaylist, renamePlaylist } = usePlaylistCRUD();
+  const { dialogState, showConfirm, showPrompt, handleConfirm, handleCancel } =
+    useDialog();
 
   useEffect(() => {
     if (id) trackAccess(id);
@@ -74,23 +78,33 @@ export function PlaylistDetailPage() {
   };
 
   const handleDelete = async () => {
-    if (confirm(`Are you sure you want to delete "${playlist.name}"?`)) {
+    const confirmed = await showConfirm(
+      "Delete Playlist",
+      `Are you sure you want to delete "${playlist.name}"? This action cannot be undone.`,
+      "danger"
+    );
+    if (confirmed) {
       try {
         await deletePlaylist(playlist.id);
         setLocation("/playlists");
       } catch (error) {
-        alert("Failed to delete playlist");
+        console.error("Failed to delete playlist:", error);
       }
     }
   };
 
   const handleEdit = async () => {
-    const newName = prompt("Rename playlist to:", playlist.name);
+    const newName = await showPrompt(
+      "Rename Playlist",
+      "Enter a new name for this playlist",
+      playlist.name,
+      "Playlist name"
+    );
     if (newName && newName !== playlist.name) {
       try {
         await renamePlaylist(playlist.id, newName);
       } catch (error) {
-        alert("Failed to rename playlist");
+        console.error("Failed to rename playlist:", error);
       }
     }
   };
@@ -239,6 +253,27 @@ export function PlaylistDetailPage() {
           ))}
         </div>
       )}
+
+      {/* Confirm Dialog for deleting playlist */}
+      <ConfirmDialog
+        isOpen={dialogState.isOpen && dialogState.type === "confirm"}
+        onClose={handleCancel}
+        onConfirm={handleConfirm}
+        title={dialogState.title}
+        message={dialogState.message}
+        variant={dialogState.variant}
+      />
+
+      {/* Prompt Dialog for renaming playlist */}
+      <PromptDialog
+        isOpen={dialogState.isOpen && dialogState.type === "prompt"}
+        onClose={handleCancel}
+        onConfirm={handleConfirm}
+        title={dialogState.title}
+        message={dialogState.message}
+        defaultValue={dialogState.defaultValue}
+        placeholder={dialogState.placeholder}
+      />
     </div>
   );
 }
