@@ -11,6 +11,9 @@ import { IconPlaylist, IconSearch, IconPlus } from "@tabler/icons-react";
 import { Button } from "@sonantica/ui";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
+import { useSelectionStore } from "../../../stores/selectionStore";
+import { SelectionActionBar } from "../../../components/SelectionActionBar";
+import { IconCheckbox } from "@tabler/icons-react";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -26,6 +29,8 @@ export function PlaylistsPage() {
   const { playlists, searchQuery } = useLibraryStore();
   const [, setLocation] = useLocation();
   const [filterType, setFilterType] = useState<string>("all");
+  const { isSelectionMode, enterSelectionMode, exitSelectionMode } =
+    useSelectionStore();
 
   // Filter playlists
   const filteredPlaylists = useMemo(() => {
@@ -101,9 +106,30 @@ export function PlaylistsPage() {
               <IconPlus size={18} />
               <span className="hidden sm:inline">New Playlist</span>
             </Button>
+
+            {/* Multi-Select Button */}
+            <Button
+              onClick={() =>
+                isSelectionMode
+                  ? exitSelectionMode()
+                  : enterSelectionMode("playlist")
+              }
+              variant={isSelectionMode ? "primary" : "ghost"}
+              size="sm"
+              className="flex items-center gap-2"
+              title="Multi-Select"
+            >
+              <IconCheckbox size={18} />
+              {isSelectionMode && (
+                <span className="hidden sm:inline">Done</span>
+              )}
+            </Button>
           </div>
         </div>
       </motion.div>
+
+      {/* Selection Action Bar */}
+      <SelectionActionBar />
 
       {/* Content */}
       <AnimatePresence mode="wait">
