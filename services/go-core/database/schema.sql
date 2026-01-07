@@ -1,8 +1,12 @@
--- Complete Database Schema for Sonantica
--- All tables created in proper order with correct FK relationships
+-- ============================================
+-- SONANTICA UNIFIED DATABASE SCHEMA
+-- ============================================
+-- This file contains the complete schema for the Sonántica Core database,
+-- including library management and analytics.
+-- All tables use UUID for primary and foreign keys for consistency.
 
 -- ============================================
--- CORE TABLES
+-- CORE LIBRARY TABLES
 -- ============================================
 
 -- Artists Table
@@ -75,6 +79,119 @@ CREATE TABLE IF NOT EXISTS playlist_tracks (
 );
 
 -- ============================================
+-- ANALYTICS TABLES
+-- ============================================
+
+-- Analytics Sessions
+CREATE TABLE IF NOT EXISTS analytics_sessions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    session_id VARCHAR(255) UNIQUE NOT NULL,
+    user_id VARCHAR(255),
+    platform VARCHAR(50) NOT NULL,
+    browser VARCHAR(100),
+    browser_version VARCHAR(50),
+    os VARCHAR(100),
+    os_version VARCHAR(50),
+    locale VARCHAR(10),
+    timezone VARCHAR(50),
+    ip_hash VARCHAR(64),
+    started_at TIMESTAMP NOT NULL,
+    ended_at TIMESTAMP,
+    last_heartbeat TIMESTAMP,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Analytics Events (Raw)
+CREATE TABLE IF NOT EXISTS analytics_events (
+    id BIGSERIAL PRIMARY KEY,
+    event_id UUID UNIQUE NOT NULL,
+    session_id VARCHAR(255) NOT NULL REFERENCES analytics_sessions(session_id) ON DELETE CASCADE,
+    event_type VARCHAR(100) NOT NULL,
+    timestamp TIMESTAMP NOT NULL,
+    data JSONB NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Playback Sessions (Aggregated)
+CREATE TABLE IF NOT EXISTS playback_sessions (
+    id BIGSERIAL PRIMARY KEY,
+    session_id VARCHAR(255) NOT NULL,
+    track_id UUID NOT NULL REFERENCES tracks(id) ON DELETE CASCADE,
+    album_id UUID REFERENCES albums(id) ON DELETE SET NULL,
+    artist_id UUID REFERENCES artists(id) ON DELETE SET NULL,
+    started_at TIMESTAMP NOT NULL,
+    ended_at TIMESTAMP,
+    duration_played INTEGER, -- seconds
+    completion_percentage DECIMAL(5,2),
+    source VARCHAR(50),
+    source_id VARCHAR(255),
+    codec VARCHAR(50),
+    bitrate INTEGER,
+    eq_enabled BOOLEAN DEFAULT FALSE,
+    eq_preset VARCHAR(100),
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Track Statistics
+CREATE TABLE IF NOT EXISTS track_statistics (
+    track_id UUID PRIMARY KEY REFERENCES tracks(id) ON DELETE CASCADE,
+    play_count INTEGER DEFAULT 0,
+    complete_count INTEGER DEFAULT 0,
+    skip_count INTEGER DEFAULT 0,
+    total_play_time INTEGER DEFAULT 0, -- seconds
+    average_completion DECIMAL(5,2) DEFAULT 0,
+    last_played_at TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Listening Heatmap
+CREATE TABLE IF NOT EXISTS listening_heatmap (
+    id BIGSERIAL PRIMARY KEY,
+    date DATE NOT NULL,
+    hour INTEGER NOT NULL CHECK (hour >= 0 AND hour < 24),
+    play_count INTEGER DEFAULT 0,
+    unique_tracks INTEGER DEFAULT 0,
+    total_duration INTEGER DEFAULT 0, -- seconds
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(date, hour)
+);
+
+-- Track Segments
+CREATE TABLE IF NOT EXISTS track_segments (
+    id BIGSERIAL PRIMARY KEY,
+    track_id UUID NOT NULL REFERENCES tracks(id) ON DELETE CASCADE,
+    segment_start INTEGER NOT NULL, -- seconds
+    segment_end INTEGER NOT NULL,   -- seconds
+    play_count INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(track_id, segment_start, segment_end)
+);
+
+-- Genre Statistics
+CREATE TABLE IF NOT EXISTS genre_statistics (
+    genre VARCHAR(100) PRIMARY KEY,
+    play_count INTEGER DEFAULT 0,
+    total_play_time INTEGER DEFAULT 0, -- seconds
+    unique_tracks INTEGER DEFAULT 0,
+    unique_artists INTEGER DEFAULT 0,
+    last_played_at TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Listening Streaks
+CREATE TABLE IF NOT EXISTS listening_streaks (
+    id BIGSERIAL PRIMARY KEY,
+    user_id VARCHAR(255),
+    date DATE NOT NULL,
+    tracks_played INTEGER DEFAULT 0,
+    play_time INTEGER DEFAULT 0, -- seconds
+    created_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(user_id, date)
+);
+
+-- ============================================
 -- INDEXES
 -- ============================================
 
@@ -90,18 +207,23 @@ CREATE INDEX IF NOT EXISTS idx_tracks_album ON tracks(album_id);
 CREATE INDEX IF NOT EXISTS idx_tracks_artist ON tracks(artist_id);
 CREATE INDEX IF NOT EXISTS idx_tracks_title ON tracks(title);
 CREATE INDEX IF NOT EXISTS idx_tracks_genre ON tracks(genre);
-CREATE INDEX IF NOT EXISTS idx_tracks_year ON tracks(year);
 
 -- Playlist indexes
 CREATE INDEX IF NOT EXISTS idx_playlists_type ON playlists(type);
 CREATE INDEX IF NOT EXISTS idx_playlist_tracks_playlist ON playlist_tracks(playlist_id);
 CREATE INDEX IF NOT EXISTS idx_playlist_tracks_position ON playlist_tracks(playlist_id, position);
 
+-- Analytics indexes
+CREATE INDEX IF NOT EXISTS idx_sessions_session_id ON analytics_sessions(session_id);
+CREATE INDEX IF NOT EXISTS idx_events_session ON analytics_events(session_id);
+CREATE INDEX IF NOT EXISTS idx_playback_track ON playback_sessions(track_id);
+CREATE INDEX IF NOT EXISTS idx_track_stats_play_count ON track_statistics(play_count DESC);
+CREATE INDEX IF NOT EXISTS idx_heatmap_date ON listening_heatmap(date);
+
 -- ============================================
 -- TRIGGERS
 -- ============================================
 
--- Update updated_at timestamp automatically
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -110,27 +232,32 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Apply triggers to all tables
-DROP TRIGGER IF EXISTS update_artists_updated_at ON artists;
-CREATE TRIGGER update_artists_updated_at
-    BEFORE UPDATE ON artists
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
+-- Apply triggers
+CREATE TRIGGER update_artists_updated_at BEFORE UPDATE ON artists FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_albums_updated_at BEFORE UPDATE ON albums FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_tracks_updated_at BEFORE UPDATE ON tracks FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_playlists_updated_at BEFORE UPDATE ON playlists FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_track_statistics_updated_at BEFORE UPDATE ON track_statistics FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_listening_heatmap_updated_at BEFORE UPDATE ON listening_heatmap FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_genre_statistics_updated_at BEFORE UPDATE ON genre_statistics FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-DROP TRIGGER IF EXISTS update_albums_updated_at ON albums;
-CREATE TRIGGER update_albums_updated_at
-    BEFORE UPDATE ON albums
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
+-- ============================================
+-- VIEWS
+-- ============================================
 
-DROP TRIGGER IF EXISTS update_tracks_updated_at ON tracks;
-CREATE TRIGGER update_tracks_updated_at
-    BEFORE UPDATE ON tracks
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
-
-DROP TRIGGER IF EXISTS update_playlists_updated_at ON playlists;
-CREATE TRIGGER update_playlists_updated_at
-    BEFORE UPDATE ON playlists
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
+CREATE OR REPLACE VIEW v_top_tracks AS
+SELECT 
+    ts.track_id,
+    t.title as track_title,
+    ar.name as artist_name,
+    al.title as album_title,
+    al.cover_art as album_art,
+    ts.play_count,
+    ts.total_play_time,
+    ts.average_completion,
+    ts.last_played_at
+FROM track_statistics ts
+LEFT JOIN tracks t ON ts.track_id = t.id
+LEFT JOIN artists ar ON t.artist_id = ar.id
+LEFT JOIN albums al ON t.album_id = al.id
+ORDER BY ts.play_count DESC;

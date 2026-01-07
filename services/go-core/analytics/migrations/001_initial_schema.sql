@@ -51,9 +51,9 @@ CREATE TABLE IF NOT EXISTS analytics_events (
 CREATE TABLE IF NOT EXISTS playback_sessions (
     id BIGSERIAL PRIMARY KEY,
     session_id VARCHAR(255) NOT NULL,
-    track_id VARCHAR(255) NOT NULL,
-    album_id VARCHAR(255),
-    artist_id VARCHAR(255),
+    track_id UUID NOT NULL,
+    album_id UUID,
+    artist_id UUID,
     started_at TIMESTAMP NOT NULL,
     ended_at TIMESTAMP,
     duration_played INTEGER,
@@ -69,7 +69,7 @@ CREATE TABLE IF NOT EXISTS playback_sessions (
 
 -- Track Statistics (Pre-aggregated)
 CREATE TABLE IF NOT EXISTS track_statistics (
-    track_id VARCHAR(255) PRIMARY KEY,
+    track_id UUID PRIMARY KEY,
     play_count INTEGER DEFAULT 0,
     complete_count INTEGER DEFAULT 0,
     skip_count INTEGER DEFAULT 0,
@@ -95,7 +95,7 @@ CREATE TABLE IF NOT EXISTS listening_heatmap (
 -- Track Segments
 CREATE TABLE IF NOT EXISTS track_segments (
     id BIGSERIAL PRIMARY KEY,
-    track_id VARCHAR(255) NOT NULL,
+    track_id UUID NOT NULL,
     segment_start INTEGER NOT NULL,
     segment_end INTEGER NOT NULL,
     play_count INTEGER DEFAULT 0,
@@ -227,7 +227,7 @@ SELECT
     COALESCE(t.title, 'Unknown') as track_title,
     COALESCE(ar.name, 'Unknown Artist') as artist_name,
     COALESCE(al.title, 'Unknown Album') as album_title,
-    al.cover_art_path as album_art,
+    al.cover_art as album_art,
     ts.play_count,
     ts.total_play_time,
     ts.average_completion,
