@@ -55,6 +55,10 @@ export function EQSidebar({ isCollapsed }: EQSidebarProps) {
     handleBandChange,
     handlePreampChange,
     handleBandReset,
+    crossfadeDuration,
+    setCrossfadeDuration,
+    fadeOutDuration,
+    setFadeOutDuration,
   } = useEQSidebarLogic();
 
   if (!eqOpen) return null;
@@ -258,6 +262,72 @@ export function EQSidebar({ isCollapsed }: EQSidebarProps) {
               <span>-20</span>
               <span>0</span>
               <span>+20</span>
+            </div>
+          </motion.div>
+
+          <motion.div
+            variants={itemVariants}
+            initial="hidden"
+            animate="visible"
+            className="space-y-2"
+          >
+            <div className="flex items-center justify-between">
+              <label className="block text-sm font-semibold text-text">
+                Crossfade
+              </label>
+              <Badge
+                variant="custom"
+                className="text-xs font-sans bg-accent/10 text-accent px-2 py-0.5"
+              >
+                {crossfadeDuration.toFixed(1)} s
+              </Badge>
+            </div>
+            <EQSlider
+              min={0}
+              max={10}
+              step={0.5}
+              value={crossfadeDuration}
+              onChange={(e) => setCrossfadeDuration(parseFloat(e.target.value))}
+              disabled={!config.enabled}
+              className="py-2"
+            />
+            <div className="flex justify-between text-[10px] text-text-muted font-sans px-1">
+              <span>0s (Off)</span>
+              <span>5s</span>
+              <span>10s</span>
+            </div>
+          </motion.div>
+
+          <motion.div
+            variants={itemVariants}
+            initial="hidden"
+            animate="visible"
+            className="space-y-2"
+          >
+            <div className="flex items-center justify-between">
+              <label className="block text-sm font-semibold text-text">
+                Fade-Out (End of Track)
+              </label>
+              <Badge
+                variant="custom"
+                className="text-xs font-sans bg-accent/10 text-accent px-2 py-0.5"
+              >
+                {fadeOutDuration.toFixed(1)} s
+              </Badge>
+            </div>
+            <EQSlider
+              min={0}
+              max={10}
+              step={0.5}
+              value={fadeOutDuration}
+              onChange={(e) => setFadeOutDuration(parseFloat(e.target.value))}
+              disabled={!config.enabled}
+              className="py-2"
+            />
+            <div className="flex justify-between text-[10px] text-text-muted font-sans px-1">
+              <span>0s (Off)</span>
+              <span>5s</span>
+              <span>10s</span>
             </div>
           </motion.div>
 

@@ -17,7 +17,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
   return (
     <div
       className={cn(
-        "flex flex-col sm:flex-row sm:items-center justify-between py-4 border-b border-border/50 first:pt-0 last:border-0 gap-4",
+        "flex flex-col sm:flex-row sm:items-center justify-between py-4 border-b border-border/50 first:pt-0 last:pb-0 last:border-0 gap-4",
         className
       )}
     >

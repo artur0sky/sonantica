@@ -13,11 +13,13 @@ import { motion } from "framer-motion";
 import {
   ContextMenu,
   useContextMenu,
-  LazyAlbumArt,
+  CoverArt,
   type ContextMenuItem,
 } from "@sonantica/ui";
 import { useQueueStore } from "@sonantica/player-core";
+import { useLibraryStore } from "@sonantica/media-library";
 import { gpuAnimations } from "@sonantica/shared";
+import { useMemo } from "react";
 
 interface AlbumCardProps {
   album: any;
@@ -27,6 +29,15 @@ interface AlbumCardProps {
 export function AlbumCard({ album, onClick }: AlbumCardProps) {
   const { addToQueue, playNext } = useQueueStore();
   const contextMenu = useContextMenu();
+  const tracks = useLibraryStore((s) => s.tracks);
+
+  // Calculate actual track count from library
+  const actualTrackCount = useMemo(
+    () =>
+      tracks.filter((t) => t.album === album.title && t.artist === album.artist)
+        .length,
+    [tracks, album.title, album.artist]
+  );
 
   // Context menu items
   const menuItems: ContextMenuItem[] = [
@@ -75,14 +86,14 @@ export function AlbumCard({ album, onClick }: AlbumCardProps) {
         onMouseDown={contextMenu.handleLongPressStart}
         onMouseUp={contextMenu.handleLongPressEnd}
         onMouseLeave={contextMenu.handleLongPressEnd}
-        className="group cursor-pointer p-4 bg-surface hover:bg-surface-elevated rounded-xl transition-colors border border-transparent hover:border-border"
+        className="group cursor-pointer p-4 hover:bg-surface-elevated transition-colors"
       >
         {/* Album Art - PERFORMANCE: Lazy loaded with LRU cache */}
-        <div className="aspect-square bg-surface-elevated rounded-lg mb-4 flex items-center justify-center shadow-lg relative overflow-hidden">
-          <LazyAlbumArt
+        <div className="aspect-square mb-4 flex items-center justify-center relative overflow-hidden">
+          <CoverArt
             src={album.coverArt}
             alt={album.name}
-            className="w-full h-full rounded-lg"
+            className="w-full h-full"
             iconSize={64}
           />
 
@@ -97,7 +108,7 @@ export function AlbumCard({ album, onClick }: AlbumCardProps) {
           </h3>
           <p className="text-sm text-text-muted truncate">{album.artist}</p>
           <p className="text-xs text-text-muted/60 mt-2 font-mono">
-            {album.year || "Unknown Year"} • {album.trackCount || 0} tracks
+            {album.year || "Unknown Year"} • {actualTrackCount} tracks
           </p>
         </div>
       </motion.div>

@@ -1,13 +1,7 @@
-/**
- * Context Menu Component
- *
- * Reusable context menu for right-click and long-press interactions.
- * Follows Sonántica's philosophy: "User autonomy" - full control over actions.
- */
-
 import { motion, AnimatePresence } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { cn, gpuAnimations } from "@sonantica/shared";
+import { useUIStore } from "../stores/uiStore";
 
 export interface ContextMenuItem {
   id: string;
@@ -57,11 +51,15 @@ export function ContextMenu({
         y = viewport.height - rect.height - 10;
       }
 
+      // Safety: don't go off left/top
+      x = Math.max(10, x);
+      y = Math.max(10, y);
+
       setAdjustedPosition({ x, y });
     }
   }, [isOpen, position]);
 
-  // Close on click outside
+  // Close on click outside, scroll, or escape
   useEffect(() => {
     if (!isOpen) return;
 
@@ -71,18 +69,29 @@ export function ContextMenu({
       }
     };
 
+    const handleScroll = (e: Event) => {
+      // Don't close if scrolling inside the menu itself (unlikely but safe)
+      if (menuRef.current && menuRef.current.contains(e.target as Node)) {
+        return;
+      }
+      onClose();
+    };
+
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         onClose();
       }
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
+    // Use capture for click outside to handle it before other logic
+    document.addEventListener("mousedown", handleClickOutside, true);
     document.addEventListener("keydown", handleEscape);
+    window.addEventListener("scroll", handleScroll, true);
 
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside, true);
       document.removeEventListener("keydown", handleEscape);
+      window.removeEventListener("scroll", handleScroll, true);
     };
   }, [isOpen, onClose]);
 
@@ -98,7 +107,7 @@ export function ContextMenu({
             top: adjustedPosition.y,
             zIndex: 9999,
           }}
-          className="min-w-[200px] bg-surface-elevated border border-border rounded-xl shadow-2xl overflow-hidden backdrop-blur-xl"
+          className="min-w-[220px] bg-surface-elevated border border-border rounded-xl shadow-2xl overflow-hidden backdrop-blur-xl"
         >
           <div className="py-2">
             {items.map((item, index) => (
@@ -113,7 +122,8 @@ export function ContextMenu({
                       : {}
                   }
                   whileTap={!item.disabled ? { scale: 0.98 } : {}}
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     if (item.disabled) return;
                     item.onClick();
                     onClose();
@@ -145,36 +155,82 @@ export function ContextMenu({
 }
 
 /**
- * Hook to manage context menu state
+ * Hook to manage context menu state with global exclusivity
  */
-export function useContextMenu() {
-  const [isOpen, setIsOpen] = useState(false);
+export function useContextMenu(id?: string) {
+  const menuId = useRef(id || Math.random().toString(36).substring(7)).current;
+  const activeId = useUIStore((s) => s.activeContextMenuId);
+  const setActiveId = useUIStore((s) => s.setActiveContextMenuId);
+
+  const isOpen = activeId === menuId;
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const startPosRef = useRef({ x: 0, y: 0 });
 
-  const handleContextMenu = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setPosition({ x: e.clientX, y: e.clientY });
-    setIsOpen(true);
-  };
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setPosition({ x: e.clientX, y: e.clientY });
+      setActiveId(menuId);
+    },
+    [menuId, setActiveId]
+  );
 
-  const handleLongPressStart = (e: React.TouchEvent | React.MouseEvent) => {
-    longPressTimerRef.current = setTimeout(() => {
-      const touch = "touches" in e ? e.touches[0] : e;
-      setPosition({ x: touch.clientX, y: touch.clientY });
-      setIsOpen(true);
-    }, 500); // 500ms long press
-  };
+  const handleLongPressStart = useCallback(
+    (e: React.TouchEvent | React.MouseEvent) => {
+      const touch = "touches" in e ? e.touches[0] : (e as React.MouseEvent);
+      startPosRef.current = { x: touch.clientX, y: touch.clientY };
 
-  const handleLongPressEnd = () => {
+      // Clear existing timer if any
+      if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+
+      longPressTimerRef.current = setTimeout(() => {
+        setPosition({ x: touch.clientX, y: touch.clientY });
+        setActiveId(menuId);
+      }, 500); // 500ms long press
+    },
+    [menuId, setActiveId]
+  );
+
+  const handleLongPressEnd = useCallback(() => {
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
     }
-  };
+  }, []);
 
-  const close = () => setIsOpen(false);
+  // Cancel long press if mouse/touch moves too much (e.g. during scroll)
+  useEffect(() => {
+    const handleMove = (e: MouseEvent | TouchEvent) => {
+      if (!longPressTimerRef.current) return;
+
+      const touch = "touches" in e ? e.touches[0] : (e as MouseEvent);
+      const deltaX = Math.abs(touch.clientX - startPosRef.current.x);
+      const deltaY = Math.abs(touch.clientY - startPosRef.current.y);
+
+      // If moved more than 10px, it's a drag/scroll, not a long press
+      if (deltaX > 10 || deltaY > 10) {
+        handleLongPressEnd();
+      }
+    };
+
+    if (longPressTimerRef.current) {
+      document.addEventListener("mousemove", handleMove);
+      document.addEventListener("touchmove", handleMove);
+    }
+
+    return () => {
+      document.removeEventListener("mousemove", handleMove);
+      document.removeEventListener("touchmove", handleMove);
+    };
+  }, [handleLongPressEnd]);
+
+  const close = useCallback(() => {
+    if (activeId === menuId) {
+      setActiveId(null);
+    }
+  }, [activeId, menuId, setActiveId]);
 
   return {
     isOpen,

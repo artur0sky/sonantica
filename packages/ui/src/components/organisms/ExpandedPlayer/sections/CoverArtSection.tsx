@@ -7,11 +7,11 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  IconMusic,
   IconPlaylist,
   IconPlayerSkipBack,
   IconPlayerSkipForward,
 } from "@tabler/icons-react";
+import { CoverArt } from "../../../atoms/CoverArt";
 import type { CoverArtSectionProps } from "../types";
 import { useExpandedPlayerGestures } from "../hooks/useExpandedPlayerGestures";
 
@@ -48,20 +48,13 @@ export function CoverArtSection({
           <div className="absolute inset-0 bg-accent/15 blur-[100px] opacity-0 hover:opacity-100 transition-opacity duration-700 -z-10" />
 
           {/* Pure Cover Art */}
-          <div className="relative w-full h-full bg-surface-elevated border border-white/5 overflow-hidden shadow-[0_40px_100px_rgba(0,0,0,0.8)]">
-            {coverArt ? (
-              <img
-                src={coverArt}
-                alt={trackTitle}
-                className="w-full h-full object-cover"
-                draggable="false"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-text-muted/20">
-                <IconMusic size={120} stroke={1} />
-              </div>
-            )}
-          </div>
+          <CoverArt
+            src={coverArt}
+            alt={trackTitle}
+            className="w-full h-full"
+            iconSize={120}
+            shadow={true}
+          />
         </motion.div>
       </div>
     );
@@ -83,20 +76,16 @@ export function CoverArtSection({
         style={{ touchAction: "none" }}
       >
         <div className="absolute inset-0 bg-accent/20 blur-[80px] opacity-0 group-hover:opacity-40 transition-opacity duration-700" />
-        <div className="relative w-full h-full bg-surface-elevated border border-white/5 overflow-hidden shadow-[0_40px_100px_rgba(0,0,0,0.8)]">
-          {coverArt ? (
-            <img
-              src={coverArt}
-              alt={trackTitle}
-              className="w-full h-full object-cover select-none pointer-events-none"
-              draggable="false"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-text-muted/20">
-              <IconMusic size={120} stroke={1} />
-            </div>
-          )}
+        <CoverArt
+          src={coverArt}
+          alt={trackTitle}
+          className="w-full h-full"
+          iconSize={120}
+          shadow={true}
+        />
 
+        {/* Overlays / Interaction Feedbacks */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
           {/* Drag Direction Feedback */}
           <AnimatePresence>
             {gestures.dragDirection && (

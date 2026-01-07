@@ -8,6 +8,7 @@ import {
   PlayButton,
   SkipButton,
   ActionIconButton,
+  CoverArt,
 } from "../atoms";
 import {
   EnhancedVolumeControl,
@@ -18,7 +19,6 @@ import {
 import { formatTime, PlaybackState, formatArtists } from "@sonantica/shared";
 import { cn } from "../../utils";
 import {
-  IconMusic,
   IconActivityHeartbeat,
   IconMicrophone,
   IconAdjustmentsHorizontal,
@@ -107,7 +107,9 @@ export function MiniPlayer({ actionButtons }: MiniPlayerProps = {}) {
   };
   const getWaveform = useWaveformStore((state: any) => state.getWaveform);
   const spectrum = useAnalyzerStore((state: any) => state.spectrum);
-  const bands = spectrum ? spectrum.bands.map((b: any) => b.amplitude) : undefined;
+  const bands = spectrum
+    ? spectrum.bands.map((b: any) => b.amplitude)
+    : undefined;
 
   if (!currentTrack) return null;
 
@@ -155,18 +157,14 @@ export function MiniPlayer({ actionButtons }: MiniPlayerProps = {}) {
           <motion.div
             layoutId="player-artwork"
             onClick={togglePlayerExpanded}
-            className="w-10 h-10 flex-shrink-0 bg-surface-elevated rounded-md flex items-center justify-center text-text-muted border border-white/5 overflow-hidden cursor-pointer active:scale-95 transition-transform"
+            className="w-10 h-10 flex-shrink-0 cursor-pointer active:scale-95 transition-transform relative"
           >
-            {currentTrack.metadata?.coverArt ? (
-              <img
-                src={currentTrack.metadata.coverArt}
-                alt="Cover"
-                className="w-full h-full object-cover select-none pointer-events-none"
-                draggable="false"
-              />
-            ) : (
-              <IconMusic size={20} stroke={1.5} />
-            )}
+            <CoverArt
+              src={currentTrack.metadata?.coverArt}
+              alt="Cover"
+              className="w-full h-full"
+              iconSize={20}
+            />
           </motion.div>
 
           <div

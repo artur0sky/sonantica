@@ -4,14 +4,21 @@ import { cn } from "../../utils";
 
 interface UserButtonProps {
   onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
+  onMouseDown?: (e: React.MouseEvent<HTMLButtonElement>) => void;
   className?: string;
   image?: string;
 }
 
-export function UserButton({ onClick, className, image }: UserButtonProps) {
+export function UserButton({
+  onClick,
+  onMouseDown,
+  className,
+  image,
+}: UserButtonProps) {
   return (
     <motion.button
       onClick={onClick}
+      onMouseDown={onMouseDown}
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
       className={cn(

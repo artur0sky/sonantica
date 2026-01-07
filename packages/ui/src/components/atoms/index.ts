@@ -22,6 +22,8 @@ export * from './UserButton';
 export * from './ScanButton';
 export * from './ShuffleButton';
 export { LazyAlbumArt } from './LazyAlbumArt';
+export { CoverArt } from './CoverArt';
+export { ArtistImage } from './ArtistImage';
 export { AddFolderButton } from './AddFolderButton';
 export { Switch } from './Switch';
 export * from './AnalyticsAtoms';

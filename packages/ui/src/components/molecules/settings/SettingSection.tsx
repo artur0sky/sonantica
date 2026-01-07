@@ -24,7 +24,7 @@ export const SettingSection: React.FC<SettingSectionProps> = ({
           <p className="text-sm text-text-muted">{description}</p>
         )}
       </div>
-      <div className="rounded-lg border border-border bg-surface-elevated px-4">
+      <div className="rounded-xl border border-border bg-surface-elevated p-4 sm:p-6">
         {children}
       </div>
     </div>

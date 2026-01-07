@@ -27,6 +27,8 @@ export interface ScanProgress {
 export interface ScanOptions {
     scanFileSizeLimit?: number;
     coverArtSizeLimit?: number;
+    watchFolders?: boolean;
+    parallelScanning?: boolean;
 }
 
 export interface ILibraryAdapter {

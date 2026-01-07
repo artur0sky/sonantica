@@ -8,13 +8,9 @@ import { useMemo } from "react";
 import { useParams, useLocation } from "wouter";
 import { useLibraryStore } from "@sonantica/media-library";
 import { TrackItem } from "../components/TrackItem";
-import {
-  IconChevronLeft,
-  IconPlayerPlay,
-  IconMusic,
-} from "@tabler/icons-react";
+import { IconChevronLeft, IconPlayerPlay } from "@tabler/icons-react";
 import { motion } from "framer-motion";
-import { Button } from "@sonantica/ui";
+import { Button, CoverArt } from "@sonantica/ui";
 import { useAlbumSimilarAlbums } from "@sonantica/recommendations";
 import { AlbumCard } from "../components/AlbumCard";
 import { AlbumAnalyticsSection } from "../../analytics/components/AlbumAnalyticsSection";
@@ -91,19 +87,14 @@ export function AlbumDetailPage() {
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="w-48 h-48 md:w-64 md:h-64 flex-shrink-0 rounded-xl overflow-hidden bg-surface-elevated shadow-2xl border border-border"
+          className="w-48 h-48 md:w-64 md:h-64 flex-shrink-0"
         >
-          {album.coverArt ? (
-            <img
-              src={album.coverArt}
-              alt={album.title}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-surface to-surface-elevated">
-              <IconMusic size={64} className="text-text-muted/20" stroke={1} />
-            </div>
-          )}
+          <CoverArt
+            src={album.coverArt}
+            alt={album.title}
+            className="w-full h-full shadow-2xl"
+            iconSize={64}
+          />
         </motion.div>
 
         <div className="flex flex-col justify-end">
@@ -173,10 +164,10 @@ export function AlbumDetailPage() {
       </div>
 
       {/* Analytics Section */}
-      <AlbumAnalyticsSection 
-        albumTitle={album.title} 
-        artistName={album.artist} 
-        albumId={album.id} 
+      <AlbumAnalyticsSection
+        albumTitle={album.title}
+        artistName={album.artist}
+        albumId={album.id}
       />
 
       {/* Similar Albums Section */}

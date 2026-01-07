@@ -103,14 +103,15 @@ func main() {
 
 	// Configurable CORS
 	allowedOrigins := os.Getenv("ALLOWED_ORIGINS")
-	if allowedOrigins == "" {
-		allowedOrigins = "http://localhost:5173,http://localhost:3000,http://localhost:8080" // Defaults for dev
+	originsList := []string{"http://localhost:5173", "http://localhost:3000", "http://localhost", "capacitor://localhost"}
+	if allowedOrigins != "" {
+		originsList = append(originsList, strings.Split(allowedOrigins, ",")...)
 	}
 
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   strings.Split(allowedOrigins, ","),
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token", "Range"},
+		AllowedOrigins:   originsList,
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token", "Range", "Origin"},
 		ExposedHeaders:   []string{"Link", "Content-Length", "Content-Range", "Accept-Ranges"},
 		AllowCredentials: true,
 		MaxAge:           300,

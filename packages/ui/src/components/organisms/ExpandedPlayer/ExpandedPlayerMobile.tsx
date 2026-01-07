@@ -68,7 +68,7 @@ export function ExpandedPlayerMobile({
   contrastColor,
 }: MobileLayoutProps) {
   return (
-    <div className="lg:hidden flex flex-col h-full bg-transparent overflow-hidden overscroll-none select-none pt-[max(env(safe-area-inset-top),2rem)] lg:pt-[env(safe-area-inset-top)]">
+    <div className="lg:hidden relative flex flex-col h-full bg-transparent overflow-hidden overscroll-none select-none pt-[max(env(safe-area-inset-top),2rem)] lg:pt-[env(safe-area-inset-top)]">
       {/* Mobile Sticky Header - Transparent */}
       <header className="h-14 flex flex-none justify-between items-center px-6 md:px-12 bg-transparent z-30">
         <PlayerButton
@@ -96,7 +96,7 @@ export function ExpandedPlayerMobile({
       </header>
 
       {/* Parallax/Scroll Container */}
-      <div className="flex-1 overflow-y-auto scrollbar-none [&::-webkit-scrollbar]:hidden relative">
+      <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden relative">
         {/* STICKY BACK: Cover Art Section */}
         <div className="sticky top-0 h-[46dvh] flex items-start justify-center p-6 z-0">
           <CoverArtSection
@@ -187,13 +187,13 @@ export function ExpandedPlayerMobile({
             <WidgetsSection />
 
             {/* Extra spacer for scroll freedom */}
-            <div className="h-32" />
+            <div className="h-40" />
           </div>
         </div>
       </div>
 
-      {/* Footer Navigation - Fixed at bottom */}
-      <div className="flex-none px-6 md:px-12 pb-[env(safe-area-inset-bottom)] pt-4 bg-[var(--dominant-color)] z-40">
+      {/* Footer Navigation - Absolute at bottom to allow shadows to pass under */}
+      <div className="absolute bottom-0 left-0 right-0 px-6 md:px-12 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] pt-8 bg-[var(--dominant-color)]/80 backdrop-blur-xl z-40">
         <NavigationFooter
           recommendationsOpen={recommendationsOpen}
           isQueueOpen={isQueueOpen}

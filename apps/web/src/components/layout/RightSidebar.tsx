@@ -7,7 +7,6 @@
 
 import {
   IconTrash,
-  IconMusic,
   IconGripVertical,
   IconPlayerPlay,
   IconChevronDown,
@@ -24,7 +23,13 @@ import {
 import type { Variants } from "framer-motion";
 import { useState, useEffect } from "react";
 import { useLibraryStore } from "@sonantica/media-library";
-import { Button, Badge, SidebarContainer, useUIStore } from "@sonantica/ui";
+import {
+  Button,
+  Badge,
+  SidebarContainer,
+  useUIStore,
+  CoverArt,
+} from "@sonantica/ui";
 import {
   formatArtists,
   formatTime,
@@ -136,8 +141,8 @@ export function RightSidebar({ isCollapsed }: RightSidebarProps) {
                 className={cn(
                   "transition-all",
                   !isCollapsed
-                    ? "bg-surface-elevated border border-accent/20 p-4 rounded-xl"
-                    : "p-0 bg-transparent border-none"
+                    ? "bg-surface-elevated p-4 rounded-xl"
+                    : "p-0 bg-transparent"
                 )}
               >
                 <div
@@ -147,39 +152,16 @@ export function RightSidebar({ isCollapsed }: RightSidebarProps) {
                   )}
                 >
                   {/* Album Art */}
-                  <div
-                    className={cn(
-                      "flex-shrink-0 rounded-lg overflow-hidden relative shadow-lg transition-all",
-                      isCollapsed
-                        ? "w-12 h-12"
-                        : "w-12 h-12 bg-surface border border-border"
-                    )}
-                  >
-                    {/* Re-hydrate coverArt from library if missing in thinned persistence */}
-                    {(() => {
-                      const coverArt =
-                        currentTrack.metadata?.coverArt ||
-                        libraryTracks.find((t) => t.id === currentTrack.id)
-                          ?.coverArt;
-
-                      return coverArt ? (
-                        <img
-                          src={coverArt}
-                          alt="Cover"
-                          className="w-full h-full object-cover select-none pointer-events-none"
-                          draggable="false"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <IconMusic
-                            size={20}
-                            className="text-text-muted/30"
-                            stroke={1.5}
-                          />
-                        </div>
-                      );
-                    })()}
-                  </div>
+                  <CoverArt
+                    src={
+                      currentTrack.metadata?.coverArt ||
+                      libraryTracks.find((t) => t.id === currentTrack.id)
+                        ?.coverArt
+                    }
+                    alt="Cover"
+                    className={cn(isCollapsed ? "w-12 h-12" : "w-12 h-12")}
+                    iconSize={isCollapsed ? 20 : 20}
+                  />
 
                   {!isCollapsed && (
                     <div className="min-w-0 flex-1">
@@ -362,7 +344,7 @@ function QueueItem({
         "group relative flex items-center transition-all select-none",
         isCollapsed
           ? "justify-center p-0 mb-1"
-          : "p-2 rounded-xl border border-transparent hover:border-white/10 hover:bg-white/5 gap-2",
+          : "p-2 rounded-xl hover:bg-white/5 gap-2",
         shouldBeGrayedOut && "opacity-40 grayscale-[0.5]"
       )}
     >
@@ -370,6 +352,10 @@ function QueueItem({
       {!isCollapsed && (
         <div
           onPointerDown={(e) => dragControls.start(e)}
+          onTouchStart={(e) => {
+            // Explicitly start dragging on touch devices
+            dragControls.start(e as any);
+          }}
           className="w-8 h-12 -ml-2 flex items-center justify-center text-text-muted/20 group-hover:text-text-muted/60 cursor-grab active:cursor-grabbing transition-colors touch-none"
         >
           <IconGripVertical size={18} stroke={1.5} />
@@ -405,42 +391,30 @@ function QueueItem({
 
       <div
         className={cn(
-          "flex-shrink-0 rounded-lg overflow-hidden transition-all relative shadow-sm",
-          isCollapsed
-            ? "w-14 h-14"
-            : "w-10 h-10 bg-surface border border-border group-hover:border-accent/40"
+          "flex-shrink-0 overflow-hidden transition-all relative cursor-pointer group/cover",
+          isCollapsed ? "w-14 h-14" : "w-10 h-10"
         )}
         onClick={onPlay}
-        onPointerDown={(e) => isCollapsed && dragControls.start(e)}
+        onPointerDown={(e) => {
+          if (isCollapsed) dragControls.start(e);
+        }}
+        onTouchStart={(e) => {
+          if (isCollapsed) dragControls.start(e as any);
+        }}
       >
-        {/* Re-hydrate coverArt from library store */}
-        {(() => {
-          // Optimization: This lookup happens per visible item
-          const libraryTracks = useLibraryStore.getState().tracks;
-          const coverArt =
+        <CoverArt
+          src={
             track.metadata?.coverArt ||
             track.coverArt ||
-            libraryTracks.find((t) => t.id === track.id)?.coverArt;
-
-          return coverArt ? (
-            <img
-              src={coverArt}
-              alt="Cover"
-              className="w-full h-full object-cover transition-transform group-hover:scale-110 select-none pointer-events-none"
-              draggable="false"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <IconMusic
-                size={16}
-                className="text-text-muted/30"
-                stroke={1.5}
-              />
-            </div>
-          );
-        })()}
+            useLibraryStore
+              .getState()
+              .tracks.find((t: any) => t.id === track.id)?.coverArt
+          }
+          className="w-full h-full"
+          iconSize={isCollapsed ? 24 : 16}
+        />
         {/* Play Icon on Hover */}
-        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity cursor-pointer">
+        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/cover:opacity-100 flex items-center justify-center transition-opacity cursor-pointer">
           <IconPlayerPlay size={18} className="text-white fill-current" />
         </div>
       </div>
