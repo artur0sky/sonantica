@@ -49,6 +49,8 @@ export function ServersSection() {
 
   const {
     tracks,
+    artists,
+    albums,
     isScanning,
     scanningServers,
     scanServer,
@@ -279,7 +281,7 @@ export function ServersSection() {
             <div className="text-2xl font-bold text-text-primary">
               {tracks.length}
             </div>
-            <div className="text-sm text-text-muted">Tracks</div>
+            <div className="text-sm text-text-muted">Tracks Loaded</div>
           </div>
           <div className="bg-surface-elevated border border-border rounded-lg p-4">
             <div className="text-2xl font-bold text-text-primary">
@@ -289,13 +291,13 @@ export function ServersSection() {
           </div>
           <div className="bg-surface-elevated border border-border rounded-lg p-4">
             <div className="text-2xl font-bold text-text-primary">
-              {new Set(tracks.map((t) => t.artist)).size}
+              {artists.length}
             </div>
             <div className="text-sm text-text-muted">Artists</div>
           </div>
           <div className="bg-surface-elevated border border-border rounded-lg p-4">
             <div className="text-2xl font-bold text-text-primary">
-              {new Set(tracks.map((t) => t.album)).size}
+              {albums.length}
             </div>
             <div className="text-sm text-text-muted">Albums</div>
           </div>
