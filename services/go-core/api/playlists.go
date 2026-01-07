@@ -3,9 +3,12 @@ package api
 import (
 	"encoding/json"
 	"log"
+	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
+	"sonantica-core/cache"
 	"sonantica-core/database"
 	"sonantica-core/models"
 
@@ -94,96 +97,126 @@ func CreatePlaylist(w http.ResponseWriter, r *http.Request) {
 		TrackCount:  insertedTracks,
 		TrackIDs:    trackUUIDs,
 	})
+
+	// Invalidate cache after everything is done to avoid partial caching
+	_ = cache.InvalidatePlaylistCache(r.Context())
 }
 
 // GetPlaylists returns all playlists matching filter
 func GetPlaylists(w http.ResponseWriter, r *http.Request) {
 	playlistType := r.URL.Query().Get("type")
+	w.Header().Set("Content-Type", "application/json")
 
-	query := `SELECT id, name, type, description, created_at, updated_at, snapshot_date FROM playlists`
+	// Try cache first
+	var playlists []models.Playlist
+	if err := cache.GetAllPlaylists(r.Context(), playlistType, &playlists); err == nil {
+		slog.Debug("Playlist cache hit")
+		json.NewEncoder(w).Encode(map[string]interface{}{"playlists": playlists, "cached": true})
+		return
+	}
+
+	// Optimized query to get playlists with track counts and covers art in one go
+	query := `
+		SELECT 
+			p.id, p.name, p.type, p.description, p.created_at, p.updated_at, p.snapshot_date,
+			(SELECT count(*) FROM playlist_tracks WHERE playlist_id = p.id) as track_count,
+			COALESCE((
+				SELECT string_agg('/api/cover/' || al.cover_art, ',')
+				FROM (
+					SELECT DISTINCT al2.cover_art
+					FROM playlist_tracks pt2
+					JOIN tracks t2 ON pt2.track_id = t2.id
+					JOIN albums al2 ON t2.album_id = al2.id
+					WHERE pt2.playlist_id = p.id AND al2.cover_art IS NOT NULL
+					LIMIT 4
+				) al
+			), '') as cover_arts,
+			COALESCE((
+				SELECT string_agg(track_id::text, ',')
+				FROM playlist_tracks
+				WHERE playlist_id = p.id
+				ORDER BY position ASC
+			), '') as track_ids
+		FROM playlists p
+	`
 	var args []interface{}
 
 	if playlistType != "" {
-		query += ` WHERE type = $1`
+		query += ` WHERE p.type = $1`
 		args = append(args, playlistType)
 	}
 
-	query += ` ORDER BY updated_at DESC`
+	query += ` ORDER BY p.updated_at DESC`
 
 	rows, err := database.DB.Query(r.Context(), query, args...)
 	if err != nil {
+		slog.Error("Failed to fetch playlists", "error", err)
 		http.Error(w, "Failed to fetch playlists", http.StatusInternalServerError)
 		return
 	}
 	defer rows.Close()
 
-	playlists := []models.Playlist{}
+	playlists = []models.Playlist{}
 	for rows.Next() {
 		var p models.Playlist
 		var snapshotDate *time.Time
 		var typeStr string
+		var coverArtsStr string
+		var trackIDsStr string
 
-		err := rows.Scan(&p.ID, &p.Name, &typeStr, &p.Description, &p.CreatedAt, &p.UpdatedAt, &snapshotDate)
+		err := rows.Scan(
+			&p.ID, &p.Name, &typeStr, &p.Description, &p.CreatedAt, &p.UpdatedAt, &snapshotDate,
+			&p.TrackCount, &coverArtsStr, &trackIDsStr,
+		)
 		if err != nil {
+			slog.Error("Scan error in GetPlaylists", "error", err)
 			continue
 		}
 		p.Type = models.PlaylistType(typeStr)
 		p.SnapshotDate = snapshotDate
 
-		// Enrichment: Get track count and 4 covers (simplified for now)
-		// Optimal way is lateral join or subquery, but keeping it simple for MVP
-		var count int
-		_ = database.DB.QueryRow(r.Context(), "SELECT count(*) FROM playlist_tracks WHERE playlist_id = $1", p.ID).Scan(&count)
-		p.TrackCount = count
+		if coverArtsStr != "" {
+			p.CoverArts = strings.Split(coverArtsStr, ",")
+		} else {
+			p.CoverArts = []string{}
+		}
 
-		if count > 0 {
-			// Get up to 4 covers
-			coverRows, _ := database.DB.Query(r.Context(), `
-                SELECT DISTINCT coalesce(al.cover_art, '') 
-                FROM playlist_tracks pt
-                JOIN tracks t ON pt.track_id = t.id
-                JOIN albums al ON t.album_id = al.id
-                WHERE pt.playlist_id = $1 AND al.cover_art IS NOT NULL
-                LIMIT 4
-             `, p.ID)
-			defer coverRows.Close()
-
-			covers := []string{}
-			for coverRows.Next() {
-				var cover string
-				if err := coverRows.Scan(&cover); err == nil {
-					// Simple path normalization if needed, similar to RemoteLibraryAdapter logic handling in backend?
-					// Assuming API returns relative paths like /api/covers/...
-					covers = append(covers, "/api/cover/"+cover) // Simplification
+		if trackIDsStr != "" {
+			idStrings := strings.Split(trackIDsStr, ",")
+			p.TrackIDs = make([]uuid.UUID, 0, len(idStrings))
+			for _, idStr := range idStrings {
+				if uid, err := uuid.Parse(idStr); err == nil {
+					p.TrackIDs = append(p.TrackIDs, uid)
 				}
 			}
-			p.CoverArts = covers
-
-			// Also get all track IDs for this playlist
-			idRows, _ := database.DB.Query(r.Context(), "SELECT track_id FROM playlist_tracks WHERE playlist_id = $1 ORDER BY position ASC", p.ID)
-			if idRows != nil {
-				defer idRows.Close()
-				tIDs := []uuid.UUID{}
-				for idRows.Next() {
-					var tID uuid.UUID
-					if err := idRows.Scan(&tID); err == nil {
-						tIDs = append(tIDs, tID)
-					}
-				}
-				p.TrackIDs = tIDs
-			}
+		} else {
+			p.TrackIDs = []uuid.UUID{}
 		}
 
 		playlists = append(playlists, p)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{"playlists": playlists})
+	// Cache the result
+	if err := cache.SetAllPlaylists(r.Context(), playlistType, playlists); err != nil {
+		slog.Warn("Failed to cache playlists", "error", err)
+	}
+
+	json.NewEncoder(w).Encode(map[string]interface{}{"playlists": playlists, "cached": false})
 }
 
 // GetPlaylist returns a single playlist with tracks
 func GetPlaylist(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
+	w.Header().Set("Content-Type", "application/json")
+
+	// Try cache
+	var cachedP models.Playlist
+	if err := cache.GetPlaylist(r.Context(), idStr, &cachedP); err == nil {
+		slog.Debug("Playlist detail cache hit", "id", idStr)
+		json.NewEncoder(w).Encode(cachedP)
+		return
+	}
+
 	id, err := uuid.Parse(idStr)
 	if err != nil {
 		http.Error(w, "Invalid ID", http.StatusBadRequest)
@@ -205,6 +238,8 @@ func GetPlaylist(w http.ResponseWriter, r *http.Request) {
 	var count int
 	_ = database.DB.QueryRow(r.Context(), "SELECT count(*) FROM playlist_tracks WHERE playlist_id = $1", p.ID).Scan(&count)
 	p.TrackCount = count
+	p.Tracks = []models.Track{}
+	p.TrackIDs = []uuid.UUID{}
 
 	// Fetch tracks
 	query := `
@@ -246,6 +281,11 @@ func GetPlaylist(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	// Cache the result
+	if err := cache.SetPlaylist(r.Context(), idStr, p); err != nil {
+		slog.Warn("Failed to cache playlist detail", "error", err)
+	}
+
 	json.NewEncoder(w).Encode(p)
 }
 
@@ -263,6 +303,9 @@ func DeletePlaylist(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to delete playlist", http.StatusInternalServerError)
 		return
 	}
+
+	// Invalidate cache
+	_ = cache.InvalidatePlaylistCache(r.Context())
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"status": "deleted"})

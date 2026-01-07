@@ -41,12 +41,14 @@ type Album struct {
 	CreatedAt   time.Time  `json:"createdAt" db:"created_at"`
 	// Joined fields
 	ArtistName *string `json:"artist,omitempty" db:"artist_name"`
+	TrackCount int     `json:"trackCount" db:"track_count"`
 }
 
 type Artist struct {
-	ID        uuid.UUID `json:"id" db:"id"`
-	Name      string    `json:"name" db:"name"`
-	Bio       *string   `json:"bio" db:"bio"`
-	CoverArt  *string   `json:"coverArt" db:"cover_art"`
-	CreatedAt time.Time `json:"createdAt" db:"created_at"`
+	ID         uuid.UUID `json:"id" db:"id"`
+	Name       string    `json:"name" db:"name"`
+	Bio        *string   `json:"bio" db:"bio"`
+	CoverArt   *string   `json:"coverArt" db:"cover_art"`
+	CreatedAt  time.Time `json:"createdAt" db:"created_at"`
+	TrackCount int       `json:"trackCount" db:"track_count"`
 }

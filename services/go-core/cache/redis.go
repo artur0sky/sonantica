@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -208,4 +209,75 @@ func SetAllAlbums(ctx context.Context, albums interface{}) error {
 // GetAllAlbums retrieves the complete albums library from cache
 func GetAllAlbums(ctx context.Context, target interface{}) error {
 	return Get(ctx, "library:all:albums", target)
+}
+
+// SetAlphabetIndex caches alphabet index for a type
+func SetAlphabetIndex(ctx context.Context, entityType string, index interface{}) error {
+	key := fmt.Sprintf("library:index:%s", entityType)
+	return Set(ctx, key, index, 30*time.Minute)
+}
+
+// GetAlphabetIndex retrieves cached alphabet index
+func GetAlphabetIndex(ctx context.Context, entityType string, target interface{}) error {
+	key := fmt.Sprintf("library:index:%s", entityType)
+	return Get(ctx, key, target)
+}
+
+// ============================================
+// Playlist-specific cache functions
+// ============================================
+
+// SetAllPlaylists caches the complete playlists list
+func SetAllPlaylists(ctx context.Context, pType string, playlists interface{}) error {
+	key := "playlist:all"
+	if pType != "" {
+		key = fmt.Sprintf("playlist:all:%s", pType)
+	}
+	return Set(ctx, key, playlists, 5*time.Minute)
+}
+
+// GetAllPlaylists retrieves the complete playlists list from cache
+func GetAllPlaylists(ctx context.Context, pType string, target interface{}) error {
+	key := "playlist:all"
+	if pType != "" {
+		key = fmt.Sprintf("playlist:all:%s", pType)
+	}
+	return Get(ctx, key, target)
+}
+
+// SetPlaylist caches a single playlist
+func SetPlaylist(ctx context.Context, id string, playlist interface{}) error {
+	key := fmt.Sprintf("playlist:%s", id)
+	return Set(ctx, key, playlist, 10*time.Minute)
+}
+
+// GetPlaylist retrieves a cached single playlist
+func GetPlaylist(ctx context.Context, id string, target interface{}) error {
+	key := fmt.Sprintf("playlist:%s", id)
+	return Get(ctx, key, target)
+}
+
+// InvalidatePlaylistCache clears all playlist-related cache
+func InvalidatePlaylistCache(ctx context.Context) error {
+	if rdb == nil {
+		return fmt.Errorf("redis client not initialized")
+	}
+
+	patterns := []string{
+		"playlist:*",
+	}
+
+	for _, pattern := range patterns {
+		iter := rdb.Scan(ctx, 0, pattern, 0).Iterator()
+		for iter.Next(ctx) {
+			if err := rdb.Del(ctx, iter.Val()).Err(); err != nil {
+				slog.Warn("Failed to delete cache key", "key", iter.Val(), "error", err)
+			}
+		}
+		if err := iter.Err(); err != nil {
+			slog.Error("Redis scan error", "pattern", pattern, "error", err)
+			return err
+		}
+	}
+	return nil
 }

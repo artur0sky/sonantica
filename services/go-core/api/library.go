@@ -235,7 +235,7 @@ func GetArtists(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		query := fmt.Sprintf("SELECT id, name, bio, cover_art, created_at FROM artists ORDER BY %s", orderBy)
+		query := fmt.Sprintf("SELECT id, name, bio, cover_art, created_at, (SELECT count(*) FROM tracks WHERE artist_id = artists.id) as track_count FROM artists ORDER BY %s", orderBy)
 
 		rows, err := database.DB.Query(r.Context(), query)
 		if err != nil {
@@ -278,11 +278,19 @@ func GetArtists(w http.ResponseWriter, r *http.Request) {
 		} else {
 			orderBy = "name ASC"
 		}
-	} else if sortParam == "trackCount" {
-		orderBy = "name ASC"
 	}
 
-	query := fmt.Sprintf("SELECT id, name, bio, cover_art, created_at FROM artists ORDER BY %s LIMIT $1 OFFSET $2", orderBy)
+	slog.Info("Fetching artists", "limit", limit, "offset", offset, "sort", sortParam, "order", orderParam)
+
+	// Try cache first
+	var artists []models.Artist
+	if err := cache.GetArtists(r.Context(), offset, limit, sortParam, orderParam, &artists); err == nil {
+		slog.Debug("Artist cache hit")
+		json.NewEncoder(w).Encode(map[string]interface{}{"artists": artists, "limit": limit, "offset": offset, "cached": true})
+		return
+	}
+
+	query := fmt.Sprintf("SELECT id, name, bio, cover_art, created_at, (SELECT count(*) FROM tracks WHERE artist_id = artists.id) as track_count FROM artists ORDER BY %s LIMIT $1 OFFSET $2", orderBy)
 
 	rows, err := database.DB.Query(r.Context(), query, limit, offset)
 	if err != nil {
@@ -292,17 +300,23 @@ func GetArtists(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 
-	artists, err := pgx.CollectRows(rows, pgx.RowToStructByName[models.Artist])
+	artists, err = pgx.CollectRows(rows, pgx.RowToStructByName[models.Artist])
 	if err != nil {
 		slog.Error("Failed to scan artists rows", "error", err)
 		http.Error(w, fmt.Sprintf("Row scan error: %v", err), http.StatusInternalServerError)
 		return
 	}
 
+	// Cache the result
+	if err := cache.SetArtists(r.Context(), offset, limit, sortParam, orderParam, artists); err != nil {
+		slog.Warn("Failed to cache artists", "error", err)
+	}
+
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"artists": artists,
 		"limit":   limit,
 		"offset":  offset,
+		"cached":  false,
 	})
 }
 
@@ -364,7 +378,8 @@ func GetAlbums(w http.ResponseWriter, r *http.Request) {
 		query := fmt.Sprintf(`
 			SELECT 
 				al.id, al.title, al.artist_id, al.release_date::TEXT, al.cover_art, al.genre, al.created_at,
-				a.name as artist_name
+				a.name as artist_name,
+				(SELECT count(*) FROM tracks WHERE album_id = al.id) as track_count
 			FROM albums al
 			LEFT JOIN artists a ON al.artist_id = a.id
 			ORDER BY %s
@@ -424,15 +439,24 @@ func GetAlbums(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Ensure we don't end up with just " ASC" if sortParam was empty but default used
-	if orderBy == " ASC" || orderBy == " DESC" {
-		orderBy = "al.title ASC"
+	// Try cache for paginated albums
+	var albums []models.Album
+	if err := cache.GetAlbums(r.Context(), offset, limit, sortParam, orderParam, &albums); err == nil {
+		slog.Debug("Albums cache hit")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"albums": albums,
+			"limit":  limit,
+			"offset": offset,
+			"cached": true,
+		})
+		return
 	}
 
 	query := fmt.Sprintf(`
 		SELECT 
 			al.id, al.title, al.artist_id, al.release_date::TEXT, al.cover_art, al.genre, al.created_at,
-			a.name as artist_name
+			a.name as artist_name,
+			(SELECT count(*) FROM tracks WHERE album_id = al.id) as track_count
 		FROM albums al
 		LEFT JOIN artists a ON al.artist_id = a.id
 		ORDER BY %s
@@ -447,17 +471,23 @@ func GetAlbums(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 
-	albums, err := pgx.CollectRows(rows, pgx.RowToStructByName[models.Album])
+	albums, err = pgx.CollectRows(rows, pgx.RowToStructByName[models.Album])
 	if err != nil {
 		slog.Error("Failed to scan albums rows", "error", err)
 		http.Error(w, fmt.Sprintf("Row scan error: %v", err), http.StatusInternalServerError)
 		return
 	}
 
+	// Cache the result
+	if err := cache.SetAlbums(r.Context(), offset, limit, sortParam, orderParam, albums); err != nil {
+		slog.Warn("Failed to cache albums", "error", err)
+	}
+
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"albums": albums,
 		"limit":  limit,
 		"offset": offset,
+		"cached": false,
 	})
 }
 
@@ -662,6 +692,13 @@ func GetAlphabetIndex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var index map[string]int
+	if err := cache.GetAlphabetIndex(r.Context(), entityType, &index); err == nil {
+		slog.Debug("Alphabet index cache hit", "type", entityType)
+		json.NewEncoder(w).Encode(index)
+		return
+	}
+
 	rows, err := database.DB.Query(r.Context(), query)
 	if err != nil {
 		slog.Error("Failed to query alphabet index", "error", err, "type", entityType)
@@ -670,7 +707,7 @@ func GetAlphabetIndex(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 
-	index := make(map[string]int)
+	index = make(map[string]int)
 	for rows.Next() {
 		var letter string
 		var offset int
@@ -678,6 +715,11 @@ func GetAlphabetIndex(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		index[letter] = offset
+	}
+
+	// Cache the result
+	if err := cache.SetAlphabetIndex(r.Context(), entityType, index); err != nil {
+		slog.Warn("Failed to cache alphabet index", "error", err)
 	}
 
 	json.NewEncoder(w).Encode(index)
