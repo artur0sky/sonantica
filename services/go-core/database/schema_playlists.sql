@@ -20,5 +20,5 @@ CREATE TABLE IF NOT EXISTS playlist_tracks (
 );
 
 -- Index for fast retrieval
-CREATE INDEX idx_playlist_tracks_playlist ON playlist_tracks(playlist_id);
-CREATE INDEX idx_playlist_tracks_position ON playlist_tracks(playlist_id, position);
+CREATE INDEX IF NOT EXISTS idx_playlist_tracks_playlist ON playlist_tracks(playlist_id);
+CREATE INDEX IF NOT EXISTS idx_playlist_tracks_position ON playlist_tracks(playlist_id, position);
