@@ -317,10 +317,22 @@ func (s *AnalyticsStorage) GetPlatformStats(ctx context.Context, filters *models
 
 // GetListeningHeatmap retrieves listening heatmap data
 func (s *AnalyticsStorage) GetListeningHeatmap(ctx context.Context, filters *models.QueryFilters) ([]models.HeatmapData, error) {
-	// If filtered by artist or album, we must query raw events (slower but accurate)
-	if (filters.ArtistID != nil && *filters.ArtistID != "") || (filters.ArtistName != nil && *filters.ArtistName != "") ||
-		(filters.AlbumID != nil && *filters.AlbumID != "") || (filters.AlbumTitle != nil && *filters.AlbumTitle != "") {
+	// If filtered by name, resolve to IDs first to use the JSON ID fields
+	if filters.ArtistName != nil && *filters.ArtistName != "" && (filters.ArtistID == nil || *filters.ArtistID == "") {
+		var id string
+		if err := s.db.QueryRow(ctx, "SELECT id FROM artists WHERE name = $1", *filters.ArtistName).Scan(&id); err == nil {
+			filters.ArtistID = &id
+		}
+	}
+	if filters.AlbumTitle != nil && *filters.AlbumTitle != "" && (filters.AlbumID == nil || *filters.AlbumID == "") {
+		var id string
+		if err := s.db.QueryRow(ctx, "SELECT id FROM albums WHERE title = $1", *filters.AlbumTitle).Scan(&id); err == nil {
+			filters.AlbumID = &id
+		}
+	}
 
+	// If filtered by artist or album, we must query raw events (slower but accurate)
+	if (filters.ArtistID != nil && *filters.ArtistID != "") || (filters.AlbumID != nil && *filters.AlbumID != "") {
 		query := `
 			SELECT 
 				DATE(timestamp) as date,
@@ -344,12 +356,13 @@ func (s *AnalyticsStorage) GetListeningHeatmap(ctx context.Context, filters *mod
 			argCount++
 		}
 
-		// Filter by artist/album from JSON data (assuming it exists in data field)
+		// Filter by artist/album from JSON data
 		if filters.ArtistID != nil && *filters.ArtistID != "" {
 			query += fmt.Sprintf(" AND (data->>'artistId') = $%d", argCount)
 			args = append(args, *filters.ArtistID)
 			argCount++
 		}
+
 		if filters.AlbumID != nil && *filters.AlbumID != "" {
 			query += fmt.Sprintf(" AND (data->>'albumId') = $%d", argCount)
 			args = append(args, *filters.AlbumID)
@@ -472,6 +485,20 @@ func (s *AnalyticsStorage) UpdateTrackStatistics(ctx context.Context, trackID st
 
 // GetPlaybackTimeline retrieves playback timeline data
 func (s *AnalyticsStorage) GetPlaybackTimeline(ctx context.Context, filters *models.QueryFilters) ([]models.TimelineData, error) {
+	// If filtered by name, resolve to IDs first
+	if filters.ArtistName != nil && *filters.ArtistName != "" && (filters.ArtistID == nil || *filters.ArtistID == "") {
+		var id string
+		if err := s.db.QueryRow(ctx, "SELECT id FROM artists WHERE name = $1", *filters.ArtistName).Scan(&id); err == nil {
+			filters.ArtistID = &id
+		}
+	}
+	if filters.AlbumTitle != nil && *filters.AlbumTitle != "" && (filters.AlbumID == nil || *filters.AlbumID == "") {
+		var id string
+		if err := s.db.QueryRow(ctx, "SELECT id FROM albums WHERE title = $1", *filters.AlbumTitle).Scan(&id); err == nil {
+			filters.AlbumID = &id
+		}
+	}
+
 	// If filtered, use raw events
 	if (filters.ArtistID != nil && *filters.ArtistID != "") || (filters.AlbumID != nil && *filters.AlbumID != "") {
 		query := `
@@ -499,6 +526,12 @@ func (s *AnalyticsStorage) GetPlaybackTimeline(ctx context.Context, filters *mod
 		if filters.ArtistID != nil && *filters.ArtistID != "" {
 			query += fmt.Sprintf(" AND (data->>'artistId') = $%d", argCount)
 			args = append(args, *filters.ArtistID)
+			argCount++
+		}
+
+		if filters.AlbumID != nil && *filters.AlbumID != "" {
+			query += fmt.Sprintf(" AND (data->>'albumId') = $%d", argCount)
+			args = append(args, *filters.AlbumID)
 			argCount++
 		}
 
