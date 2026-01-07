@@ -42,8 +42,14 @@ export function AlbumsPage() {
   const [sortField, setSortField] = useState<SortField>("title");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
   const { scanServer } = useMultiServerLibrary();
-  const { isSelectionMode, enterSelectionMode, exitSelectionMode } =
-    useSelectionStore();
+  const {
+    isSelectionMode,
+    enterSelectionMode,
+    exitSelectionMode,
+    selectAll,
+    clearSelection,
+    selectedIds,
+  } = useSelectionStore();
 
   const filteredAlbums = getFilteredAlbums();
 
@@ -193,6 +199,26 @@ export function AlbumsPage() {
                   <span className="hidden sm:inline">Done</span>
                 )}
               </Button>
+
+              {/* Select All Toggle (only in selection mode) */}
+              {isSelectionMode && (
+                <Button
+                  onClick={() => {
+                    if (selectedIds.size === sortedAlbums.length) {
+                      clearSelection();
+                    } else {
+                      selectAll(sortedAlbums.map((a) => a.id));
+                    }
+                  }}
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs"
+                >
+                  {selectedIds.size === sortedAlbums.length
+                    ? "Deselect All"
+                    : "Select All"}
+                </Button>
+              )}
             </div>
           )}
         </div>

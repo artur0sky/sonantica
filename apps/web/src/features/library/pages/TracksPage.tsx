@@ -55,8 +55,14 @@ export function TracksPage() {
 
   const [sortField, setSortField] = useState<SortField>("title");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
-  const { isSelectionMode, enterSelectionMode, exitSelectionMode } =
-    useSelectionStore();
+  const {
+    isSelectionMode,
+    enterSelectionMode,
+    exitSelectionMode,
+    selectAll,
+    clearSelection,
+    selectedIds,
+  } = useSelectionStore();
 
   const filteredTracks = getFilteredTracks();
 
@@ -348,6 +354,26 @@ export function TracksPage() {
                     <span className="hidden sm:inline">Done</span>
                   )}
                 </Button>
+
+                {/* Select All Toggle (only in selection mode) */}
+                {isSelectionMode && (
+                  <Button
+                    onClick={() => {
+                      if (selectedIds.size === sortedTracks.length) {
+                        clearSelection();
+                      } else {
+                        selectAll(sortedTracks.map((t) => t.id));
+                      }
+                    }}
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs"
+                  >
+                    {selectedIds.size === sortedTracks.length
+                      ? "Deselect All"
+                      : "Select All"}
+                  </Button>
+                )}
               </>
             )}
           </div>

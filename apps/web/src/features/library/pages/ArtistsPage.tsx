@@ -44,8 +44,17 @@ export function ArtistsPage() {
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
   const { scanServer } = useMultiServerLibrary();
-  const { isSelectionMode, enterSelectionMode, exitSelectionMode } =
-    useSelectionStore();
+  const {
+    isSelectionMode,
+    enterSelectionMode,
+    exitSelectionMode,
+    itemType,
+    isSelected,
+    toggleSelection,
+    selectAll,
+    clearSelection,
+    selectedIds,
+  } = useSelectionStore();
 
   const filteredArtists = getFilteredArtists();
 
@@ -161,6 +170,24 @@ export function ArtistsPage() {
                   <span className="hidden sm:inline">Done</span>
                 )}
               </Button>
+              {isSelectionMode && (
+                <Button
+                  onClick={() => {
+                    if (selectedIds.size === sortedArtists.length) {
+                      clearSelection();
+                    } else {
+                      selectAll(sortedArtists.map((a) => a.id));
+                    }
+                  }}
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs"
+                >
+                  {selectedIds.size === sortedArtists.length
+                    ? "Deselect All"
+                    : "Select All"}
+                </Button>
+              )}
             </div>
           )
         }
@@ -193,6 +220,13 @@ export function ArtistsPage() {
                 <ArtistCard
                   artist={artist}
                   onClick={() => handleArtistClick(artist)}
+                  selected={
+                    isSelectionMode &&
+                    itemType === "artist" &&
+                    isSelected(artist.id)
+                  }
+                  isInSelectionMode={isSelectionMode && itemType === "artist"}
+                  onSelectionToggle={toggleSelection}
                 />
               </div>
             ))}

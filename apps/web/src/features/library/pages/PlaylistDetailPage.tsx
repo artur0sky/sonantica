@@ -4,10 +4,11 @@
  * Displays tracks belonging to a specific playlist.
  */
 
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import { useParams, useLocation } from "wouter";
 import { useLibraryStore } from "@sonantica/media-library";
 import { TrackItem } from "../components/TrackItem";
+import { usePlaylistSettingsStore } from "../../../stores/playlistSettingsStore";
 import {
   IconChevronLeft,
   IconPlayerPlay,
@@ -23,6 +24,11 @@ export function PlaylistDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
   const { getPlaylistById, tracks } = useLibraryStore();
+  const trackAccess = usePlaylistSettingsStore((s) => s.trackAccess);
+
+  useEffect(() => {
+    if (id) trackAccess(id);
+  }, [id, trackAccess]);
 
   const playlist = useMemo(
     () => (id ? getPlaylistById(id) : null) ?? null,

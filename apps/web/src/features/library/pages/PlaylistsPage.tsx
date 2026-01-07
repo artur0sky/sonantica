@@ -13,6 +13,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import { useSelectionStore } from "../../../stores/selectionStore";
 import { SelectionActionBar } from "../../../components/SelectionActionBar";
+import { usePlaylistSettingsStore } from "../../../stores/playlistSettingsStore";
+import { playFromContext } from "../../../utils/playContext";
+import { trackToMediaSource } from "../../../utils/streamingUrl";
 import { IconCheckbox } from "@tabler/icons-react";
 
 const containerVariants = {
@@ -26,11 +29,25 @@ const containerVariants = {
 };
 
 export function PlaylistsPage() {
-  const { playlists, searchQuery } = useLibraryStore();
+  const { playlists, searchQuery, tracks } = useLibraryStore();
   const [, setLocation] = useLocation();
   const [filterType, setFilterType] = useState<string>("all");
-  const { isSelectionMode, enterSelectionMode, exitSelectionMode } =
-    useSelectionStore();
+  const trackAccess = usePlaylistSettingsStore((s) => s.trackAccess);
+
+  const {
+    isSelectionMode,
+    enterSelectionMode,
+    exitSelectionMode,
+    isSelected,
+    toggleSelection,
+    itemType,
+    selectAll,
+    clearSelection,
+    selectedIds,
+  } = useSelectionStore();
+
+  const isInSelectionModeForPlaylists =
+    isSelectionMode && itemType === "playlist";
 
   // Filter playlists
   const filteredPlaylists = useMemo(() => {
@@ -56,7 +73,23 @@ export function PlaylistsPage() {
   }, [playlists, searchQuery, filterType]);
 
   const handlePlaylistClick = (playlist: any) => {
+    trackAccess(playlist.id);
     setLocation(`/playlist/${playlist.id}`);
+  };
+
+  const handlePlayPlaylist = (playlist: any) => {
+    trackAccess(playlist.id);
+    if (!playlist.trackIds) return;
+
+    // Map trackIds to actual tracks
+    const playlistTracks = playlist.trackIds
+      .map((id: string) => tracks.find((t) => t.id === id))
+      .filter((t: any) => !!t);
+
+    if (playlistTracks.length === 0) return;
+
+    const mediaSources = playlistTracks.map(trackToMediaSource);
+    playFromContext(mediaSources, 0);
   };
 
   const handleCreatePlaylist = () => {
@@ -124,6 +157,26 @@ export function PlaylistsPage() {
                 <span className="hidden sm:inline">Done</span>
               )}
             </Button>
+
+            {/* Select All Toggle (only in selection mode) */}
+            {isSelectionMode && (
+              <Button
+                onClick={() => {
+                  if (selectedIds.size === filteredPlaylists.length) {
+                    clearSelection();
+                  } else {
+                    selectAll(filteredPlaylists.map((p) => p.id));
+                  }
+                }}
+                variant="ghost"
+                size="sm"
+                className="text-xs"
+              >
+                {selectedIds.size === filteredPlaylists.length
+                  ? "Deselect All"
+                  : "Select All"}
+              </Button>
+            )}
           </div>
         </div>
       </motion.div>
@@ -178,6 +231,12 @@ export function PlaylistsPage() {
                 key={playlist.id}
                 playlist={playlist}
                 onClick={() => handlePlaylistClick(playlist)}
+                onPlay={() => handlePlayPlaylist(playlist)}
+                selected={
+                  isInSelectionModeForPlaylists && isSelected(playlist.id)
+                }
+                isInSelectionMode={isInSelectionModeForPlaylists}
+                onSelectionToggle={toggleSelection}
               />
             ))}
           </motion.div>

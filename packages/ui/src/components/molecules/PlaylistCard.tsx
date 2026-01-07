@@ -1,6 +1,10 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { IconPlaylist, IconPlayerPlay } from "@tabler/icons-react";
+import {
+  IconPlaylist,
+  IconPlayerPlay,
+  IconCircleCheckFilled,
+} from "@tabler/icons-react";
 import { cn } from "@sonantica/shared";
 import { CoverArt } from "../atoms/CoverArt";
 
@@ -17,13 +21,38 @@ export interface PlaylistCardProps {
   onPlay?: () => void;
   className?: string;
   contextMenuProps?: any; // For spread
+  selected?: boolean;
+  isInSelectionMode?: boolean;
+  onSelectionToggle?: (id: string) => void;
 }
 
 export const PlaylistCard = React.forwardRef<HTMLDivElement, PlaylistCardProps>(
-  ({ playlist, onClick, onPlay, className, contextMenuProps }, ref) => {
+  (
+    {
+      playlist,
+      onClick,
+      onPlay,
+      className,
+      contextMenuProps,
+      selected,
+      isInSelectionMode,
+      onSelectionToggle,
+    },
+    ref
+  ) => {
     // Determine grid vs single cover
     const hasGrid = playlist.coverArts && playlist.coverArts.length >= 4;
     const coverArts = playlist.coverArts || [];
+
+    const handleClick = (e: React.MouseEvent) => {
+      if (isInSelectionMode && onSelectionToggle) {
+        e.preventDefault();
+        e.stopPropagation();
+        onSelectionToggle(playlist.id);
+      } else {
+        onClick?.();
+      }
+    };
 
     return (
       <motion.div
@@ -33,11 +62,29 @@ export const PlaylistCard = React.forwardRef<HTMLDivElement, PlaylistCardProps>(
         whileTap={{ scale: 0.98 }}
         className={cn(
           "group relative flex flex-col gap-3 p-3 rounded-xl hover:bg-surface-elevated transition-colors cursor-pointer",
+          selected &&
+            "bg-accent/10 ring-2 ring-accent ring-offset-2 ring-offset-bg",
           className
         )}
-        onClick={onClick}
+        onClick={handleClick}
         {...contextMenuProps}
       >
+        {/* Selection Checkbox Overlay */}
+        {isInSelectionMode && (
+          <div
+            className={cn(
+              "absolute top-2 right-2 z-20 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all",
+              selected
+                ? "bg-accent border-accent"
+                : "bg-bg/80 backdrop-blur-sm border-white/30"
+            )}
+          >
+            {selected && (
+              <IconCircleCheckFilled size={20} className="text-white" />
+            )}
+          </div>
+        )}
+
         {/* Cover Art Container */}
         <div className="relative aspect-square w-full overflow-hidden rounded-md shadow-sm bg-surface-base">
           {hasGrid ? (
@@ -47,8 +94,6 @@ export const PlaylistCard = React.forwardRef<HTMLDivElement, PlaylistCardProps>(
                   key={i}
                   className="w-full h-full relative overflow-hidden text-[0]"
                 >
-                  {" "}
-                  {/* text 0 removes space */}
                   <CoverArt
                     src={art}
                     alt=""
@@ -69,19 +114,21 @@ export const PlaylistCard = React.forwardRef<HTMLDivElement, PlaylistCardProps>(
           )}
 
           {/* Hover Play Button */}
-          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={(e) => {
-                e.stopPropagation();
-                onPlay?.();
-              }}
-              className="p-3 rounded-full bg-accent text-white shadow-xl hover:bg-accent-light"
-            >
-              <IconPlayerPlay className="fill-current" size={24} />
-            </motion.button>
-          </div>
+          {!isInSelectionMode && (
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onPlay?.();
+                }}
+                className="p-3 rounded-full bg-accent text-white shadow-xl hover:bg-accent-light"
+              >
+                <IconPlayerPlay className="fill-current" size={24} />
+              </motion.button>
+            </div>
+          )}
 
           {/* Type Badge (if special) */}
           {playlist.type === "SMART" && (
