@@ -72,10 +72,10 @@ func GetTracks(w http.ResponseWriter, r *http.Request) {
 			SELECT 
 				t.id, t.title, t.album_id, t.artist_id, t.file_path, t.duration_seconds, 
 				t.format, t.bitrate, t.sample_rate, t.channels, t.track_number, t.disc_number, 
-				t.genre, t.play_count, t.is_favorite, t.created_at, t.updated_at,
+				t.genre, t.year, t.play_count, t.is_favorite, t.created_at, t.updated_at,
 				a.name as artist_name,
 				al.title as album_title,
-				al.cover_art_path as album_cover_art
+				al.cover_art as album_cover_art
 			FROM tracks t
 			LEFT JOIN artists a ON t.artist_id = a.id
 			LEFT JOIN albums al ON t.album_id = al.id
@@ -149,10 +149,10 @@ func GetTracks(w http.ResponseWriter, r *http.Request) {
 		SELECT 
 			t.id, t.title, t.album_id, t.artist_id, t.file_path, t.duration_seconds, 
 			t.format, t.bitrate, t.sample_rate, t.channels, t.track_number, t.disc_number, 
-			t.genre, t.play_count, t.is_favorite, t.created_at, t.updated_at,
+			t.genre, t.year, t.play_count, t.is_favorite, t.created_at, t.updated_at,
 			a.name as artist_name,
 			al.title as album_title,
-			al.cover_art_path as album_cover_art
+			al.cover_art as album_cover_art
 		FROM tracks t
 		LEFT JOIN artists a ON t.artist_id = a.id
 		LEFT JOIN albums al ON t.album_id = al.id
@@ -235,7 +235,7 @@ func GetArtists(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		query := fmt.Sprintf("SELECT id, name, bio, image_url, created_at FROM artists ORDER BY %s", orderBy)
+		query := fmt.Sprintf("SELECT id, name, bio, cover_art, created_at FROM artists ORDER BY %s", orderBy)
 
 		rows, err := database.DB.Query(r.Context(), query)
 		if err != nil {
@@ -282,7 +282,7 @@ func GetArtists(w http.ResponseWriter, r *http.Request) {
 		orderBy = "name ASC"
 	}
 
-	query := fmt.Sprintf("SELECT id, name, bio, image_url, created_at FROM artists ORDER BY %s LIMIT $1 OFFSET $2", orderBy)
+	query := fmt.Sprintf("SELECT id, name, bio, cover_art, created_at FROM artists ORDER BY %s LIMIT $1 OFFSET $2", orderBy)
 
 	rows, err := database.DB.Query(r.Context(), query, limit, offset)
 	if err != nil {
@@ -352,7 +352,7 @@ func GetAlbums(w http.ResponseWriter, r *http.Request) {
 		case "artist":
 			orderBy = "a.name"
 		case "year":
-			orderBy = "al.release_year"
+			orderBy = "al.release_date"
 		}
 
 		if orderParam == "desc" {
@@ -363,7 +363,7 @@ func GetAlbums(w http.ResponseWriter, r *http.Request) {
 
 		query := fmt.Sprintf(`
 			SELECT 
-				al.id, al.title, al.artist_id, al.release_year, al.cover_art_path, al.folder_path, al.created_at,
+				al.id, al.title, al.artist_id, al.release_date, al.cover_art, al.genre, al.created_at,
 				a.name as artist_name
 			FROM albums al
 			LEFT JOIN artists a ON al.artist_id = a.id
@@ -412,7 +412,7 @@ func GetAlbums(w http.ResponseWriter, r *http.Request) {
 	case "artist":
 		orderBy = "a.name"
 	case "year":
-		orderBy = "al.release_year"
+		orderBy = "al.release_date"
 	}
 
 	if orderParam == "desc" {
@@ -431,7 +431,7 @@ func GetAlbums(w http.ResponseWriter, r *http.Request) {
 
 	query := fmt.Sprintf(`
 		SELECT 
-			al.id, al.title, al.artist_id, al.release_year, al.cover_art_path, al.folder_path, al.created_at,
+			al.id, al.title, al.artist_id, al.release_date, al.cover_art, al.genre, al.created_at,
 			a.name as artist_name
 		FROM albums al
 		LEFT JOIN artists a ON al.artist_id = a.id
@@ -534,15 +534,15 @@ func GetTracksByArtist(w http.ResponseWriter, r *http.Request) {
 		SELECT 
 			t.id, t.title, t.album_id, t.artist_id, t.file_path, t.duration_seconds, 
 			t.format, t.bitrate, t.sample_rate, t.channels, t.track_number, t.disc_number, 
-			t.genre, t.play_count, t.is_favorite, t.created_at, t.updated_at,
+			t.genre, t.year, t.play_count, t.is_favorite, t.created_at, t.updated_at,
 			a.name as artist_name,
 			al.title as album_title,
-			al.cover_art_path as album_cover_art
+			al.cover_art as album_cover_art
 		FROM tracks t
 		LEFT JOIN artists a ON t.artist_id = a.id
 		LEFT JOIN albums al ON t.album_id = al.id
 		WHERE t.artist_id = $1
-		ORDER BY al.release_year DESC, t.track_number ASC
+		ORDER BY al.release_date DESC, t.track_number ASC
 	`
 
 	rows, err := database.DB.Query(r.Context(), query, artistID)
@@ -576,10 +576,10 @@ func GetTracksByAlbum(w http.ResponseWriter, r *http.Request) {
 		SELECT 
 			t.id, t.title, t.album_id, t.artist_id, t.file_path, t.duration_seconds, 
 			t.format, t.bitrate, t.sample_rate, t.channels, t.track_number, t.disc_number, 
-			t.genre, t.play_count, t.is_favorite, t.created_at, t.updated_at,
+			t.genre, t.year, t.play_count, t.is_favorite, t.created_at, t.updated_at,
 			a.name as artist_name,
 			al.title as album_title,
-			al.cover_art_path as album_cover_art
+			al.cover_art as album_cover_art
 		FROM tracks t
 		LEFT JOIN artists a ON t.artist_id = a.id
 		LEFT JOIN albums al ON t.album_id = al.id

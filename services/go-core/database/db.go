@@ -7,12 +7,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-
-	_ "embed"
 )
-
-//go:embed schema.sql
-var databaseSchema string
 
 var DB *pgxpool.Pool
 
@@ -34,9 +29,10 @@ func Connect() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	DB, err = pgxpool.NewWithConfig(ctx, config)
-	if err != nil {
-		return fmt.Errorf("unable to create connection pool: %v", err)
+	var DB_err error
+	DB, DB_err = pgxpool.NewWithConfig(ctx, config)
+	if DB_err != nil {
+		return fmt.Errorf("unable to create connection pool: %v", DB_err)
 	}
 
 	if err := DB.Ping(ctx); err != nil {
@@ -44,21 +40,6 @@ func Connect() error {
 	}
 
 	fmt.Println("✅ Connected to PostgreSQL successfully")
-	return nil
-}
-
-func RunMigrations() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	fmt.Println("📦 Running database migrations...")
-
-	// Execute Complete Database Schema
-	if _, err := DB.Exec(ctx, databaseSchema); err != nil {
-		return fmt.Errorf("failed to execute database schema: %v", err)
-	}
-
-	fmt.Println("✅ Database migrations completed")
 	return nil
 }
 

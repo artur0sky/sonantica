@@ -57,12 +57,6 @@ func main() {
 	}
 	defer database.Close()
 
-	// Run Core Database Migrations
-	if err := database.RunMigrations(); err != nil {
-		slog.Error("Failed to run database migrations", "error", err)
-		os.Exit(1)
-	}
-
 	// Initialize Analytics Logger
 	analytics.InitLogger("sonantica-analytics")
 

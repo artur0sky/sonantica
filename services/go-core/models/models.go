@@ -20,6 +20,7 @@ type Track struct {
 	TrackNumber     *int       `json:"trackNumber" db:"track_number"`
 	DiscNumber      *int       `json:"discNumber" db:"disc_number"`
 	Genre           *string    `json:"genre" db:"genre"`
+	Year            *int       `json:"year" db:"year"`
 	PlayCount       int        `json:"playCount" db:"play_count"`
 	IsFavorite      bool       `json:"isFavorite" db:"is_favorite"`
 	CreatedAt       time.Time  `json:"createdAt" db:"created_at"`
@@ -31,13 +32,13 @@ type Track struct {
 }
 
 type Album struct {
-	ID           uuid.UUID  `json:"id" db:"id"`
-	Title        string     `json:"title" db:"title"`
-	ArtistID     *uuid.UUID `json:"artistId" db:"artist_id"`
-	ReleaseYear  *int       `json:"year" db:"release_year"`
-	CoverArtPath *string    `json:"coverArt" db:"cover_art_path"`
-	FolderPath   *string    `json:"folderPath" db:"folder_path"`
-	CreatedAt    time.Time  `json:"createdAt" db:"created_at"`
+	ID          uuid.UUID  `json:"id" db:"id"`
+	Title       string     `json:"title" db:"title"`
+	ArtistID    *uuid.UUID `json:"artistId" db:"artist_id"`
+	ReleaseDate *string    `json:"releaseDate" db:"release_date"`
+	CoverArt    *string    `json:"coverArt" db:"cover_art"`
+	Genre       *string    `json:"genre" db:"genre"`
+	CreatedAt   time.Time  `json:"createdAt" db:"created_at"`
 	// Joined fields
 	ArtistName *string `json:"artist,omitempty" db:"artist_name"`
 }
@@ -46,6 +47,6 @@ type Artist struct {
 	ID        uuid.UUID `json:"id" db:"id"`
 	Name      string    `json:"name" db:"name"`
 	Bio       *string   `json:"bio" db:"bio"`
-	ImageURL  *string   `json:"imageUrl" db:"image_url"`
+	CoverArt  *string   `json:"coverArt" db:"cover_art"`
 	CreatedAt time.Time `json:"createdAt" db:"created_at"`
 }
