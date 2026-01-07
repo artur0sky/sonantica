@@ -17,6 +17,9 @@ import { AlphabetNavigator, Button, useUIStore } from "@sonantica/ui";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import { useMultiServerLibrary } from "../../../hooks/useMultiServerLibrary";
+import { useSelectionStore } from "../../../stores/selectionStore";
+import { SelectionActionBar } from "../../../components/SelectionActionBar";
+import { IconCheckbox } from "@tabler/icons-react";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -39,6 +42,14 @@ export function AlbumsPage() {
   const [sortField, setSortField] = useState<SortField>("title");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
   const { scanServer } = useMultiServerLibrary();
+  const {
+    isSelectionMode,
+    enterSelectionMode,
+    exitSelectionMode,
+    selectAll,
+    clearSelection,
+    selectedIds,
+  } = useSelectionStore();
 
   const filteredAlbums = getFilteredAlbums();
 
@@ -170,10 +181,51 @@ export function AlbumsPage() {
                   <IconSortDescending size={18} />
                 )}
               </Button>
+
+              {/* Multi-Select Button */}
+              <Button
+                onClick={() =>
+                  isSelectionMode
+                    ? exitSelectionMode()
+                    : enterSelectionMode("album")
+                }
+                variant={isSelectionMode ? "primary" : "ghost"}
+                size="sm"
+                className="flex items-center gap-2"
+                title="Multi-Select"
+              >
+                <IconCheckbox size={18} />
+                {isSelectionMode && (
+                  <span className="hidden sm:inline">Done</span>
+                )}
+              </Button>
+
+              {/* Select All Toggle (only in selection mode) */}
+              {isSelectionMode && (
+                <Button
+                  onClick={() => {
+                    if (selectedIds.size === sortedAlbums.length) {
+                      clearSelection();
+                    } else {
+                      selectAll(sortedAlbums.map((a) => a.id));
+                    }
+                  }}
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs"
+                >
+                  {selectedIds.size === sortedAlbums.length
+                    ? "Deselect All"
+                    : "Select All"}
+                </Button>
+              )}
             </div>
           )}
         </div>
       </motion.div>
+
+      {/* Selection Action Bar */}
+      <SelectionActionBar />
 
       {/* Content */}
       <AnimatePresence mode="wait">

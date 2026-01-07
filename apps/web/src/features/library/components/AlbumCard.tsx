@@ -18,8 +18,10 @@ import {
 } from "@sonantica/ui";
 import { useQueueStore } from "@sonantica/player-core";
 import { useLibraryStore } from "@sonantica/media-library";
-import { gpuAnimations } from "@sonantica/shared";
+import { gpuAnimations, cn } from "@sonantica/shared";
 import { useMemo } from "react";
+import { useSelectionStore } from "../../../stores/selectionStore";
+import { IconCircleCheckFilled } from "@tabler/icons-react";
 
 interface AlbumCardProps {
   album: any;
@@ -30,6 +32,12 @@ export function AlbumCard({ album, onClick }: AlbumCardProps) {
   const { addToQueue, playNext } = useQueueStore();
   const contextMenu = useContextMenu();
   const tracks = useLibraryStore((s) => s.tracks);
+
+  // Selection state
+  const { isSelectionMode, itemType, toggleSelection, isSelected } =
+    useSelectionStore();
+  const isInSelectionMode = isSelectionMode && itemType === "album";
+  const selected = isInSelectionMode && isSelected(album.id);
 
   // Calculate actual track count from library
   const actualTrackCount = useMemo(
@@ -78,16 +86,41 @@ export function AlbumCard({ album, onClick }: AlbumCardProps) {
         layout
         {...gpuAnimations.scaleIn}
         whileHover={{ transform: "translateY(-8px) scale(1.02)" }}
-        whileTap={{ transform: "scale(0.98)" }}
-        onClick={onClick}
+        whileTap={{ scale: 0.98 }}
+        onClick={() => {
+          if (isInSelectionMode) {
+            toggleSelection(album.id);
+          } else {
+            onClick();
+          }
+        }}
         onContextMenu={contextMenu.handleContextMenu}
         onTouchStart={contextMenu.handleLongPressStart}
         onTouchEnd={contextMenu.handleLongPressEnd}
         onMouseDown={contextMenu.handleLongPressStart}
         onMouseUp={contextMenu.handleLongPressEnd}
         onMouseLeave={contextMenu.handleLongPressEnd}
-        className="group cursor-pointer p-4 hover:bg-surface-elevated transition-colors"
+        className={cn(
+          "group relative cursor-pointer p-4 hover:bg-surface-elevated transition-colors",
+          selected &&
+            "ring-2 ring-accent ring-offset-2 ring-offset-bg rounded-lg"
+        )}
       >
+        {/* Selection Checkbox Overlay */}
+        {isInSelectionMode && (
+          <div
+            className={cn(
+              "absolute top-2 right-2 z-10 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all",
+              selected
+                ? "bg-accent border-accent"
+                : "bg-bg/80 backdrop-blur-sm border-white/30"
+            )}
+          >
+            {selected && (
+              <IconCircleCheckFilled size={20} className="text-white" />
+            )}
+          </div>
+        )}
         {/* Album Art - PERFORMANCE: Lazy loaded with LRU cache */}
         <div className="aspect-square mb-4 flex items-center justify-center relative overflow-hidden">
           <CoverArt

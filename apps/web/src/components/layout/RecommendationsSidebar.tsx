@@ -9,12 +9,16 @@ import { useState } from "react";
 import { SidebarContainer, useUIStore, Button, CoverArt } from "@sonantica/ui";
 import { useLibraryStore } from "@sonantica/media-library";
 import { useQueueRecommendations } from "@sonantica/recommendations";
+import { usePlaylistCRUD } from "../../hooks/usePlaylistCRUD";
+import { useDialog } from "../../hooks/useDialog";
+import { PromptDialog } from "@sonantica/ui";
 import { TrackItem } from "../../features/library/components/TrackItem";
 import {
   IconMusic,
   IconDisc,
   IconMicrophone,
   IconPlayerPlay,
+  IconPlaylistAdd,
 } from "@tabler/icons-react";
 import { useQueueStore } from "@sonantica/player-core";
 import { AnimatePresence, motion } from "framer-motion";
@@ -40,12 +44,65 @@ export function RecommendationsSidebar() {
     { value: 1.0, label: "Diverse" },
   ];
 
+  const { createPlaylist } = usePlaylistCRUD();
+  const { dialogState, showPrompt, handleConfirm, handleCancel } = useDialog();
+
+  // Save recommendations as playlist
+  const handleSaveAsPlaylist = async () => {
+    // Get current diversity label
+    const diversityLabel =
+      diversityOptions.find((opt) => opt.value === diversity)?.label ||
+      "Balanced";
+
+    const playlistName = await showPrompt(
+      "Save Discovery Mix",
+      "Enter a name for this playlist",
+      `${diversityLabel} Mix ${new Date().toLocaleDateString()}`,
+      "Discovery Mix"
+    );
+    if (!playlistName) return;
+
+    try {
+      const trackIds = trackRecommendations.map((rec: any) => rec.item.id);
+      console.log("[RecommendationsSidebar] Creating playlist:", {
+        name: playlistName,
+        diversity: diversityLabel,
+        diversityValue: diversity,
+        trackCount: trackIds.length,
+        trackIds,
+      });
+
+      const createdPlaylist = await createPlaylist(
+        playlistName,
+        "GENERATED",
+        trackIds
+      );
+      console.log(
+        "[RecommendationsSidebar] Playlist created:",
+        createdPlaylist
+      );
+    } catch (error) {
+      console.error("Failed to save playlist:", error);
+    }
+  };
+
   return (
     <SidebarContainer
       title="Discovery"
       onClose={toggleRecommendations}
       headerActions={
         <div className="flex gap-1">
+          {trackRecommendations.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSaveAsPlaylist}
+              className="p-2"
+              title="Save as Playlist"
+            >
+              <IconPlaylistAdd size={16} stroke={1.5} />
+            </Button>
+          )}
           {diversityOptions.map((opt) => (
             <Button
               key={opt.value}
@@ -186,6 +243,17 @@ export function RecommendationsSidebar() {
           </div>
         )}
       </div>
+
+      {/* Prompt Dialog for saving recommendations as playlist */}
+      <PromptDialog
+        isOpen={dialogState.isOpen && dialogState.type === "prompt"}
+        onClose={handleCancel}
+        onConfirm={handleConfirm}
+        title={dialogState.title}
+        message={dialogState.message}
+        defaultValue={dialogState.defaultValue}
+        placeholder={dialogState.placeholder}
+      />
     </SidebarContainer>
   );
 }

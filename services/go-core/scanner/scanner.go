@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"path/filepath"
+	"sonantica-core/cache"
 	"strings"
 	"time"
 
@@ -127,6 +128,8 @@ func scan(root string) {
 			"jobs_dispatched", jobsDispatched,
 			"scan_id", scanID,
 		)
+		// Invalidate cache when scan is complete
+		_ = cache.InvalidateLibraryCache(context.Background())
 	}
 }
 

@@ -14,10 +14,14 @@ import {
   SortControl,
   EmptyState,
   useUIStore,
+  Button,
 } from "@sonantica/ui";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import { useMultiServerLibrary } from "../../../hooks/useMultiServerLibrary";
+import { useSelectionStore } from "../../../stores/selectionStore";
+import { SelectionActionBar } from "../../../components/SelectionActionBar";
+import { IconCheckbox } from "@tabler/icons-react";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -40,6 +44,17 @@ export function ArtistsPage() {
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
   const { scanServer } = useMultiServerLibrary();
+  const {
+    isSelectionMode,
+    enterSelectionMode,
+    exitSelectionMode,
+    itemType,
+    isSelected,
+    toggleSelection,
+    selectAll,
+    clearSelection,
+    selectedIds,
+  } = useSelectionStore();
 
   const filteredArtists = getFilteredArtists();
 
@@ -128,16 +143,52 @@ export function ArtistsPage() {
         }
         actions={
           stats.totalArtists > 0 && (
-            <SortControl
-              value={sortField}
-              options={[
-                { value: "name", label: "Name" },
-                { value: "trackCount", label: "Track Count" },
-              ]}
-              onValueChange={(val) => setSortField(val as SortField)}
-              direction={sortOrder}
-              onDirectionChange={setSortOrder}
-            />
+            <div className="flex items-center gap-2">
+              <SortControl
+                value={sortField}
+                options={[
+                  { value: "name", label: "Name" },
+                  { value: "trackCount", label: "Track Count" },
+                ]}
+                onValueChange={(val) => setSortField(val as SortField)}
+                direction={sortOrder}
+                onDirectionChange={setSortOrder}
+              />
+              <Button
+                onClick={() =>
+                  isSelectionMode
+                    ? exitSelectionMode()
+                    : enterSelectionMode("artist")
+                }
+                variant={isSelectionMode ? "primary" : "ghost"}
+                size="sm"
+                className="flex items-center gap-2"
+                title="Multi-Select"
+              >
+                <IconCheckbox size={18} />
+                {isSelectionMode && (
+                  <span className="hidden sm:inline">Done</span>
+                )}
+              </Button>
+              {isSelectionMode && (
+                <Button
+                  onClick={() => {
+                    if (selectedIds.size === sortedArtists.length) {
+                      clearSelection();
+                    } else {
+                      selectAll(sortedArtists.map((a) => a.id));
+                    }
+                  }}
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs"
+                >
+                  {selectedIds.size === sortedArtists.length
+                    ? "Deselect All"
+                    : "Select All"}
+                </Button>
+              )}
+            </div>
           )
         }
       />
@@ -169,12 +220,22 @@ export function ArtistsPage() {
                 <ArtistCard
                   artist={artist}
                   onClick={() => handleArtistClick(artist)}
+                  selected={
+                    isSelectionMode &&
+                    itemType === "artist" &&
+                    isSelected(artist.id)
+                  }
+                  isInSelectionMode={isSelectionMode && itemType === "artist"}
+                  onSelectionToggle={toggleSelection}
                 />
               </div>
             ))}
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Selection Action Bar */}
+      <SelectionActionBar />
 
       {/* Navigator */}
       {sortedArtists.length > 50 && (

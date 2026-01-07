@@ -62,6 +62,16 @@ const AnalyticsDashboard = lazy(() =>
     default: m.AnalyticsDashboard,
   }))
 );
+const PlaylistsPage = lazy(() =>
+  import("./features/library/pages/PlaylistsPage").then((m) => ({
+    default: m.PlaylistsPage,
+  }))
+);
+const PlaylistDetailPage = lazy(() =>
+  import("./features/library/pages/PlaylistDetailPage").then((m) => ({
+    default: m.PlaylistDetailPage,
+  }))
+);
 
 const PageLoader = () => (
   <div className="flex items-center justify-center min-h-[50vh] text-text-muted">
@@ -113,18 +123,12 @@ function App() {
                     {/* Analytics Dashboard */}
                     <Route path="/analytics" component={AnalyticsDashboard} />
 
-                    {/* Playlists - Coming soon */}
-                    <Route path="/playlists">
-                      <div className="max-w-6xl mx-auto p-6">
-                        <div className="text-center py-20">
-                          <div className="text-6xl mb-4">📋</div>
-                          <h2 className="text-2xl font-semibold mb-2">
-                            Playlists
-                          </h2>
-                          <p className="text-text-muted">Coming soon...</p>
-                        </div>
-                      </div>
-                    </Route>
+                    {/* Playlists */}
+                    <Route path="/playlists" component={PlaylistsPage} />
+                    <Route
+                      path="/playlist/:id"
+                      component={PlaylistDetailPage}
+                    />
 
                     {/* 404 */}
                     <Route>

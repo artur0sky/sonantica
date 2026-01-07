@@ -62,28 +62,30 @@ MEDIA_PATH = os.environ.get("MEDIA_PATH", "/media")
 
 
 
+from sqlalchemy.dialects import postgresql
+
 # --- DOMAIN MODELS (ORM) ---
 Base = declarative_base()
 
 class Artist(Base):
     __tablename__ = 'artists'
     
-    id = Column(String, primary_key=True, server_default=func.gen_random_uuid()) # Use PG UUID gen
+    id = Column(postgresql.UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid())
     name = Column(String(255), nullable=False, unique=True)
     bio = Column(String, nullable=True)
-    image_url = Column(String, nullable=True)
+    cover_art = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 class Album(Base):
     __tablename__ = 'albums'
     
-    id = Column(String, primary_key=True, server_default=func.gen_random_uuid())
+    id = Column(postgresql.UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid())
     title = Column(String(255), nullable=False)
-    artist_id = Column(String, ForeignKey('artists.id', ondelete='CASCADE'))
-    release_year = Column(Integer, nullable=True)
-    cover_art_path = Column(String, nullable=True)
-    folder_path = Column(String, unique=True, nullable=True)
+    artist_id = Column(postgresql.UUID(as_uuid=True), ForeignKey('artists.id', ondelete='CASCADE'))
+    release_date = Column(String, nullable=True)
+    cover_art = Column(String, nullable=True)
+    genre = Column(String(100), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
@@ -92,10 +94,10 @@ class Album(Base):
 class Track(Base):
     __tablename__ = 'tracks'
     
-    id = Column(String, primary_key=True, server_default=func.gen_random_uuid())
+    id = Column(postgresql.UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid())
     title = Column(String(255), nullable=False)
-    album_id = Column(String, ForeignKey('albums.id', ondelete='CASCADE'))
-    artist_id = Column(String, ForeignKey('artists.id', ondelete='SET NULL'))
+    album_id = Column(postgresql.UUID(as_uuid=True), ForeignKey('albums.id', ondelete='CASCADE'))
+    artist_id = Column(postgresql.UUID(as_uuid=True), ForeignKey('artists.id', ondelete='SET NULL'))
     file_path = Column(String, unique=True, nullable=False)
     
     # Audio Info
@@ -109,6 +111,7 @@ class Track(Base):
     track_number = Column(Integer)
     disc_number = Column(Integer, default=1)
     genre = Column(String(100))
+    year = Column(Integer)
     
     # User data
     play_count = Column(Integer, default=0)
@@ -121,77 +124,86 @@ class Track(Base):
 class AudioRepository:
     def __init__(self, db_url):
         self.engine = create_engine(db_url, pool_pre_ping=True)
-        Base.metadata.create_all(self.engine) # Idempotent schema creation
+        # Base.metadata.create_all(self.engine) # Schema management is handled by Go migrations
         self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
         logger.info("✅ Database connected via SQLAlchemy.")
 
     def get_or_create_artist(self, session: Session, name: str) -> str:
         name = name.strip().replace("\x00", "")
-        # Try to find first (optimization)
         artist = session.query(Artist).filter(Artist.name == name).first()
         if artist:
             return artist.id
             
         try:
-            # Create new
             new_artist = Artist(name=name)
             session.add(new_artist)
             session.commit()
             return new_artist.id
         except IntegrityError:
             session.rollback()
-            # Race condition handling: someone else created it
             return session.query(Artist).filter(Artist.name == name).first().id
 
-    def get_or_create_album(self, session: Session, title: str, artist_id: str, cover_path: str = None) -> str:
+    def get_or_create_album(self, session: Session, title: str, artist_id: str, cover_path: str = None, year: int = 0) -> str:
         title = title.strip().replace("\x00", "")
         album = session.query(Album).filter(Album.title == title, Album.artist_id == artist_id).first()
         
+        release_date = None
+        if year and year > 0:
+            release_date = f"{year}-01-01"
+
         if album:
-            # Update cover if missing
-            if not album.cover_art_path and cover_path:
-                album.cover_art_path = cover_path
+            changed = False
+            if not album.cover_art and cover_path:
+                album.cover_art = cover_path
+                changed = True
+            if not album.release_date and release_date:
+                album.release_date = release_date
+                changed = True
+            if changed:
                 session.commit()
             return album.id
             
         try:
-            new_album = Album(title=title, artist_id=artist_id, cover_art_path=cover_path)
+            new_album = Album(title=title, artist_id=artist_id, cover_art=cover_path, release_date=release_date)
             session.add(new_album)
             session.commit()
             return new_album.id
         except IntegrityError:
             session.rollback()
             album = session.query(Album).filter(Album.title == title, Album.artist_id == artist_id).first()
-            if album and not album.cover_art_path and cover_path:
-                album.cover_art_path = cover_path
-                session.commit()
+            if album:
+                changed = False
+                if not album.cover_art and cover_path:
+                    album.cover_art = cover_path
+                    changed = True
+                if not album.release_date and release_date:
+                    album.release_date = release_date
+                    changed = True
+                if changed:
+                    session.commit()
             return album.id
 
     def save_track(self, meta: dict, file_path_rel: str):
         session = self.SessionLocal()
         try:
-            # 1. Resolve Dependencies
             artist_id = self.get_or_create_artist(session, meta["artist"])
-            # Pass cover_path to album creation
-            album_id = self.get_or_create_album(session, meta["album"], artist_id, meta.get("cover_path"))
+            album_id = self.get_or_create_album(session, meta["album"], artist_id, meta.get("cover_path"), meta.get("year", 0))
             
-            # 2. Check if Track exists (Update vs Insert)
             track = session.query(Track).filter(Track.file_path == file_path_rel).first()
             
             if track:
-                # Update existing
                 track.title = meta["title"]
                 track.artist_id = artist_id
                 track.album_id = album_id
                 track.duration_seconds = meta["duration"]
                 track.track_number = meta["track_number"]
                 track.genre = meta["genre"]
-                track.format = meta["format"]  # Should update format if it somehow changes (e.g. re-rip)
-                track.bitrate = meta["bitrate"] # Should update quality stats too
+                track.year = meta.get("year", 0)
+                track.format = meta["format"]
+                track.bitrate = meta["bitrate"]
                 track.updated_at = datetime.datetime.now(datetime.timezone.utc)
                 action = "Updated"
             else:
-                # Insert new
                 track = Track(
                     title=meta["title"],
                     file_path=file_path_rel,
@@ -203,7 +215,8 @@ class AudioRepository:
                     sample_rate=meta["sample_rate"],
                     channels=meta["channels"],
                     track_number=meta["track_number"],
-                    genre=meta["genre"]
+                    genre=meta["genre"],
+                    year=meta.get("year", 0)
                 )
                 session.add(track)
                 action = "Created"
@@ -341,6 +354,14 @@ def analyze_audio(file_path):
             metadata["album"] = str(tags.get("album", ["Unknown Album"])[0])
             metadata["genre"] = str(tags.get("genre", ["Unknown"])[0])
             
+            # Extract Year
+            year_raw = str(tags.get("date", tags.get("year", ["0"]))[0])
+            try:
+                # Handle YYYY-MM-DD or just YYYY
+                metadata["year"] = int(year_raw.split('-')[0])
+            except:
+                pass
+
             track_num_raw = str(tags.get("tracknumber", ["0"])[0])
             try:
                 metadata["track_number"] = int(track_num_raw.split('/')[0])

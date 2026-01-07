@@ -8,13 +8,24 @@ import { motion } from "framer-motion";
 import { ArtistImage } from "@sonantica/ui";
 import { useLibraryStore } from "@sonantica/media-library";
 import { useMemo } from "react";
+import { cn } from "@sonantica/shared";
+import { IconCircleCheckFilled } from "@tabler/icons-react";
 
 interface ArtistCardProps {
   artist: any;
   onClick: () => void;
+  selected?: boolean;
+  isInSelectionMode?: boolean;
+  onSelectionToggle?: (id: string) => void;
 }
 
-export function ArtistCard({ artist, onClick }: ArtistCardProps) {
+export function ArtistCard({
+  artist,
+  onClick,
+  selected,
+  isInSelectionMode,
+  onSelectionToggle,
+}: ArtistCardProps) {
   const albums = useLibraryStore((s) => s.albums);
 
   // Calculate actual album count from library
@@ -30,9 +41,34 @@ export function ArtistCard({ artist, onClick }: ArtistCardProps) {
       animate={{ opacity: 1, scale: 1 }}
       whileHover={{ y: -8, scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
-      onClick={onClick}
-      className="group cursor-pointer"
+      onClick={() => {
+        if (isInSelectionMode && onSelectionToggle) {
+          onSelectionToggle(artist.id);
+        } else {
+          onClick();
+        }
+      }}
+      className={cn(
+        "group cursor-pointer p-4 rounded-xl transition-colors",
+        selected &&
+          "bg-accent/10 ring-2 ring-accent ring-offset-2 ring-offset-bg"
+      )}
     >
+      {/* Selection Checkbox Overlay */}
+      {isInSelectionMode && (
+        <div
+          className={cn(
+            "absolute top-2 right-2 z-10 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all",
+            selected
+              ? "bg-accent border-accent"
+              : "bg-bg/80 backdrop-blur-sm border-white/30"
+          )}
+        >
+          {selected && (
+            <IconCircleCheckFilled size={20} className="text-white" />
+          )}
+        </div>
+      )}
       {/* Artist Image - Circular */}
       <div className="aspect-square mb-4 relative">
         <ArtistImage

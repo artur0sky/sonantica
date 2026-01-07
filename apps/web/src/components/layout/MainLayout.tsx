@@ -137,7 +137,9 @@ export function MainLayout({ children }: MainLayoutProps) {
   // Tight space = more than 350px of sidebars OR window is small
   const isCramped =
     totalRightOffset > 350 ||
-    (window.innerWidth < 1440 && totalRightOffset > 100);
+    (typeof window !== "undefined" &&
+      window.innerWidth < 1440 &&
+      totalRightOffset > 100);
 
   const setIsCramped = useUIStore((state) => state.setIsCramped);
 
@@ -428,7 +430,7 @@ export function MainLayout({ children }: MainLayoutProps) {
 
       {/* Mobile/Tablet Overlays (Fixed to absolute top) */}
       <AnimatePresence>
-        {window.innerWidth < 1024 &&
+        {isMobile &&
           (isLeftSidebarOpen || isRightSidebarOpen || lyricsOpen || eqOpen) && (
             <motion.div
               initial={{ opacity: 0 }}
@@ -450,7 +452,7 @@ export function MainLayout({ children }: MainLayoutProps) {
 
       {/* Mobile Left Sidebar Overlay */}
       <AnimatePresence>
-        {window.innerWidth < 1024 && isLeftSidebarOpen && (
+        {isMobile && isLeftSidebarOpen && (
           <motion.aside
             initial={{ x: "-100%" }}
             animate={{ x: 0 }}
@@ -484,7 +486,7 @@ export function MainLayout({ children }: MainLayoutProps) {
 
       {/* Mobile Right Sidebar Overlay */}
       <AnimatePresence>
-        {window.innerWidth < 1024 && isRightSidebarOpen && currentTrack && (
+        {isMobile && isRightSidebarOpen && currentTrack && (
           <motion.aside
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
@@ -518,7 +520,7 @@ export function MainLayout({ children }: MainLayoutProps) {
 
       {/* Mobile Lyrics Sidebar Overlay */}
       <AnimatePresence>
-        {window.innerWidth < 1024 && lyricsOpen && currentTrack && (
+        {isMobile && lyricsOpen && currentTrack && (
           <motion.aside
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
@@ -554,7 +556,7 @@ export function MainLayout({ children }: MainLayoutProps) {
 
       {/* Mobile EQ Sidebar Overlay */}
       <AnimatePresence>
-        {window.innerWidth < 1024 && eqOpen && currentTrack && (
+        {isMobile && eqOpen && currentTrack && (
           <motion.aside
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
@@ -590,7 +592,7 @@ export function MainLayout({ children }: MainLayoutProps) {
 
       {/* Mobile Recommendations Sidebar Overlay */}
       <AnimatePresence>
-        {window.innerWidth < 1024 && recommendationsOpen && currentTrack && (
+        {isMobile && recommendationsOpen && currentTrack && (
           <motion.aside
             initial={{ x: "100%" }}
             animate={{ x: 0 }}

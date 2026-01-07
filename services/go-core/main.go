@@ -130,6 +130,12 @@ func main() {
 		r.Get("/albums", api.GetAlbums)
 		r.Get("/albums/{id}/tracks", api.GetTracksByAlbum)
 		r.Get("/alphabet-index", api.GetAlphabetIndex)
+
+		// Playlists
+		r.Get("/playlists", api.GetPlaylists)
+		r.Post("/playlists", api.CreatePlaylist)
+		r.Get("/playlists/{id}", api.GetPlaylist)
+		r.Delete("/playlists/{id}", api.DeletePlaylist)
 	})
 
 	r.Route("/api/scan", func(r chi.Router) {

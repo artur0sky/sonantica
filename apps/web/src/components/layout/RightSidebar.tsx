@@ -13,6 +13,7 @@ import {
   IconChevronUp,
   IconCloudDownload,
   IconCircleCheckFilled,
+  IconPlaylistAdd,
 } from "@tabler/icons-react";
 import {
   motion,
@@ -37,8 +38,12 @@ import {
   OfflineStatus,
 } from "@sonantica/shared";
 import { useQueueLogic } from "../../hooks/useQueueLogic";
+import { usePlaylistCRUD } from "../../hooks/usePlaylistCRUD";
 import { useOfflineStore } from "@sonantica/offline-manager";
 import { useSettingsStore } from "../../stores/settingsStore";
+import { QueueHistory } from "./QueueHistory";
+import { useDialog } from "../../hooks/useDialog";
+import { PromptDialog } from "@sonantica/ui";
 
 const itemVariants: Variants = {
   hidden: { x: 20, opacity: 0 },
@@ -86,11 +91,45 @@ export function RightSidebar({ isCollapsed }: RightSidebarProps) {
   // Queue expansion state
   const isQueueExpanded = useUIStore((s) => s.isQueueExpanded);
   const toggleQueueExpanded = useUIStore((s) => s.toggleQueueExpanded);
+  const { createPlaylist } = usePlaylistCRUD();
+  const { dialogState, showPrompt, handleConfirm, handleCancel } = useDialog();
 
   // Show only next track when not expanded
   const displayQueue = isQueueExpanded
     ? visibleQueue
     : visibleQueue.slice(0, 1);
+
+  // Save queue as playlist
+  const handleSaveAsPlaylist = async () => {
+    const playlistName = await showPrompt(
+      "Save Queue as Playlist",
+      "Enter a name for this playlist",
+      `Queue ${new Date().toLocaleDateString()}`,
+      "Queue Playlist"
+    );
+    if (!playlistName) return;
+
+    try {
+      const trackIds = fullQueue.map((t) => t.id);
+      console.log("[RightSidebar] Creating playlist from queue:", {
+        name: playlistName,
+        trackCount: trackIds.length,
+        trackIds: trackIds,
+      });
+
+      const createdPlaylist = await createPlaylist(
+        playlistName,
+        "MANUAL",
+        trackIds
+      );
+      console.log(
+        "[RightSidebar] Playlist created successfully:",
+        createdPlaylist
+      );
+    } catch (error) {
+      console.error("Failed to save playlist:", error);
+    }
+  };
 
   return (
     <SidebarContainer
@@ -100,16 +139,28 @@ export function RightSidebar({ isCollapsed }: RightSidebarProps) {
       headerActions={
         !isCollapsed &&
         upcomingQueue.length > 0 && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={clearQueue}
-            className="p-2"
-            title="Clear Queue"
-          >
-            <IconTrash size={18} stroke={1.5} />
-            <span className="ml-1">Clear</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSaveAsPlaylist}
+              className="p-2"
+              title="Save as Playlist"
+            >
+              <IconPlaylistAdd size={18} stroke={1.5} />
+              <span className="ml-1">Save</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearQueue}
+              className="p-2"
+              title="Clear Queue"
+            >
+              <IconTrash size={18} stroke={1.5} />
+              <span className="ml-1">Clear</span>
+            </Button>
+          </div>
         )
       }
     >
@@ -244,8 +295,22 @@ export function RightSidebar({ isCollapsed }: RightSidebarProps) {
               </div>
             )}
           </AnimatePresence>
+
+          {/* Queue History */}
+          {!isCollapsed && <QueueHistory />}
         </div>
       </div>
+
+      {/* Prompt Dialog for saving queue as playlist */}
+      <PromptDialog
+        isOpen={dialogState.isOpen && dialogState.type === "prompt"}
+        onClose={handleCancel}
+        onConfirm={handleConfirm}
+        title={dialogState.title}
+        message={dialogState.message}
+        defaultValue={dialogState.defaultValue}
+        placeholder={dialogState.placeholder}
+      />
     </SidebarContainer>
   );
 }
@@ -296,7 +361,6 @@ function QueueItem({
   // Lazy hydration on appearance
   useEffect(() => {
     if (!track.metadata?.coverArt && !track.coverArt) {
-      // Small timeout to avoid hammering the decoder if scrolling fast
       const timer = setTimeout(() => {
         // Auto-hydration removed
       }, 500);
@@ -316,8 +380,6 @@ function QueueItem({
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => setIsHovered(false)}
       onDrag={(_, info) => {
-        // Track X offset to detect swipe-to-delete
-        // Right sidebar is on the right, dragging LEFT (negative X) means dragging OUTSIDE
         const threshold = -80;
         const progress = Math.min(Math.max(info.offset.x / threshold, 0), 1);
         setDragProgress(progress);
@@ -348,12 +410,11 @@ function QueueItem({
         shouldBeGrayedOut && "opacity-40 grayscale-[0.5]"
       )}
     >
-      {/* Drag Handle - Larger touch target */}
+      {/* Drag Handle */}
       {!isCollapsed && (
         <div
           onPointerDown={(e) => dragControls.start(e)}
           onTouchStart={(e) => {
-            // Explicitly start dragging on touch devices
             dragControls.start(e as any);
           }}
           className="w-8 h-12 -ml-2 flex items-center justify-center text-text-muted/20 group-hover:text-text-muted/60 cursor-grab active:cursor-grabbing transition-colors touch-none"
@@ -362,7 +423,7 @@ function QueueItem({
         </div>
       )}
 
-      {/* Removal Visual Cue (Trash Icon Overlay) */}
+      {/* Removal Visual Cue */}
       <AnimatePresence>
         {dragProgress > 0.2 && (
           <motion.div
@@ -413,7 +474,6 @@ function QueueItem({
           className="w-full h-full"
           iconSize={isCollapsed ? 24 : 16}
         />
-        {/* Play Icon on Hover */}
         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/cover:opacity-100 flex items-center justify-center transition-opacity cursor-pointer">
           <IconPlayerPlay size={18} className="text-white fill-current" />
         </div>
@@ -444,7 +504,7 @@ function QueueItem({
             )}
             <span className="truncate opacity-70">{formatArtists(artist)}</span>
 
-            {/* Bitrate Badge (Compact) */}
+            {/* Bitrate Badge */}
             <motion.span
               initial={{ opacity: 0 }}
               whileHover={{ opacity: 1 }}

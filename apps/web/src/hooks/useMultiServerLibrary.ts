@@ -18,7 +18,8 @@ import {
   type LibraryStats,
   type Track,
   type Artist,
-  type Album
+  type Album,
+  type Playlist
 } from '@sonantica/media-library';
 import { useSettingsStore } from '../stores/settingsStore';
 import { useOfflineStore } from '@sonantica/offline-manager';
@@ -28,6 +29,7 @@ interface MultiServerLibraryState {
   tracks: Track[];
   artists: Artist[];
   albums: Album[];
+  playlists: Playlist[];
   stats: LibraryStats | null;
   loading: boolean;
   error: string | null;
@@ -42,6 +44,8 @@ export function useMultiServerLibrary() {
     setTracks,
     setArtists,
     setAlbums,
+    setPlaylists,
+    playlists: storePlaylists,
     clearLibrary: storeClearLibrary
   } = useLibraryStore();
   
@@ -49,6 +53,7 @@ export function useMultiServerLibrary() {
     tracks: storeTracks,
     artists: storeArtists,
     albums: storeAlbums,
+    playlists: storePlaylists,
     stats: null,
     loading: false,
     error: null,
@@ -64,9 +69,10 @@ export function useMultiServerLibrary() {
       ...prev,
       tracks: storeTracks,
       artists: storeArtists,
-      albums: storeAlbums
+      albums: storeAlbums,
+      playlists: storePlaylists
     }));
-  }, [storeTracks, storeArtists, storeAlbums]);
+  }, [storeTracks, storeArtists, storeAlbums, storePlaylists]);
 
   /**
    * Load offline content into the library
@@ -218,12 +224,15 @@ export function useMultiServerLibrary() {
       let fetchedTracks: Track[] = [];
       let fetchedArtists: Artist[] = [];
       let fetchedAlbums: Album[] = [];
+      let fetchedPlaylists: Playlist[] = [];
 
       const promises = [];
       
       const shouldFetchTracks = type === 'all' || type === 'tracks';
       const shouldFetchArtists = type === 'all' || type === 'artists';
       const shouldFetchAlbums = type === 'all' || type === 'albums';
+      // Playlists are lightweight, fetch them always or when 'all'
+      const shouldFetchPlaylists = type === 'all';
 
       console.log(`🚀 Loading FULL library from ${server.name} (Virtual Scrolling Mode)`);
       
@@ -236,6 +245,27 @@ export function useMultiServerLibrary() {
       }
       if (shouldFetchAlbums) {
         promises.push(adapter.getAlbums({ limit: -1, offset: 0, ...sortOptions }).then(res => fetchedAlbums = res));
+      }
+      if (shouldFetchPlaylists && adapter.getPlaylists) {
+         promises.push(
+           adapter.getPlaylists()
+             .then(res => {
+               // Validate response is an array
+               if (Array.isArray(res)) {
+                 fetchedPlaylists = res;
+               } else if (res && typeof res === 'object' && Array.isArray((res as any).playlists)) {
+                 // Handle { playlists: [...] } response format
+                 fetchedPlaylists = (res as any).playlists;
+               } else {
+                 console.warn('Invalid playlists response format:', res);
+                 fetchedPlaylists = [];
+               }
+             })
+             .catch(err => {
+               console.warn('Failed to fetch playlists (non-critical):', err);
+               fetchedPlaylists = [];
+             })
+         );
       }
 
       await Promise.all(promises);
@@ -267,10 +297,16 @@ export function useMultiServerLibrary() {
         coverArt: normalizeArt(album.coverArt)
       }));
 
+      const taggedPlaylists = fetchedPlaylists.map(playlist => ({
+        ...playlist,
+        serverId: server.id
+      }));
+
       console.log(`✅ Loaded FULL library from ${server.name}`, {
         tracks: taggedTracks.length,
         artists: taggedArtists.length,
-        albums: taggedAlbums.length
+        albums: taggedAlbums.length,
+        playlists: taggedPlaylists.length
       });
 
       // Replace data for this server (no pagination, we have everything)
@@ -279,6 +315,7 @@ export function useMultiServerLibrary() {
         let newTracks = prev.tracks;
         let newArtists = prev.artists;
         let newAlbums = prev.albums;
+        let newPlaylists = prev.playlists;
 
         if (shouldFetchTracks) {
             const otherTracks = prev.tracks.filter(t => t.serverId !== serverId);
@@ -295,17 +332,24 @@ export function useMultiServerLibrary() {
             newAlbums = [...otherAlbums, ...taggedAlbums];
         }
 
+        if (shouldFetchPlaylists) {
+            const otherPlaylists = prev.playlists.filter(p => (p as any).serverId !== serverId);
+            newPlaylists = [...otherPlaylists, ...taggedPlaylists];
+        }
+
         // Sync with library store
         // We only update the store with the things we changed
         if (shouldFetchTracks) setTracks(newTracks);
         if (shouldFetchArtists) setArtists(newArtists);
         if (shouldFetchAlbums) setAlbums(newAlbums);
+        if (shouldFetchPlaylists) setPlaylists(newPlaylists);
 
         return {
           ...prev,
           tracks: newTracks,
           artists: newArtists,
           albums: newAlbums,
+          playlists: newPlaylists,
           scanningServers: new Set([...prev.scanningServers].filter(id => id !== serverId)),
           error: null
         };
@@ -319,7 +363,7 @@ export function useMultiServerLibrary() {
         error: error instanceof Error ? error.message : 'Scan failed'
       }));
     }
-  }, [setTracks, setArtists, setAlbums]); // Dependencies
+  }, [setTracks, setArtists, setAlbums, setPlaylists]); // Dependencies
 
   /**
    * Trigger a remote scan on the server (Command server to index files)
@@ -480,6 +524,7 @@ export function useMultiServerLibrary() {
       tracks: [],
       artists: [],
       albums: [],
+      playlists: [],
       stats: null,
       loading: false,
       error: null,

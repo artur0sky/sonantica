@@ -71,7 +71,7 @@ func GetAlbumCover(w http.ResponseWriter, r *http.Request) {
 	slog.Info("Requesting cover", "album_id", albumID)
 
 	var coverArtPath *string
-	query := `SELECT cover_art_path FROM albums WHERE id = $1`
+	query := `SELECT cover_art FROM albums WHERE id = $1`
 
 	err := database.DB.QueryRow(r.Context(), query, albumID).Scan(&coverArtPath)
 	if err != nil {

@@ -20,6 +20,8 @@ import {
 import { LyricsDisplay } from "./LyricsDisplay";
 import { Timeline } from "./Timeline";
 import { VolumeControl } from "./VolumeControl";
+import { AddToPlaylistModal } from "../../../components/AddToPlaylistModal";
+import { useRef } from "react";
 
 export function NowPlaying() {
   const { currentTrack, state, loadTrack } = usePlayerStore();
@@ -27,6 +29,8 @@ export function NowPlaying() {
   const [activeTab, setActiveTab] = useState<"player" | "lyrics" | "info">(
     "player"
   );
+  const [showPlaylistModal, setShowPlaylistModal] = useState(false);
+  const longPressTimer = useRef<number | null>(null);
 
   if (!currentTrack) {
     return (
@@ -57,6 +61,19 @@ export function NowPlaying() {
       });
     } catch (error) {
       console.error("Failed to load demo:", error);
+    }
+  };
+
+  const handleLongPressStart = () => {
+    longPressTimer.current = setTimeout(() => {
+      setShowPlaylistModal(true);
+    }, 500); // 500ms long press
+  };
+
+  const handleLongPressEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
     }
   };
 
@@ -105,12 +122,19 @@ export function NowPlaying() {
                   }}
                   className="relative cursor-grab active:cursor-grabbing"
                 >
-                  <CoverArt
-                    src={currentTrack.metadata?.coverArt}
-                    alt="Album Cover"
-                    className="aspect-square w-full max-w-sm mx-auto"
-                    iconSize={80}
-                  />
+                  <div
+                    onPointerDown={handleLongPressStart}
+                    onPointerUp={handleLongPressEnd}
+                    onPointerLeave={handleLongPressEnd}
+                    className="select-none"
+                  >
+                    <CoverArt
+                      src={currentTrack.metadata?.coverArt}
+                      alt="Album Cover"
+                      className="aspect-square w-full max-w-sm mx-auto"
+                      iconSize={80}
+                    />
+                  </div>
 
                   {/* Swipe Up Indicator */}
                   {hasLyrics && (
@@ -275,6 +299,14 @@ export function NowPlaying() {
           )}
         </div>
       </div>
+
+      {/* Add to Playlist Modal */}
+      <AddToPlaylistModal
+        isOpen={showPlaylistModal}
+        onClose={() => setShowPlaylistModal(false)}
+        trackId={currentTrack.id}
+        trackTitle={currentTrack.metadata?.title}
+      />
     </div>
   );
 }
