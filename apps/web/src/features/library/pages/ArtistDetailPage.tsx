@@ -8,9 +8,9 @@ import { useMemo } from "react";
 import { useParams, useLocation } from "wouter";
 import { useLibraryStore } from "@sonantica/media-library";
 import { AlbumCard } from "../components/AlbumCard";
-import { IconChevronLeft, IconUser } from "@tabler/icons-react";
+import { IconChevronLeft } from "@tabler/icons-react";
 import { motion } from "framer-motion";
-import { Button } from "@sonantica/ui";
+import { Button, ArtistImage } from "@sonantica/ui";
 import { useArtistSimilarArtists } from "@sonantica/recommendations";
 import { ArtistCard } from "../components/ArtistCard";
 import { ArtistAnalyticsSection } from "../../analytics/components/ArtistAnalyticsSection";
@@ -70,23 +70,14 @@ export function ArtistDetailPage() {
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="w-32 h-32 md:w-48 md:h-48 flex-shrink-0 rounded-full overflow-hidden bg-surface-elevated shadow-xl border border-border flex items-center justify-center"
+          className="w-32 h-32 md:w-48 md:h-48 flex-shrink-0"
         >
-          {/* Artists usually don't have images yet in our system, so use an icon or the first album art */}
-          {artistAlbums[0]?.coverArt ? (
-            <div className="relative w-full h-full">
-              <img
-                src={artistAlbums[0].coverArt}
-                alt={artist.name}
-                className="w-full h-full object-cover blur-sm opacity-50"
-              />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <IconUser size={64} className="text-white" stroke={1.5} />
-              </div>
-            </div>
-          ) : (
-            <IconUser size={64} className="text-text-muted/20" stroke={1.5} />
-          )}
+          <ArtistImage
+            src={artistAlbums[0]?.coverArt}
+            alt={artist.name}
+            className="w-full h-full shadow-xl"
+            iconSize={64}
+          />
         </motion.div>
 
         <div>
@@ -121,7 +112,7 @@ export function ArtistDetailPage() {
           />
         ))}
       </div>
-      
+
       {/* Analytics Section */}
       <ArtistAnalyticsSection artistName={artist.name} artistId={artist.id} />
 
