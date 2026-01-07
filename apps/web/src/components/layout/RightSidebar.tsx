@@ -40,6 +40,7 @@ import {
 import { useQueueLogic } from "../../hooks/useQueueLogic";
 import { useOfflineStore } from "@sonantica/offline-manager";
 import { useSettingsStore } from "../../stores/settingsStore";
+import { QueueHistory } from "./QueueHistory";
 
 const itemVariants: Variants = {
   hidden: { x: 20, opacity: 0 },
@@ -276,6 +277,9 @@ export function RightSidebar({ isCollapsed }: RightSidebarProps) {
               </div>
             )}
           </AnimatePresence>
+
+          {/* Queue History */}
+          {!isCollapsed && <QueueHistory />}
         </div>
       </div>
     </SidebarContainer>
