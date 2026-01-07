@@ -11,6 +11,7 @@
  */
 
 import { useEffect, useState, useCallback } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { App as CapApp } from '@capacitor/app';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { StatusBar, Style } from '@capacitor/status-bar';
@@ -248,4 +249,36 @@ export function useAppInfo() {
   }, []);
 
   return info;
+}
+
+/**
+ * Hook to manage background playback session
+ * Ensures the app stays alive on Android 14+
+ */
+export function useMediaPlayback() {
+  const startService = useCallback(async () => {
+    if (Capacitor.getPlatform() !== 'android') return;
+    try {
+      const { registerPlugin } = await import('@capacitor/core');
+      const MediaPlayback = registerPlugin<any>('MediaPlayback');
+      await MediaPlayback.startForegroundService();
+      console.log('✅ Native Foreground Service started');
+    } catch (error) {
+       console.error('Failed to start native service:', error);
+    }
+  }, []);
+
+  const stopService = useCallback(async () => {
+    if (Capacitor.getPlatform() !== 'android') return;
+    try {
+      const { registerPlugin } = await import('@capacitor/core');
+      const MediaPlayback = registerPlugin<any>('MediaPlayback');
+      await MediaPlayback.stopForegroundService();
+      console.log('🛑 Native Foreground Service stopped');
+    } catch (error) {
+       console.error('Failed to stop native service:', error);
+    }
+  }, []);
+
+  return { startService, stopService };
 }

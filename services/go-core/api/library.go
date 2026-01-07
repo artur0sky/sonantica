@@ -344,7 +344,7 @@ func GetAlbums(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Cache miss, query ALL from database
-		orderBy := "al.title ASC" // Default
+		orderBy := "al.title" // Default field
 
 		switch sortParam {
 		case "title":
@@ -404,7 +404,7 @@ func GetAlbums(w http.ResponseWriter, r *http.Request) {
 		limit = 100
 	}
 
-	orderBy := "al.title ASC" // Default
+	orderBy := "al.title" // Default field
 
 	switch sortParam {
 	case "title":
