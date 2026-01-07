@@ -19,7 +19,7 @@ import { cn } from "@sonantica/shared";
 import { usePlayerStore, useQueueStore } from "@sonantica/player-core";
 import { useLibraryStore } from "@sonantica/media-library";
 import { PlaybackState, formatArtists, formatTime } from "@sonantica/shared";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   ContextMenu,
   useContextMenu,
@@ -31,6 +31,7 @@ import { useOfflineStore } from "@sonantica/offline-manager";
 import { useSettingsStore } from "../../../stores/settingsStore";
 import { OfflineStatus } from "@sonantica/shared";
 import { useOfflineManager } from "../../../hooks/useOfflineManager";
+import { AddToPlaylistModal } from "../../../components/AddToPlaylistModal";
 
 interface TrackItemProps {
   track: any;
@@ -58,6 +59,7 @@ export function TrackItem({ track, onClick }: TrackItemProps) {
 
   // Context menu state
   const contextMenu = useContextMenu();
+  const [showPlaylistModal, setShowPlaylistModal] = useState(false);
 
   // If we should hide unavailable offline and it's not available, return null
   if (offlineMode && hideUnavailableOffline && !isOfflineAvailable) {
@@ -77,6 +79,12 @@ export function TrackItem({ track, onClick }: TrackItemProps) {
       label: "Add to Queue",
       icon: <IconPlaylistAdd size={18} stroke={1.5} />,
       onClick: () => addToQueue(trackToMediaSource(track)),
+    },
+    {
+      id: "add-to-playlist",
+      label: "Add to Playlist",
+      icon: <IconPlaylistAdd size={18} stroke={1.5} />,
+      onClick: () => setShowPlaylistModal(true),
     },
     {
       id: "divider-1",
@@ -268,6 +276,14 @@ export function TrackItem({ track, onClick }: TrackItemProps) {
         isOpen={contextMenu.isOpen}
         position={contextMenu.position}
         onClose={contextMenu.close}
+      />
+
+      {/* Add to Playlist Modal */}
+      <AddToPlaylistModal
+        isOpen={showPlaylistModal}
+        onClose={() => setShowPlaylistModal(false)}
+        trackId={track.id}
+        trackTitle={track.title}
       />
     </>
   );
