@@ -363,7 +363,7 @@ func GetAlbums(w http.ResponseWriter, r *http.Request) {
 
 		query := fmt.Sprintf(`
 			SELECT 
-				al.id, al.title, al.artist_id, al.release_date, al.cover_art, al.genre, al.created_at,
+				al.id, al.title, al.artist_id, al.release_date::TEXT, al.cover_art, al.genre, al.created_at,
 				a.name as artist_name
 			FROM albums al
 			LEFT JOIN artists a ON al.artist_id = a.id
@@ -431,7 +431,7 @@ func GetAlbums(w http.ResponseWriter, r *http.Request) {
 
 	query := fmt.Sprintf(`
 		SELECT 
-			al.id, al.title, al.artist_id, al.release_date, al.cover_art, al.genre, al.created_at,
+			al.id, al.title, al.artist_id, al.release_date::TEXT, al.cover_art, al.genre, al.created_at,
 			a.name as artist_name
 		FROM albums al
 		LEFT JOIN artists a ON al.artist_id = a.id
