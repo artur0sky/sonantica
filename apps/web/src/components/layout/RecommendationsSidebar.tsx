@@ -15,6 +15,7 @@ import {
   IconDisc,
   IconMicrophone,
   IconPlayerPlay,
+  IconPlaylistAdd,
 } from "@tabler/icons-react";
 import { useQueueStore } from "@sonantica/player-core";
 import { AnimatePresence, motion } from "framer-motion";
@@ -40,12 +41,44 @@ export function RecommendationsSidebar() {
     { value: 1.0, label: "Diverse" },
   ];
 
+  // Save recommendations as playlist
+  const handleSaveAsPlaylist = async () => {
+    const playlistName = prompt(
+      "Enter playlist name:",
+      `Discovery Mix ${new Date().toLocaleString()}`
+    );
+    if (!playlistName) return;
+
+    try {
+      const trackIds = trackRecommendations.map((rec: any) => rec.item.id);
+      console.log(
+        "Saving recommendations as playlist:",
+        playlistName,
+        trackIds
+      );
+      // await libraryAdapter.createPlaylist(playlistName, 'GENERATED', trackIds);
+    } catch (error) {
+      console.error("Failed to save playlist:", error);
+    }
+  };
+
   return (
     <SidebarContainer
       title="Discovery"
       onClose={toggleRecommendations}
       headerActions={
         <div className="flex gap-1">
+          {trackRecommendations.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSaveAsPlaylist}
+              className="p-2"
+              title="Save as Playlist"
+            >
+              <IconPlaylistAdd size={16} stroke={1.5} />
+            </Button>
+          )}
           {diversityOptions.map((opt) => (
             <Button
               key={opt.value}

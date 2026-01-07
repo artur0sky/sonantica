@@ -13,6 +13,7 @@ import {
   IconChevronUp,
   IconCloudDownload,
   IconCircleCheckFilled,
+  IconPlaylistAdd,
 } from "@tabler/icons-react";
 import {
   motion,
@@ -92,6 +93,25 @@ export function RightSidebar({ isCollapsed }: RightSidebarProps) {
     ? visibleQueue
     : visibleQueue.slice(0, 1);
 
+  // Save queue as playlist
+  const handleSaveAsPlaylist = async () => {
+    // TODO: Open modal to name the playlist
+    const playlistName = prompt(
+      "Enter playlist name:",
+      `Queue ${new Date().toLocaleString()}`
+    );
+    if (!playlistName) return;
+
+    try {
+      const trackIds = fullQueue.map((t) => t.id);
+      // This will be implemented when we integrate with the library adapter
+      console.log("Saving queue as playlist:", playlistName, trackIds);
+      // await libraryAdapter.createPlaylist(playlistName, 'MANUAL', trackIds);
+    } catch (error) {
+      console.error("Failed to save playlist:", error);
+    }
+  };
+
   return (
     <SidebarContainer
       title="Queue"
@@ -100,16 +120,28 @@ export function RightSidebar({ isCollapsed }: RightSidebarProps) {
       headerActions={
         !isCollapsed &&
         upcomingQueue.length > 0 && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={clearQueue}
-            className="p-2"
-            title="Clear Queue"
-          >
-            <IconTrash size={18} stroke={1.5} />
-            <span className="ml-1">Clear</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSaveAsPlaylist}
+              className="p-2"
+              title="Save as Playlist"
+            >
+              <IconPlaylistAdd size={18} stroke={1.5} />
+              <span className="ml-1">Save</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearQueue}
+              className="p-2"
+              title="Clear Queue"
+            >
+              <IconTrash size={18} stroke={1.5} />
+              <span className="ml-1">Clear</span>
+            </Button>
+          </div>
         )
       }
     >
