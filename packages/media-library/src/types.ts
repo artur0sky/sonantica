@@ -78,3 +78,30 @@ export interface LibraryFilter {
   year?: number;
   search?: string;
 }
+
+/**
+ * Playlist Type definition
+ * - MANUAL: Created by user
+ * - SMART: Rules based (dynamic)
+ * - GENERATED: Ephemeral/Radio mixes
+ * - HISTORY_SNAPSHOT: Saved queue state
+ */
+export type PlaylistType = 'MANUAL' | 'SMART' | 'GENERATED' | 'HISTORY_SNAPSHOT';
+
+/**
+ * Playlist definition
+ */
+export interface Playlist {
+  id: string;
+  name: string;
+  type: PlaylistType;
+  description?: string;
+  trackIds: string[]; // Ordered list of track IDs
+  createdAt: Date;
+  updatedAt: Date;
+  
+  // For HISTORY_SNAPSHOT
+  snapshotDate?: Date;
+  // For SMART playlists
+  rules?: Record<string, any>; 
+}

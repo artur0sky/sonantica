@@ -9,6 +9,7 @@
  */
 
 import type { Track, Artist, Album } from '@sonantica/shared';
+import type { Playlist, PlaylistType } from '../types';
 
 export interface LibraryStats {
     totalTracks: number;
@@ -104,4 +105,15 @@ export interface ILibraryAdapter {
         onScanComplete?: (stats: LibraryStats) => void;
         onScanStart?: () => void;
     }): () => void;
+
+    // --- Playlist Methods ---
+
+    createPlaylist(name: string, type: PlaylistType, trackIds?: string[]): Promise<Playlist>;
+    getPlaylists(filter?: { type?: PlaylistType }): Promise<Playlist[]>;
+    getPlaylist(id: string): Promise<Playlist>;
+    updatePlaylist(id: string, updates: Partial<Omit<Playlist, 'id' | 'type' | 'createdAt'>>): Promise<Playlist>;
+    deletePlaylist(id: string): Promise<void>;
+    addTracksToPlaylist(playlistId: string, trackIds: string[]): Promise<Playlist>;
+    removeTracksFromPlaylist(playlistId: string, trackIds: string[]): Promise<Playlist>;
+    saveQueueSnapshot(trackIds: string[]): Promise<Playlist>;
 }
