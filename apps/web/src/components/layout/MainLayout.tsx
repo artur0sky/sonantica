@@ -8,7 +8,7 @@
  */
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Suspense, lazy, useMemo, useEffect } from "react";
+import { Suspense, lazy, useMemo, useEffect, useRef } from "react";
 import { usePlayerStore } from "@sonantica/player-core";
 import {
   useUIStore,
@@ -96,12 +96,21 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   const isMobile = useMediaQuery("(max-width: 1023px)");
 
-  // Auto-close left sidebar when playing (desktop only)
+  // Auto-close left sidebar when playing starts (desktop only)
   const state = usePlayerStore((s) => s.state);
+  const prevState = useRef(state);
+
   useEffect(() => {
-    if (!isMobile && state === "playing" && currentTrack && isLeftSidebarOpen) {
+    if (
+      !isMobile &&
+      state === "playing" &&
+      prevState.current !== "playing" &&
+      currentTrack &&
+      isLeftSidebarOpen
+    ) {
       closeLeftSidebarOnPlay();
     }
+    prevState.current = state;
   }, [
     state,
     currentTrack,

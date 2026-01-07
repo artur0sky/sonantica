@@ -133,8 +133,47 @@ services:
         condition: service_healthy
     networks:
       - sonantica-net
+    command: ["celery", "-A", "worker.app", "worker", "--loglevel=info", "-Q", "celery", "-c", "2"]
     labels:
-      com.sonantica.description: "Audio Analysis Worker (Python)"
+      com.sonantica.description: "Audio Analysis & Analytics Worker (Celery)"
+
+  celery-beat:
+    build:
+      context: ./services/python-worker
+      dockerfile: Dockerfile
+    container_name: sonantica-beat
+    environment:
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-sonantica}
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - sonantica-net
+    command: ["celery", "-A", "worker.app", "beat", "--loglevel=info"]
+    labels:
+      com.sonantica.description: "Periodic Task Scheduler (Celery Beat)"
+
+  flower:
+    build:
+      context: ./services/python-worker
+      dockerfile: Dockerfile
+    container_name: sonantica-flower
+    environment:
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-sonantica}
+    ports:
+      - "5555:5555"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - sonantica-net
+    command: ["celery", "-A", "worker.app", "flower", "--port=5555"]
+    labels:
+      com.sonantica.description: "Celery Task Monitor"
 
   # ============================================
   # FRONTEND & PROXY

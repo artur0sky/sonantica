@@ -33,7 +33,7 @@ func (s *AnalyticsStorage) GetOverviewStats(ctx context.Context, filters *models
 	// A better approach for now is to use the pre-aggregated `listening_heatmap` for count/time
 	// if NO artist/album filter is applied.
 
-	if filters.ArtistName == nil && filters.AlbumTitle == nil {
+	if filters.ArtistName == nil && filters.AlbumTitle == nil && filters.ArtistID == nil && filters.AlbumID == nil {
 		// Use heatmap for faster queries
 		heatmapQuery := "SELECT COALESCE(SUM(play_count), 0), COALESCE(SUM(total_duration), 0) FROM listening_heatmap WHERE 1=1"
 
@@ -56,14 +56,7 @@ func (s *AnalyticsStorage) GetOverviewStats(ctx context.Context, filters *models
 			return stats, fmt.Errorf("failed to get overview from heatmap: %w", err)
 		}
 	} else {
-		// Optimization: For now, just count from track stats if filters are simple
-		// But track_statistics doesn't have time series.
-		// Let's stick to returning 0 or simplified counts if filters are present,
-		// waiting for a proper aggregated table design.
-
 		// Fallback: Query matching tracks
-		// access directly via track_statistics joined with tracks
-
 		query := `
 			SELECT 
 				COALESCE(SUM(ts.play_count), 0),
@@ -77,19 +70,25 @@ func (s *AnalyticsStorage) GetOverviewStats(ctx context.Context, filters *models
 		qArgs := []interface{}{}
 		qArgCount := 1
 
-		if filters.ArtistName != nil {
+		if filters.ArtistID != nil && *filters.ArtistID != "" {
+			query += fmt.Sprintf(" AND ar.id = $%d", qArgCount)
+			qArgs = append(qArgs, *filters.ArtistID)
+			qArgCount++
+		} else if filters.ArtistName != nil {
 			query += fmt.Sprintf(" AND ar.name = $%d", qArgCount)
 			qArgs = append(qArgs, *filters.ArtistName)
 			qArgCount++
 		}
-		if filters.AlbumTitle != nil {
+
+		if filters.AlbumID != nil && *filters.AlbumID != "" {
+			query += fmt.Sprintf(" AND al.id = $%d", qArgCount)
+			qArgs = append(qArgs, *filters.AlbumID)
+			qArgCount++
+		} else if filters.AlbumTitle != nil {
 			query += fmt.Sprintf(" AND al.title = $%d", qArgCount)
 			qArgs = append(qArgs, *filters.AlbumTitle)
 			qArgCount++
 		}
-
-		// Note: we ignore time filters here because track_statistics is global.
-		// This is a known limitation until we have time-bucketed stats per track.
 
 		err := s.db.QueryRow(ctx, query, qArgs...).Scan(&stats.TotalPlays, &stats.TotalPlayTime)
 		if err != nil {
@@ -149,7 +148,8 @@ func (s *AnalyticsStorage) GetOverviewStats(ctx context.Context, filters *models
 
 		// Cover Art Stats
 		var withCover, totalAlbums int
-		s.db.QueryRow(ctx, "SELECT COUNT(*) FROM albums WHERE cover_art_path IS NOT NULL AND cover_art_path != ''").Scan(&withCover)
+		s.db.QueryRow(ctx, "SELECT COUNT(*) FROM albums WHERE cover_art IS NOT NULL AND cover_art != ''").Scan(&withCover)
+
 		// Re-read total albums ensures consistency
 		s.db.QueryRow(ctx, "SELECT COUNT(*) FROM albums").Scan(&totalAlbums)
 

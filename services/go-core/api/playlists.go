@@ -133,9 +133,12 @@ func GetPlaylists(w http.ResponseWriter, r *http.Request) {
 			), '') as cover_arts,
 			COALESCE((
 				SELECT string_agg(track_id::text, ',')
-				FROM playlist_tracks
-				WHERE playlist_id = p.id
-				ORDER BY position ASC
+				FROM (
+					SELECT track_id
+					FROM playlist_tracks
+					WHERE playlist_id = p.id
+					ORDER BY position ASC
+				) t_ids
 			), '') as track_ids
 		FROM playlists p
 	`
