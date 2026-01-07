@@ -6,6 +6,8 @@
 
 import { motion } from "framer-motion";
 import { ArtistImage } from "@sonantica/ui";
+import { useLibraryStore } from "@sonantica/media-library";
+import { useMemo } from "react";
 
 interface ArtistCardProps {
   artist: any;
@@ -13,6 +15,14 @@ interface ArtistCardProps {
 }
 
 export function ArtistCard({ artist, onClick }: ArtistCardProps) {
+  const albums = useLibraryStore((s) => s.albums);
+
+  // Calculate actual album count from library
+  const actualAlbumCount = useMemo(
+    () => albums.filter((a) => a.artist === artist.name).length,
+    [albums, artist.name]
+  );
+
   return (
     <motion.div
       layout
@@ -44,7 +54,7 @@ export function ArtistCard({ artist, onClick }: ArtistCardProps) {
           {artist.name}
         </h3>
         <p className="text-sm text-text-muted truncate">
-          {artist.albumCount || 0} albums
+          {actualAlbumCount} albums
         </p>
       </div>
     </motion.div>

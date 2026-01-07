@@ -17,7 +17,9 @@ import {
   type ContextMenuItem,
 } from "@sonantica/ui";
 import { useQueueStore } from "@sonantica/player-core";
+import { useLibraryStore } from "@sonantica/media-library";
 import { gpuAnimations } from "@sonantica/shared";
+import { useMemo } from "react";
 
 interface AlbumCardProps {
   album: any;
@@ -27,6 +29,15 @@ interface AlbumCardProps {
 export function AlbumCard({ album, onClick }: AlbumCardProps) {
   const { addToQueue, playNext } = useQueueStore();
   const contextMenu = useContextMenu();
+  const tracks = useLibraryStore((s) => s.tracks);
+
+  // Calculate actual track count from library
+  const actualTrackCount = useMemo(
+    () =>
+      tracks.filter((t) => t.album === album.title && t.artist === album.artist)
+        .length,
+    [tracks, album.title, album.artist]
+  );
 
   // Context menu items
   const menuItems: ContextMenuItem[] = [
@@ -97,7 +108,7 @@ export function AlbumCard({ album, onClick }: AlbumCardProps) {
           </h3>
           <p className="text-sm text-text-muted truncate">{album.artist}</p>
           <p className="text-xs text-text-muted/60 mt-2 font-mono">
-            {album.year || "Unknown Year"} • {album.trackCount || 0} tracks
+            {album.year || "Unknown Year"} • {actualTrackCount} tracks
           </p>
         </div>
       </motion.div>

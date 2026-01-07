@@ -18,7 +18,7 @@ import { ArtistAnalyticsSection } from "../../analytics/components/ArtistAnalyti
 export function ArtistDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
-  const { getArtistById, albums } = useLibraryStore();
+  const { getArtistById, albums, tracks } = useLibraryStore();
 
   const artist = useMemo(
     () => (id ? getArtistById(id) : null) ?? null,
@@ -29,6 +29,12 @@ export function ArtistDetailPage() {
   const artistAlbums = useMemo(
     () => (artist ? albums.filter((a) => a.artist === artist.name) : []),
     [artist, albums]
+  );
+
+  // Calculate actual track count from library
+  const artistTrackCount = useMemo(
+    () => (artist ? tracks.filter((t) => t.artist === artist.name).length : 0),
+    [artist, tracks]
   );
 
   // Get similar artists
@@ -94,8 +100,8 @@ export function ArtistDetailPage() {
             </h1>
             <p className="text-lg text-text-muted">
               {artistAlbums.length} album
-              {artistAlbums.length !== 1 ? "s" : ""} • {artist.trackCount} track
-              {artist.trackCount !== 1 ? "s" : ""}
+              {artistAlbums.length !== 1 ? "s" : ""} • {artistTrackCount} track
+              {artistTrackCount !== 1 ? "s" : ""}
             </p>
           </motion.div>
         </div>
