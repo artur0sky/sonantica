@@ -128,6 +128,7 @@ func main() {
 		r.Get("/artists/{id}/tracks", api.GetTracksByArtist)
 		r.Get("/albums", api.GetAlbums)
 		r.Get("/albums/{id}/tracks", api.GetTracksByAlbum)
+		r.Get("/alphabet-index", api.GetAlphabetIndex)
 	})
 
 	r.Route("/api/scan", func(r chi.Router) {

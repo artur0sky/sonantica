@@ -90,7 +90,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   // Actions
   loadFromServers: (tracks: Track[], artists: Artist[], albums: Album[]) => {
     // Enrich tracks with cover art from albums
-    const enrichedTracks = tracks.map(track => {
+    const enrichTracks = (tracksToEnrich: Track[]) => tracksToEnrich.map(track => {
       if (track.coverArt) return track; // Already has art
       
       // Try to find album
@@ -107,6 +107,10 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
       }
       return track;
     });
+
+    const enrichedTracks = enrichTracks(tracks);
+    // Note: We don't merge here, loadFromServers replaces state by design.
+    // Use append* actions for incremental loading.
 
     const stats = calculateStats(enrichedTracks, artists, albums);
     set({
@@ -127,6 +131,34 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     set({ tracks, stats });
   },
 
+  appendTracks: (newTracks: Track[]) => {
+    const { tracks: currentTracks, artists, albums } = get();
+    // Enrich new tracks
+    const enrichTracks = (tracksToEnrich: Track[]) => tracksToEnrich.map(track => {
+      if (track.coverArt) return track; 
+      let album = track.albumId ? albums.find(a => a.id === track.albumId) : null;
+      if (!album) {
+        album = albums.find(a => a.title === track.album && a.artist === track.artist);
+      }
+      if (album && album.coverArt) {
+        return { ...track, coverArt: album.coverArt };
+      }
+      return track;
+    });
+
+    const enrichedNewTracks = enrichTracks(newTracks);
+    
+    // Deduplicate based on ID
+    const existingIds = new Set(currentTracks.map(t => t.id));
+    const uniqueNewTracks = enrichedNewTracks.filter(t => !existingIds.has(t.id));
+
+    if (uniqueNewTracks.length === 0) return;
+
+    const updatedTracks = [...currentTracks, ...uniqueNewTracks];
+    const stats = calculateStats(updatedTracks, artists, albums);
+    set({ tracks: updatedTracks, stats });
+  },
+
   setArtists: (artists) => {
     console.log('🔄 setArtists called with', artists.length, 'artists');
     const { tracks, albums } = get();
@@ -134,11 +166,35 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     set({ artists, stats });
   },
 
+  appendArtists: (newArtists: Artist[]) => {
+    const { tracks, artists: currentArtists, albums } = get();
+    const existingIds = new Set(currentArtists.map(a => a.id));
+    const uniqueNewArtists = newArtists.filter(a => !existingIds.has(a.id));
+
+    if (uniqueNewArtists.length === 0) return;
+
+    const updatedArtists = [...currentArtists, ...uniqueNewArtists];
+    const stats = calculateStats(tracks, updatedArtists, albums);
+    set({ artists: updatedArtists, stats });
+  },
+
   setAlbums: (albums) => {
     console.log('🔄 setAlbums called with', albums.length, 'albums');
     const { tracks, artists } = get();
     const stats = calculateStats(tracks, artists, albums);
     set({ albums, stats });
+  },
+
+  appendAlbums: (newAlbums: Album[]) => {
+    const { tracks, artists, albums: currentAlbums } = get();
+    const existingIds = new Set(currentAlbums.map(a => a.id));
+    const uniqueNewAlbums = newAlbums.filter(a => !existingIds.has(a.id));
+
+    if (uniqueNewAlbums.length === 0) return;
+
+    const updatedAlbums = [...currentAlbums, ...uniqueNewAlbums];
+    const stats = calculateStats(tracks, artists, updatedAlbums);
+    set({ albums: updatedAlbums, stats });
   },
 
   setLoading: (loading) => set({ loading }),

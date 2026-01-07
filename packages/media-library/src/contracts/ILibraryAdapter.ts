@@ -39,7 +39,7 @@ export interface ILibraryAdapter {
     /**
      * Get all tracks from the library
      */
-    getTracks(): Promise<Track[]>;
+    getTracks(options?: { limit?: number; offset?: number; sort?: string; order?: 'asc' | 'desc' }): Promise<Track[]>;
 
     /**
      * Get a single track by ID
@@ -49,7 +49,7 @@ export interface ILibraryAdapter {
     /**
      * Get all albums from the library
      */
-    getAlbums(): Promise<Album[]>;
+    getAlbums(options?: { limit?: number; offset?: number; sort?: string; order?: 'asc' | 'desc' }): Promise<Album[]>;
 
     /**
      * Get tracks for a specific album
@@ -59,7 +59,7 @@ export interface ILibraryAdapter {
     /**
      * Get all artists from the library
      */
-    getArtists(): Promise<Artist[]>;
+    getArtists(options?: { limit?: number; offset?: number; sort?: string; order?: 'asc' | 'desc' }): Promise<Artist[]>;
 
     /**
      * Get tracks for a specific artist
@@ -87,6 +87,11 @@ export interface ILibraryAdapter {
      * Get current scan status
      */
     getScanStatus(): Promise<ScanProgress>;
+
+    /**
+     * Get alphabet index (mapping of Letter -> Offset)
+     */
+    getAlphabetIndex(type: 'tracks' | 'artists' | 'albums'): Promise<Record<string, number>>;
 
     /**
      * Subscribe to real-time scan events (optional)
