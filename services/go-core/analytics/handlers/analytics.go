@@ -173,6 +173,16 @@ func (h *AnalyticsHandler) GetDashboard(w http.ResponseWriter, r *http.Request) 
 		overview = models.OverviewStats{}
 	}
 
+	// Get recent sessions
+	recentSessions, err := h.storage.GetRecentSessions(ctx, 10)
+	if err != nil {
+		log.Printf("Error getting recent sessions: %v", err)
+		recentSessions = []models.SessionSummary{}
+	}
+
+	// Get streaks (using a default identity for global dashboard, or could be extracted from session)
+	streak, _ := h.storage.GetListeningStreak(ctx, "anonymous")
+
 	// Build dashboard response
 	dashboard = models.DashboardMetrics{
 		StartDate:         filters.StartDate.Format("2006-01-02"),
@@ -183,8 +193,8 @@ func (h *AnalyticsHandler) GetDashboard(w http.ResponseWriter, r *http.Request) 
 		Overview:          overview,
 		PlaybackTimeline:  timeline,
 		GenreDistribution: genres,
-		RecentSessions:    []models.SessionSummary{},
-		ListeningStreak:   models.StreakData{},
+		RecentSessions:    recentSessions,
+		ListeningStreak:   streak,
 	}
 
 	// 3. Save to Cache (Async)
@@ -203,38 +213,100 @@ func (h *AnalyticsHandler) GetDashboard(w http.ResponseWriter, r *http.Request) 
 // GetTopTracks returns top played tracks
 func (h *AnalyticsHandler) GetTopTracks(w http.ResponseWriter, r *http.Request) {
 	filters := h.parseFilters(r)
+	ctx := r.Context()
 
-	tracks, err := h.storage.GetTopTracks(r.Context(), filters)
+	// 1. Try Cache
+	cacheKey := fmt.Sprintf("tracks:top:%s", hashFilters(filters))
+	var tracks []models.TopTrack
+	if err := cache.Get(ctx, cacheKey, &tracks); err == nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("X-Cache", "HIT")
+		json.NewEncoder(w).Encode(tracks)
+		return
+	}
+
+	// 2. Fetch
+	tracks, err := h.storage.GetTopTracks(ctx, filters)
 	if err != nil {
 		log.Printf("Error getting top tracks: %v", err)
 		http.Error(w, "Failed to get top tracks", http.StatusInternalServerError)
 		return
 	}
 
+	// 3. Cache
+	go func() {
+		cache.Set(context.Background(), cacheKey, tracks, 5*time.Minute)
+	}()
+
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("X-Cache", "MISS")
 	json.NewEncoder(w).Encode(tracks)
 }
 
 // GetPlatformStats returns platform statistics
 func (h *AnalyticsHandler) GetPlatformStats(w http.ResponseWriter, r *http.Request) {
 	filters := h.parseFilters(r)
+	ctx := r.Context()
 
-	stats, err := h.storage.GetPlatformStats(r.Context(), filters)
+	// 1. Try Cache
+	cacheKey := fmt.Sprintf("platform:stats:%s", hashFilters(filters))
+	var stats []models.PlatformStats
+	if err := cache.Get(ctx, cacheKey, &stats); err == nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("X-Cache", "HIT")
+		json.NewEncoder(w).Encode(stats)
+		return
+	}
+
+	// 2. Fetch
+	stats, err := h.storage.GetPlatformStats(ctx, filters)
 	if err != nil {
 		log.Printf("Error getting platform stats: %v", err)
 		http.Error(w, "Failed to get platform stats", http.StatusInternalServerError)
 		return
 	}
 
+	// 3. Cache
+	go func() {
+		cache.Set(context.Background(), cacheKey, stats, 10*time.Minute)
+	}()
+
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("X-Cache", "MISS")
 	json.NewEncoder(w).Encode(stats)
 }
 
 // GetListeningPatterns returns listening patterns
 func (h *AnalyticsHandler) GetListeningPatterns(w http.ResponseWriter, r *http.Request) {
-	// TODO: Implement listening pattern analysis
+	filters := h.parseFilters(r)
+	ctx := r.Context()
+
+	// 1. Try Cache
+	cacheKey := fmt.Sprintf("listening:patterns:%s", hashFilters(filters))
+	var patterns models.ListeningPattern
+	if err := cache.Get(ctx, cacheKey, &patterns); err == nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("X-Cache", "HIT")
+		json.NewEncoder(w).Encode(patterns)
+		return
+	}
+
+	// 2. Fetch
+	patterns, err := h.storage.GetListeningPatterns(ctx, filters)
+	if err != nil {
+		log.Printf("Error getting listening patterns: %v", err)
+		http.Error(w, "Failed to get patterns", http.StatusInternalServerError)
+		return
+	}
+
+	// 3. Cache
+	go func() {
+		cache.Set(context.Background(), cacheKey, patterns, 30*time.Minute)
+	}()
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(models.ListeningPattern{})
+	w.Header().Set("X-Cache", "MISS")
+	json.NewEncoder(w).Encode(patterns)
 }
 
 // GetArtistAnalytics returns analytics for a specific artist
@@ -363,62 +435,75 @@ func (h *AnalyticsHandler) handleSessionEvent(event *models.AnalyticsEvent) erro
 func (h *AnalyticsHandler) processEventForAggregation(event *models.AnalyticsEvent) {
 	ctx := context.Background()
 
-	// Process playback events for track statistics
-	if event.EventType == models.EventPlaybackComplete {
+	// 1. Process Playback Events
+	if strings.HasPrefix(string(event.EventType), "playback.") {
 		// Extract trackId from Data map
 		trackID, ok := event.Data["trackId"].(string)
 		if !ok || trackID == "" {
 			return
 		}
 
-		// Extract duration (optional)
-		duration := 0
-		if durationVal, ok := event.Data["duration"].(float64); ok {
-			duration = int(durationVal)
+		// Get additional track metadata (genre, etc.)
+		genre, _, _, _ := h.storage.GetTrackMetadata(ctx, trackID)
+
+		timestamp := time.Unix(0, event.Timestamp*int64(time.Millisecond))
+		hour := timestamp.Hour()
+
+		// User identity for streaks (fallback to session if no user)
+		identity := "anonymous"
+		if event.UserID != nil && *event.UserID != "" {
+			identity = *event.UserID
+		} else if event.SessionID != "" {
+			identity = event.SessionID
 		}
 
-		// Update track statistics
-		h.storage.UpdateTrackStatistics(
-			ctx,
-			trackID,
-			1,     // play count
-			1,     // complete count
-			0,     // skip count
-			duration,
-			100.0, // 100% completion
-		)
-	} else if event.EventType == models.EventPlaybackSkip {
-		// Extract trackId from Data map
-		trackID, ok := event.Data["trackId"].(string)
-		if !ok || trackID == "" {
-			return
-		}
+		switch event.EventType {
+		case models.EventPlaybackStart:
+			// Increment play count in track stats
+			h.storage.UpdateTrackStatistics(ctx, trackID, 1, 0, 0, 0, 0)
+			// Update heatmap
+			h.storage.UpdateListeningHeatmap(ctx, timestamp, hour, 1, 1, 0)
+			// Update genre stats
+			h.storage.UpdateGenreStatistics(ctx, genre, 1, 0, 1)
+			// Update streak (track count)
+			h.storage.UpdateListeningStreak(ctx, identity, timestamp, 1, 0)
 
-		// Extract position and duration for completion percentage
-		position := 0.0
-		duration := 0.0
-		completionPct := 0.0
+		case models.EventPlaybackComplete:
+			duration := 0
+			if d, ok := event.Data["duration"].(float64); ok {
+				duration = int(d)
+			}
+			// Update track stats (complete count and play time)
+			h.storage.UpdateTrackStatistics(ctx, trackID, 0, 1, 0, duration, 100.0)
+			// Update heatmap (play time)
+			h.storage.UpdateListeningHeatmap(ctx, timestamp, hour, 0, 0, duration)
+			// Update genre stats (play time)
+			h.storage.UpdateGenreStatistics(ctx, genre, 0, duration, 0)
+			// Update streak (play time)
+			h.storage.UpdateListeningStreak(ctx, identity, timestamp, 0, duration)
 
-		if posVal, ok := event.Data["position"].(float64); ok {
-			position = posVal
+		case models.EventPlaybackSkip:
+			position := 0.0
+			duration := 0.0
+			if p, ok := event.Data["position"].(float64); ok {
+				position = p
+			}
+			if d, ok := event.Data["duration"].(float64); ok {
+				duration = d
+			}
+			completionPct := 0.0
+			if duration > 0 {
+				completionPct = (position / duration) * 100.0
+			}
+			// Update track stats (skip count and play time)
+			h.storage.UpdateTrackStatistics(ctx, trackID, 0, 0, 1, int(position), completionPct)
+			// Update heatmap (play time)
+			h.storage.UpdateListeningHeatmap(ctx, timestamp, hour, 0, 0, int(position))
+			// Update genre stats (play time)
+			h.storage.UpdateGenreStatistics(ctx, genre, 0, int(position), 0)
+			// Update streak (play time)
+			h.storage.UpdateListeningStreak(ctx, identity, timestamp, 0, int(position))
 		}
-		if durVal, ok := event.Data["duration"].(float64); ok {
-			duration = durVal
-		}
-
-		if duration > 0 {
-			completionPct = (position / duration) * 100.0
-		}
-
-		h.storage.UpdateTrackStatistics(
-			ctx,
-			trackID,
-			1,   // play count
-			0,   // complete count
-			1,   // skip count
-			int(position),
-			completionPct,
-		)
 	}
 }
 

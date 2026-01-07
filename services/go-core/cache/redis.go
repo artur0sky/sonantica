@@ -281,3 +281,24 @@ func InvalidatePlaylistCache(ctx context.Context) error {
 	}
 	return nil
 }
+
+// ============================================
+// Analytics-specific cache functions
+// ============================================
+
+// SetAnalyticsData caches analytics results (dashboard, top tracks, etc.)
+func SetAnalyticsData(ctx context.Context, key string, data interface{}, ttl time.Duration) error {
+	fullKey := fmt.Sprintf("analytics:%s", key)
+	return Set(ctx, fullKey, data, ttl)
+}
+
+// GetAnalyticsData retrieves cached analytics results
+func GetAnalyticsData(ctx context.Context, key string, target interface{}) error {
+	fullKey := fmt.Sprintf("analytics:%s", key)
+	return Get(ctx, fullKey, target)
+}
+
+// InvalidateAnalyticsCache clears analytics-related cache
+func InvalidateAnalyticsCache(ctx context.Context) error {
+	return Invalidate(ctx, "analytics:*")
+}

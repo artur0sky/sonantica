@@ -166,13 +166,21 @@ func (s *AnalyticsStorage) GetTopTracks(ctx context.Context, filters *models.Que
 		argCount++
 	}
 
-	if filters.ArtistName != nil && *filters.ArtistName != "" {
+	if filters.ArtistID != nil && *filters.ArtistID != "" {
+		query += fmt.Sprintf(" AND ar.id = $%d", argCount)
+		args = append(args, *filters.ArtistID)
+		argCount++
+	} else if filters.ArtistName != nil && *filters.ArtistName != "" {
 		query += fmt.Sprintf(" AND ar.name = $%d", argCount)
 		args = append(args, *filters.ArtistName)
 		argCount++
 	}
 
-	if filters.AlbumTitle != nil && *filters.AlbumTitle != "" {
+	if filters.AlbumID != nil && *filters.AlbumID != "" {
+		query += fmt.Sprintf(" AND al.id = $%d", argCount)
+		args = append(args, *filters.AlbumID)
+		argCount++
+	} else if filters.AlbumTitle != nil && *filters.AlbumTitle != "" {
 		query += fmt.Sprintf(" AND al.title = $%d", argCount)
 		args = append(args, *filters.AlbumTitle)
 		argCount++
@@ -309,6 +317,70 @@ func (s *AnalyticsStorage) GetPlatformStats(ctx context.Context, filters *models
 
 // GetListeningHeatmap retrieves listening heatmap data
 func (s *AnalyticsStorage) GetListeningHeatmap(ctx context.Context, filters *models.QueryFilters) ([]models.HeatmapData, error) {
+	// If filtered by artist or album, we must query raw events (slower but accurate)
+	if (filters.ArtistID != nil && *filters.ArtistID != "") || (filters.ArtistName != nil && *filters.ArtistName != "") ||
+		(filters.AlbumID != nil && *filters.AlbumID != "") || (filters.AlbumTitle != nil && *filters.AlbumTitle != "") {
+
+		query := `
+			SELECT 
+				DATE(timestamp) as date,
+				EXTRACT(HOUR FROM timestamp)::int as hour,
+				COUNT(*) as play_count,
+				EXTRACT(DOW FROM timestamp)::int as day_of_week
+			FROM analytics_events
+			WHERE event_type = 'playback.start'
+		`
+		args := []interface{}{}
+		argCount := 1
+
+		if filters.StartDate != nil {
+			query += fmt.Sprintf(" AND timestamp >= $%d", argCount)
+			args = append(args, filters.StartDate)
+			argCount++
+		}
+		if filters.EndDate != nil {
+			query += fmt.Sprintf(" AND timestamp <= $%d", argCount)
+			args = append(args, filters.EndDate)
+			argCount++
+		}
+
+		// Filter by artist/album from JSON data (assuming it exists in data field)
+		if filters.ArtistID != nil && *filters.ArtistID != "" {
+			query += fmt.Sprintf(" AND (data->>'artistId') = $%d", argCount)
+			args = append(args, *filters.ArtistID)
+			argCount++
+		}
+		if filters.AlbumID != nil && *filters.AlbumID != "" {
+			query += fmt.Sprintf(" AND (data->>'albumId') = $%d", argCount)
+			args = append(args, *filters.AlbumID)
+			argCount++
+		}
+
+		query += " GROUP BY 1, 2, 4 ORDER BY 1, 2"
+
+		rows, err := s.db.Query(ctx, query, args...)
+		if err != nil {
+			return nil, err
+		}
+		defer rows.Close()
+
+		heatmap := []models.HeatmapData{}
+		for rows.Next() {
+			var d models.HeatmapData
+			var date time.Time
+			var hour, playCount, dow int
+			if err := rows.Scan(&date, &hour, &playCount, &dow); err == nil {
+				d.Date = date.Format("2006-01-02")
+				d.Hour = &hour
+				d.Value = playCount
+				d.DayOfWeek = dow
+				heatmap = append(heatmap, d)
+			}
+		}
+		return heatmap, nil
+	}
+
+	// Default: use aggregated table
 	query := `
 		SELECT 
 			date,
@@ -400,6 +472,58 @@ func (s *AnalyticsStorage) UpdateTrackStatistics(ctx context.Context, trackID st
 
 // GetPlaybackTimeline retrieves playback timeline data
 func (s *AnalyticsStorage) GetPlaybackTimeline(ctx context.Context, filters *models.QueryFilters) ([]models.TimelineData, error) {
+	// If filtered, use raw events
+	if (filters.ArtistID != nil && *filters.ArtistID != "") || (filters.AlbumID != nil && *filters.AlbumID != "") {
+		query := `
+			SELECT 
+				DATE(timestamp) as date,
+				COUNT(*) as play_count,
+				SUM((data->>'duration')::int) as play_time,
+				COUNT(DISTINCT (data->>'trackId')) as unique_tracks
+			FROM analytics_events
+			WHERE event_type = 'playback.complete'
+		`
+		args := []interface{}{}
+		argCount := 1
+
+		if filters.StartDate != nil {
+			query += fmt.Sprintf(" AND timestamp >= $%d", argCount)
+			args = append(args, filters.StartDate)
+			argCount++
+		}
+		if filters.EndDate != nil {
+			query += fmt.Sprintf(" AND timestamp <= $%d", argCount)
+			args = append(args, filters.EndDate)
+			argCount++
+		}
+		if filters.ArtistID != nil && *filters.ArtistID != "" {
+			query += fmt.Sprintf(" AND (data->>'artistId') = $%d", argCount)
+			args = append(args, *filters.ArtistID)
+			argCount++
+		}
+
+		query += " GROUP BY 1 ORDER BY 1 ASC"
+
+		rows, err := s.db.Query(ctx, query, args...)
+		if err != nil {
+			return nil, err
+		}
+		defer rows.Close()
+
+		timeline := []models.TimelineData{}
+		for rows.Next() {
+			var d models.TimelineData
+			var date time.Time
+			if err := rows.Scan(&date, &d.PlayCount, &d.PlayTime, &d.UniqueTracks); err == nil {
+				d.Date = date.Format("2006-01-02")
+				d.Timestamp = date.Format(time.RFC3339)
+				timeline = append(timeline, d)
+			}
+		}
+		return timeline, nil
+	}
+
+	// Default: use aggregated heatmap table (summed by date)
 	query := `
 		SELECT 
 			date,
@@ -493,4 +617,164 @@ func (s *AnalyticsStorage) GetGenreDistribution(ctx context.Context, filters *mo
 	}
 
 	return genres, nil
+}
+
+// UpdateListeningHeatmap updates the listening heatmap for a specific date and hour
+func (s *AnalyticsStorage) UpdateListeningHeatmap(ctx context.Context, date time.Time, hour int, playCount, uniqueTracks, totalDuration int) error {
+	query := `
+		INSERT INTO listening_heatmap (
+			date, hour, play_count, unique_tracks, total_duration, created_at, updated_at
+		) VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+		ON CONFLICT (date, hour) DO UPDATE SET
+			play_count = listening_heatmap.play_count + EXCLUDED.play_count,
+			unique_tracks = listening_heatmap.unique_tracks + EXCLUDED.unique_tracks,
+			total_duration = listening_heatmap.total_duration + EXCLUDED.total_duration,
+			updated_at = NOW()
+	`
+
+	_, err := s.db.Exec(ctx, query, date.Format("2006-01-02"), hour, playCount, uniqueTracks, totalDuration)
+	return err
+}
+
+// UpdateGenreStatistics updates search statistics for a genre
+func (s *AnalyticsStorage) UpdateGenreStatistics(ctx context.Context, genre string, playCount, totalPlayTime, uniqueTracks int) error {
+	if genre == "" {
+		genre = "Unknown"
+	}
+
+	query := `
+		INSERT INTO genre_statistics (
+			genre, play_count, total_play_time, unique_tracks, updated_at
+		) VALUES ($1, $2, $3, $4, NOW())
+		ON CONFLICT (genre) DO UPDATE SET
+			play_count = genre_statistics.play_count + EXCLUDED.play_count,
+			total_play_time = genre_statistics.total_play_time + EXCLUDED.total_play_time,
+			unique_tracks = genre_statistics.unique_tracks + EXCLUDED.unique_tracks,
+			last_played_at = NOW(),
+			updated_at = NOW()
+	`
+
+	_, err := s.db.Exec(ctx, query, genre, playCount, totalPlayTime, uniqueTracks)
+	return err
+}
+
+// GetTrackMetadata retrieves genre and other info for a track
+func (s *AnalyticsStorage) GetTrackMetadata(ctx context.Context, trackID string) (genre string, artistID string, albumID string, err error) {
+	query := `
+		SELECT COALESCE(genre, 'Unknown'), artist_id::text, album_id::text
+		FROM tracks
+		WHERE id = $1
+	`
+	err = s.db.QueryRow(ctx, query, trackID).Scan(&genre, &artistID, &albumID)
+	return
+}
+
+// UpdateListeningStreak updates the listening streak for a user/session
+func (s *AnalyticsStorage) UpdateListeningStreak(ctx context.Context, userID string, date time.Time, tracksPlayed int, playTime int) error {
+	query := `
+		INSERT INTO listening_streaks (
+			user_id, date, tracks_played, play_time, created_at
+		) VALUES ($1, $2, $3, $4, NOW())
+		ON CONFLICT (user_id, date) DO UPDATE SET
+			tracks_played = listening_streaks.tracks_played + EXCLUDED.tracks_played,
+			play_time = listening_streaks.play_time + EXCLUDED.play_time
+	`
+
+	_, err := s.db.Exec(ctx, query, userID, date.Format("2006-01-02"), tracksPlayed, playTime)
+	return err
+}
+
+// GetRecentSessions retrieves the most recent analytics sessions
+func (s *AnalyticsStorage) GetRecentSessions(ctx context.Context, limit int) ([]models.SessionSummary, error) {
+	query := `
+		SELECT 
+			session_id, platform, browser, started_at, ended_at,
+			(SELECT COUNT(*) FROM analytics_events WHERE session_id = s.session_id AND event_type LIKE 'playback.%%') as tracks_played,
+			(SELECT SUM((data->>'duration')::int) FROM analytics_events WHERE session_id = s.session_id AND event_type = 'playback.complete') as total_play_time
+		FROM analytics_sessions s
+		ORDER BY started_at DESC
+		LIMIT $1
+	`
+
+	rows, err := s.db.Query(ctx, query, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	summaries := []models.SessionSummary{}
+	for rows.Next() {
+		var sm models.SessionSummary
+		var start, end *time.Time
+		var browser *string
+		err := rows.Scan(&sm.SessionID, &sm.Platform, &browser, &start, &end, &sm.TracksPlayed, &sm.TotalPlayTime)
+		if err != nil {
+			return nil, err
+		}
+
+		if browser != nil {
+			sm.Browser = browser
+		}
+		if start != nil {
+			sm.StartTime = start.Format(time.RFC3339)
+		}
+		if end != nil {
+			endTime := end.Format(time.RFC3339)
+			sm.EndTime = &endTime
+			sm.Duration = int(end.Sub(*start).Seconds())
+		}
+
+		summaries = append(summaries, sm)
+	}
+
+	return summaries, nil
+}
+
+// GetListeningStreak calculates the current and longest listening streaks for a user
+func (s *AnalyticsStorage) GetListeningStreak(ctx context.Context, userID string) (models.StreakData, error) {
+	var streak models.StreakData
+
+	// Get total days active
+	queryTotals := `
+		SELECT 
+			COUNT(*) as total_days,
+			COALESCE(MAX(tracks_played), 0) as max_tracks_day
+		FROM listening_streaks
+		WHERE user_id = $1
+	`
+	err := s.db.QueryRow(ctx, queryTotals, userID).Scan(&streak.TotalDaysActive, &streak.CurrentStreak)
+	if err != nil {
+		return streak, err
+	}
+
+	streak.TotalWeeksActive = streak.TotalDaysActive / 7
+	return streak, nil
+}
+
+// GetListeningPatterns retrieves listening patterns analysis
+func (s *AnalyticsStorage) GetListeningPatterns(ctx context.Context, filters *models.QueryFilters) (models.ListeningPattern, error) {
+	var pattern models.ListeningPattern
+
+	// Peak Hour
+	s.db.QueryRow(ctx, "SELECT hour FROM listening_heatmap GROUP BY hour ORDER BY SUM(play_count) DESC LIMIT 1").Scan(&pattern.PeakListeningHour)
+
+	// Peak Day (DOW)
+	s.db.QueryRow(ctx, "SELECT EXTRACT(DOW FROM date) FROM listening_heatmap GROUP BY 1 ORDER BY SUM(play_count) DESC LIMIT 1").Scan(&pattern.PeakListeningDay)
+
+	// Average Session Length (from session summaries)
+	s.db.QueryRow(ctx, "SELECT COALESCE(AVG(EXTRACT(EPOCH FROM (ended_at - started_at))), 0) FROM analytics_sessions WHERE ended_at IS NOT NULL").Scan(&pattern.AverageSessionLength)
+
+	// Preferred Genres
+	rows, err := s.db.Query(ctx, "SELECT genre FROM genre_statistics ORDER BY play_count DESC LIMIT 5")
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var g string
+			if err := rows.Scan(&g); err == nil {
+				pattern.PreferredGenres = append(pattern.PreferredGenres, g)
+			}
+		}
+	}
+
+	return pattern, nil
 }

@@ -149,7 +149,8 @@ func (s *AnalyticsStorage) GetOverviewStats(ctx context.Context, filters *models
 
 		// Cover Art Stats
 		var withCover, totalAlbums int
-		s.db.QueryRow(ctx, "SELECT COUNT(*) FROM albums WHERE cover_art_path IS NOT NULL AND cover_art_path != ''").Scan(&withCover)
+		s.db.QueryRow(ctx, "SELECT COUNT(*) FROM albums WHERE cover_art IS NOT NULL AND cover_art != ''").Scan(&withCover)
+
 		// Re-read total albums ensures consistency
 		s.db.QueryRow(ctx, "SELECT COUNT(*) FROM albums").Scan(&totalAlbums)
 
