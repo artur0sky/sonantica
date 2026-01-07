@@ -9,6 +9,7 @@ export * from './components/atoms';
 
 // Molecules - Composite components
 export * from './components/molecules';
+export * from './components/molecules/PlaylistCard';
 
 export * from "./components/organisms";
 

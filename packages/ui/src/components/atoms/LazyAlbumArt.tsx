@@ -1,12 +1,12 @@
 /**
  * Lazy Album Art Component
- * 
+ *
  * Optimized image loading with:
  * - Lazy loading (only loads when visible)
  * - LRU cache (prevents memory leaks)
  * - Blur placeholder
  * - Error fallback
- * 
+ *
  * PERFORMANCE: Essential for large libraries (>1000 albums)
  */
 
@@ -23,11 +23,17 @@ interface LazyAlbumArtProps {
   iconSize?: number;
   /** Threshold for lazy loading (0-1, default 0.1 = 10% visible) */
   threshold?: number;
+  /** Custom fallback icon component */
+  fallbackIcon?: React.ComponentType<{
+    size?: number;
+    className?: string;
+    stroke?: number;
+  }>;
 }
 
 /**
  * Lazy-loaded album art with automatic fallback
- * 
+ *
  * PERFORMANCE FEATURES:
  * - Only loads when scrolled into view
  * - Blur-up effect for smooth loading
@@ -40,12 +46,22 @@ export const LazyAlbumArt = memo(function LazyAlbumArt({
   className,
   iconSize = 20,
   threshold = 0.1,
+  fallbackIcon: FallbackIcon = IconMusic,
 }: LazyAlbumArtProps) {
   // No src = show fallback immediately
   if (!src) {
     return (
-      <div className={cn("w-full h-full flex items-center justify-center bg-surface-elevated", className)}>
-        <IconMusic size={iconSize} className="text-text-muted/30" stroke={1.5} />
+      <div
+        className={cn(
+          "w-full h-full flex items-center justify-center bg-surface-elevated",
+          className
+        )}
+      >
+        <FallbackIcon
+          size={iconSize}
+          className="text-text-muted/30"
+          stroke={1.5}
+        />
       </div>
     );
   }
