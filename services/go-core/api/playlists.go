@@ -76,6 +76,13 @@ func CreatePlaylist(w http.ResponseWriter, r *http.Request) {
 	log.Printf("[CreatePlaylist] Playlist created successfully: id=%s, insertedTracks=%d/%d", playlistID, insertedTracks, len(req.TrackIDs))
 
 	// Return created playlist
+	trackUUIDs := []uuid.UUID{}
+	for _, tid := range req.TrackIDs {
+		if u, err := uuid.Parse(tid); err == nil {
+			trackUUIDs = append(trackUUIDs, u)
+		}
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(models.Playlist{
 		ID:          playlistID,
@@ -85,6 +92,7 @@ func CreatePlaylist(w http.ResponseWriter, r *http.Request) {
 		CreatedAt:   now,
 		UpdatedAt:   now,
 		TrackCount:  insertedTracks,
+		TrackIDs:    trackUUIDs,
 	})
 }
 
@@ -131,11 +139,11 @@ func GetPlaylists(w http.ResponseWriter, r *http.Request) {
 		if count > 0 {
 			// Get up to 4 covers
 			coverRows, _ := database.DB.Query(r.Context(), `
-                SELECT DISTINCT coalesce(al.cover_art_path, '') 
+                SELECT DISTINCT coalesce(al.cover_art, '') 
                 FROM playlist_tracks pt
                 JOIN tracks t ON pt.track_id = t.id
                 JOIN albums al ON t.album_id = al.id
-                WHERE pt.playlist_id = $1 AND al.cover_art_path IS NOT NULL
+                WHERE pt.playlist_id = $1 AND al.cover_art IS NOT NULL
                 LIMIT 4
              `, p.ID)
 			defer coverRows.Close()
@@ -150,6 +158,20 @@ func GetPlaylists(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 			p.CoverArts = covers
+
+			// Also get all track IDs for this playlist
+			idRows, _ := database.DB.Query(r.Context(), "SELECT track_id FROM playlist_tracks WHERE playlist_id = $1 ORDER BY position ASC", p.ID)
+			if idRows != nil {
+				defer idRows.Close()
+				tIDs := []uuid.UUID{}
+				for idRows.Next() {
+					var tID uuid.UUID
+					if err := idRows.Scan(&tID); err == nil {
+						tIDs = append(tIDs, tID)
+					}
+				}
+				p.TrackIDs = tIDs
+			}
 		}
 
 		playlists = append(playlists, p)
@@ -180,11 +202,48 @@ func GetPlaylist(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	p.Type = models.PlaylistType(typeStr)
+	var count int
+	_ = database.DB.QueryRow(r.Context(), "SELECT count(*) FROM playlist_tracks WHERE playlist_id = $1", p.ID).Scan(&count)
+	p.TrackCount = count
 
 	// Fetch tracks
-	// Note: This needs to join tracks to get metadata
-	// Ignoring full track fetch for brevity, returning IDs can be enough or full objects
-	// Returning full objects...
+	query := `
+		SELECT 
+			t.id, t.title, t.album_id, t.artist_id, t.file_path, t.duration_seconds, 
+			t.format, t.bitrate, t.sample_rate, t.channels, t.track_number, t.disc_number, 
+			t.genre, t.year, t.play_count, t.is_favorite, t.created_at, t.updated_at,
+			a.name as artist_name,
+			al.title as album_title,
+			al.cover_art as album_cover_art
+		FROM playlist_tracks pt
+		JOIN tracks t ON pt.track_id = t.id
+		LEFT JOIN artists a ON t.artist_id = a.id
+		LEFT JOIN albums al ON t.album_id = al.id
+		WHERE pt.playlist_id = $1
+		ORDER BY pt.position ASC
+	`
+
+	rows, err := database.DB.Query(r.Context(), query, p.ID)
+	if err != nil {
+		log.Printf("[GetPlaylist] Failed to query tracks: %v", err)
+	} else {
+		defer rows.Close()
+		for rows.Next() {
+			var t models.Track
+			err := rows.Scan(
+				&t.ID, &t.Title, &t.AlbumID, &t.ArtistID, &t.FilePath, &t.DurationSeconds,
+				&t.Format, &t.Bitrate, &t.SampleRate, &t.Channels, &t.TrackNumber, &t.DiscNumber,
+				&t.Genre, &t.Year, &t.PlayCount, &t.IsFavorite, &t.CreatedAt, &t.UpdatedAt,
+				&t.ArtistName, &t.AlbumTitle, &t.AlbumCoverArt,
+			)
+			if err != nil {
+				log.Printf("[GetPlaylist] Failed to scan track: %v", err)
+				continue
+			}
+			p.Tracks = append(p.Tracks, t)
+			p.TrackIDs = append(p.TrackIDs, t.ID)
+		}
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(p)

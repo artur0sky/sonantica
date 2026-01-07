@@ -26,8 +26,10 @@ type Playlist struct {
 	Rules        *string      `json:"rules,omitempty" db:"rules"` // Stored as JSON string
 
 	// Enriched fields
-	TrackCount int      `json:"trackCount,omitempty"`
-	CoverArts  []string `json:"coverArts,omitempty"` // First 4 covers for the grid
+	TrackCount int         `json:"trackCount,omitempty"`
+	CoverArts  []string    `json:"coverArts,omitempty"` // First 4 covers for the grid
+	Tracks     []Track     `json:"tracks,omitempty"`    // List of tracks in the playlist
+	TrackIDs   []uuid.UUID `json:"trackIds,omitempty"`  // List of track IDs for compatibility
 }
 
 type PlaylistTrack struct {
