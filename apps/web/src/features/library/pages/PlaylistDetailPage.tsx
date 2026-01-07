@@ -53,6 +53,31 @@ export function PlaylistDetailPage() {
       .filter((t): t is NonNullable<typeof t> => t !== undefined);
   }, [playlist, tracks]);
 
+  // Debug: Log playlist info
+  useEffect(() => {
+    if (playlist) {
+      console.log("[PlaylistDetailPage] Playlist:", {
+        id: playlist.id,
+        name: playlist.name,
+        trackIds: playlist.trackIds,
+        trackCount: playlist.trackIds?.length || 0,
+      });
+      console.log(
+        "[PlaylistDetailPage] Resolved tracks:",
+        playlistTracks.length
+      );
+      if (playlistTracks.length === 0 && playlist.trackIds?.length > 0) {
+        console.warn(
+          "[PlaylistDetailPage] Warning: Playlist has trackIds but no tracks were resolved!"
+        );
+        console.log(
+          "[PlaylistDetailPage] Available tracks in library:",
+          tracks.length
+        );
+      }
+    }
+  }, [playlist, playlistTracks, tracks.length]);
+
   if (!playlist) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] text-text-muted">
