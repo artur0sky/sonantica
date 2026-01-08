@@ -1,217 +1,316 @@
-# Plan de Refactorización: Atomic Design & Modularización
+# Plan de Refactorización: Atomic Design & Modularización - ACTUALIZADO
 
-Este documento detalla el plan para refactorizar los "God Components" identificados en la aplicación web (`MainLayout.tsx`, `EQSidebar.tsx`, `TracksPage.tsx`) siguiendo los principios de Atomic Design.
+Este documento detalla el plan completo para refactorizar los componentes de la aplicación web siguiendo los principios de Atomic Design.
 
 ---
 
 ## 🎯 Objetivos
-1.  **Reducir Complejidad Cognitiva:** Dividir archivos de >500 líneas en componentes pequeños y específicos.
-2.  **Mejorar Rendimiento:** Facilitar el code-splitting y renderizado condicional.
-3.  **Separación de Responsabilidades:** Aislar lógica de negocio (hooks) de la presentación (UI).
-4.  **Escalabilidad:** Facilitar la adición de nuevas características sin tocar el layout principal.
+
+1. **Reducir Complejidad Cognitiva:** Dividir archivos de >500 líneas en componentes pequeños y específicos.
+2. **Mejorar Rendimiento:** Facilitar el code-splitting y renderizado condicional.
+3. **Separación de Responsabilidades:** Aislar lógica de negocio (hooks) de la presentación (UI).
+4. **Escalabilidad:** Facilitar la adición de nuevas características sin tocar el layout principal.
+5. **Reutilización:** Crear componentes que puedan usarse en múltiples contextos.
 
 ---
 
-## 🏗️ 1. Refactorización de `MainLayout.tsx` (Prioridad Alta)
-*Actualmente: 25KB, gestiona estado, layouts móvil/desktop, temas, audio, etc.*
+## ✅ COMPLETADO - Prioridad Alta (100%)
 
-### Tareas:
+### 🏗️ 1. Refactorización de `MainLayout.tsx`
 
-- [x] **1.1. Crear `MobileOverlays` Organism** ✅ **COMPLETADO**
-    -   **Archivo:** `src/components/layout/mobile/MobileOverlays.tsx`
-    -   **Responsabilidad:** Renderizar todos los overlays (`AnimatePresence`) móviles (Sidebar izquierdo, derecho, Lyrics, EQ).
-    -   **Dependencia:** `useUIStore`.
-    -   **Estado:** Usa CSS animations (no Framer Motion), respeta `useAnimationSettings`
-    -   **Código eliminado:** ~190 líneas de MainLayout.tsx
-    -   **MainLayout reducido:** 670 → 480 líneas (~28% reducción)
+- [x] **1.1. MobileOverlays Organism** ✅
+- [x] **1.2. DesktopSidebars Organism** ✅
+- [x] **1.3. LayoutThemeManager** ✅
+- **Resultado:** 670 → 307 líneas (54% reducción)
 
-- [x] **1.2. Crear `DesktopSidebars` Organism** ✅ **COMPLETADO**
-    -   **Archivo:** `src/components/layout/desktop/DesktopSidebars.tsx`
-    -   **Responsabilidad:** Renderizar los `<aside>` de escritorio (Lyrics, Queue, EQ, Recommendations).
-    -   **Dependencia:** `Suspense`, `lazy` imports.
-    -   **Estado:** Sin animaciones (posicionamiento estático), lazy loading mantenido
-    -   **Código eliminado:** ~140 líneas de MainLayout.tsx
-    -   **MainLayout total reducido:** 670 → 335 líneas (~50% reducción)
+### 📦 2. Core Package Extractions
 
-- [x] **1.3. Crear `LayoutThemeManager` HOC/Provider** ✅ **COMPLETADO**
-    -   **Archivo:** `src/components/layout/managers/LayoutThemeManager.tsx`
-    -   **Responsabilidad:** Gestionar `useDominantColor` y aplicar las variables CSS.
-    -   **Estado:** Componente wrapper + hook `useLayoutTheme` para acceso a temas
-    -   **Código eliminado:** ~30 líneas de MainLayout.tsx
-    -   **MainLayout FINAL:** 670 → 307 líneas (**54% reducción total**)
-    -   **Beneficio:** Gestión centralizada de temas, fácil de testear y reutilizar
+- [x] **EmptyState** (Molecule) ✅
+- [x] **GraphicEQGrid** (Atom) ✅
 
 ---
 
-## 🎛️ 2. Refactorización de `EQSidebar.tsx` (Prioridad Media)
-*Actualmente: 21KB, mezcla 3 vistas distintas.*
+## 🔄 PENDIENTE - Prioridad Alta (Nuevo)
 
-### Tareas:
+### 📄 3. Componentes Compartidos de Páginas
 
-- [x] **2.1. Extraer `GraphicEQGrid` a `@sonantica/ui`** (📦 Core Extraction) ✅ **COMPLETADO**
-    -   **Destino:** `packages/ui/src/components/atoms/GraphicEQGrid.tsx`
-    -   **Responsabilidad:** Renderizar las líneas de eje y etiquetas dB (+12, 0, -12) de forma puramente visual.
-    -   **Motivo:** Reutilizable en cualquier visualización de audio.
-    -   **Estado:** Integrado en EQSidebar.tsx, 13 líneas eliminadas
-    -   **Bundle:** 14.87 KB → 14.16 KB (-700 bytes)
+#### **3.1. Crear `LibraryPageHeader` Organism** 🆕
+**Problema Identificado:**
+- ArtistsPage, AlbumsPage, PlaylistsPage, TracksPage tienen headers similares
+- Código duplicado: título, subtítulo, acciones (sort, multi-select)
+- ~80 líneas duplicadas por página
 
-- [ ] **2.2. Refactorizar Vistas Logic**
-    -   Crear `CollapsedEQView` (XS View).
-    -   Crear `GraphicEQView` (Visual View) usando el nuevo atom `GraphicEQGrid`.
-    -   Crear `ListEQView` (Compact View).
+**Solución:**
+- **Archivo:** `src/features/library/components/LibraryPageHeader.tsx`
+- **Props:**
+  ```ts
+  {
+    title: string;
+    subtitle?: string;
+    sortOptions?: SortOption[];
+    onSortChange?: (field: string, order: 'asc' | 'desc') => void;
+    enableMultiSelect?: boolean;
+    selectionType?: 'track' | 'artist' | 'album' | 'playlist';
+    customActions?: ReactNode;
+  }
+  ```
+- **Beneficio:** ~320 líneas eliminadas (4 páginas × 80 líneas)
 
-- [ ] **2.3. Crear `EQControls`**
-    -   Agrupar selector de presets y preamp.
+#### **3.2. Crear `VirtualizedGrid` Organism** 🆕
+**Problema Identificado:**
+- ArtistsPage, AlbumsPage usan grids similares
+- Lógica de virtualización repetida
+- Alphabet navigation duplicada
 
----
+**Solución:**
+- **Archivo:** `src/features/library/components/VirtualizedGrid.tsx`
+- **Props:**
+  ```ts
+  {
+    items: any[];
+    renderItem: (item: any, index: number) => ReactNode;
+    columns: { sm: number; md: number; lg: number };
+    enableAlphabet?: boolean;
+    onItemClick?: (item: any) => void;
+  }
+  ```
+- **Beneficio:** ~150 líneas eliminadas
 
-## 🎵 3. Refactorización de `TracksPage.tsx` (Prioridad Media)
-*Actualmente: 18KB, lógica mixta.*
+#### **3.3. Crear `VirtualizedList` Organism** 🆕
+**Problema Identificado:**
+- TracksPage tiene lista virtualizada compleja
+- Lógica de selección múltiple mezclada
 
-### Tareas:
-
-- [x] **3.1. Extraer `EmptyState` a `@sonantica/ui`** (📦 Core Extraction) ✅ **COMPLETADO**
-    -   **Destino:** `packages/ui/src/components/molecules/EmptyState.tsx`
-    -   **Props:** `icon`, `title`, `description`, `action` (ReactNode), `variant`.
-    -   **Motivo:** El diseño de "No music found" se repite en Playlists, Albums, Artists, etc.
-    -   **Estado:** Modernizado con CSS animations, 3 variantes (default, compact, minimal)
-    -   **Páginas actualizadas:** TracksPage.tsx, ArtistsPage.tsx
-    -   **Código eliminado:** ~80 líneas (40 por página)
-
-- [ ] **3.2. Componentizar Página**
-    -   `TracksHeader` (Organism).
-    -   `TracksVirtualList` (Organism).
-
----
-
-## 📦 4. Análisis de Candidatos a Paquetes Core
-
-### Candidatos para `@sonantica/ui`:
-| Componente | Origen Actual | Destino Propuesto | Estado |
-| :--- | :--- | :--- | :--- |
-| `EmptyState` | `TracksPage.tsx` (ln 388) | `molecules/EmptyState.tsx` | ✅ **Completado** |
-| `GraphicEQGrid` | `EQSidebar.tsx` (ln 385) | `atoms/GraphicEQGrid.tsx` | ✅ **Completado** |
-| `MobileOverlays` | `MainLayout.tsx` | `layout/mobile/MobileOverlays.tsx` | ✅ **Completado** |
-| `DesktopSidebars` | `MainLayout.tsx` | `layout/desktop/DesktopSidebars.tsx` | ✅ **Completado** |
-| `LayoutThemeManager` | `MainLayout.tsx` | `layout/managers/LayoutThemeManager.tsx` | ✅ **Completado** |
-| `SidebarLoader` | `MainLayout.tsx` (ln 50) | `atoms/CenteredLoader.tsx` | 🆕 Por crear |
-
-### Candidatos para `@sonantica/shared`:
-| Utilidad | Origen Actual | Destino Propuesto | Estado |
-| :--- | :--- | :--- | :--- |
-| `useDominantColor` | `hooks/useDominantColor.ts` | Mantener en app (específico de web) | ✅ Evaluado |
-| `isCramped` Logic | `MainLayout.tsx` (ln 147) | N/A (Lógica muy específica de UI Web) | ✅ Evaluado |
+**Solución:**
+- **Archivo:** `src/features/library/components/VirtualizedList.tsx`
+- **Separar:** Lógica de virtualización + UI
+- **Beneficio:** ~200 líneas más mantenibles
 
 ---
 
-## 📊 5. Progreso Final
+## 🎛️ PENDIENTE - Prioridad Media
+
+### 4. Componentes Compartidos de Sidebars
+
+#### **4.1. Crear `SidebarSection` Molecule** 🆕
+**Problema Identificado:**
+- RecommendationsSidebar tiene 3 secciones (Tracks, Albums, Artists)
+- Cada sección tiene header similar con icono + título
+- Patrón repetido en otros sidebars
+
+**Solución:**
+- **Archivo:** `packages/ui/src/components/molecules/SidebarSection.tsx`
+- **Props:**
+  ```ts
+  {
+    title: string;
+    icon?: ReactNode;
+    children: ReactNode;
+    className?: string;
+  }
+  ```
+- **Uso:**
+  ```tsx
+  <SidebarSection title="Suggested Tracks" icon={<IconMusic />}>
+    {/* content */}
+  </SidebarSection>
+  ```
+- **Beneficio:** Consistencia visual, ~30 líneas por sidebar
+
+#### **4.2. Crear `RecommendationCard` Molecule** 🆕
+**Problema Identificado:**
+- RecommendationsSidebar tiene 3 tipos de cards (track, album, artist)
+- Código duplicado para hover states, play buttons
+
+**Solución:**
+- **Archivo:** `src/features/recommendations/components/RecommendationCard.tsx`
+- **Variantes:** `track`, `album`, `artist`
+- **Beneficio:** ~100 líneas eliminadas
+
+#### **4.3. Refactorizar `EQSidebar` Views** 
+**Problema Identificado:**
+- Vista Colapsada (80 líneas)
+- Vista Expandida (330 líneas)
+- Lógica mezclada con presentación
+
+**Solución:**
+- Crear `CollapsedEQView.tsx`
+- Crear `ExpandedEQView.tsx`
+- Crear `EQControls.tsx` (preset + preamp)
+- **Beneficio:** ~400 líneas más organizadas
+
+---
+
+## 📦 5. Nuevos Candidatos a Core Packages
+
+### Para `@sonantica/ui`:
+
+| Componente | Origen | Destino | Prioridad | Estado |
+|------------|--------|---------|-----------|--------|
+| `LibraryPageHeader` | Páginas de library | `organisms/LibraryPageHeader.tsx` | 🔴 Alta | 🆕 |
+| `VirtualizedGrid` | ArtistsPage, AlbumsPage | `organisms/VirtualizedGrid.tsx` | 🔴 Alta | 🆕 |
+| `VirtualizedList` | TracksPage | `organisms/VirtualizedList.tsx` | 🔴 Alta | 🆕 |
+| `SidebarSection` | Sidebars | `molecules/SidebarSection.tsx` | 🟠 Media | 🆕 |
+| `RecommendationCard` | RecommendationsSidebar | `molecules/RecommendationCard.tsx` | 🟡 Baja | 🆕 |
+| `CollapsedEQView` | EQSidebar | `organisms/eq/CollapsedEQView.tsx` | 🟠 Media | 📋 |
+| `ExpandedEQView` | EQSidebar | `organisms/eq/ExpandedEQView.tsx` | 🟠 Media | 📋 |
+| `EQControls` | EQSidebar | `molecules/EQControls.tsx` | 🟠 Media | 📋 |
+
+### Para `@sonantica/shared`:
+
+| Utilidad | Descripción | Prioridad |
+|----------|-------------|-----------|
+| `useSortable` | Hook para sorting genérico | 🟠 Media |
+| `useVirtualScroll` | Hook para virtualización | 🟠 Media |
+| `useAlphabetNav` | Hook para navegación alfabética | 🟡 Baja |
+
+---
+
+## 📊 6. Progreso Actualizado
 
 ### ✅ Completado (2026-01-07):
 
-#### **Prioridad Alta - MainLayout Refactoring (100% ✅):**
-1. **MobileOverlays organism** - CSS animations, respeta useAnimationSettings (~190 líneas eliminadas)
-2. **DesktopSidebars organism** - Posicionamiento estático, lazy loading (~140 líneas eliminadas)
-3. **LayoutThemeManager** - Gestión centralizada de temas (~30 líneas eliminadas)
+#### **Prioridad Alta - MainLayout (100% ✅):**
+1. MobileOverlays organism (~190 líneas eliminadas)
+2. DesktopSidebars organism (~140 líneas eliminadas)
+3. LayoutThemeManager (~30 líneas eliminadas)
 
-#### **Core Package Extractions:**
-4. **EmptyState modernizado** - CSS animations, 3 variantes, TypeScript mejorado (~80 líneas eliminadas)
-5. **GraphicEQGrid creado** - Atom reutilizable para visualización de audio (13 líneas eliminadas)
+#### **Core Packages:**
+4. EmptyState modernizado (~80 líneas eliminadas)
+5. GraphicEQGrid creado (13 líneas eliminadas)
 
 #### **Integraciones:**
-6. **TracksPage actualizado** - Usando EmptyState
-7. **ArtistsPage actualizado** - Usando EmptyState
-8. **EQSidebar actualizado** - Usando GraphicEQGrid
-9. **MainLayout refactorizado** - Usando MobileOverlays, DesktopSidebars y LayoutThemeManager
+6. TracksPage, ArtistsPage, EQSidebar, MainLayout actualizados
 
-#### **Calidad:**
-10. **Compilación exitosa** - Sin errores TypeScript
-11. **Sistema de animaciones** - Todos los componentes usan CSS (no Framer Motion)
+### 📈 Métricas Actuales:
 
-### 📈 Métricas Finales:
+| Métrica | Valor |
+|---------|-------|
+| **Componentes creados** | 5 |
+| **Código eliminado** | ~453 líneas |
+| **MainLayout reducido** | 54% |
+| **Tareas completadas** | 6 de 17 (35%) |
+| **Prioridad Alta completada** | 100% (MainLayout) |
 
-| Métrica | Valor | Impacto |
-|---------|-------|---------|
-| **Componentes reutilizables creados** | 5 | +500% modularidad |
-| **Código total eliminado** | ~453 líneas | Menos mantenimiento |
-| **MainLayout reducido** | 670 → 307 líneas | **54% más pequeño** |
-| **EQSidebar optimizado** | 14.87 KB → 14.16 KB | -700 bytes |
-| **Archivos creados** | 5 nuevos componentes | Mejor organización |
-| **Páginas refactorizadas** | 5 | Consistencia mejorada |
-| **Pasos completados** | 6 de 11 tareas | **55% progreso total** |
-| **Prioridad Alta** | 3 de 3 tareas | **100% completado** |
+### 🎯 Métricas Proyectadas (Al completar todo):
 
-### 🎯 Próximos Pasos Recomendados:
-
-**Prioridad Media:**
-- [ ] **Paso 2.2**: Refactorizar vistas de EQSidebar (CollapsedView, GraphicView, ListView)
-- [ ] **Paso 2.3**: Crear EQControls organism
-- [ ] **Paso 3.2**: Componentizar TracksPage (Header + VirtualList)
-
-**Optimizaciones Futuras:**
-- [ ] Extraer `SidebarLoader` a `@sonantica/ui` como `CenteredLoader`
-- [ ] Evaluar extracción de lógica de resize a hook compartido
-- [ ] Considerar crear `LayoutProvider` para contexto global
+| Métrica | Valor Proyectado |
+|---------|------------------|
+| **Componentes totales** | ~13 |
+| **Código total eliminado** | ~1,500 líneas |
+| **Páginas optimizadas** | 7 |
+| **Sidebars optimizados** | 5 |
 
 ---
 
-## 📂 Nueva Estructura de Directorios Implementada
+## 📂 7. Nueva Estructura Propuesta
 
 ```text
 apps/web/src/
 ├── components/
 │   ├── layout/
 │   │   ├── mobile/
-│   │   │   └── MobileOverlays.tsx       ✅ Creado
+│   │   │   └── MobileOverlays.tsx              ✅
 │   │   ├── desktop/
-│   │   │   └── DesktopSidebars.tsx      ✅ Creado
+│   │   │   └── DesktopSidebars.tsx             ✅
 │   │   ├── managers/
-│   │   │   └── LayoutThemeManager.tsx   ✅ Creado
-│   │   ├── MainLayout.tsx               ✅ Refactorizado (54% reducción)
-│   │   ├── EQSidebar.tsx                ✅ Optimizado
-│   │   ├── LeftSidebar.tsx
-│   │   └── RightSidebar.tsx
+│   │   │   └── LayoutThemeManager.tsx          ✅
+│   │   ├── MainLayout.tsx                      ✅
+│   │   ├── EQSidebar.tsx                       🔄 (Pendiente refactor)
+│   │   └── ...
 │   └── ...
 ├── features/
 │   ├── library/
+│   │   ├── components/
+│   │   │   ├── LibraryPageHeader.tsx           🆕 Crear
+│   │   │   ├── VirtualizedGrid.tsx             🆕 Crear
+│   │   │   ├── VirtualizedList.tsx             🆕 Crear
+│   │   │   ├── ArtistCard.tsx
+│   │   │   └── TrackItem.tsx
 │   │   └── pages/
-│   │       ├── TracksPage.tsx           ✅ Actualizado
-│   │       └── ArtistsPage.tsx          ✅ Actualizado
-│   └── ...
+│   │       ├── ArtistsPage.tsx                 🔄 Actualizar
+│   │       ├── AlbumsPage.tsx                  🔄 Actualizar
+│   │       ├── PlaylistsPage.tsx               🔄 Actualizar
+│   │       └── TracksPage.tsx                  🔄 Actualizar
+│   ├── recommendations/
+│   │   └── components/
+│   │       └── RecommendationCard.tsx          🆕 Crear
+│   └── dsp/
+│       └── components/
+│           └── eq/
+│               ├── CollapsedEQView.tsx         🆕 Crear
+│               ├── ExpandedEQView.tsx          🆕 Crear
+│               └── EQControls.tsx              🆕 Crear
 
 packages/ui/src/components/
 ├── atoms/
-│   ├── GraphicEQGrid.tsx                ✅ Creado
+│   ├── GraphicEQGrid.tsx                       ✅
 │   └── ...
 ├── molecules/
-│   ├── EmptyState.tsx                   ✅ Modernizado
+│   ├── EmptyState.tsx                          ✅
+│   ├── SidebarSection.tsx                      🆕 Crear
 │   └── ...
-└── ...
+└── organisms/
+    ├── LibraryPageHeader.tsx                   🆕 Crear
+    ├── VirtualizedGrid.tsx                     🆕 Crear
+    └── VirtualizedList.tsx                     🆕 Crear
 ```
 
 ---
 
-## 🏆 Logros Destacados
+## � 8. Plan de Ejecución Recomendado
 
-### **Arquitectura:**
-- ✅ Atomic Design principles aplicados consistentemente
-- ✅ Clean Architecture respetada (separación de responsabilidades)
-- ✅ Preparado para multi-repo migration
+### **Fase 1 - Componentes Compartidos de Páginas** (Prioridad Alta)
+1. Crear `LibraryPageHeader` organism
+2. Actualizar ArtistsPage, AlbumsPage, PlaylistsPage, TracksPage
+3. **Impacto:** ~320 líneas eliminadas, 4 páginas consistentes
 
-### **Performance:**
-- ✅ CSS animations en lugar de Framer Motion (mejor INP)
-- ✅ Lazy loading mantenido para sidebars pesados
-- ✅ Bundle size optimizado
+### **Fase 2 - Virtualización** (Prioridad Alta)
+1. Crear `VirtualizedGrid` organism
+2. Crear `VirtualizedList` organism
+3. Actualizar páginas correspondientes
+4. **Impacto:** ~350 líneas más mantenibles
 
-### **Mantenibilidad:**
-- ✅ MainLayout 54% más pequeño y legible
-- ✅ Componentes con responsabilidad única
-- ✅ Código más fácil de testear
+### **Fase 3 - Componentes de Sidebars** (Prioridad Media)
+1. Crear `SidebarSection` molecule
+2. Crear `RecommendationCard` molecule
+3. Actualizar RecommendationsSidebar
+4. **Impacto:** ~130 líneas eliminadas, mejor consistencia
 
-### **Reutilización:**
-- ✅ 5 componentes listos para apps móvil/desktop
-- ✅ Design system en crecimiento
-- ✅ Temas centralizados y reutilizables
+### **Fase 4 - EQSidebar Refactor** (Prioridad Media)
+1. Crear `CollapsedEQView`, `ExpandedEQView`, `EQControls`
+2. Refactorizar EQSidebar
+3. **Impacto:** ~400 líneas más organizadas
 
 ---
 
-**Nota:** Cada paso se completó asegurando que no se rompe la funcionalidad existente. Todas las compilaciones fueron exitosas sin errores TypeScript.
+## 🏆 9. Logros y Beneficios
+
+### **Arquitectura:**
+- ✅ Atomic Design aplicado consistentemente
+- ✅ Clean Architecture respetada
+- ✅ Preparado para multi-repo migration
+- 🆕 Componentes compartidos entre páginas
+- 🆕 Patrones de diseño reutilizables
+
+### **Performance:**
+- ✅ CSS animations (no Framer Motion en nuevos componentes)
+- ✅ Lazy loading mantenido
+- 🆕 Virtualización optimizada y reutilizable
+
+### **Mantenibilidad:**
+- ✅ MainLayout 54% más pequeño
+- 🆕 Headers de páginas unificados
+- 🆕 Lógica de virtualización centralizada
+- 🆕 Sidebars con estructura consistente
+
+### **Reutilización:**
+- ✅ 5 componentes creados
+- 🆕 13 componentes proyectados
+- 🆕 Hooks compartidos para lógica común
+
+---
+
+**Última actualización:** 2026-01-07
+**Estado:** Prioridad Alta completada, nuevas tareas identificadas
+**Próximo paso:** Fase 1 - LibraryPageHeader
