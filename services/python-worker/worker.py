@@ -181,7 +181,8 @@ class ListeningHeatmap(Base):
     play_count = Column(Integer, default=0)
     unique_tracks = Column(Integer, default=0)
     total_duration = Column(Integer, default=0)
-    UNIQUE_CONSTRAINT = UniqueConstraint('date', 'hour', name='uq_date_hour')
+    
+    __table_args__ = (UniqueConstraint('date', 'hour', name='uq_date_hour'),)
 
 class GenreStatistics(Base):
     __tablename__ = 'genre_statistics'
