@@ -40,3 +40,10 @@ export * from './EQPresetSelector';
 // Selection molecules
 export * from './SelectionActionButton';
 export * from './SelectionInfo';
+
+// Modal and Dialogs
+export * from './Modal';
+export { ConfirmDialog } from './ConfirmDialog';
+export type { ConfirmDialogProps } from './ConfirmDialog';
+export { PromptDialog } from './PromptDialog';
+export type { PromptDialogProps } from './PromptDialog';
