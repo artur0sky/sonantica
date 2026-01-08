@@ -48,7 +48,7 @@ export function TrackItem({ track, onClick }: TrackItemProps) {
 
   // Offline state
   const offlineItem = useOfflineStore((state: any) => state.items[track.id]);
-  const { offlineMode, hideUnavailableOffline } = useSettingsStore();
+  const { offlineMode } = useSettingsStore();
 
   const isOfflineAvailable = offlineItem?.status === OfflineStatus.COMPLETED;
   const isDownloading = offlineItem?.status === OfflineStatus.DOWNLOADING;
@@ -66,11 +66,6 @@ export function TrackItem({ track, onClick }: TrackItemProps) {
     useSelectionStore();
   const isInSelectionMode = isSelectionMode && itemType === "track";
   const selected = isInSelectionMode && isSelected(track.id);
-
-  // If we should hide unavailable offline and it's not available, return null
-  if (offlineMode && hideUnavailableOffline && !isOfflineAvailable) {
-    return null;
-  }
 
   // Context menu items
   const menuItems: ContextMenuItem[] = [

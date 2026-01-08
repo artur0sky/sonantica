@@ -2,6 +2,9 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { usePlayerStore, useQueueStore } from "@sonantica/player-core";
 import { useLibraryStore } from "@sonantica/media-library";
 import { useUIStore } from "@sonantica/ui";
+import { useOfflineStore } from "@sonantica/offline-manager";
+import { useSettingsStore } from "../stores/settingsStore";
+import { OfflineStatus } from "@sonantica/shared";
 
 export function useQueueLogic() {
   const currentTrack = usePlayerStore((s) => s.currentTrack);
@@ -16,7 +19,18 @@ export function useQueueLogic() {
   } = useQueueStore();
   const libraryTracks = useLibraryStore((s) => s.tracks);
 
-  const upcomingQueue = getRemainingTracks();
+  const { offlineMode, hideUnavailableOffline } = useSettingsStore();
+  const offlineItems = useOfflineStore((state: any) => state.items);
+
+  const upcomingQueue = useMemo(() => {
+    const remaining = getRemainingTracks();
+    if (offlineMode && hideUnavailableOffline) {
+      return remaining.filter((track: any) => 
+        offlineItems[track.id]?.status === OfflineStatus.COMPLETED
+      );
+    }
+    return remaining;
+  }, [getRemainingTracks, offlineMode, hideUnavailableOffline, offlineItems]);
 
   // Infinite Scroll State
   const [displayedCount, setDisplayedCount] = useState(50);
@@ -74,16 +88,28 @@ export function useQueueLogic() {
     return "";
   };
 
-  async function handlePlay(track: any, index: number) {
+  async function handlePlay(track: any) {
     const queueStore = useQueueStore.getState();
-    queueStore.jumpTo(queueStore.currentIndex + index + 1);
-    await loadTrack(track);
-    await play();
+    const absoluteIndex = queueStore.queue.findIndex(
+      (t, idx) => idx > queueStore.currentIndex && t.id === track.id
+    );
+
+    if (absoluteIndex !== -1) {
+      queueStore.jumpTo(absoluteIndex);
+      await loadTrack(track);
+      await play();
+    }
   }
 
-  function handleRemove(index: number) {
-     const queueStore = useQueueStore.getState();
-     queueStore.removeFromQueue(queueStore.currentIndex + index + 1);
+  function handleRemove(trackId: string) {
+    const queueStore = useQueueStore.getState();
+    const absoluteIndex = queueStore.queue.findIndex(
+      (t, idx) => idx > queueStore.currentIndex && t.id === trackId
+    );
+
+    if (absoluteIndex !== -1) {
+      queueStore.removeFromQueue(absoluteIndex);
+    }
   }
 
   return {

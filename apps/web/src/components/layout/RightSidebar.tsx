@@ -281,8 +281,8 @@ export function RightSidebar({ isCollapsed }: RightSidebarProps) {
                       track={track}
                       index={index}
                       isCollapsed={isCollapsed}
-                      onPlay={() => handlePlay(track, index)}
-                      onRemove={() => handleRemove(index)}
+                      onPlay={() => handlePlay(track)}
+                      onRemove={() => handleRemove(track.id)}
                       getExtension={getExtension}
                       getBadgeClass={getBadgeClass}
                     />
@@ -341,7 +341,7 @@ function QueueItem({
 
   // Offline state
   const offlineItem = useOfflineStore((state: any) => state.items[track.id]);
-  const { offlineMode, hideUnavailableOffline } = useSettingsStore();
+  const { offlineMode } = useSettingsStore();
 
   const isOfflineAvailable = offlineItem?.status === OfflineStatus.COMPLETED;
   const isDownloading = offlineItem?.status === OfflineStatus.DOWNLOADING;
@@ -352,11 +352,6 @@ function QueueItem({
   const artist = track.metadata?.artist || track.artist || "Unknown Artist";
   const duration = track.metadata?.duration || track.duration || 0;
   const bitrate = track.metadata?.bitrate || track.bitrate;
-
-  // Hide if offline mode and hideUnavailableOffline is true
-  if (offlineMode && hideUnavailableOffline && !isOfflineAvailable) {
-    return null;
-  }
 
   // Lazy hydration on appearance
   useEffect(() => {

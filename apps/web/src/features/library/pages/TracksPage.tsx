@@ -6,7 +6,7 @@
  * Uses Framer Motion for page transitions (controlled by Settings)
  */
 
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { Link } from "wouter";
 import {
   LibraryPageHeader,
@@ -15,8 +15,10 @@ import {
   useUIStore,
 } from "@sonantica/ui";
 import { useLibraryStore } from "@sonantica/media-library";
-import { useSortable, useAlphabetNav } from "@sonantica/shared";
+import { useSortable, useAlphabetNav, OfflineStatus } from "@sonantica/shared";
 import { TrackItem } from "../components/TrackItem";
+import { useOfflineStore } from "@sonantica/offline-manager";
+import { useSettingsStore } from "../../../stores/settingsStore";
 import {
   IconMusic,
   IconSearch,
@@ -35,8 +37,22 @@ import { SelectionActionBar } from "../../../components/SelectionActionBar";
 export function TracksPage() {
   const { stats, searchQuery, getFilteredTracks } = useLibraryStore();
   const isCramped = useUIStore((state) => state.isCramped);
+  const { offlineMode, hideUnavailableOffline } = useSettingsStore();
+  const offlineItems = useOfflineStore((state) => state.items);
 
-  const filteredTracks = getFilteredTracks();
+  const filteredTracks = useMemo(() => {
+    let tracks = getFilteredTracks();
+
+    // Apply offline filtering if needed
+    if (offlineMode && hideUnavailableOffline) {
+      tracks = tracks.filter(
+        (track: any) =>
+          offlineItems[track.id]?.status === OfflineStatus.COMPLETED
+      );
+    }
+
+    return tracks;
+  }, [getFilteredTracks, offlineMode, hideUnavailableOffline, offlineItems]);
 
   const {
     sortField,
