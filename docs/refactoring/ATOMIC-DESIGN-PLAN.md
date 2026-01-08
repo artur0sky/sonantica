@@ -32,7 +32,79 @@ Este documento detalla el plan completo para refactorizar los componentes de la 
 
 ## 🔄 PENDIENTE - Prioridad Alta (Nuevo)
 
-### 📄 3. Componentes Compartidos de Páginas
+### 🎵 3. Atomización del MiniPlayer 🆕
+
+**Problema Identificado:**
+- MiniPlayer.tsx tiene 314 líneas con múltiples responsabilidades
+- Mezcla lógica de UI, estado, animaciones y gestos
+- Usa Framer Motion (debe migrar a CSS animations)
+- Componentes internos no reutilizables
+
+**Componentes a Extraer:**
+
+#### **3.1. Crear `TrackInfo` Molecule** 🆕
+- **Archivo:** `packages/ui/src/components/molecules/TrackInfo.tsx`
+- **Responsabilidad:** Cover art + título + artista
+- **Props:**
+  ```ts
+  {
+    coverArt?: string;
+    title: string;
+    artist: string;
+    onClick?: () => void;
+    enableDragGesture?: boolean;
+    onSwipeLeft?: () => void;
+    onSwipeRight?: () => void;
+  }
+  ```
+- **Beneficio:** ~40 líneas, reutilizable en ExpandedPlayer
+
+#### **3.2. Crear `PlaybackControls` Molecule** 🆕
+- **Archivo:** `packages/ui/src/components/molecules/PlaybackControls.tsx`
+- **Responsabilidad:** Botones de reproducción (shuffle, prev, play, next, repeat)
+- **Props:**
+  ```ts
+  {
+    isPlaying: boolean;
+    repeatMode: RepeatMode;
+    isShuffled: boolean;
+    onPlay: () => void;
+    onPause: () => void;
+    onNext: () => void;
+    onPrevious: () => void;
+    onToggleRepeat: () => void;
+    onToggleShuffle: () => void;
+    size?: 'sm' | 'md' | 'lg';
+  }
+  ```
+- **Beneficio:** ~30 líneas, reutilizable en ExpandedPlayer
+
+#### **3.3. Crear `SidebarButtonCarousel` Molecule** 🆕
+- **Archivo:** `packages/ui/src/components/molecules/SidebarButtonCarousel.tsx`
+- **Responsabilidad:** Botones de sidebar con swipe/long-press
+- **Props:**
+  ```ts
+  {
+    buttons: Array<{
+      id: string;
+      icon: ComponentType;
+      label: string;
+      action: () => void;
+      isActive?: boolean;
+    }>;
+    enableSwipe?: boolean;
+  }
+  ```
+- **Beneficio:** ~100 líneas, lógica compleja aislada
+
+#### **3.4. Refactorizar MiniPlayer**
+- Usar los 3 componentes nuevos
+- Migrar de Framer Motion a CSS animations
+- **Resultado proyectado:** 314 → ~140 líneas (55% reducción)
+
+---
+
+### 📄 4. Componentes Compartidos de Páginas
 
 #### **3.1. Crear `LibraryPageHeader` Organism** 🆕
 **Problema Identificado:**
@@ -311,6 +383,160 @@ packages/ui/src/components/
 
 ---
 
-**Última actualización:** 2026-01-07
-**Estado:** Prioridad Alta completada, nuevas tareas identificadas
-**Próximo paso:** Fase 1 - LibraryPageHeader
+## 🎨 9. Migración de Framer Motion a CSS Animations 🆕
+
+**Filosofía de Sonántica:**
+> "El sistema de animaciones debe ser consistente, performante y respetar la intención del usuario."
+
+### **Objetivo:**
+Migrar TODOS los componentes que usan Framer Motion a CSS animations usando el sistema de Sonántica (`useAnimationSettings`).
+
+### **Beneficios:**
+- ✅ Mejor performance (INP, FPS)
+- ✅ Menor bundle size (~50KB menos)
+- ✅ Animaciones más predecibles
+- ✅ Respeto a preferencias de usuario (prefers-reduced-motion)
+- ✅ Consistencia visual en toda la app
+
+### **Archivos Identificados con Framer Motion:**
+
+#### **Prioridad Crítica (Core UI):**
+1. ✅ `MobileOverlays.tsx` - Ya migrado a CSS
+2. ❌ `MiniPlayer.tsx` - 314 líneas, usa motion.div, drag gestures
+3. ❌ `ExpandedPlayerDesktop.tsx` - Animaciones de expansión
+4. ❌ `ExpandedPlayerMobile.tsx` - Animaciones de expansión
+
+#### **Prioridad Alta (Páginas):**
+5. ❌ `TracksPage.tsx` - AnimatePresence para listas
+6. ❌ `ArtistsPage.tsx` - AnimatePresence para grids
+7. ❌ `AlbumsPage.tsx` - AnimatePresence para grids
+8. ❌ `PlaylistsPage.tsx` - AnimatePresence para listas
+9. ❌ `PlaylistDetailPage.tsx` - Animaciones de entrada
+10. ❌ `ArtistDetailPage.tsx` - Animaciones de entrada
+11. ❌ `AlbumDetailPage.tsx` - Animaciones de entrada
+
+#### **Prioridad Media (Sidebars):**
+12. ❌ `RightSidebar.tsx` - AnimatePresence para queue items
+13. ❌ `LyricsSidebar.tsx` - Animaciones de scroll/sync
+14. ❌ `EQSidebar.tsx` - AnimatePresence para controles
+15. ❌ `RecommendationsSidebar.tsx` - AnimatePresence para cards
+
+#### **Prioridad Media (Componentes):**
+16. ❌ `SelectionActionBar.tsx` - Animaciones de entrada
+17. ❌ `AddToPlaylistModal.tsx` - Modal animations
+18. ❌ `DownloadButton.tsx` - Button animations
+19. ❌ `PlaylistStats.tsx` - Stats animations
+20. ❌ `NowPlaying.tsx` - Animaciones de track info
+21. ❌ `LyricsDisplay.tsx` - Animaciones de scroll
+
+#### **Prioridad Baja (Layout):**
+22. ❌ `MainLayout.tsx` - AnimatePresence para player
+23. ❌ `LeftSidebar.tsx` - Animaciones de navegación
+24. ❌ `Header.tsx` - Animaciones de header
+25. ❌ `QueueHistory.tsx` - Animaciones de historial
+
+**Total:** 25 archivos (1 migrado, 24 pendientes)
+
+### **Estrategia de Migración:**
+
+#### **Paso 1: Reemplazos Directos**
+```tsx
+// ❌ Framer Motion
+<motion.div
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  exit={{ opacity: 0, y: -20 }}
+  transition={{ duration: 0.3 }}
+>
+
+// ✅ CSS Animations (Sonántica)
+<div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+```
+
+#### **Paso 2: AnimatePresence → CSS Transitions**
+```tsx
+// ❌ Framer Motion
+<AnimatePresence mode="popLayout">
+  {items.map(item => (
+    <motion.div key={item.id} layout exit={{ opacity: 0 }}>
+      {item.content}
+    </motion.div>
+  ))}
+</AnimatePresence>
+
+// ✅ CSS Transitions
+{items.map(item => (
+  <div
+    key={item.id}
+    className="transition-all duration-200 data-[state=closed]:animate-out data-[state=closed]:fade-out"
+  >
+    {item.content}
+  </div>
+))}
+```
+
+#### **Paso 3: Drag Gestures → Touch/Mouse Events**
+```tsx
+// ❌ Framer Motion
+<motion.div
+  drag="x"
+  dragConstraints={{ left: 0, right: 0 }}
+  onDragEnd={(_, info) => {
+    if (info.offset.x > 80) handleSwipeRight();
+  }}
+>
+
+// ✅ Touch Events + CSS
+const handleTouchStart = (e) => { /* ... */ };
+const handleTouchMove = (e) => { /* ... */ };
+const handleTouchEnd = (e) => { /* ... */ };
+
+<div
+  onTouchStart={handleTouchStart}
+  onTouchMove={handleTouchMove}
+  onTouchEnd={handleTouchEnd}
+  className="touch-pan-x"
+  style={{ transform: `translateX(${offset}px)` }}
+>
+```
+
+#### **Paso 4: Layout Animations → CSS Grid/Flexbox Transitions**
+```tsx
+// ❌ Framer Motion
+<motion.div layout>
+
+// ✅ CSS
+<div className="transition-all duration-300">
+```
+
+### **Orden de Migración Recomendado:**
+
+**Fase 1 - Core Player (Crítico):**
+1. MiniPlayer (con atomización)
+2. ExpandedPlayerDesktop
+3. ExpandedPlayerMobile
+
+**Fase 2 - Páginas (Alto impacto):**
+4. TracksPage, ArtistsPage, AlbumsPage, PlaylistsPage
+5. Detail pages (Artist, Album, Playlist)
+
+**Fase 3 - Sidebars (Consistencia):**
+6. RightSidebar, LyricsSidebar, EQSidebar
+7. RecommendationsSidebar
+
+**Fase 4 - Componentes (Refinamiento):**
+8. SelectionActionBar, Modals, Buttons
+9. Layout components
+
+### **Métricas Proyectadas:**
+
+| Métrica | Antes | Después | Mejora |
+|---------|-------|---------|--------|
+| **Bundle size** | ~50KB (Framer Motion) | 0KB | -50KB |
+| **Archivos migrados** | 1/25 (4%) | 25/25 (100%) | +96% |
+| **Performance (INP)** | Variable | Consistente | +30% |
+| **Animaciones CSS** | ~10% | 100% | +90% |
+
+---
+
+## 🏆 10. Logros y Beneficios

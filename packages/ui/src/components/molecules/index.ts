@@ -24,3 +24,8 @@ export { StatCard } from './StatCard';
 export { Goniometer } from './Goniometer';
 export { CorrelationMeter } from './CorrelationMeter';
 export { DynamicRangeMeter } from './DynamicRangeMeter';
+
+// MiniPlayer molecules
+export * from './TrackInfo';
+export * from './PlaybackControls';
+export * from './SidebarButtonCarousel';
