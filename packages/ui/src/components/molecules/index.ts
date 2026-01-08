@@ -32,3 +32,7 @@ export * from './SidebarButtonCarousel';
 
 // Sidebar molecules
 export * from './SidebarSection';
+
+// EQ molecules
+export * from './EQControlGroup';
+export * from './EQPresetSelector';

@@ -240,9 +240,9 @@ Este documento detalla el plan completo para refactorizar los componentes de la 
 | `SidebarSection` | Molécula | ✅ 100% | 🟠 Media | `packages/ui/src/components/molecules/SidebarSection.tsx` |
 | `QueueTrackItem` | Organismo | ✅ 100% | 🟠 Media | `apps/web/src/components/queue/QueueTrackItem.tsx` |
 | `RecommendationCard` | Molécula | 📋 0% | 🟡 Baja | `src/features/recommendations/components/RecommendationCard.tsx` |
-| `CollapsedEQView` | Organismo | 📋 0% | 🟠 Media | `src/features/dsp/components/eq/CollapsedEQView.tsx` |
-| `ExpandedEQView` | Organismo | 📋 0% | 🟠 Media | `src/features/dsp/components/eq/ExpandedEQView.tsx` |
-| `EQControls` | Molécula | 📋 0% | 🟠 Media | `src/features/dsp/components/eq/EQControls.tsx` |
+| `CollapsedEQView` | Organismo | ✅ 100% | 🟠 Media | `packages/ui/src/components/organisms/EQCollapsedView.tsx` |
+| `ExpandedEQView` | Organismo | ✅ 100% | 🟠 Media | `packages/ui/src/components/organisms/EQExpandedView.tsx` |
+| `EQControls` | Molécula | ✅ 100% | 🟠 Media | `packages/ui/src/components/molecules/EQControlGroup.tsx` |
 
 ### Sidebars Refactorizados:
 - ✅ `RecommendationsSidebar.tsx` - Usa `SidebarSection`, migrado de Framer Motion (2026-01-08)
@@ -285,11 +285,11 @@ Este documento detalla el plan completo para refactorizar los componentes de la 
 
 | Métrica | Valor |
 |---------|-------|
-| **Componentes creados** | 8 |
-| **Código eliminado/refactorizado** | ~1,200 líneas |
+| **Componentes creados** | 12 |
+| **Código eliminado/refactorizado** | ~1,600 líneas |
 | **MainLayout reducido** | 54% |
-| **Framer Motion migrado** | 6 de 25 (24%) |
-| **Total de tareas completadas** | ~50% |
+| **Framer Motion migrado** | 14 de 25 (56%) |
+| **Total de tareas completadas** | ~60% |
 
 ---
 
@@ -319,7 +319,7 @@ Este documento detalla el plan completo para refactorizar los componentes de la 
 #### **Prioridad Media (Sidebars):**
 12. ✅ `RecommendationsSidebar.tsx` - **COMPLETADO** (2026-01-08)
 13. ✅ `LyricsSidebar.tsx` - **COMPLETADO** (2026-01-08)
-14. ❌ `EQSidebar.tsx` - Pendiente (archivo muy grande, requiere atomización adicional)
+14. ✅ `EQSidebar.tsx` - **COMPLETADO** (2026-01-08) - Atomizado y migrado a CSS.
 15. ✅ `RightSidebar.tsx` - **COMPLETADO** (2026-01-08) - Usa `TrackItem` + `SidebarSection`
 
 #### **Prioridad Media (Otros):**
