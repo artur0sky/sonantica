@@ -3,10 +3,17 @@
  *
  * Displays intelligent music suggestions based on current playback.
  * "Sound is a form of language" - recommendations help discover connections.
+ * No external animation library dependencies
  */
 
 import { useState } from "react";
-import { SidebarContainer, useUIStore, Button, CoverArt } from "@sonantica/ui";
+import {
+  SidebarContainer,
+  SidebarSection,
+  useUIStore,
+  Button,
+  CoverArt,
+} from "@sonantica/ui";
 import { useLibraryStore } from "@sonantica/media-library";
 import { useQueueRecommendations } from "@sonantica/recommendations";
 import { usePlaylistCRUD } from "../../hooks/usePlaylistCRUD";
@@ -21,7 +28,6 @@ import {
   IconPlaylistAdd,
 } from "@tabler/icons-react";
 import { useQueueStore } from "@sonantica/player-core";
-import { AnimatePresence, motion } from "framer-motion";
 
 import { trackToMediaSource } from "../../utils/streamingUrl";
 
@@ -127,51 +133,41 @@ export function RecommendationsSidebar() {
         </div>
 
         {/* Tracks Section */}
-        <div className="mb-8">
-          <h3 className="text-[10px] text-text-muted/70 font-bold mb-3 uppercase tracking-[0.2em] flex items-center gap-2">
-            <IconMusic size={12} /> Suggested Tracks
-          </h3>
+        <SidebarSection title="Suggested Tracks" icon={<IconMusic size={12} />}>
           <div className="space-y-1">
-            <AnimatePresence mode="popLayout">
-              {trackRecommendations.map((rec: any) => (
-                <motion.div
-                  key={rec.item.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  layout
-                >
-                  <div className="relative group">
-                    <TrackItem
-                      track={rec.item}
-                      onClick={() => playNext(trackToMediaSource(rec.item))}
-                    />
-                    {/* Reason badge */}
-                    {rec.reasons.length > 0 && (
-                      <div className="absolute top-1 right-2 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
-                        <span className="text-[9px] bg-surface-elevated/90 backdrop-blur px-1.5 py-0.5 rounded border border-border/50 text-text-muted">
-                          {rec.reasons[0].description}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
+            {trackRecommendations.map((rec: any, index: number) => (
+              <div
+                key={rec.item.id}
+                className="animate-in fade-in slide-in-from-bottom-2 duration-300"
+                style={{ animationDelay: `${index * 30}ms` }}
+              >
+                <div className="relative group">
+                  <TrackItem
+                    track={rec.item}
+                    onClick={() => playNext(trackToMediaSource(rec.item))}
+                  />
+                  {/* Reason badge */}
+                  {rec.reasons.length > 0 && (
+                    <div className="absolute top-1 right-2 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span className="text-[9px] bg-surface-elevated/90 backdrop-blur px-1.5 py-0.5 rounded border border-border/50 text-text-muted">
+                        {rec.reasons[0].description}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
             {trackRecommendations.length === 0 && (
               <p className="text-xs text-text-muted py-4 text-center">
                 Play something to start discovering.
               </p>
             )}
           </div>
-        </div>
+        </SidebarSection>
 
         {/* Albums Section */}
         {albumRecommendations.length > 0 && (
-          <div className="mb-8">
-            <h3 className="text-[10px] text-text-muted/70 font-bold mb-3 uppercase tracking-[0.2em] flex items-center gap-2">
-              <IconDisc size={12} /> Related Albums
-            </h3>
+          <SidebarSection title="Related Albums" icon={<IconDisc size={12} />}>
             <div className="grid grid-cols-2 gap-3">
               {albumRecommendations.map((rec: any) => (
                 // Using a simplified view or existing card
@@ -208,15 +204,15 @@ export function RecommendationsSidebar() {
                 </div>
               ))}
             </div>
-          </div>
+          </SidebarSection>
         )}
 
         {/* Artists Section */}
         {artistRecommendations.length > 0 && (
-          <div className="mb-8">
-            <h3 className="text-[10px] text-text-muted/70 font-bold mb-3 uppercase tracking-[0.2em] flex items-center gap-2">
-              <IconMicrophone size={12} /> Similar Artists
-            </h3>
+          <SidebarSection
+            title="Similar Artists"
+            icon={<IconMicrophone size={12} />}
+          >
             <div className="space-y-2">
               {artistRecommendations.map((rec: any) => (
                 <div
@@ -240,7 +236,7 @@ export function RecommendationsSidebar() {
                 </div>
               ))}
             </div>
-          </div>
+          </SidebarSection>
         )}
       </div>
 

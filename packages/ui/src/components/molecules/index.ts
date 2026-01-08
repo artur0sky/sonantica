@@ -29,3 +29,6 @@ export { DynamicRangeMeter } from './DynamicRangeMeter';
 export * from './TrackInfo';
 export * from './PlaybackControls';
 export * from './SidebarButtonCarousel';
+
+// Sidebar molecules
+export * from './SidebarSection';

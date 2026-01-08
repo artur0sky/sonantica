@@ -233,15 +233,18 @@ Este documento detalla el plan completo para refactorizar los componentes de la 
 
 ---
 
-## 6. Componentes Compartidos de Sidebars (0% completado)
+## 6. Componentes Compartidos de Sidebars (20% completado)
 
 | Componente | Nivel | Estado | Prioridad | Archivo |
 | :--- | :--- | :--- | :--- | :--- |
-| `SidebarSection` | Molécula | 📋 0% | 🟠 Media | `packages/ui/src/components/molecules/SidebarSection.tsx` |
+| `SidebarSection` | Molécula | ✅ 100% | 🟠 Media | `packages/ui/src/components/molecules/SidebarSection.tsx` |
 | `RecommendationCard` | Molécula | 📋 0% | 🟡 Baja | `src/features/recommendations/components/RecommendationCard.tsx` |
 | `CollapsedEQView` | Organismo | 📋 0% | 🟠 Media | `src/features/dsp/components/eq/CollapsedEQView.tsx` |
 | `ExpandedEQView` | Organismo | 📋 0% | 🟠 Media | `src/features/dsp/components/eq/ExpandedEQView.tsx` |
 | `EQControls` | Molécula | 📋 0% | 🟠 Media | `src/features/dsp/components/eq/EQControls.tsx` |
+
+### Sidebars Refactorizados:
+- ✅ `RecommendationsSidebar.tsx` - Usa `SidebarSection`, migrado de Framer Motion (2026-01-08)
 
 ---
 
@@ -307,10 +310,10 @@ Este documento detalla el plan completo para refactorizar los componentes de la 
 11. ✅ `AlbumDetailPage.tsx` - **COMPLETADO** (2026-01-08)
 
 #### **Prioridad Media (Sidebars):**
-12. ❌ `RightSidebar.tsx`
+12. ✅ `RecommendationsSidebar.tsx` - **COMPLETADO** (2026-01-08)
 13. ❌ `LyricsSidebar.tsx`
 14. ❌ `EQSidebar.tsx`
-15. ❌ `RecommendationsSidebar.tsx`
+15. ❌ `RightSidebar.tsx`
 
 #### **Prioridad Media (Otros):**
 16. ❌ `SelectionActionBar.tsx`
