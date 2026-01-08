@@ -29,9 +29,12 @@ interface SettingsState {
   hideUnavailableOffline: boolean;
   downloadQuality: 'original' | 'high' | 'normal' | 'low';
   
+  // Analytics
+  analyticsDashboardRefreshRate: number; // in ms
+  
   // Actions
   toggle: (key: keyof Omit<SettingsState, 'toggle' | 'setTheme' | 'setNumber' | 'setDownloadQuality' | 'setAnimationSpeed'>) => void;
-  setNumber: (key: 'playbackBufferSize' | 'scanFileSizeLimit' | 'coverArtSizeLimit' | 'crossfadeDuration' | 'fadeOutDuration', value: number) => void;
+  setNumber: (key: 'playbackBufferSize' | 'scanFileSizeLimit' | 'coverArtSizeLimit' | 'crossfadeDuration' | 'fadeOutDuration' | 'analyticsDashboardRefreshRate', value: number) => void;
   setDownloadQuality: (quality: 'original' | 'high' | 'normal' | 'low') => void;
   setAnimationSpeed: (speed: 'slow' | 'normal' | 'fast') => void;
 }
@@ -58,6 +61,9 @@ export const useSettingsStore = create<SettingsState>()(
       
       crossfadeDuration: 0, // Disabled by default
       fadeOutDuration: 0, // Disabled by default
+
+      // Analytics
+      analyticsDashboardRefreshRate: 10000, // 10s default
 
       offlineMode: false,
       hideUnavailableOffline: false,

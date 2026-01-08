@@ -287,6 +287,9 @@ export interface AnalyticsConfig {
   
   // Debug
   debug: boolean;
+  
+  // Offline Behavior
+  trackInOfflineMode: boolean; // If true, buffer events while offline. If false, pause tracking.
 }
 
 /**
@@ -309,4 +312,6 @@ export const DEFAULT_ANALYTICS_CONFIG: AnalyticsConfig = {
   dataRetentionDays: 90,
   
   debug: false,
+  
+  trackInOfflineMode: true,
 };

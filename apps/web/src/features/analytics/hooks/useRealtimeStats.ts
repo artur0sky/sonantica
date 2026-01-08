@@ -16,6 +16,8 @@ export interface RealtimeData {
   active: number;
 }
 
+import { useSettingsStore } from '../../../stores/settingsStore';
+
 export function useRealtimeStats() {
   const [data, setData] = useState<RealtimeData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -27,17 +29,17 @@ export function useRealtimeStats() {
       if (config.servers.length === 0) return;
 
       // Aggregating from multiple servers if needed, but usually one
-      const server = config.servers[0]; 
+      const server = config.servers[0];
       const baseUrl = server.serverUrl.endsWith('/') ? server.serverUrl.slice(0, -1) : server.serverUrl;
-      
+
       const response = await fetch(`${baseUrl}/api/v1/analytics/realtime`);
       if (!response.ok) throw new Error(`Real-time failed: ${response.statusText}`);
-      
+
       const newData = await response.json() as RealtimeData;
-      
+
       // Sort timeline by timestamp ascending for the chart
       newData.timeline.sort((a, b) => a.timestamp - b.timestamp);
-      
+
       setData(newData);
       setLoading(false);
     } catch (err) {
@@ -47,13 +49,14 @@ export function useRealtimeStats() {
     }
   }, []);
 
+  const refreshRate = useSettingsStore(s => s.analyticsDashboardRefreshRate || 10000);
+
   useEffect(() => {
     fetchRealtime();
-    // Poll every 10 seconds for "streaming-like" updates
-    // For true streaming we would use WebSockets, but polling is a good first step for scalability
-    const interval = setInterval(fetchRealtime, 10000);
+
+    const interval = setInterval(fetchRealtime, refreshRate);
     return () => clearInterval(interval);
-  }, [fetchRealtime]);
+  }, [fetchRealtime, refreshRate]);
 
   return { data, loading, error, refresh: fetchRealtime };
 }

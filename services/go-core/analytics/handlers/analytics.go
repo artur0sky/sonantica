@@ -101,11 +101,10 @@ func (h *AnalyticsHandler) IngestEventBatch(w http.ResponseWriter, r *http.Reque
 	}
 
 	// OFFLOAD TO CELERY: Aggregate stats & Update real-time cache
+	// OFFLOAD TO CELERY: Aggregate stats & Update real-time cache (Batched)
 	go func() {
-		for i := range batch.Events {
-			if err := cache.EnqueueCeleryTask(context.Background(), "sonantica.process_analytics", batch.Events[i]); err != nil {
-				log.Printf("Failed to enqueue analytics task for batch event: %v", err)
-			}
+		if err := cache.EnqueueCeleryTask(context.Background(), "sonantica.process_analytics_batch", batch.Events); err != nil {
+			log.Printf("Failed to enqueue analytics batch task: %v", err)
 		}
 	}()
 
@@ -182,6 +181,34 @@ func (h *AnalyticsHandler) GetDashboard(w http.ResponseWriter, r *http.Request) 
 		recentSessions = []models.SessionSummary{}
 	}
 
+	// Get Top Artists
+	topArtists, err := h.storage.GetTopArtists(ctx, filters)
+	if err != nil {
+		log.Printf("Error getting top artists: %v", err)
+		topArtists = []models.TopArtist{}
+	}
+
+	// Get Top Albums
+	topAlbums, err := h.storage.GetTopAlbums(ctx, filters)
+	if err != nil {
+		log.Printf("Error getting top albums: %v", err)
+		topAlbums = []models.TopAlbum{}
+	}
+
+	// Get Top Playlists
+	topPlaylists, err := h.storage.GetTopPlaylists(ctx, filters)
+	if err != nil {
+		log.Printf("Error getting top playlists: %v", err)
+		topPlaylists = []models.TopPlaylist{}
+	}
+
+	// Get Recently Played
+	recentlyPlayed, err := h.storage.GetRecentlyPlayed(ctx, 10)
+	if err != nil {
+		log.Printf("Error getting recently played: %v", err)
+		recentlyPlayed = []models.RecentlyPlayedTrack{}
+	}
+
 	// Get streaks (using a default identity for global dashboard, or could be extracted from session)
 	streak, _ := h.storage.GetListeningStreak(ctx, "anonymous")
 
@@ -190,12 +217,16 @@ func (h *AnalyticsHandler) GetDashboard(w http.ResponseWriter, r *http.Request) 
 		StartDate:         filters.StartDate.Format("2006-01-02"),
 		EndDate:           filters.EndDate.Format("2006-01-02"),
 		TopTracks:         topTracks,
+		TopArtists:        topArtists,
+		TopAlbums:         topAlbums,
+		TopPlaylists:      topPlaylists,
 		PlatformStats:     platformStats,
 		ListeningHeatmap:  heatmap,
 		Overview:          overview,
 		PlaybackTimeline:  timeline,
 		GenreDistribution: genres,
 		RecentSessions:    recentSessions,
+		RecentlyPlayed:    recentlyPlayed,
 		ListeningStreak:   streak,
 	}
 
@@ -250,9 +281,18 @@ func (h *AnalyticsHandler) GetRealtimeStats(w http.ResponseWriter, r *http.Reque
 
 	trendingTracks := []map[string]interface{}{}
 	for _, z := range trending {
+		trackID := z.Member.(string)
+		title, artist, err := h.storage.GetTrackDetails(ctx, trackID)
+		if err != nil {
+			title = "Unknown Track"
+			artist = "Unknown Artist"
+		}
+
 		trendingTracks = append(trendingTracks, map[string]interface{}{
-			"trackId": z.Member,
-			"score":   z.Score,
+			"trackId":    trackID,
+			"trackTitle": title,
+			"artistName": artist,
+			"score":      z.Score,
 		})
 	}
 
