@@ -36,7 +36,7 @@ To support users with multiple music servers (e.g., Home, Office, Cloud):
 
 ## 3. Advanced Visualization (The "Audiophile Insight")
 
-We will implement advanced charting to give "Wise Craftsman" depth to the data.
+We will implement advanced charting to give "Wise Craftsman" depth to the data, drawing inspiration from industry leaders like Stats.fm but refining them for our "Audio First" philosophy.
 
 ### 3.1 Swarm Plot (Timeline Distribution)
 
@@ -67,27 +67,55 @@ We will implement advanced charting to give "Wise Craftsman" depth to the data.
 *   **Radial Bar**: "The 24h Clock". Best for visualizing *when* user listens (e.g., Late night jazz vs Morning news).
 *   **Bump Chart**: "Rankings Race". Visualizing how the Top 5 Artists change rank month over month.
 
+### 3.6 Sonic Profile (Radar/Spider Chart)
+*   **Concept**: A pentagonal or hexagonal web comparing audio features.
+*   **Axes**: Energy, Valence (Mood), Dynamic Range, BPM, Instrumentalness.
+*   **Comparison**: User's Top 50 vs. Library Average vs. Specific Playlist.
+*   **Use Case**: "What is the shape of my taste?" Understanding if one prefers high-energy pop or contemplative instrumental music.
+
+### 3.7 Habit Grid (Weekly Heatmap)
+*   **Concept**: 7x24 Grid (Days of Week x Hours).
+*   **Intensity**: Color saturation based on listening minutes.
+*   **Use Case**: identifying weekly routines (e.g., "The Friday Night Focus" or "Sunday Morning Jazz").
+
+### 3.8 Discovery Rate (Bar + Line)
+*   **Concept**: Bars for Total Plays, Line for *New* Artists/Tracks discovered.
+*   **Use Case**: Monitoring musical stagnation vs. exploration. Encourages the "Active Listener" to seek new sounds.
+
+### 3.9 Metric Toggling (Count vs. Time)
+*   **Global Rule**: All "Top" lists must toggle between:
+    1.  **Play Count**: Frequency of playback (favors short songs).
+    2.  **Time Listened**: Depth of engagement (favors long compositions).
+    *   *Rationale*: A 20-minute post-rock anthem shouldn't rank lower than a 2-minute pop intro just because of play count.
+
 ---
+
 
 ## 4. Implementation Roadmap
 
 ### Phase 1: Robustness (Immediate) - **COMPLETED**
+
 - [x] Verify Pipeline (Audio & Page Views).
 - [x] Implement Persistent Event Buffer (localStorage).
 - [x] Optimize caching strategy.
 
 ### Phase 2: Enhanced UI & New Charts (Next Sprint)
+
 - [ ] Install/Upgrade visualization library (Recommend `@nivo` for Swarm/Stream/Sankey).
 - [ ] Create `StreamChart` component in `@sonantica/ui`.
 - [ ] Create `SessionSankey` component.
 - [ ] Implement "Precise Time" toggle in Dashboard (switching between aggregations).
+- [ ] **Sonic Profile**: Implement Radar Chart for audio features.
+- [ ] **Habit Grid**: Implement Weekly Heatmap.
 
 ### Phase 3: Federation & Server Scalability
+
 - [ ] Update `useAnalyticsDashboard` to accept `serverIds` filter.
 - [ ] Implement `fetchAggregatedStats` service.
 - [ ] Add "Server Source" dropdown in Dashboard Header.
 
 ### Phase 4: The "Audiophile" Deep Dive
+
 - [ ] **Technical Inspector**: A special view showing Codec/Bitrate distribution (Pie/Bar).
 - [ ] **Gapless Analysis**: unexpected gaps or buffer underruns (using `playback.buffer_underrun` events).
 
@@ -95,7 +123,8 @@ We will implement advanced charting to give "Wise Craftsman" depth to the data.
 
 ## 5. Technical Guidelines (SOLID & CLEAN)
 
-1.  **Atomic Components**: Each chart is a Molecule/Organism.
-2.  **Data Isolation**: Data transformation logic (Raw Event -> Chart Format) stays in `hooks/` or `utils/`, never in the View.
-3.  **Responsive**: All charts must redraw/resize (use `ResponsiveWrapper`).
-4.  **Theming**: Charts must respect the `theme-token` system (Dark/Light mode compliant colors).
+1. **Atomic Components**: Each chart is a Molecule/Organism.
+2. **Data Isolation**: Data transformation logic (Raw Event -> Chart Format) stays in `hooks/` or `utils/`, never in the View.
+3. **Responsive**: All charts must redraw/resize (use `ResponsiveWrapper`).
+4. **Theming**: Charts must respect the `theme-token` system (Dark/Light mode compliant colors).
+
