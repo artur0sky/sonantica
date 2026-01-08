@@ -21,65 +21,68 @@ Este documento detalla el plan para refactorizar los "God Components" identifica
     -   **Archivo:** `src/components/layout/mobile/MobileOverlays.tsx`
     -   **Responsabilidad:** Renderizar todos los overlays (`AnimatePresence`) móviles (Sidebar izquierdo, derecho, Lyrics, EQ).
     -   **Dependencia:** `useUIStore`.
-    -   **Beneficio:** Limpia ~200 líneas de `MainLayout`.
 
 - [ ] **1.2. Crear `DesktopSidebars` Organism**
     -   **Archivo:** `src/components/layout/desktop/DesktopSidebars.tsx`
     -   **Responsabilidad:** Renderizar los `<aside>` de escritorio (Lyrics, Queue, EQ, Recommendations).
     -   **Dependencia:** `Suspense`, `lazy` imports.
-    -   **Beneficio:** Centraliza la lógica de carga perezosa de módulos pesados.
 
 - [ ] **1.3. Crear `LayoutThemeManager` HOC/Provider**
-    -   **Archivo:** `src/components/layout/LayoutThemeManager.tsx`
-    -   **Responsabilidad:** Gestionar `useDominantColor` y aplicar las variables CSS (`--dominant-color`, etc.).
-    -   **Beneficio:** Saca la lógica de estilos inline del componente layout.
-
-- [ ] **1.4. Simplificar `MainLayout`**
-    -   Componer el layout final usando solo estos nuevos organismos.
-    -   Debería quedar en <200 líneas.
+    -   **Archivo:** `src/components/layout/managers/LayoutThemeManager.tsx`
+    -   **Responsabilidad:** Gestionar `useDominantColor` y aplicar las variables CSS.
+    -   **Nota:** Evaluar si la lógica de extracción de color pertenece a `@sonantica/shared` (ver Sección 4).
 
 ---
 
 ## 🎛️ 2. Refactorización de `EQSidebar.tsx` (Prioridad Media)
-*Actualmente: 21KB, mezcla 3 vistas distintas y lógica compleja de sliders.*
+*Actualmente: 21KB, mezcla 3 vistas distintas.*
 
 ### Tareas:
 
-- [ ] **2.1. Crear `CollapsedEQView` Molecule**
-    -   **Archivo:** `src/features/dsp/components/eq/CollapsedEQView.tsx`
-    -   **Responsabilidad:** Vista ultracompacta (XS) del sidebar.
-    -   **Props:** `config`, `handlers`.
+- [ ] **2.1. Extraer `GraphicEQGrid` a `@sonantica/ui`** (📦 Core Extraction)
+    -   **Destino:** `packages/ui/src/components/atoms/GraphicEQGrid.tsx`
+    -   **Responsabilidad:** Renderizar las líneas de eje y etiquetas dB (+12, 0, -12) de forma puramente visual.
+    -   **Motivo:** Reutilizable en cualquier visualización de audio.
 
-- [ ] **2.2. Crear `GraphicEQView` Organism**
-    -   **Archivo:** `src/features/dsp/components/eq/GraphicEQView.tsx`
-    -   **Responsabilidad:** Vista visual con sliders verticales y grid (la lógica más pesada de renderizado).
+- [ ] **2.2. Refactorizar Vistas Logic**
+    -   Crear `CollapsedEQView` (XS View).
+    -   Crear `GraphicEQView` (Visual View) usando el nuevo atom `GraphicEQGrid`.
+    -   Crear `ListEQView` (Compact View).
 
-- [ ] **2.3. Crear `ListEQView` Molecule**
-    -   **Archivo:** `src/features/dsp/components/eq/ListEQView.tsx`
-    -   **Responsabilidad:** Vista de lista simple con sliders horizontales.
-
-- [ ] **2.4. Crear `EQControls` Molecule**
-    -   **Archivo:** `src/features/dsp/components/eq/EQControls.tsx`
-    -   **Responsabilidad:** Sección superior común (Presets, Preamp, Toggle).
+- [ ] **2.3. Crear `EQControls`**
+    -   Agrupar selector de presets y preamp.
 
 ---
 
 ## 🎵 3. Refactorización de `TracksPage.tsx` (Prioridad Media)
-*Actualmente: 18KB, mezcla virtualización con UI.*
+*Actualmente: 18KB, lógica mixta.*
 
 ### Tareas:
 
-- [ ] **3.1. Crear `TracksHeader` Organism**
-    -   **Archivo:** `src/features/library/components/tracks/TracksHeader.tsx`
-    -   **Responsabilidad:** Título, contador, dropdown de ordenamiento y botones de acción (Play, Shuffle).
+- [ ] **3.1. Extraer `EmptyState` a `@sonantica/ui`** (📦 Core Extraction)
+    -   **Destino:** `packages/ui/src/components/molecules/EmptyState.tsx`
+    -   **Props:** `icon`, `title`, `description`, `action` (ReactNode).
+    -   **Motivo:** El diseño de "No music found" se repite en Playlists, Albums, Artists, etc.
 
-- [ ] **3.2. Crear `TracksVirtualList` Organism**
-    -   **Archivo:** `src/features/library/components/tracks/TracksVirtualList.tsx`
-    -   **Responsabilidad:** Encapsular toda la lógica de `@tanstack/react-virtual`.
+- [ ] **3.2. Componentizar Página**
+    -   `TracksHeader` (Organism).
+    -   `TracksVirtualList` (Organism).
 
-- [ ] **3.3. Crear `EmptyLibraryState` Atom/Molecule**
-    -   **Archivo:** `src/features/library/components/states/EmptyLibraryState.tsx`
-    -   **Responsabilidad:** UI de estado vacío reutilizable.
+---
+
+## 📦 4. Análisis de Candidatos a Paquetes Core
+
+### Candidatos para `@sonantica/ui`:
+| Componente | Origen Actual | Destino Propuesto | Estado |
+| :--- | :--- | :--- | :--- |
+| `EmptyState` | `TracksPage.tsx` (ln 388) | `molecules/EmptyState.tsx` | 🆕 Por crear |
+| `GraphicEQGrid` | `EQSidebar.tsx` (ln 385) | `atoms/GraphicEQGrid.tsx` | 🆕 Por crear |
+| `SidebarLoader` | `MainLayout.tsx` (ln 50) | `atoms/CenteredLoader.tsx` | 🆕 Renombrar |
+
+### Candidatos para `@sonantica/shared`:
+| Utilidad | Origen Actual | Destino Propuesto |
+| :--- | :--- | :--- |
+| `isCramped` Logic | `MainLayout.tsx` (ln 147) | N/A (Lógica muy específica de UI Web) |
 
 ---
 
