@@ -302,6 +302,12 @@ Este documento detalla el plan completo para refactorizar los componentes de la 
 | `useVirtualScroll` | Hook para virtualización | 🟠 Media | 📋 0% |
 | `useAlphabetNav` | Hook para navegación alfabética | 🟠 Media | ✅ 100% |
 
+#### **7.1. Correcciones de Navegación (2026-01-08) ✅**
+
+- [x] **Alphabet Navigation en Tracks (Virtualized):** Corregido para usar `virtualizer.scrollToIndex` en lugar de DOM scrolling (que fallaba en listas virtuales).
+- [x] **Alphabet Navigation en Playlists:** Habilitado soporte en `PlaylistsPage` usando `VirtualizedGrid` y `useAlphabetNav`.
+- [x] **idPrefix Standard:** Estandarizado el uso de `idPrefix` en `VirtualizedList` y `VirtualizedGrid` para asegurar compatibilidad con hooks de navegación.
+
 ---
 
 ## 📊 8. Progreso Actualizado
@@ -328,7 +334,7 @@ Este documento detalla el plan completo para refactorizar los componentes de la 
 | **Código eliminado/refactorizado** | ~3,500 líneas |
 | **MainLayout reducido** | 57% |
 | **Framer Motion migrado** | 19 de 44 (43%) |
-| **Total de tareas completadas** | ~60% |
+| **Total de tareas completadas** | ~65% |
 
 ---
 

@@ -6,7 +6,7 @@
 
 import { useState, useMemo } from "react";
 import { useLibraryStore } from "@sonantica/media-library";
-import { useSortable } from "@sonantica/shared";
+import { useSortable, useAlphabetNav } from "@sonantica/shared";
 import { PlaylistCard } from "@sonantica/ui";
 import { IconPlaylist, IconSearch, IconPlus } from "@tabler/icons-react";
 import {
@@ -14,6 +14,7 @@ import {
   VirtualizedGrid,
   Button,
   PromptDialog,
+  useUIStore,
 } from "@sonantica/ui";
 import { useLocation } from "wouter";
 import { useSelectionStore } from "../../../stores/selectionStore";
@@ -31,6 +32,7 @@ export function PlaylistsPage() {
   const trackAccess = usePlaylistSettingsStore((s) => s.trackAccess);
   const { createPlaylist } = usePlaylistCRUD();
   const { dialogState, showPrompt, handleConfirm, handleCancel } = useDialog();
+  const isCramped = useUIStore((state) => state.isCramped);
 
   // Filter playlists first
   const filterBaseRaw = useMemo(() => {
@@ -56,6 +58,11 @@ export function PlaylistsPage() {
       if (field === "updatedAt") return new Date(item.updatedAt).getTime();
       return (item as any)[field];
     },
+  });
+
+  const { scrollToLetter } = useAlphabetNav({
+    idPrefix: "playlist",
+    headerOffset: 120,
   });
 
   const {
@@ -191,6 +198,14 @@ export function PlaylistsPage() {
           description: `No playlists found matching "${searchQuery}"`,
         }}
         isFiltered={!!searchQuery}
+        alphabetNav={{
+          enabled: true,
+          onLetterClick: scrollToLetter,
+          forceScrollOnly: isCramped,
+          getLetterItem: (p: any) => ({
+            name: p.name,
+          }),
+        }}
       />
 
       <SelectionActionBar />

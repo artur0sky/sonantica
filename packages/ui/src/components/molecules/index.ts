@@ -14,6 +14,7 @@ export { SidebarResizer } from './SidebarResizer';
 export { SidebarContainer } from './SidebarContainer';
 export * from './EmptyState';
 export * from './PageHeader';
+export * from './DetailPageHeader';
 export * from './SortControl';
 export { FolderList } from './FolderList';
 export * from './Tabs';

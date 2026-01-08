@@ -23,6 +23,9 @@ export interface VirtualizedListProps<T> {
   /** Key extractor for items */
   keyExtractor: (item: T) => string;
 
+  /** ID prefix for items (used for scrolling/navigation) */
+  idPrefix?: string;
+
   /** Estimated height of a single item for virtualization */
   estimateSize?: number;
 
@@ -85,6 +88,7 @@ export function VirtualizedList<T>({
   items,
   renderItem,
   keyExtractor,
+  idPrefix = "item",
   estimateSize = 76,
   overscan = 10,
   scrollElementId = "main-content",
@@ -144,6 +148,7 @@ export function VirtualizedList<T>({
                 return (
                   <div
                     key={virtualItem.key}
+                    id={`${idPrefix}-${virtualItem.index}`}
                     data-index={virtualItem.index}
                     ref={virtualizer.measureElement}
                     style={{
@@ -170,7 +175,7 @@ export function VirtualizedList<T>({
             className={`animate-in fade-in slide-in-from-bottom-2 duration-300 ${className}`}
           >
             {items.map((item, index) => (
-              <div key={keyExtractor(item)} id={`item-${index}`}>
+              <div key={keyExtractor(item)} id={`${idPrefix}-${index}`}>
                 {renderItem(item, index)}
               </div>
             ))}
@@ -191,7 +196,13 @@ export function VirtualizedList<T>({
               ? items.map(alphabetNav.getLetterItem)
               : (items as any)
           }
-          onLetterClick={alphabetNav.onLetterClick}
+          onLetterClick={(index, letter) => {
+            if (useVirtual) {
+              virtualizer.scrollToIndex(index, { align: "start" });
+            } else {
+              alphabetNav.onLetterClick(index, letter);
+            }
+          }}
           forceScrollOnly={alphabetNav.forceScrollOnly}
           mode="local"
         />

@@ -83,8 +83,8 @@ export function TracksPage() {
   });
 
   const { scrollToLetter } = useAlphabetNav({
-    idPrefix: "item",
-    headerOffset: 100,
+    idPrefix: "track",
+    headerOffset: 120,
   });
 
   const {
@@ -185,6 +185,7 @@ export function TracksPage() {
       <VirtualizedList
         items={sortedTracks}
         keyExtractor={(t: any) => t.id}
+        idPrefix="track"
         renderItem={(track: any, index: number) => (
           <TrackItem
             track={track}
