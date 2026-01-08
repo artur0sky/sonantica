@@ -36,3 +36,7 @@ export * from './SidebarSection';
 // EQ molecules
 export * from './EQControlGroup';
 export * from './EQPresetSelector';
+
+// Selection molecules
+export * from './SelectionActionButton';
+export * from './SelectionInfo';
