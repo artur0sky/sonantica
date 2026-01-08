@@ -3,11 +3,11 @@
  *
  * Displays statistics and insights about a playlist.
  * Following Sonántica's philosophy of transparency and user control.
+ * Refactored to use shared UI atoms and molecules.
  */
 
 import { useMemo } from "react";
 import { useLibraryStore } from "@sonantica/media-library";
-import { motion } from "framer-motion";
 import {
   IconClock,
   IconMusic,
@@ -16,40 +16,11 @@ import {
   IconCalendar,
   IconFileMusic,
 } from "@tabler/icons-react";
-import { formatTime } from "@sonantica/shared";
+import { formatTime, cn } from "@sonantica/shared";
+import { StatCard } from "@sonantica/ui";
 
 interface PlaylistStatsProps {
   playlistId: string;
-}
-
-interface StatCardProps {
-  icon: React.ReactNode;
-  label: string;
-  value: string | number;
-  subtitle?: string;
-}
-
-function StatCard({ icon, label, value, subtitle }: StatCardProps) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="bg-surface-elevated rounded-xl p-4 border border-border hover:border-accent/50 transition-colors"
-    >
-      <div className="flex items-start gap-3">
-        <div className="text-accent mt-1">{icon}</div>
-        <div className="flex-1 min-w-0">
-          <div className="text-xs text-text-muted uppercase tracking-wider mb-1">
-            {label}
-          </div>
-          <div className="text-2xl font-bold text-text truncate">{value}</div>
-          {subtitle && (
-            <div className="text-xs text-text-muted mt-1">{subtitle}</div>
-          )}
-        </div>
-      </div>
-    </motion.div>
-  );
 }
 
 export function PlaylistStats({ playlistId }: PlaylistStatsProps) {
@@ -159,94 +130,109 @@ export function PlaylistStats({ playlistId }: PlaylistStatsProps) {
   };
 
   return (
-    <div className="space-y-4">
-      <h3 className="text-sm font-semibold text-text-muted uppercase tracking-wider mb-4">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+      <h3 className="text-[10px] font-bold text-text-muted uppercase tracking-[0.2em] mb-4">
         Playlist Statistics
       </h3>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <StatCard
-          icon={<IconMusic size={20} stroke={1.5} />}
-          label="Total Tracks"
+          icon={<IconMusic size={18} stroke={1.5} />}
+          label="Tracks"
           value={stats.trackCount}
         />
 
         <StatCard
-          icon={<IconClock size={20} stroke={1.5} />}
-          label="Duration"
+          icon={<IconClock size={18} stroke={1.5} />}
+          label="Total Duration"
           value={formatTime(stats.totalDuration)}
           subtitle={`${Math.round(stats.totalDuration / 60)} minutes`}
         />
 
         <StatCard
-          icon={<IconUser size={20} stroke={1.5} />}
-          label="Artists"
+          icon={<IconUser size={18} stroke={1.5} />}
+          label="Unique Artists"
           value={stats.uniqueArtists}
           subtitle={stats.uniqueArtists === 1 ? "artist" : "different artists"}
         />
 
         <StatCard
-          icon={<IconDisc size={20} stroke={1.5} />}
-          label="Albums"
+          icon={<IconDisc size={18} stroke={1.5} />}
+          label="Unique Albums"
           value={stats.uniqueAlbums}
           subtitle={stats.uniqueAlbums === 1 ? "album" : "different albums"}
         />
 
         <StatCard
-          icon={<IconFileMusic size={20} stroke={1.5} />}
-          label="Format"
+          icon={<IconFileMusic size={18} stroke={1.5} />}
+          label="Main Format"
           value={stats.mostCommonFormat}
         />
 
         <StatCard
-          icon={<IconCalendar size={20} stroke={1.5} />}
-          label="Year Range"
+          icon={<IconCalendar size={18} stroke={1.5} />}
+          label="Musical Era"
           value={stats.yearRange}
         />
       </div>
 
-      {/* Audio Quality */}
+      {/* Audio Quality Section */}
       {stats.avgBitrate && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-surface-elevated rounded-xl p-4 border border-border"
-        >
-          <div className="flex items-center justify-between">
+        <div className="bg-surface-elevated rounded-2xl p-5 border border-border/50 relative overflow-hidden group">
+          {/* Subtle noise/texture would go here */}
+          <div className="flex items-center justify-between relative z-10">
             <div>
-              <div className="text-xs text-text-muted uppercase tracking-wider mb-1">
-                Average Bitrate
+              <div className="text-[10px] font-bold text-text-muted uppercase tracking-widest mb-1.5 opacity-60">
+                Average Fidelity
               </div>
-              <div className="text-xl font-bold text-accent">
-                {stats.avgBitrate} kbps
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-black text-accent tracking-tighter">
+                  {stats.avgBitrate}
+                </span>
+                <span className="text-sm font-bold text-text-muted">kbps</span>
               </div>
             </div>
-            <div className="text-right text-xs text-text-muted">
-              {stats.avgBitrate >= 1000
-                ? "High Quality"
-                : stats.avgBitrate >= 320
-                ? "Good Quality"
-                : "Standard Quality"}
+            <div className="text-right">
+              <div
+                className={cn(
+                  "px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider",
+                  stats.avgBitrate >= 1000
+                    ? "bg-accent/10 text-accent border border-accent/20"
+                    : stats.avgBitrate >= 320
+                    ? "bg-green-500/10 text-green-500 border border-green-500/20"
+                    : "bg-text-muted/10 text-text-muted border border-border"
+                )}
+              >
+                {stats.avgBitrate >= 1000
+                  ? "Lossless High-End"
+                  : stats.avgBitrate >= 320
+                  ? "High Fidelity"
+                  : "Standard Audio"}
+              </div>
             </div>
           </div>
-        </motion.div>
+        </div>
       )}
 
-      {/* Metadata */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="bg-surface-elevated rounded-xl p-4 border border-border text-xs text-text-muted space-y-2"
-      >
-        <div className="flex justify-between">
-          <span>Created:</span>
-          <span className="text-text">{formatDate(stats.createdAt)}</span>
+      {/* Timeline Metadata */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="bg-surface/30 rounded-xl p-4 border border-border/10">
+          <div className="text-[9px] font-bold text-text-muted uppercase tracking-widest mb-1 opacity-50">
+            Collection Created
+          </div>
+          <div className="text-xs font-semibold text-text">
+            {formatDate(stats.createdAt)}
+          </div>
         </div>
-        <div className="flex justify-between">
-          <span>Last Modified:</span>
-          <span className="text-text">{formatDate(stats.updatedAt)}</span>
+        <div className="bg-surface/30 rounded-xl p-4 border border-border/10 text-right">
+          <div className="text-[9px] font-bold text-text-muted uppercase tracking-widest mb-1 opacity-50">
+            Last Inventory
+          </div>
+          <div className="text-xs font-semibold text-text">
+            {formatDate(stats.updatedAt)}
+          </div>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 }

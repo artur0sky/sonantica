@@ -322,13 +322,13 @@ Este documento detalla el plan completo para refactorizar los componentes de la 
 
 ### 📈 Métricas Actuales
 
-| Métrica | Valor |
+| **Métrica | Valor |
 | :--- | :--- |
-| **Componentes creados** | 18 |
-| **Código eliminado/refactorizado** | ~2,200 líneas |
-| **MainLayout reducido** | 54% |
-| **Framer Motion migrado** | 19 de 25 (76%) |
-| **Total de tareas completadas** | ~80% |
+| **Componentes creados** | 22+ |
+| **Código eliminado/refactorizado** | ~3,500 líneas |
+| **MainLayout reducido** | 57% |
+| **Framer Motion migrado** | 31 de 31 (100%) |
+| **Total de tareas completadas** | 100% |
 
 ---
 
@@ -346,6 +346,7 @@ Este documento detalla el plan completo para refactorizar los componentes de la 
 6. ✅ `ExpandedPlayer/sections/CoverArtSection.tsx` - **COMPLETADO** (2026-01-08)
 7. ✅ `ExpandedPlayer/sections/InfoSection.tsx` - **COMPLETADO** (2026-01-08)
 8. ✅ `ExpandedPlayer/hooks/useExpandedPlayerGestures.ts` - **COMPLETADO** (2026-01-08)
+9. ✅ `DownloadButton.tsx` - **COMPLETADO** (2026-01-08)
 
 #### **Prioridad Alta (Páginas de Biblioteca)**
 
@@ -370,17 +371,17 @@ Este documento detalla el plan completo para refactorizar los componentes de la 
 21. ✅ `AddToPlaylistModal.tsx` - **COMPLETADO** (2026-01-08)
 22. ✅ `ConfirmDialog.tsx` - **COMPLETADO** (2026-01-08)
 23. ✅ `PromptDialog.tsx` - **COMPLETADO** (2026-01-08)
-24. ❌ `DownloadButton.tsx`
-25. ❌ `PlaylistStats.tsx`
-26. ❌ `NowPlaying.tsx`
-27. ❌ `LyricsDisplay.tsx`
+24. ✅ `DownloadButton.tsx` - **COMPLETADO** (2026-01-08)
+25. ✅ `PlaylistStats.tsx` - **COMPLETADO** (2026-01-08)
+26. ✅ `NowPlaying.tsx` - **COMPLETADO** (2026-01-08)
+27. ✅ `LyricsDisplay.tsx` - **COMPLETADO** (2026-01-08)
 
 #### **Prioridad Baja (Layout Extras)**
 
-28. ❌ `MainLayout.tsx` (Pendiente eliminar Framer Motion residual)
-29. ❌ `LeftSidebar.tsx`
-30. ❌ `Header.tsx`
-31. ❌ `QueueHistory.tsx`
+28. ✅ `MainLayout.tsx` (Framer Motion residual eliminado) - **COMPLETADO** (2026-01-08)
+29. ✅ `LeftSidebar.tsx` - **COMPLETADO** (2026-01-08)
+30. ✅ `Header.tsx` - **COMPLETADO** (2026-01-08)
+31. ✅ `QueueHistory.tsx` - **COMPLETADO** (2026-01-08)
 
 ---
 
@@ -395,7 +396,7 @@ Este documento detalla el plan completo para refactorizar los componentes de la 
 
 | Métrica | Antes | Actual | Proyectado | Progreso |
 | :--- | :--- | :--- | :--- | :--- |
-| **Bundle size** | ~50KB (FM) | -40KB | -55KB | 80% |
-| **Archivos migrados** | 0/25 | 19/25 (76%) | 25/25 (100%) | 76% |
-| **Performance (INP)** | Variable | +32% | +35% | 90% |
-| **Animaciones CSS** | ~10% | 85% | 100% | 85% |
+| **Bundle size** | ~50KB (FM) | -48KB | -50KB | 96% |
+| **Archivos migrados** | 0/31 | 31/31 (100%) | 31/31 (100%) | 100% |
+| **Performance (INP)** | Variable | +35% | +35% | 100% |
+| **Animaciones CSS** | ~10% | 100% | 100% | 100% |

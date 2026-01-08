@@ -21,3 +21,6 @@ export * from './VirtualizedList';
 // EQ Components
 export * from './EQCollapsedView';
 export * from './EQExpandedView';
+
+// Lyrics Components
+export * from './LyricsView';

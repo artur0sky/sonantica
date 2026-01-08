@@ -40,6 +40,7 @@ export * from './EQPresetSelector';
 // Selection molecules
 export * from './SelectionActionButton';
 export * from './SelectionInfo';
+export * from './NowPlayingInfo';
 
 // Modal and Dialogs
 export * from './Modal';
