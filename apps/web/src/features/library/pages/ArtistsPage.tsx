@@ -10,7 +10,6 @@ import { ArtistCard } from "../components/ArtistCard";
 import { IconMicrophone, IconSearch } from "@tabler/icons-react";
 import { LibraryPageHeader, VirtualizedGrid, useUIStore } from "@sonantica/ui";
 import { useLocation } from "wouter";
-import { useMultiServerLibrary } from "../../../hooks/useMultiServerLibrary";
 import { useSelectionStore } from "../../../stores/selectionStore";
 import { SelectionActionBar } from "../../../components/SelectionActionBar";
 
@@ -24,7 +23,6 @@ export function ArtistsPage() {
 
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
-  const { scanServer } = useMultiServerLibrary();
   const {
     isSelectionMode,
     enterSelectionMode,
