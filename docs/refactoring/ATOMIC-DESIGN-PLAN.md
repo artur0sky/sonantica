@@ -25,10 +25,13 @@ Este documento detalla el plan para refactorizar los "God Components" identifica
     -   **Código eliminado:** ~190 líneas de MainLayout.tsx
     -   **MainLayout reducido:** 670 → 480 líneas (~28% reducción)
 
-- [ ] **1.2. Crear `DesktopSidebars` Organism**
+- [x] **1.2. Crear `DesktopSidebars` Organism** ✅ **COMPLETADO**
     -   **Archivo:** `src/components/layout/desktop/DesktopSidebars.tsx`
-    -   **Responsabilidad:** Renderizar los `<aside>` de escritorio (Lyrics, Queue, EQ).
+    -   **Responsabilidad:** Renderizar los `<aside>` de escritorio (Lyrics, Queue, EQ, Recommendations).
     -   **Dependencia:** `Suspense`, `lazy` imports.
+    -   **Estado:** Sin animaciones (posicionamiento estático), lazy loading mantenido
+    -   **Código eliminado:** ~140 líneas de MainLayout.tsx
+    -   **MainLayout total reducido:** 670 → 335 líneas (~50% reducción)
 
 - [ ] **1.3. Crear `LayoutThemeManager` HOC/Provider**
     -   **Archivo:** `src/components/layout/managers/LayoutThemeManager.tsx`
