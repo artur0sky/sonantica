@@ -262,9 +262,9 @@ Este documento detalla el plan completo para refactorizar los componentes de la 
 | `AlbumsPage.tsx` | ✅ 100% | 🔴 Crítica | Implementado `LibraryPageHeader` y `VirtualizedGrid`. Migrado a CSS animations. |
 | `PlaylistsPage.tsx` | ✅ 100% | 🔴 Crítica | Implementado `LibraryPageHeader` y `VirtualizedGrid`. Migrado a CSS animations. |
 | `TracksPage.tsx` | ✅ 100% | 🔴 Crítica | Implementado `LibraryPageHeader` y `VirtualizedList`. Migrado a CSS animations. |
-| `ArtistDetailPage.tsx` | 📋 0% | 🟠 Alta | Pendiente |
-| `AlbumDetailPage.tsx` | 📋 0% | 🟠 Alta | Pendiente |
-| `PlaylistDetailPage.tsx` | 📋 0% | 🟠 Alta | Pendiente |
+| `ArtistDetailPage.tsx` | 📋 0% | 🟠 Alta | Pendiente de atomización (Header/Grid/List organisms) y revisión de animaciones. |
+| `AlbumDetailPage.tsx` | 📋 0% | 🟠 Alta | Pendiente de atomización (Header/Grid/List organisms) y revisión de animaciones. |
+| `PlaylistDetailPage.tsx` | 📋 0% | 🟠 Alta | Pendiente de atomización (Header/Grid/List organisms) y revisión de animaciones. |
 
 ---
 
@@ -327,8 +327,8 @@ Este documento detalla el plan completo para refactorizar los componentes de la 
 | **Componentes creados** | 22+ |
 | **Código eliminado/refactorizado** | ~3,500 líneas |
 | **MainLayout reducido** | 57% |
-| **Framer Motion migrado** | 31 de 31 (100%) |
-| **Total de tareas completadas** | 100% |
+| **Framer Motion migrado** | 19 de 44 (43%) |
+| **Total de tareas completadas** | ~60% |
 
 ---
 
@@ -378,10 +378,23 @@ Este documento detalla el plan completo para refactorizar los componentes de la 
 
 #### **Prioridad Baja (Layout Extras)**
 
-28. ✅ `MainLayout.tsx` (Framer Motion residual eliminado) - **COMPLETADO** (2026-01-08)
-29. ✅ `LeftSidebar.tsx` - **COMPLETADO** (2026-01-08)
-30. ✅ `Header.tsx` - **COMPLETADO** (2026-01-08)
-31. ✅ `QueueHistory.tsx` - **COMPLETADO** (2026-01-08)
+28. 📋 `MainLayout.tsx` (Framer Motion residual en App.tsx / Root)
+29. 📋 `LeftSidebar.tsx` (Revisar si queda algo)
+30. 📋 `Header.tsx` (Revisar si queda algo)
+31. 📋 `QueueHistory.tsx` (Revisar si queda algo)
+32. 📋 `RealtimeTicker.tsx` (New)
+33. 📋 `WaveformScrubber.tsx` (New)
+34. 📋 `TrackRating.tsx` (New)
+35. 📋 `TrackCard.tsx` (New)
+36. 📋 `SidebarContainer.tsx` (New)
+37. 📋 `SearchBar.tsx` (New)
+38. 📋 `PlaylistCard.tsx` (New)
+39. 📋 `PageHeader.tsx` (New)
+40. 📋 `FolderList.tsx` (New)
+41. 📋 `EnhancedVolumeControl.tsx` (New)
+42. 📋 `BackgroundSpectrum.tsx` (New)
+43. 📋 `ContextMenu.tsx` (New)
+44. 📋 `Atoms (PlayerButton, ScanButton, PlayButton, UserButton, AlphabetNavigator)` (New)
 
 ---
 
@@ -394,9 +407,9 @@ Este documento detalla el plan completo para refactorizar los componentes de la 
 
 ### **Métricas Proyectadas**
 
-| Métrica | Antes | Actual | Proyectado | Progreso |
+| **Métrica | Antes | Actual | Proyectado | Progreso |
 | :--- | :--- | :--- | :--- | :--- |
-| **Bundle size** | ~50KB (FM) | -48KB | -50KB | 96% |
-| **Archivos migrados** | 0/31 | 31/31 (100%) | 31/31 (100%) | 100% |
-| **Performance (INP)** | Variable | +35% | +35% | 100% |
-| **Animaciones CSS** | ~10% | 100% | 100% | 100% |
+| **Bundle size** | ~50KB (FM) | -30KB | -50KB | 60% |
+| **Archivos migrados** | 0/44 | 19/44 (43%) | 44/44 (100%) | 43% |
+| **Performance (INP)** | Variable | +25% | +35% | 70% |
+| **Animaciones CSS** | ~10% | 45% | 100% | 45% |
