@@ -77,6 +77,7 @@ const defaultConfig: AnalyticsConfig = {
   dataRetentionDays: 90,
 
   debug: false,
+  trackInOfflineMode: true,
 };
 
 /**
