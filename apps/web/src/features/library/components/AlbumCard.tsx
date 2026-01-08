@@ -9,7 +9,6 @@ import {
   IconPlayerSkipForward,
   IconArrowsShuffle,
 } from "@tabler/icons-react";
-import { motion } from "framer-motion";
 import {
   ContextMenu,
   useContextMenu,
@@ -18,7 +17,7 @@ import {
 } from "@sonantica/ui";
 import { useQueueStore } from "@sonantica/player-core";
 import { useLibraryStore } from "@sonantica/media-library";
-import { gpuAnimations, cn } from "@sonantica/shared";
+import { cn } from "@sonantica/shared";
 import { useMemo } from "react";
 import { useSelectionStore } from "../../../stores/selectionStore";
 import { IconCircleCheckFilled } from "@tabler/icons-react";
@@ -82,11 +81,7 @@ export function AlbumCard({ album, onClick }: AlbumCardProps) {
 
   return (
     <>
-      <motion.div
-        layout
-        {...gpuAnimations.scaleIn}
-        whileHover={{ transform: "translateY(-8px) scale(1.02)" }}
-        whileTap={{ scale: 0.98 }}
+      <div
         onClick={() => {
           if (isInSelectionMode) {
             toggleSelection(album.id);
@@ -101,10 +96,16 @@ export function AlbumCard({ album, onClick }: AlbumCardProps) {
         onMouseUp={contextMenu.handleLongPressEnd}
         onMouseLeave={contextMenu.handleLongPressEnd}
         className={cn(
-          "group relative cursor-pointer p-4 hover:bg-surface-elevated transition-colors",
+          "group relative cursor-pointer p-4 transition-all duration-100",
+          "hover:bg-surface-elevated hover:-translate-y-2 hover:scale-[1.02]",
+          "active:scale-[0.98]",
+          "gpu-accelerated",
           selected &&
             "ring-2 ring-accent ring-offset-2 ring-offset-bg rounded-lg"
         )}
+        style={{
+          transform: "translateZ(0)", // GPU acceleration
+        }}
       >
         {/* Selection Checkbox Overlay */}
         {isInSelectionMode && (
@@ -131,12 +132,12 @@ export function AlbumCard({ album, onClick }: AlbumCardProps) {
           />
 
           {/* Hover Overlay */}
-          <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+          <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-100" />
         </div>
 
         {/* Info */}
-        <div className="text-center group-hover:text-left transition-all">
-          <h3 className="font-semibold text-lg truncate mb-1 group-hover:text-accent transition-colors">
+        <div className="text-center group-hover:text-left transition-all duration-100">
+          <h3 className="font-semibold text-lg truncate mb-1 group-hover:text-accent transition-colors duration-100">
             {album.title || album.name}
           </h3>
           <p className="text-sm text-text-muted truncate">{album.artist}</p>
@@ -144,7 +145,7 @@ export function AlbumCard({ album, onClick }: AlbumCardProps) {
             {album.year || "Unknown Year"} • {actualTrackCount} tracks
           </p>
         </div>
-      </motion.div>
+      </div>
 
       {/* Context Menu */}
       <ContextMenu

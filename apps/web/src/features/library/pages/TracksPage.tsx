@@ -3,6 +3,7 @@
  *
  * Displays all tracks in the library with sorting and filtering.
  * Supports virtual scrolling for large libraries.
+ * Uses Framer Motion for page transitions (controlled by Settings)
  */
 
 import { useState, useEffect, useMemo } from "react";

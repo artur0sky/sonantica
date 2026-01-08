@@ -14,7 +14,6 @@ import {
   IconCircleCheckFilled,
   IconExclamationCircle,
 } from "@tabler/icons-react";
-import { motion } from "framer-motion";
 import { cn } from "@sonantica/shared";
 import { usePlayerStore, useQueueStore } from "@sonantica/player-core";
 import { useLibraryStore } from "@sonantica/media-library";
@@ -147,16 +146,7 @@ export function TrackItem({ track, onClick }: TrackItemProps) {
 
   return (
     <>
-      <motion.div
-        layout
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        whileHover={{
-          scale: 1.01,
-          backgroundColor: "var(--color-surface-elevated)",
-          transition: { duration: 0.1 },
-        }}
-        whileTap={{ scale: 0.99 }}
+      <div
         onClick={() => {
           if (isInSelectionMode) {
             toggleSelection(track.id);
@@ -171,13 +161,18 @@ export function TrackItem({ track, onClick }: TrackItemProps) {
         onMouseUp={contextMenu.handleLongPressEnd}
         onMouseLeave={contextMenu.handleLongPressEnd}
         className={cn(
-          "flex items-center gap-4 p-3 rounded-lg cursor-pointer transition-all group",
+          "flex items-center gap-4 p-3 rounded-lg cursor-pointer group",
+          "list-item-optimized smooth-interaction",
+          "transition-all duration-100",
           iscurrentTrack
             ? "bg-surface-elevated"
             : "hover:bg-surface-elevated/50",
           shouldBeGrayedOut && "opacity-40 grayscale-[0.5] filter",
           selected && "bg-accent/10 border border-accent/30"
         )}
+        style={{
+          transform: "translateZ(0)", // GPU acceleration
+        }}
       >
         {/* Selection Checkbox */}
         {isInSelectionMode && (
@@ -260,15 +255,12 @@ export function TrackItem({ track, onClick }: TrackItemProps) {
               />
             )}
             {isDownloading && (
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
-              >
+              <div className="animate-spin">
                 <IconCloudDownload
                   size={14}
                   className="text-accent flex-shrink-0"
                 />
-              </motion.div>
+              </div>
             )}
             {isQueued && (
               <IconCloudDownload
@@ -298,7 +290,7 @@ export function TrackItem({ track, onClick }: TrackItemProps) {
             {formatTime(track.duration)}
           </div>
         )}
-      </motion.div>
+      </div>
 
       {/* Context Menu */}
       <ContextMenu
