@@ -17,10 +17,13 @@ Este documento detalla el plan para refactorizar los "God Components" identifica
 
 ### Tareas:
 
-- [ ] **1.1. Crear `MobileOverlays` Organism**
+- [x] **1.1. Crear `MobileOverlays` Organism** ✅ **COMPLETADO**
     -   **Archivo:** `src/components/layout/mobile/MobileOverlays.tsx`
     -   **Responsabilidad:** Renderizar todos los overlays (`AnimatePresence`) móviles (Sidebar izquierdo, derecho, Lyrics, EQ).
     -   **Dependencia:** `useUIStore`.
+    -   **Estado:** Usa CSS animations (no Framer Motion), respeta `useAnimationSettings`
+    -   **Código eliminado:** ~190 líneas de MainLayout.tsx
+    -   **MainLayout reducido:** 670 → 480 líneas (~28% reducción)
 
 - [ ] **1.2. Crear `DesktopSidebars` Organism**
     -   **Archivo:** `src/components/layout/desktop/DesktopSidebars.tsx`

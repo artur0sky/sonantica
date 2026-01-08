@@ -45,6 +45,7 @@ import { useMediaSession } from "../../hooks/useMediaSession";
 import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
 import { useSidebarResize } from "../../hooks/useSidebarResize"; // New Hook
 import { useDominantColor } from "../../hooks/useDominantColor";
+import { MobileOverlays } from "./mobile/MobileOverlays";
 
 // Sidebar loading fallback
 const SidebarLoader = () => (
@@ -437,203 +438,14 @@ export function MainLayout({ children }: MainLayoutProps) {
         </AnimatePresence>
       </div>
 
-      {/* Mobile/Tablet Overlays (Fixed to absolute top) */}
-      <AnimatePresence>
-        {isMobile &&
-          (isLeftSidebarOpen || isRightSidebarOpen || lyricsOpen || eqOpen) && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => {
-                if (isLeftSidebarOpen)
-                  useUIStore.getState().toggleLeftSidebar();
-                if (isRightSidebarOpen) useUIStore.getState().toggleQueue();
-                if (lyricsOpen) useUIStore.getState().toggleLyrics();
-                if (eqOpen) useUIStore.getState().toggleEQ();
-                if (recommendationsOpen)
-                  useUIStore.getState().toggleRecommendations();
-              }}
-              className="fixed inset-0 bg-black/60 z-[60] backdrop-blur-sm"
-            />
-          )}
-      </AnimatePresence>
-
-      {/* Mobile Left Sidebar Overlay */}
-      <AnimatePresence>
-        {isMobile && isLeftSidebarOpen && (
-          <motion.aside
-            initial={{ x: "-100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "-100%" }}
-            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-y-0 left-0 w-[280px] z-[70] shadow-2xl border-r border-white/10 overflow-y-auto pt-[max(env(safe-area-inset-top),2rem)]"
-            style={
-              {
-                backgroundColor: dominantColor,
-                color: contrastColor,
-                "--color-text": contrastColor,
-                "--color-text-muted": mutedColor,
-                "--color-border":
-                  contrastColor === "#ffffff"
-                    ? "rgba(255,255,255,0.1)"
-                    : "rgba(0,0,0,0.1)",
-                "--color-surface": "transparent",
-                "--color-surface-elevated":
-                  contrastColor === "#ffffff"
-                    ? "rgba(255,255,255,0.1)"
-                    : "rgba(0,0,0,0.1)",
-                "--color-accent": contrastColor,
-                "--color-accent-hover": contrastColor,
-              } as React.CSSProperties
-            }
-          >
-            <LeftSidebar isCollapsed={false} />
-          </motion.aside>
-        )}
-      </AnimatePresence>
-
-      {/* Mobile Right Sidebar Overlay */}
-      <AnimatePresence>
-        {isMobile && isRightSidebarOpen && currentTrack && (
-          <motion.aside
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
-            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-y-0 right-0 w-[320px] z-[70] shadow-2xl border-l border-white/10 overflow-y-auto pt-[max(env(safe-area-inset-top),2rem)]"
-            style={
-              {
-                backgroundColor: dominantColor,
-                color: contrastColor,
-                "--color-text": contrastColor,
-                "--color-text-muted": mutedColor,
-                "--color-border":
-                  contrastColor === "#ffffff"
-                    ? "rgba(255,255,255,0.1)"
-                    : "rgba(0,0,0,0.1)",
-                "--color-surface": "transparent",
-                "--color-surface-elevated":
-                  contrastColor === "#ffffff"
-                    ? "rgba(255,255,255,0.1)"
-                    : "rgba(0,0,0,0.1)",
-                "--color-accent": contrastColor,
-                "--color-accent-hover": contrastColor,
-              } as React.CSSProperties
-            }
-          >
-            <RightSidebar isCollapsed={false} />
-          </motion.aside>
-        )}
-      </AnimatePresence>
-
-      {/* Mobile Lyrics Sidebar Overlay */}
-      <AnimatePresence>
-        {isMobile && lyricsOpen && currentTrack && (
-          <motion.aside
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
-            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-y-0 right-0 w-[320px] z-[70] shadow-2xl border-l border-white/10 overflow-y-auto pt-[max(env(safe-area-inset-top),2rem)]"
-            style={
-              {
-                backgroundColor: dominantColor,
-                color: contrastColor,
-                "--color-text": contrastColor,
-                "--color-text-muted": mutedColor,
-                "--color-border":
-                  contrastColor === "#ffffff"
-                    ? "rgba(255,255,255,0.1)"
-                    : "rgba(0,0,0,0.1)",
-                "--color-surface": "transparent",
-                "--color-surface-elevated":
-                  contrastColor === "#ffffff"
-                    ? "rgba(255,255,255,0.1)"
-                    : "rgba(0,0,0,0.1)",
-                "--color-accent": contrastColor,
-                "--color-accent-hover": contrastColor,
-              } as React.CSSProperties
-            }
-          >
-            <Suspense fallback={<SidebarLoader />}>
-              <LyricsSidebar isCollapsed={false} />
-            </Suspense>
-          </motion.aside>
-        )}
-      </AnimatePresence>
-
-      {/* Mobile EQ Sidebar Overlay */}
-      <AnimatePresence>
-        {isMobile && eqOpen && currentTrack && (
-          <motion.aside
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
-            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-y-0 right-0 w-[320px] z-[70] shadow-2xl border-l border-white/10 overflow-y-auto pt-[max(env(safe-area-inset-top),2rem)]"
-            style={
-              {
-                backgroundColor: dominantColor,
-                color: contrastColor,
-                "--color-text": contrastColor,
-                "--color-text-muted": mutedColor,
-                "--color-border":
-                  contrastColor === "#ffffff"
-                    ? "rgba(255,255,255,0.1)"
-                    : "rgba(0,0,0,0.1)",
-                "--color-surface": "transparent",
-                "--color-surface-elevated":
-                  contrastColor === "#ffffff"
-                    ? "rgba(255,255,255,0.1)"
-                    : "rgba(0,0,0,0.1)",
-                "--color-accent": contrastColor,
-                "--color-accent-hover": contrastColor,
-              } as React.CSSProperties
-            }
-          >
-            <Suspense fallback={<SidebarLoader />}>
-              <EQSidebar isCollapsed={false} />
-            </Suspense>
-          </motion.aside>
-        )}
-      </AnimatePresence>
-
-      {/* Mobile Recommendations Sidebar Overlay */}
-      <AnimatePresence>
-        {isMobile && recommendationsOpen && currentTrack && (
-          <motion.aside
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
-            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-y-0 right-0 w-[320px] z-[70] shadow-2xl border-l border-white/10 overflow-y-auto pt-[max(env(safe-area-inset-top),2rem)]"
-            style={
-              {
-                backgroundColor: dominantColor,
-                color: contrastColor,
-                "--color-text": contrastColor,
-                "--color-text-muted": mutedColor,
-                "--color-border":
-                  contrastColor === "#ffffff"
-                    ? "rgba(255,255,255,0.1)"
-                    : "rgba(0,0,0,0.1)",
-                "--color-surface": "transparent",
-                "--color-surface-elevated":
-                  contrastColor === "#ffffff"
-                    ? "rgba(255,255,255,0.1)"
-                    : "rgba(0,0,0,0.1)",
-                "--color-accent": contrastColor,
-                "--color-accent-hover": contrastColor,
-              } as React.CSSProperties
-            }
-          >
-            <Suspense fallback={<SidebarLoader />}>
-              <RecommendationsSidebar />
-            </Suspense>
-          </motion.aside>
-        )}
-      </AnimatePresence>
+      {/* Mobile Overlays - Extracted to organism component */}
+      <MobileOverlays
+        isMobile={isMobile}
+        currentTrack={currentTrack}
+        dominantColor={dominantColor}
+        contrastColor={contrastColor}
+        mutedColor={mutedColor}
+      />
 
       {/* Bottom Mini Player - Sticky */}
       <AnimatePresence mode="wait">
