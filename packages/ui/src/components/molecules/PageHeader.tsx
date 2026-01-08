@@ -1,4 +1,3 @@
-import { motion } from "framer-motion";
 import { ReactNode } from "react";
 import { cn } from "../../utils";
 
@@ -10,6 +9,12 @@ interface PageHeaderProps {
   sticky?: boolean;
 }
 
+/**
+ * PageHeader Molecule
+ *
+ * A reusable header component for pages, supporting sticky positioning,
+ * subtitles, and action buttons.
+ */
 export function PageHeader({
   title,
   subtitle,
@@ -18,11 +23,9 @@ export function PageHeader({
   sticky = true,
 }: PageHeaderProps) {
   return (
-    <motion.div
-      initial={{ y: -20, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
+    <div
       className={cn(
-        "bg-bg/95 backdrop-blur-md border-b border-border/50 -mx-6 px-6 py-4 mb-6 z-30",
+        "bg-bg/95 backdrop-blur-md border-b border-border/50 -mx-6 px-6 py-4 mb-6 z-30 animate-in fade-in slide-in-from-top-4 duration-300",
         sticky && "sticky top-0",
         className
       )}
@@ -37,6 +40,6 @@ export function PageHeader({
 
         {actions && <div className="flex items-center gap-2">{actions}</div>}
       </div>
-    </motion.div>
+    </div>
   );
 }

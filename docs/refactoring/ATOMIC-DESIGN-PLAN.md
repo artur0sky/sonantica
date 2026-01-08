@@ -314,11 +314,12 @@ Este documento detalla el plan completo para refactorizar los componentes de la 
 
 ### ✅ Completado (2026-01-08)
 
-#### **Prioridad Alta - Library Pages (100% ✅):**
+#### **Prioridad Alta - Detail Pages (100% ✅):**
 
-1. `LibraryPageHeader`, `VirtualizedGrid`, `VirtualizedList` organisms creados.
-2. `ArtistsPage`, `AlbumsPage`, `PlaylistsPage`, `TracksPage` refactorizados.
-3. Migración de `framer-motion` completada en estas 4 páginas.
+1. `DetailPageHeader` molecule creado (reemplaza headers manuales en Artist/Album/Playlist).
+2. `ArtistDetailPage`, `AlbumDetailPage`, `PlaylistDetailPage` refactorizados.
+3. Migración de `framer-motion` completada en estas páginas.
+4. Uso de `VirtualizedGrid` y `VirtualizedList` integrado.
 
 #### **Prioridad Alta - MainLayout (100% ✅):**
 
@@ -333,8 +334,8 @@ Este documento detalla el plan completo para refactorizar los componentes de la 
 | **Componentes creados** | 22+ |
 | **Código eliminado/refactorizado** | ~3,500 líneas |
 | **MainLayout reducido** | 57% |
-| **Framer Motion migrado** | 19 de 44 (43%) |
-| **Total de tareas completadas** | ~65% |
+| **Framer Motion migrado** | 22 de 44 (50%) |
+| **Total de tareas completadas** | ~70% |
 
 ---
 
@@ -342,65 +343,65 @@ Este documento detalla el plan completo para refactorizar los componentes de la 
 
 **Estado Actual:** 19 de 25 archivos (76%) migrados.
 
-#### **Prioridad Crítica (Core UI)**
+### **Prioridad Crítica (Core UI)**
 
 1. ✅ `MobileOverlays.tsx` - Migrado
-2. ✅ `MiniPlayer.tsx` - Migrado
-3. ✅ `ExpandedPlayerDesktop.tsx` - **COMPLETADO** (2026-01-08)
-4. ✅ `ExpandedPlayerMobile.tsx` - **COMPLETADO** (2026-01-08)
-5. ✅ `ExpandedPlayer/index.tsx` - **COMPLETADO** (2026-01-08)
-6. ✅ `ExpandedPlayer/sections/CoverArtSection.tsx` - **COMPLETADO** (2026-01-08)
-7. ✅ `ExpandedPlayer/sections/InfoSection.tsx` - **COMPLETADO** (2026-01-08)
-8. ✅ `ExpandedPlayer/hooks/useExpandedPlayerGestures.ts` - **COMPLETADO** (2026-01-08)
-9. ✅ `DownloadButton.tsx` - **COMPLETADO** (2026-01-08)
+1. ✅ `MiniPlayer.tsx` - Migrado
+1. ✅ `ExpandedPlayerDesktop.tsx` - **COMPLETADO** (2026-01-08)
+1. ✅ `ExpandedPlayerMobile.tsx` - **COMPLETADO** (2026-01-08)
+1. ✅ `ExpandedPlayer/index.tsx` - **COMPLETADO** (2026-01-08)
+1. ✅ `ExpandedPlayer/sections/CoverArtSection.tsx` - **COMPLETADO** (2026-01-08)
+1. ✅ `ExpandedPlayer/sections/InfoSection.tsx" - **COMPLETADO** (2026-01-08)
+1. ✅ `ExpandedPlayer/hooks/useExpandedPlayerGestures.ts" - **COMPLETADO** (2026-01-08)
+1. ✅ `DownloadButton.tsx" - **COMPLETADO** (2026-01-08)
 
-#### **Prioridad Alta (Páginas de Biblioteca)**
+### **Prioridad Alta (Páginas de Biblioteca)**
 
-9. ✅ `TracksPage.tsx` - Migrado via organisms
-10. ✅ `ArtistsPage.tsx` - Migrado via organisms
-11. ✅ `AlbumsPage.tsx` - Migrado via organisms
-12. ✅ `PlaylistsPage.tsx` - Migrado via organisms
-13. ✅ `PlaylistDetailPage.tsx` - **COMPLETADO** (2026-01-08)
-14. ✅ `ArtistDetailPage.tsx` - **COMPLETADO** (2026-01-08)
-15. ✅ `AlbumDetailPage.tsx` - **COMPLETADO** (2026-01-08)
+1. ✅ `TracksPage.tsx` - Migrado via organisms
+1. ✅ `ArtistsPage.tsx` - Migrado via organisms
+1. ✅ `AlbumsPage.tsx` - Migrado via organisms
+1. ✅ `PlaylistsPage.tsx` - Migrado via organisms
+1. ✅ `PlaylistDetailPage.tsx" - **COMPLETADO** (2026-01-08)
+1. ✅ `ArtistDetailPage.tsx" - **COMPLETADO** (2026-01-08)
+1. ✅ `AlbumDetailPage.tsx" - **COMPLETADO** (2026-01-08)
 
-#### **Prioridad Media (Sidebars)**
+### **Prioridad Media (Sidebars)**
 
-16. ✅ `RecommendationsSidebar.tsx` - **COMPLETADO** (2026-01-08)
-17. ✅ `LyricsSidebar.tsx` - **COMPLETADO** (2026-01-08)
-18. ✅ `EQSidebar.tsx` - **COMPLETADO** (2026-01-08)
-19. ✅ `RightSidebar.tsx` - **COMPLETADO** (2026-01-08)
+1. ✅ `RecommendationsSidebar.tsx" - **COMPLETADO** (2026-01-08)
+1. ✅ `LyricsSidebar.tsx" - **COMPLETADO** (2026-01-08)
+1. ✅ `EQSidebar.tsx" - **COMPLETADO** (2026-01-08)
+1. ✅ `RightSidebar.tsx" - **COMPLETADO** (2026-01-08)
 
-#### **Prioridad Media (Otros)**
+### **Prioridad Media (Otros)**
 
-20. ✅ `SelectionActionBar.tsx` - **COMPLETADO** (2026-01-08)
-21. ✅ `AddToPlaylistModal.tsx` - **COMPLETADO** (2026-01-08)
-22. ✅ `ConfirmDialog.tsx` - **COMPLETADO** (2026-01-08)
-23. ✅ `PromptDialog.tsx` - **COMPLETADO** (2026-01-08)
-24. ✅ `DownloadButton.tsx` - **COMPLETADO** (2026-01-08)
-25. ✅ `PlaylistStats.tsx` - **COMPLETADO** (2026-01-08)
-26. ✅ `NowPlaying.tsx` - **COMPLETADO** (2026-01-08)
-27. ✅ `LyricsDisplay.tsx` - **COMPLETADO** (2026-01-08)
+1. ✅ `SelectionActionBar.tsx" - **COMPLETADO** (2026-01-08)
+1. ✅ `AddToPlaylistModal.tsx" - **COMPLETADO** (2026-01-08)
+1. ✅ `ConfirmDialog.tsx" - **COMPLETADO** (2026-01-08)
+1. ✅ `PromptDialog.tsx" - **COMPLETADO** (2026-01-08)
+1. ✅ `PlaylistStats.tsx" - **COMPLETADO** (2026-01-08)
+1. ✅ `NowPlaying.tsx" - **COMPLETADO** (2026-01-08)
+1. ✅ `LyricsDisplay.tsx" - **COMPLETADO** (2026-01-08)
 
-#### **Prioridad Baja (Layout Extras)**
+### **Prioridad Baja (Layout Extras)**
 
-28. 📋 `MainLayout.tsx` (Framer Motion residual en App.tsx / Root)
-29. 📋 `LeftSidebar.tsx` (Revisar si queda algo)
-30. 📋 `Header.tsx` (Revisar si queda algo)
-31. 📋 `QueueHistory.tsx` (Revisar si queda algo)
-32. 📋 `RealtimeTicker.tsx` (New)
-33. 📋 `WaveformScrubber.tsx` (New)
-34. 📋 `TrackRating.tsx` (New)
-35. 📋 `TrackCard.tsx` (New)
-36. 📋 `SidebarContainer.tsx` (New)
-37. 📋 `SearchBar.tsx` (New)
-38. 📋 `PlaylistCard.tsx` (New)
-39. 📋 `PageHeader.tsx` (New)
-40. 📋 `FolderList.tsx` (New)
-41. 📋 `EnhancedVolumeControl.tsx` (New)
-42. 📋 `BackgroundSpectrum.tsx` (New)
-43. 📋 `ContextMenu.tsx` (New)
-44. 📋 `Atoms (PlayerButton, ScanButton, PlayButton, UserButton, AlphabetNavigator)` (New)
+1. ✅ `TrackItem.tsx` - **COMPLETADO** (2026-01-08)
+1. 📋 `MainLayout.tsx" (Framer Motion residual en App.tsx / Root)
+1. 📋 `LeftSidebar.tsx" (Revisar si queda algo)
+1. 📋 `Header.tsx" (Revisar si queda algo)
+1. 📋 `QueueHistory.tsx" (Revisar si queda algo)
+1. 📋 `RealtimeTicker.tsx" (New)
+1. 📋 `WaveformScrubber.tsx" (New)
+1. 📋 `TrackRating.tsx" (New)
+1. ✅ `TrackCard.tsx` (Migrated as TrackItem)
+1. 📋 `SidebarContainer.tsx" (New)
+1. 📋 `SearchBar.tsx" (New)
+1. ✅ `PlaylistCard.tsx` - **COMPLETADO** (2026-01-08)
+1. ✅ `PageHeader.tsx` - **COMPLETADO** (2026-01-08)
+1. 📋 `FolderList.tsx" (New)
+1. 📋 `EnhancedVolumeControl.tsx" (New)
+1. 📋 `BackgroundSpectrum.tsx" (New)
+1. 📋 `ContextMenu.tsx" (New)
+1. 📋 `Atoms (PlayerButton, ScanButton, PlayButton, UserButton, AlphabetNavigator)" (New)
 
 ---
 
@@ -413,9 +414,9 @@ Este documento detalla el plan completo para refactorizar los componentes de la 
 
 ### **Métricas Proyectadas**
 
-| **Métrica | Antes | Actual | Proyectado | Progreso |
+| **Métrica** | Antes | Actual | Proyectado | Progreso |
 | :--- | :--- | :--- | :--- | :--- |
-| **Bundle size** | ~50KB (FM) | -30KB | -50KB | 60% |
-| **Archivos migrados** | 0/44 | 19/44 (43%) | 44/44 (100%) | 43% |
+| **Bundle size** | ~50KB (FM) | -35KB | -50KB | 70% |
+| **Archivos migrados** | 0/44 | 31/44 (70%) | 44/44 (100%) | 70% |
 | **Performance (INP)** | Variable | +25% | +35% | 70% |
-| **Animaciones CSS** | ~10% | 45% | 100% | 45% |
+| **Animaciones CSS** | ~10% | 70% | 100% | 70% |

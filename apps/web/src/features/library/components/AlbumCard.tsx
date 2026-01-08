@@ -1,9 +1,3 @@
-/**
- * Album Card Component
- *
- * Grid item for album view
- */
-
 import {
   IconPlaylistAdd,
   IconPlayerSkipForward,
@@ -13,14 +7,13 @@ import {
   ContextMenu,
   useContextMenu,
   CoverArt,
+  MediaCard,
   type ContextMenuItem,
 } from "@sonantica/ui";
 import { useQueueStore } from "@sonantica/player-core";
 import { useLibraryStore } from "@sonantica/media-library";
-import { cn } from "@sonantica/shared";
 import { useMemo } from "react";
 import { useSelectionStore } from "../../../stores/selectionStore";
-import { IconCircleCheckFilled } from "@tabler/icons-react";
 
 interface AlbumCardProps {
   album: any;
@@ -81,7 +74,24 @@ export function AlbumCard({ album, onClick }: AlbumCardProps) {
 
   return (
     <>
-      <div
+      <MediaCard
+        title={album.title || album.name}
+        subtitle={
+          <div className="flex flex-col gap-0.5 mt-1">
+            <span className="truncate opacity-90">{album.artist}</span>
+            <span className="text-xs opacity-60 font-mono">
+              {album.year || "Unknown Year"} • {actualTrackCount} tracks
+            </span>
+          </div>
+        }
+        image={
+          <CoverArt
+            src={album.coverArt}
+            alt={album.name}
+            className="w-full h-full"
+            iconSize={64}
+          />
+        }
         onClick={() => {
           if (isInSelectionMode) {
             toggleSelection(album.id);
@@ -89,65 +99,16 @@ export function AlbumCard({ album, onClick }: AlbumCardProps) {
             onClick();
           }
         }}
+        selected={selected}
+        isSelectionMode={isInSelectionMode}
         onContextMenu={contextMenu.handleContextMenu}
-        onTouchStart={contextMenu.handleLongPressStart}
-        onTouchEnd={contextMenu.handleLongPressEnd}
         onMouseDown={contextMenu.handleLongPressStart}
         onMouseUp={contextMenu.handleLongPressEnd}
         onMouseLeave={contextMenu.handleLongPressEnd}
-        className={cn(
-          "group relative cursor-pointer p-4 transition-all duration-100",
-          "hover:bg-surface-elevated hover:-translate-y-2 hover:scale-[1.02]",
-          "active:scale-[0.98]",
-          "gpu-accelerated",
-          selected &&
-            "ring-2 ring-accent ring-offset-2 ring-offset-bg rounded-lg"
-        )}
-        style={{
-          transform: "translateZ(0)", // GPU acceleration
-        }}
-      >
-        {/* Selection Checkbox Overlay */}
-        {isInSelectionMode && (
-          <div
-            className={cn(
-              "absolute top-2 right-2 z-10 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all",
-              selected
-                ? "bg-accent border-accent"
-                : "bg-bg/80 backdrop-blur-sm border-white/30"
-            )}
-          >
-            {selected && (
-              <IconCircleCheckFilled size={20} className="text-white" />
-            )}
-          </div>
-        )}
-        {/* Album Art - PERFORMANCE: Lazy loaded with LRU cache */}
-        <div className="aspect-square mb-4 flex items-center justify-center relative overflow-hidden">
-          <CoverArt
-            src={album.coverArt}
-            alt={album.name}
-            className="w-full h-full"
-            iconSize={64}
-          />
+        onTouchStart={contextMenu.handleLongPressStart}
+        onTouchEnd={contextMenu.handleLongPressEnd}
+      />
 
-          {/* Hover Overlay */}
-          <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-100" />
-        </div>
-
-        {/* Info */}
-        <div className="text-center group-hover:text-left transition-all duration-100">
-          <h3 className="font-semibold text-lg truncate mb-1 group-hover:text-accent transition-colors duration-100">
-            {album.title || album.name}
-          </h3>
-          <p className="text-sm text-text-muted truncate">{album.artist}</p>
-          <p className="text-xs text-text-muted/60 mt-2 font-mono">
-            {album.year || "Unknown Year"} • {actualTrackCount} tracks
-          </p>
-        </div>
-      </div>
-
-      {/* Context Menu */}
       <ContextMenu
         items={menuItems}
         isOpen={contextMenu.isOpen}
