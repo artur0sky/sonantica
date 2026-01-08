@@ -22,5 +22,7 @@ export * from './VirtualizedList';
 export * from './EQCollapsedView';
 export * from './EQExpandedView';
 
-// Lyrics Components
 export * from './LyricsView';
+
+// Layout Components
+export * from './GenericPageWrapper';

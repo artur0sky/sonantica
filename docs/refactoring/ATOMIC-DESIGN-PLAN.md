@@ -250,7 +250,7 @@ Este documento detalla el plan completo para refactorizar los componentes de la 
 | `LibraryPageHeader` | Organismo | ✅ 100% | 🔴 Crítica | `packages/ui/src/components/organisms/LibraryPageHeader.tsx` |
 | `VirtualizedGrid` | Organismo | ✅ 100% | 🔴 Crítica | `packages/ui/src/components/organisms/VirtualizedGrid.tsx` |
 | `VirtualizedList` | Organismo | ✅ 100% | 🔴 Crítica | `packages/ui/src/components/organisms/VirtualizedList.tsx` |
-| `GenericPageWrapper` | Organismo | 📋 0% | 🟡 Media | - |
+| `GenericPageWrapper` | Organismo | ✅ 100% | 🟡 Media | `packages/ui/src/components/organisms/GenericPageWrapper.tsx` |
 
 ---
 
@@ -274,7 +274,7 @@ Este documento detalla el plan completo para refactorizar los componentes de la 
 | :--- | :--- | :--- | :--- | :--- |
 | `SidebarSection` | Molécula | ✅ 100% | 🟠 Media | `packages/ui/src/components/molecules/SidebarSection.tsx` |
 | `QueueTrackItem` | Organismo | ✅ 100% | 🟠 Media | `apps/web/src/components/queue/QueueTrackItem.tsx` |
-| `RecommendationCard` | Molécula | 📋 0% | 🟡 Baja | `src/features/recommendations/components/RecommendationCard.tsx` |
+| `RecommendationCard` | Molécula | ✅ 100% | 🟡 Baja | `apps/web/src/features/recommendations/components/RecommendationCard.tsx` |
 | `CollapsedEQView` | Organismo | ✅ 100% | 🟠 Media | `packages/ui/src/components/organisms/EQCollapsedView.tsx` |
 | `ExpandedEQView` | Organismo | ✅ 100% | 🟠 Media | `packages/ui/src/components/organisms/EQExpandedView.tsx` |
 | `EQControls` | Molécula | ✅ 100% | 🟠 Media | `packages/ui/src/components/molecules/EQControlGroup.tsx` |
@@ -393,7 +393,7 @@ Este documento detalla el plan completo para refactorizar los componentes de la 
 1. 📋 `WaveformScrubber.tsx" (New)
 1. 📋 `TrackRating.tsx" (New)
 1. ✅ `TrackCard.tsx` (Migrated as TrackItem)
-1. 📋 `SidebarContainer.tsx" (New)
+1. ✅ `SidebarContainer.tsx` - **COMPLETADO** (2026-01-08)
 1. 📋 `SearchBar.tsx" (New)
 1. ✅ `PlaylistCard.tsx` - **COMPLETADO** (2026-01-08)
 1. ✅ `PageHeader.tsx` - **COMPLETADO** (2026-01-08)
@@ -431,6 +431,6 @@ Este documento detalla el plan completo para refactorizar los componentes de la 
 | **Métrica** | Antes | Actual | Proyectado | Progreso |
 | :--- | :--- | :--- | :--- | :--- |
 | **Bundle size** | ~50KB (FM) | -35KB | -50KB | 70% |
-| **Archivos migrados** | 0/44 | 31/44 (70%) | 44/44 (100%) | 70% |
+| **Archivos migrados** | 0/44 | 33/44 (75%) | 44/44 (100%) | 75% |
 | **Performance (INP)** | Variable | +25% | +35% | 70% |
 | **Animaciones CSS** | ~10% | 70% | 100% | 70% |

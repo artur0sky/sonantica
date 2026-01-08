@@ -15,6 +15,7 @@ import {
   Button,
   PromptDialog,
   useUIStore,
+  GenericPageWrapper,
 } from "@sonantica/ui";
 import { useLocation } from "wouter";
 import { useSelectionStore } from "../../../stores/selectionStore";
@@ -119,7 +120,7 @@ export function PlaylistsPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-6 pb-32">
+    <GenericPageWrapper>
       <LibraryPageHeader
         title="Playlists"
         subtitle={
@@ -219,6 +220,6 @@ export function PlaylistsPage() {
         defaultValue={dialogState.defaultValue}
         placeholder={dialogState.placeholder}
       />
-    </div>
+    </GenericPageWrapper>
   );
 }

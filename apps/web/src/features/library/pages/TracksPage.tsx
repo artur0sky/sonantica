@@ -13,6 +13,7 @@ import {
   VirtualizedList,
   Button,
   useUIStore,
+  GenericPageWrapper,
 } from "@sonantica/ui";
 import { useLibraryStore } from "@sonantica/media-library";
 import { useSortable, useAlphabetNav, OfflineStatus } from "@sonantica/shared";
@@ -127,7 +128,7 @@ export function TracksPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 pb-24 sm:pb-32">
+    <GenericPageWrapper className="px-3 sm:px-4 md:px-6 pb-24 sm:pb-32">
       <LibraryPageHeader
         title="Tracks"
         subtitle={
@@ -225,6 +226,6 @@ export function TracksPage() {
       />
 
       <SelectionActionBar />
-    </div>
+    </GenericPageWrapper>
   );
 }

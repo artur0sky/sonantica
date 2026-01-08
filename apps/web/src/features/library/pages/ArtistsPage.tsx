@@ -8,7 +8,12 @@ import { useLibraryStore } from "@sonantica/media-library";
 import { useSortable, useAlphabetNav } from "@sonantica/shared";
 import { ArtistCard } from "../components/ArtistCard";
 import { IconMicrophone, IconSearch } from "@tabler/icons-react";
-import { LibraryPageHeader, VirtualizedGrid, useUIStore } from "@sonantica/ui";
+import {
+  LibraryPageHeader,
+  VirtualizedGrid,
+  useUIStore,
+  GenericPageWrapper,
+} from "@sonantica/ui";
 import { useLocation } from "wouter";
 import { useSelectionStore } from "../../../stores/selectionStore";
 import { SelectionActionBar } from "../../../components/SelectionActionBar";
@@ -57,7 +62,7 @@ export function ArtistsPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-6 pb-32">
+    <GenericPageWrapper>
       <LibraryPageHeader
         title="Artists"
         subtitle={
@@ -121,6 +126,6 @@ export function ArtistsPage() {
       />
 
       <SelectionActionBar />
-    </div>
+    </GenericPageWrapper>
   );
 }
