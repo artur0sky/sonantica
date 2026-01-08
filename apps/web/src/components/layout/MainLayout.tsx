@@ -8,7 +8,7 @@
  */
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Suspense, lazy, useMemo, useEffect, useRef } from "react";
+import { useMemo, useEffect, useRef } from "react";
 import { usePlayerStore } from "@sonantica/player-core";
 import {
   useUIStore,
@@ -19,24 +19,10 @@ import {
 } from "@sonantica/ui";
 import { Header } from "./Header";
 import { LeftSidebar } from "./LeftSidebar";
-import { RightSidebar } from "./RightSidebar";
-import { IconLoader, IconPlaylistAdd } from "@tabler/icons-react";
+import { IconPlaylistAdd } from "@tabler/icons-react";
 import { useLibraryStore } from "@sonantica/media-library";
 import { DownloadButton } from "../DownloadButton";
 import { cn } from "@sonantica/shared";
-
-// PERFORMANCE: Lazy load heavy sidebars (code splitting)
-const LyricsSidebar = lazy(() =>
-  import("./LyricsSidebar").then((m) => ({ default: m.LyricsSidebar }))
-);
-const EQSidebar = lazy(() =>
-  import("./EQSidebar").then((m) => ({ default: m.EQSidebar }))
-);
-const RecommendationsSidebar = lazy(() =>
-  import("./RecommendationsSidebar").then((m) => ({
-    default: m.RecommendationsSidebar,
-  }))
-);
 
 import { useWaveformLoader } from "../../features/player/hooks/useWaveformLoader";
 import { PlaybackPersistence } from "../../features/player/components/PlaybackPersistence";
@@ -46,13 +32,7 @@ import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
 import { useSidebarResize } from "../../hooks/useSidebarResize"; // New Hook
 import { useDominantColor } from "../../hooks/useDominantColor";
 import { MobileOverlays } from "./mobile/MobileOverlays";
-
-// Sidebar loading fallback
-const SidebarLoader = () => (
-  <div className="flex items-center justify-center h-full text-text-muted">
-    <IconLoader className="animate-spin" size={24} />
-  </div>
-);
+import { DesktopSidebars } from "./desktop/DesktopSidebars";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -279,147 +259,15 @@ export function MainLayout({ children }: MainLayoutProps) {
           </AnimatePresence>
         </main>
 
-        {/* Right Sidebar - Queue (Desktop Only - Relative Position) */}
-        {!isMobile && isRightSidebarOpen && currentTrack && (
-          <aside
-            className="border-l border-white/10 h-full flex-shrink-0 z-20 relative shadow-[-10px_0_30px_rgba(0,0,0,0.2)]"
-            style={
-              {
-                width: rightSidebarWidth,
-                backgroundColor: dominantColor,
-                color: contrastColor,
-                "--color-text": contrastColor,
-                "--color-text-muted": mutedColor,
-                "--color-border":
-                  contrastColor === "#ffffff"
-                    ? "rgba(255,255,255,0.1)"
-                    : "rgba(0,0,0,0.1)",
-                "--color-surface": "transparent",
-                "--color-surface-elevated":
-                  contrastColor === "#ffffff"
-                    ? "rgba(255,255,255,0.1)"
-                    : "rgba(0,0,0,0.1)",
-                "--color-accent": contrastColor,
-                "--color-accent-hover": contrastColor,
-              } as React.CSSProperties
-            }
-          >
-            <SidebarResizer
-              orientation="vertical"
-              onMouseDown={() => startResizing("right")}
-              className="left-0 opacity-20 hover:opacity-50"
-            />
-            <RightSidebar isCollapsed={rightSidebarWidth === 80} />
-          </aside>
-        )}
-
-        {/* Lyrics Sidebar (Desktop Only - Relative Position) */}
-        {!isMobile && lyricsOpen && currentTrack && (
-          <aside
-            className="border-l border-white/10 h-full flex-shrink-0 z-20 relative shadow-[-10px_0_30px_rgba(0,0,0,0.2)]"
-            style={
-              {
-                width: lyricsSidebarWidth,
-                backgroundColor: dominantColor,
-                color: contrastColor,
-                "--color-text": contrastColor,
-                "--color-text-muted": mutedColor,
-                "--color-border":
-                  contrastColor === "#ffffff"
-                    ? "rgba(255,255,255,0.1)"
-                    : "rgba(0,0,0,0.1)",
-                "--color-surface": "transparent",
-                "--color-surface-elevated":
-                  contrastColor === "#ffffff"
-                    ? "rgba(255,255,255,0.1)"
-                    : "rgba(0,0,0,0.1)",
-                "--color-accent": contrastColor,
-                "--color-accent-hover": contrastColor,
-              } as React.CSSProperties
-            }
-          >
-            <SidebarResizer
-              orientation="vertical"
-              onMouseDown={() => startResizing("lyrics")}
-              className="left-0 opacity-20 hover:opacity-50"
-            />
-            <Suspense fallback={<SidebarLoader />}>
-              <LyricsSidebar isCollapsed={lyricsSidebarWidth === 80} />
-            </Suspense>
-          </aside>
-        )}
-
-        {/* EQ Sidebar (Desktop Only - Relative Position) */}
-        {!isMobile && eqOpen && currentTrack && (
-          <aside
-            className="border-l border-white/10 h-full flex-shrink-0 z-20 relative shadow-[-10px_0_30px_rgba(0,0,0,0.2)]"
-            style={
-              {
-                width: eqSidebarWidth,
-                backgroundColor: dominantColor,
-                color: contrastColor,
-                "--color-text": contrastColor,
-                "--color-text-muted": mutedColor,
-                "--color-border":
-                  contrastColor === "#ffffff"
-                    ? "rgba(255,255,255,0.1)"
-                    : "rgba(0,0,0,0.1)",
-                "--color-surface": "transparent",
-                "--color-surface-elevated":
-                  contrastColor === "#ffffff"
-                    ? "rgba(255,255,255,0.1)"
-                    : "rgba(0,0,0,0.1)",
-                "--color-accent": contrastColor,
-                "--color-accent-hover": contrastColor,
-              } as React.CSSProperties
-            }
-          >
-            <SidebarResizer
-              orientation="vertical"
-              onMouseDown={() => startResizing("eq")}
-              className="left-0 opacity-20 hover:opacity-50"
-            />
-            <Suspense fallback={<SidebarLoader />}>
-              <EQSidebar isCollapsed={eqSidebarWidth === 80} />
-            </Suspense>
-          </aside>
-        )}
-
-        {/* Recommendations Sidebar (Desktop Only - Relative Position) */}
-        {!isMobile && recommendationsOpen && currentTrack && (
-          <aside
-            className="border-l border-white/10 h-full flex-shrink-0 z-20 relative shadow-[-10px_0_30px_rgba(0,0,0,0.2)]"
-            style={
-              {
-                width: recommendationsSidebarWidth,
-                backgroundColor: dominantColor,
-                color: contrastColor,
-                "--color-text": contrastColor,
-                "--color-text-muted": mutedColor,
-                "--color-border":
-                  contrastColor === "#ffffff"
-                    ? "rgba(255,255,255,0.1)"
-                    : "rgba(0,0,0,0.1)",
-                "--color-surface": "transparent",
-                "--color-surface-elevated":
-                  contrastColor === "#ffffff"
-                    ? "rgba(255,255,255,0.1)"
-                    : "rgba(0,0,0,0.1)",
-                "--color-accent": contrastColor,
-                "--color-accent-hover": contrastColor,
-              } as React.CSSProperties
-            }
-          >
-            <SidebarResizer
-              orientation="vertical"
-              onMouseDown={() => startResizing("recommendations")}
-              className="left-0 opacity-20 hover:opacity-50"
-            />
-            <Suspense fallback={<SidebarLoader />}>
-              <RecommendationsSidebar />
-            </Suspense>
-          </aside>
-        )}
+        {/* Desktop Sidebars - Extracted to organism component */}
+        <DesktopSidebars
+          isMobile={isMobile}
+          currentTrack={currentTrack}
+          dominantColor={dominantColor}
+          contrastColor={contrastColor}
+          mutedColor={mutedColor}
+          startResizing={startResizing}
+        />
 
         {/* Metadata Panel (Overlay) */}
         <AnimatePresence>
