@@ -22,15 +22,49 @@ export function useQueueLogic() {
   const { offlineMode, hideUnavailableOffline } = useSettingsStore();
   const offlineItems = useOfflineStore((state: any) => state.items);
 
+  /**
+   * Enrich queue tracks with library data
+   * Queue tracks come from player-core with nested metadata
+   * Library tracks have flat structure (title, artist, album, etc.)
+   * This ensures TrackItem receives consistent data structure
+   */
+  const enrichTrackWithLibraryData = (queueTrack: any) => {
+    const libraryTrack = libraryTracks.find((t: any) => t.id === queueTrack.id);
+    
+    if (libraryTrack) {
+      // Use library track data (already has flat structure)
+      return libraryTrack;
+    }
+    
+    // Fallback: flatten metadata if no library match
+    return {
+      ...queueTrack,
+      title: queueTrack.metadata?.title || queueTrack.title || queueTrack.filename || "Unknown Title",
+      artist: queueTrack.metadata?.artist || queueTrack.artist || "Unknown Artist",
+      album: queueTrack.metadata?.album || queueTrack.album,
+      duration: queueTrack.metadata?.duration || queueTrack.duration || 0,
+      coverArt: queueTrack.metadata?.coverArt || queueTrack.coverArt,
+      bitrate: queueTrack.metadata?.bitrate || queueTrack.bitrate,
+      year: queueTrack.metadata?.year || queueTrack.year,
+      genre: queueTrack.metadata?.genre || queueTrack.genre,
+    };
+  };
+
   const upcomingQueue = useMemo(() => {
     const remaining = getRemainingTracks();
+    
+    // Enrich with library data
+    let enriched = remaining.map(enrichTrackWithLibraryData);
+    
+    // Apply offline filtering if needed
     if (offlineMode && hideUnavailableOffline) {
-      return remaining.filter((track: any) => 
+      enriched = enriched.filter((track: any) => 
         offlineItems[track.id]?.status === OfflineStatus.COMPLETED
       );
     }
-    return remaining;
-  }, [getRemainingTracks, offlineMode, hideUnavailableOffline, offlineItems]);
+    
+    return enriched;
+  }, [getRemainingTracks, libraryTracks, offlineMode, hideUnavailableOffline, offlineItems]);
 
   // Infinite Scroll State
   const [displayedCount, setDisplayedCount] = useState(50);
@@ -64,6 +98,17 @@ export function useQueueLogic() {
     // Merge reordered visible tracks with the rest of the upcoming tracks
     const remaining = upcomingQueue.slice(displayedCount);
     reorderUpcoming([...newVisibleQueue, ...remaining]);
+  };
+
+  // Reorder by indices (for drag-and-drop)
+  const handleReorderByIndex = (fromIndex: number, toIndex: number) => {
+    const newQueue = [...visibleQueue];
+    const [movedItem] = newQueue.splice(fromIndex, 1);
+    newQueue.splice(toIndex, 0, movedItem);
+    
+    // Merge reordered visible tracks with the rest of the upcoming tracks
+    const remaining = upcomingQueue.slice(displayedCount);
+    reorderUpcoming([...newQueue, ...remaining]);
   };
 
   const getExtension = (url: string): string => {
@@ -113,7 +158,7 @@ export function useQueueLogic() {
   }
 
   return {
-    currentTrack,
+    currentTrack: currentTrack ? enrichTrackWithLibraryData(currentTrack) : null,
     toggleQueue,
     fullQueue,
     currentIndex,
@@ -123,10 +168,11 @@ export function useQueueLogic() {
     observerTarget,
     visibleQueue,
     handleReorder,
+    handleReorderByIndex,
     getExtension,
     getBadgeClass,
     clearQueue,
     handlePlay,
-    handleRemove
+    handleRemove,
   };
 }

@@ -233,11 +233,12 @@ Este documento detalla el plan completo para refactorizar los componentes de la 
 
 ---
 
-## 6. Componentes Compartidos de Sidebars (20% completado)
+## 6. Componentes Compartidos de Sidebars (40% completado)
 
 | Componente | Nivel | Estado | Prioridad | Archivo |
 | :--- | :--- | :--- | :--- | :--- |
 | `SidebarSection` | Molécula | ✅ 100% | 🟠 Media | `packages/ui/src/components/molecules/SidebarSection.tsx` |
+| `QueueTrackItem` | Organismo | ✅ 100% | 🟠 Media | `apps/web/src/components/queue/QueueTrackItem.tsx` |
 | `RecommendationCard` | Molécula | 📋 0% | 🟡 Baja | `src/features/recommendations/components/RecommendationCard.tsx` |
 | `CollapsedEQView` | Organismo | 📋 0% | 🟠 Media | `src/features/dsp/components/eq/CollapsedEQView.tsx` |
 | `ExpandedEQView` | Organismo | 📋 0% | 🟠 Media | `src/features/dsp/components/eq/ExpandedEQView.tsx` |
@@ -245,6 +246,12 @@ Este documento detalla el plan completo para refactorizar los componentes de la 
 
 ### Sidebars Refactorizados:
 - ✅ `RecommendationsSidebar.tsx` - Usa `SidebarSection`, migrado de Framer Motion (2026-01-08)
+- ✅ `LyricsSidebar.tsx` - Migrado de Framer Motion a CSS animations (2026-01-08)
+- ✅ `RightSidebar.tsx` - Usa `QueueTrackItem` + `SidebarSection`, 558→235 líneas (-58%) (2026-01-08)
+  * Drag-and-drop nativo (HTML5 API)
+  * Swipe-to-remove gesture
+  * Metadata enriquecida desde biblioteca
+  * Sin Framer Motion
 
 ---
 
@@ -311,9 +318,9 @@ Este documento detalla el plan completo para refactorizar los componentes de la 
 
 #### **Prioridad Media (Sidebars):**
 12. ✅ `RecommendationsSidebar.tsx` - **COMPLETADO** (2026-01-08)
-13. ❌ `LyricsSidebar.tsx`
-14. ❌ `EQSidebar.tsx`
-15. ❌ `RightSidebar.tsx`
+13. ✅ `LyricsSidebar.tsx` - **COMPLETADO** (2026-01-08)
+14. ❌ `EQSidebar.tsx` - Pendiente (archivo muy grande, requiere atomización adicional)
+15. ✅ `RightSidebar.tsx` - **COMPLETADO** (2026-01-08) - Usa `TrackItem` + `SidebarSection`
 
 #### **Prioridad Media (Otros):**
 16. ❌ `SelectionActionBar.tsx`

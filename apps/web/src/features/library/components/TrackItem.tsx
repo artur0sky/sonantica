@@ -36,9 +36,18 @@ import { useSelectionStore } from "../../../stores/selectionStore";
 interface TrackItemProps {
   track: any;
   onClick: () => void;
+  showRemoveButton?: boolean;
+  onRemove?: () => void;
+  compact?: boolean;
 }
 
-export function TrackItem({ track, onClick }: TrackItemProps) {
+export function TrackItem({
+  track,
+  onClick,
+  showRemoveButton: _showRemoveButton,
+  onRemove: _onRemove,
+  compact: _compact,
+}: TrackItemProps) {
   const { currentTrack, state } = usePlayerStore();
   const { addToQueue, playNext } = useQueueStore();
   const { downloadTrack, removeTrack } = useOfflineManager();
