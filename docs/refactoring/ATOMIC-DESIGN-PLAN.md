@@ -32,7 +32,7 @@ Este documento detalla el plan completo para refactorizar los componentes de la 
 
 ## 🔄 PENDIENTE - Prioridad Alta (Nuevo)
 
-### 🎵 3. Atomización del MiniPlayer 🆕
+### 🎵 3. Atomización del MiniPlayer
 
 **Problema Identificado:**
 - MiniPlayer.tsx tiene 314 líneas con múltiples responsabilidades
@@ -42,65 +42,49 @@ Este documento detalla el plan completo para refactorizar los componentes de la 
 
 **Componentes a Extraer:**
 
-#### **3.1. Crear `TrackInfo` Molecule** 🆕
+#### **3.1. Crear `TrackInfo` Molecule** ✅ **COMPLETADO**
 - **Archivo:** `packages/ui/src/components/molecules/TrackInfo.tsx`
 - **Responsabilidad:** Cover art + título + artista
-- **Props:**
-  ```ts
-  {
-    coverArt?: string;
-    title: string;
-    artist: string;
-    onClick?: () => void;
-    enableDragGesture?: boolean;
-    onSwipeLeft?: () => void;
-    onSwipeRight?: () => void;
-  }
-  ```
-- **Beneficio:** ~40 líneas, reutilizable en ExpandedPlayer
+- **Implementación:** 170 líneas
+- **Características:**
+  - Gestos nativos de swipe (touch + mouse)
+  - Sin Framer Motion - solo CSS + eventos nativos
+  - Tamaños configurables (sm/md/lg)
+  - Indicador de drag opcional
+  - Threshold: 80px para detección de swipe
+- **Beneficio:** Reutilizable en ExpandedPlayer, NowPlaying
 
-#### **3.2. Crear `PlaybackControls` Molecule** 🆕
+#### **3.2. Crear `PlaybackControls` Molecule** ✅ **COMPLETADO**
 - **Archivo:** `packages/ui/src/components/molecules/PlaybackControls.tsx`
 - **Responsabilidad:** Botones de reproducción (shuffle, prev, play, next, repeat)
-- **Props:**
-  ```ts
-  {
-    isPlaying: boolean;
-    repeatMode: RepeatMode;
-    isShuffled: boolean;
-    onPlay: () => void;
-    onPause: () => void;
-    onNext: () => void;
-    onPrevious: () => void;
-    onToggleRepeat: () => void;
-    onToggleShuffle: () => void;
-    size?: 'sm' | 'md' | 'lg';
-  }
-  ```
-- **Beneficio:** ~30 líneas, reutilizable en ExpandedPlayer
+- **Implementación:** 120 líneas
+- **Características:**
+  - Variantes de tamaño (sm/md/lg)
+  - Orientación horizontal/vertical
+  - Controles secundarios opcionales
+  - Completamente tipado
+- **Beneficio:** Reutilizable en ExpandedPlayer, todos los contextos de player
 
-#### **3.3. Crear `SidebarButtonCarousel` Molecule** 🆕
+#### **3.3. Crear `SidebarButtonCarousel` Molecule** ✅ **COMPLETADO**
 - **Archivo:** `packages/ui/src/components/molecules/SidebarButtonCarousel.tsx`
 - **Responsabilidad:** Botones de sidebar con swipe/long-press
-- **Props:**
-  ```ts
-  {
-    buttons: Array<{
-      id: string;
-      icon: ComponentType;
-      label: string;
-      action: () => void;
-      isActive?: boolean;
-    }>;
-    enableSwipe?: boolean;
-  }
-  ```
-- **Beneficio:** ~100 líneas, lógica compleja aislada
+- **Implementación:** 228 líneas
+- **Características:**
+  - Swipe nativo para navegar botones
+  - Long-press (600ms) para expandir todos
+  - Context menu support
+  - Backdrop para cerrar
+  - Sin Framer Motion - eventos nativos + CSS
+- **Beneficio:** Lógica compleja aislada, reutilizable
 
-#### **3.4. Refactorizar MiniPlayer**
+#### **3.4. Refactorizar MiniPlayer** 📋 **PENDIENTE**
 - Usar los 3 componentes nuevos
 - Migrar de Framer Motion a CSS animations
 - **Resultado proyectado:** 314 → ~140 líneas (55% reducción)
+
+**Estado:** 3/4 tareas completadas (75%)
+**Líneas creadas:** ~518 líneas en componentes reutilizables
+**Bundle impact:** +3.3KB (types), -50KB cuando se elimine Framer Motion
 
 ---
 
