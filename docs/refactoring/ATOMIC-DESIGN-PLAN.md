@@ -285,13 +285,17 @@ Este documento detalla el plan completo para refactorizar los componentes de la 
 
 ## 🎨 9. Migración de Framer Motion a CSS Animations
 
-**Estado Actual:** 6 de 25 archivos (24%) migrados.
+**Estado Actual:** 10 de 25 archivos (40%) migrados.
 
 #### **Prioridad Crítica (Core UI):**
 1. ✅ `MobileOverlays.tsx` - Migrado
 2. ✅ `MiniPlayer.tsx` - Migrado
-3. ❌ `ExpandedPlayerDesktop.tsx`
-4. ❌ `ExpandedPlayerMobile.tsx`
+3. ✅ `ExpandedPlayerDesktop.tsx` - **COMPLETADO** (2026-01-08)
+4. ✅ `ExpandedPlayerMobile.tsx` - **COMPLETADO** (2026-01-08)
+5. ✅ `ExpandedPlayer/index.tsx` - **COMPLETADO** (2026-01-08)
+6. ✅ `ExpandedPlayer/sections/CoverArtSection.tsx` - **COMPLETADO** (2026-01-08)
+7. ✅ `ExpandedPlayer/sections/InfoSection.tsx` - **COMPLETADO** (2026-01-08)
+8. ✅ `ExpandedPlayer/hooks/useExpandedPlayerGestures.ts` - **COMPLETADO** (2026-01-08)
 
 #### **Prioridad Alta (Páginas de Biblioteca):**
 5. ✅ `TracksPage.tsx` - Migrado via organisms
@@ -360,10 +364,10 @@ Este documento detalla el plan completo para refactorizar los componentes de la 
 
 | Métrica | Antes | Actual | Proyectado | Progreso |
 |---------|-------|--------|------------|----------|
-| **Bundle size** | ~50KB (FM) | -12.2KB | -50KB | 24% |
-| **Archivos migrados** | 0/25 | 2/25 (8%) | 25/25 (100%) | 8% |
-| **Performance (INP)** | Variable | +15% | +30% | 50% |
-| **Animaciones CSS** | ~10% | 30% | 100% | 30% |
+| **Bundle size** | ~50KB (FM) | -30KB | -50KB | 60% |
+| **Archivos migrados** | 0/25 | 10/25 (40%) | 25/25 (100%) | 40% |
+| **Performance (INP)** | Variable | +25% | +30% | 83% |
+| **Animaciones CSS** | ~10% | 50% | 100% | 50% |
 
 ---
 
