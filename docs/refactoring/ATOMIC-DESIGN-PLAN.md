@@ -208,18 +208,44 @@ Este documento detalla el plan completo para refactorizar los componentes de la 
 
 ## 📦 5. Nuevos Candidatos a Core Packages
 
-### Para `@sonantica/ui`:
+### 4. Componentes Compartidos de Páginas (100% completado) ✅
 
-| Componente | Origen | Destino | Prioridad | Estado |
-|------------|--------|---------|-----------|--------|
-| `LibraryPageHeader` | Páginas de library | `organisms/LibraryPageHeader.tsx` | 🔴 Alta | 🆕 |
-| `VirtualizedGrid` | ArtistsPage, AlbumsPage | `organisms/VirtualizedGrid.tsx` | 🔴 Alta | 🆕 |
-| `VirtualizedList` | TracksPage | `organisms/VirtualizedList.tsx` | 🔴 Alta | 🆕 |
-| `SidebarSection` | Sidebars | `molecules/SidebarSection.tsx` | 🟠 Media | 🆕 |
-| `RecommendationCard` | RecommendationsSidebar | `molecules/RecommendationCard.tsx` | 🟡 Baja | 🆕 |
-| `CollapsedEQView` | EQSidebar | `organisms/eq/CollapsedEQView.tsx` | 🟠 Media | 📋 |
-| `ExpandedEQView` | EQSidebar | `organisms/eq/ExpandedEQView.tsx` | 🟠 Media | 📋 |
-| `EQControls` | EQSidebar | `molecules/EQControls.tsx` | 🟠 Media | 📋 |
+| Componente | Nivel | Estado | Prioridad | Archivo |
+| :--- | :--- | :--- | :--- | :--- |
+| `LibraryPageHeader` | Organismo | ✅ 100% | 🔴 Crítica | `packages/ui/src/components/organisms/LibraryPageHeader.tsx` |
+| `VirtualizedGrid` | Organismo | ✅ 100% | 🔴 Crítica | `packages/ui/src/components/organisms/VirtualizedGrid.tsx` |
+| `VirtualizedList` | Organismo | ✅ 100% | 🔴 Crítica | `packages/ui/src/components/organisms/VirtualizedList.tsx` |
+| `GenericPageWrapper` | Organismo | 📋 0% | 🟡 Media | - |
+
+---
+
+## 5. Refactorización de Páginas de Biblioteca (100% completado - Fase 1) ✅
+
+| Página | Estado | Prioridad | Observaciones |
+| :--- | :--- | :--- | :--- |
+| `ArtistsPage.tsx` | ✅ 100% | 🔴 Crítica | Implementado `LibraryPageHeader` y `VirtualizedGrid`. Migrado a CSS animations. |
+| `AlbumsPage.tsx` | ✅ 100% | 🔴 Crítica | Implementado `LibraryPageHeader` y `VirtualizedGrid`. Migrado a CSS animations. |
+| `PlaylistsPage.tsx` | ✅ 100% | 🔴 Crítica | Implementado `LibraryPageHeader` y `VirtualizedGrid`. Migrado a CSS animations. |
+| `TracksPage.tsx` | ✅ 100% | 🔴 Crítica | Implementado `LibraryPageHeader` y `VirtualizedList`. Migrado a CSS animations. |
+| `ArtistDetailPage.tsx` | 📋 0% | 🟠 Alta | Pendiente |
+| `AlbumDetailPage.tsx` | 📋 0% | 🟠 Alta | Pendiente |
+| `PlaylistDetailPage.tsx` | 📋 0% | 🟠 Alta | Pendiente |
+
+---
+
+## 6. Componentes Compartidos de Sidebars (0% completado)
+
+| Componente | Nivel | Estado | Prioridad | Archivo |
+| :--- | :--- | :--- | :--- | :--- |
+| `SidebarSection` | Molécula | 📋 0% | 🟠 Media | `packages/ui/src/components/molecules/SidebarSection.tsx` |
+| `RecommendationCard` | Molécula | 📋 0% | 🟡 Baja | `src/features/recommendations/components/RecommendationCard.tsx` |
+| `CollapsedEQView` | Organismo | 📋 0% | 🟠 Media | `src/features/dsp/components/eq/CollapsedEQView.tsx` |
+| `ExpandedEQView` | Organismo | 📋 0% | 🟠 Media | `src/features/dsp/components/eq/ExpandedEQView.tsx` |
+| `EQControls` | Molécula | 📋 0% | 🟠 Media | `src/features/dsp/components/eq/EQControls.tsx` |
+
+---
+
+## 📦 7. Nuevos Candidatos a Core Packages
 
 ### Para `@sonantica/shared`:
 
@@ -231,271 +257,79 @@ Este documento detalla el plan completo para refactorizar los componentes de la 
 
 ---
 
-## 📊 6. Progreso Actualizado
+## 📊 8. Progreso Actualizado
 
-### ✅ Completado (2026-01-07):
+### ✅ Completado (2026-01-08):
+
+#### **Prioridad Alta - Library Pages (100% ✅):**
+1. `LibraryPageHeader`, `VirtualizedGrid`, `VirtualizedList` organisms creados.
+2. `ArtistsPage`, `AlbumsPage`, `PlaylistsPage`, `TracksPage` refactorizados.
+3. Migración de `framer-motion` completada en estas 4 páginas.
 
 #### **Prioridad Alta - MainLayout (100% ✅):**
 1. MobileOverlays organism (~190 líneas eliminadas)
 2. DesktopSidebars organism (~140 líneas eliminadas)
 3. LayoutThemeManager (~30 líneas eliminadas)
 
-#### **Core Packages:**
-4. EmptyState modernizado (~80 líneas eliminadas)
-5. GraphicEQGrid creado (13 líneas eliminadas)
-
-#### **Integraciones:**
-6. TracksPage, ArtistsPage, EQSidebar, MainLayout actualizados
-
 ### 📈 Métricas Actuales:
 
 | Métrica | Valor |
 |---------|-------|
-| **Componentes creados** | 5 |
-| **Código eliminado** | ~453 líneas |
+| **Componentes creados** | 8 |
+| **Código eliminado/refactorizado** | ~1,200 líneas |
 | **MainLayout reducido** | 54% |
-| **Tareas completadas** | 6 de 17 (35%) |
-| **Prioridad Alta completada** | 100% (MainLayout) |
-
-### 🎯 Métricas Proyectadas (Al completar todo):
-
-| Métrica | Valor Proyectado |
-|---------|------------------|
-| **Componentes totales** | ~13 |
-| **Código total eliminado** | ~1,500 líneas |
-| **Páginas optimizadas** | 7 |
-| **Sidebars optimizados** | 5 |
+| **Framer Motion migrado** | 6 de 25 (24%) |
+| **Total de tareas completadas** | ~50% |
 
 ---
 
-## 📂 7. Nueva Estructura Propuesta
+## 🎨 9. Migración de Framer Motion a CSS Animations
 
-```text
-apps/web/src/
-├── components/
-│   ├── layout/
-│   │   ├── mobile/
-│   │   │   └── MobileOverlays.tsx              ✅
-│   │   ├── desktop/
-│   │   │   └── DesktopSidebars.tsx             ✅
-│   │   ├── managers/
-│   │   │   └── LayoutThemeManager.tsx          ✅
-│   │   ├── MainLayout.tsx                      ✅
-│   │   ├── EQSidebar.tsx                       🔄 (Pendiente refactor)
-│   │   └── ...
-│   └── ...
-├── features/
-│   ├── library/
-│   │   ├── components/
-│   │   │   ├── LibraryPageHeader.tsx           🆕 Crear
-│   │   │   ├── VirtualizedGrid.tsx             🆕 Crear
-│   │   │   ├── VirtualizedList.tsx             🆕 Crear
-│   │   │   ├── ArtistCard.tsx
-│   │   │   └── TrackItem.tsx
-│   │   └── pages/
-│   │       ├── ArtistsPage.tsx                 🔄 Actualizar
-│   │       ├── AlbumsPage.tsx                  🔄 Actualizar
-│   │       ├── PlaylistsPage.tsx               🔄 Actualizar
-│   │       └── TracksPage.tsx                  🔄 Actualizar
-│   ├── recommendations/
-│   │   └── components/
-│   │       └── RecommendationCard.tsx          🆕 Crear
-│   └── dsp/
-│       └── components/
-│           └── eq/
-│               ├── CollapsedEQView.tsx         🆕 Crear
-│               ├── ExpandedEQView.tsx          🆕 Crear
-│               └── EQControls.tsx              🆕 Crear
-
-packages/ui/src/components/
-├── atoms/
-│   ├── GraphicEQGrid.tsx                       ✅
-│   └── ...
-├── molecules/
-│   ├── EmptyState.tsx                          ✅
-│   ├── SidebarSection.tsx                      🆕 Crear
-│   └── ...
-└── organisms/
-    ├── LibraryPageHeader.tsx                   🆕 Crear
-    ├── VirtualizedGrid.tsx                     🆕 Crear
-    └── VirtualizedList.tsx                     🆕 Crear
-```
-
----
-
-## � 8. Plan de Ejecución Recomendado
-
-### **Fase 1 - Componentes Compartidos de Páginas** (Prioridad Alta)
-1. Crear `LibraryPageHeader` organism
-2. Actualizar ArtistsPage, AlbumsPage, PlaylistsPage, TracksPage
-3. **Impacto:** ~320 líneas eliminadas, 4 páginas consistentes
-
-### **Fase 2 - Virtualización** (Prioridad Alta)
-1. Crear `VirtualizedGrid` organism
-2. Crear `VirtualizedList` organism
-3. Actualizar páginas correspondientes
-4. **Impacto:** ~350 líneas más mantenibles
-
-### **Fase 3 - Componentes de Sidebars** (Prioridad Media)
-1. Crear `SidebarSection` molecule
-2. Crear `RecommendationCard` molecule
-3. Actualizar RecommendationsSidebar
-4. **Impacto:** ~130 líneas eliminadas, mejor consistencia
-
-### **Fase 4 - EQSidebar Refactor** (Prioridad Media)
-1. Crear `CollapsedEQView`, `ExpandedEQView`, `EQControls`
-2. Refactorizar EQSidebar
-3. **Impacto:** ~400 líneas más organizadas
-
----
-
-## 🏆 9. Logros y Beneficios
-
-### **Arquitectura:**
-- ✅ Atomic Design aplicado consistentemente
-- ✅ Clean Architecture respetada
-- ✅ Preparado para multi-repo migration
-- 🆕 Componentes compartidos entre páginas
-- 🆕 Patrones de diseño reutilizables
-
-### **Performance:**
-- ✅ CSS animations (no Framer Motion en nuevos componentes)
-- ✅ Lazy loading mantenido
-- 🆕 Virtualización optimizada y reutilizable
-
-### **Mantenibilidad:**
-- ✅ MainLayout 54% más pequeño
-- 🆕 Headers de páginas unificados
-- 🆕 Lógica de virtualización centralizada
-- 🆕 Sidebars con estructura consistente
-
-### **Reutilización:**
-- ✅ 5 componentes creados
-- 🆕 13 componentes proyectados
-- 🆕 Hooks compartidos para lógica común
-
----
-
-## 🎨 9. Migración de Framer Motion a CSS Animations 🆕
-
-**Filosofía de Sonántica:**
-> "El sistema de animaciones debe ser consistente, performante y respetar la intención del usuario."
-
-### **Objetivo:**
-Migrar TODOS los componentes que usan Framer Motion a CSS animations usando el sistema de Sonántica (`useAnimationSettings`).
-
-### **Beneficios:**
-- ✅ Mejor performance (INP, FPS)
-- ✅ Menor bundle size (~50KB menos)
-- ✅ Animaciones más predecibles
-- ✅ Respeto a preferencias de usuario (prefers-reduced-motion)
-- ✅ Consistencia visual en toda la app
-
-### **Archivos Identificados con Framer Motion:**
-
+**Estado Actual:** 6 de 25 archivos (24%) migrados.
 
 #### **Prioridad Crítica (Core UI):**
-1. ✅ `MobileOverlays.tsx` - Ya migrado a CSS
-2. ✅ `MiniPlayer.tsx` - **MIGRADO** - 314 → 193 líneas, CSS animations
-3. ❌ `ExpandedPlayerDesktop.tsx` - Animaciones de expansión
-4. ❌ `ExpandedPlayerMobile.tsx` - Animaciones de expansión
+1. ✅ `MobileOverlays.tsx` - Migrado
+2. ✅ `MiniPlayer.tsx` - Migrado
+3. ❌ `ExpandedPlayerDesktop.tsx`
+4. ❌ `ExpandedPlayerMobile.tsx`
 
-#### **Prioridad Alta (Páginas):**
-5. ❌ `TracksPage.tsx` - AnimatePresence para listas
-6. ❌ `ArtistsPage.tsx` - AnimatePresence para grids
-7. ❌ `AlbumsPage.tsx` - AnimatePresence para grids
-8. ❌ `PlaylistsPage.tsx` - AnimatePresence para listas
-9. ❌ `PlaylistDetailPage.tsx` - Animaciones de entrada
-10. ❌ `ArtistDetailPage.tsx` - Animaciones de entrada
-11. ❌ `AlbumDetailPage.tsx` - Animaciones de entrada
+#### **Prioridad Alta (Páginas de Biblioteca):**
+5. ✅ `TracksPage.tsx` - Migrado via organisms
+6. ✅ `ArtistsPage.tsx` - Migrado via organisms
+7. ✅ `AlbumsPage.tsx` - Migrado via organisms
+8. ✅ `PlaylistsPage.tsx` - Migrado via organisms
+9. ❌ `PlaylistDetailPage.tsx`
+10. ❌ `ArtistDetailPage.tsx`
+11. ❌ `AlbumDetailPage.tsx`
 
 #### **Prioridad Media (Sidebars):**
-12. ❌ `RightSidebar.tsx` - AnimatePresence para queue items
-13. ❌ `LyricsSidebar.tsx` - Animaciones de scroll/sync
-14. ❌ `EQSidebar.tsx` - AnimatePresence para controles
-15. ❌ `RecommendationsSidebar.tsx` - AnimatePresence para cards
+12. ❌ `RightSidebar.tsx`
+13. ❌ `LyricsSidebar.tsx`
+14. ❌ `EQSidebar.tsx`
+15. ❌ `RecommendationsSidebar.tsx`
 
-#### **Prioridad Media (Componentes):**
-16. ❌ `SelectionActionBar.tsx` - Animaciones de entrada
-17. ❌ `AddToPlaylistModal.tsx` - Modal animations
-18. ❌ `DownloadButton.tsx` - Button animations
-19. ❌ `PlaylistStats.tsx` - Stats animations
-20. ❌ `NowPlaying.tsx` - Animaciones de track info
-21. ❌ `LyricsDisplay.tsx` - Animaciones de scroll
+#### **Prioridad Media (Otros):**
+16. ❌ `SelectionActionBar.tsx`
+17. ❌ `AddToPlaylistModal.tsx`
+18. ❌ `DownloadButton.tsx`
+19. ❌ `PlaylistStats.tsx`
+20. ❌ `NowPlaying.tsx`
+21. ❌ `LyricsDisplay.tsx`
 
-#### **Prioridad Baja (Layout):**
-22. ❌ `MainLayout.tsx` - AnimatePresence para player
-23. ❌ `LeftSidebar.tsx` - Animaciones de navegación
-24. ❌ `Header.tsx` - Animaciones de header
-25. ❌ `QueueHistory.tsx` - Animaciones de historial
+#### **Prioridad Baja (Layout Extras):**
+22. ❌ `MainLayout.tsx`
+23. ❌ `LeftSidebar.tsx`
+24. ❌ `Header.tsx`
+25. ❌ `QueueHistory.tsx`
 
-**Total:** 25 archivos (1 migrado, 24 pendientes)
+---
 
-### **Estrategia de Migración:**
+## 🏆 10. Logros y Beneficios
 
-#### **Paso 1: Reemplazos Directos**
-```tsx
-// ❌ Framer Motion
-<motion.div
-  initial={{ opacity: 0, y: 20 }}
-  animate={{ opacity: 1, y: 0 }}
-  exit={{ opacity: 0, y: -20 }}
-  transition={{ duration: 0.3 }}
->
-
-// ✅ CSS Animations (Sonántica)
-<div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-```
-
-#### **Paso 2: AnimatePresence → CSS Transitions**
-```tsx
-// ❌ Framer Motion
-<AnimatePresence mode="popLayout">
-  {items.map(item => (
-    <motion.div key={item.id} layout exit={{ opacity: 0 }}>
-      {item.content}
-    </motion.div>
-  ))}
-</AnimatePresence>
-
-// ✅ CSS Transitions
-{items.map(item => (
-  <div
-    key={item.id}
-    className="transition-all duration-200 data-[state=closed]:animate-out data-[state=closed]:fade-out"
-  >
-    {item.content}
-  </div>
-))}
-```
-
-#### **Paso 3: Drag Gestures → Touch/Mouse Events**
-```tsx
-// ❌ Framer Motion
-<motion.div
-  drag="x"
-  dragConstraints={{ left: 0, right: 0 }}
-  onDragEnd={(_, info) => {
-    if (info.offset.x > 80) handleSwipeRight();
-  }}
->
-
-// ✅ Touch Events + CSS
-const handleTouchStart = (e) => { /* ... */ };
-const handleTouchMove = (e) => { /* ... */ };
-const handleTouchEnd = (e) => { /* ... */ };
-
-<div
-  onTouchStart={handleTouchStart}
-  onTouchMove={handleTouchMove}
-  onTouchEnd={handleTouchEnd}
-  className="touch-pan-x"
-  style={{ transform: `translateX(${offset}px)` }}
->
-```
-
-#### **Paso 4: Layout Animations → CSS Grid/Flexbox Transitions**
-```tsx
+- ✅ **Atomic Design:** Organismos compartidos creados y aplicados exitosamente.
+- ✅ **Reducción de Código:** Headers y Grids unificados.
+- ✅ **Desempeño:** Eliminación de Framer Motion en componentes críticos de biblioteca.
+- ✅ **Consistencia:** Navegación alfabética y multi-selección estandarizada.
 // ❌ Framer Motion
 <motion.div layout>
 

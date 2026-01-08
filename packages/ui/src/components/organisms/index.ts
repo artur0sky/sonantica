@@ -12,3 +12,8 @@ export * from './AnalyticsVisuals';
 // Analytics Components - Layout
 export * from './DashboardGrid';
 export * from './RealtimeTicker';
+
+// Library Components
+export * from './LibraryPageHeader';
+export * from './VirtualizedGrid';
+export * from './VirtualizedList';

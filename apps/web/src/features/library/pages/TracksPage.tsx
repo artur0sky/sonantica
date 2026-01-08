@@ -6,46 +6,30 @@
  * Uses Framer Motion for page transitions (controlled by Settings)
  */
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Link } from "wouter";
-import { useVirtualizer } from "@tanstack/react-virtual";
-import { Button, EmptyState } from "@sonantica/ui";
+import {
+  LibraryPageHeader,
+  VirtualizedList,
+  Button,
+  useUIStore,
+} from "@sonantica/ui";
 import { useLibraryStore } from "@sonantica/media-library";
-import { useUIStore } from "@sonantica/ui";
 import { TrackItem } from "../components/TrackItem";
 import {
   IconMusic,
   IconSearch,
   IconPlayerPlay,
   IconArrowsShuffle,
-  IconSortAscending,
-  IconSortDescending,
 } from "@tabler/icons-react";
-import { AlphabetNavigator } from "@sonantica/ui";
-import { motion, AnimatePresence } from "framer-motion";
 import {
   playFromContext,
   playAll,
   playAllShuffled,
 } from "../../../utils/playContext";
 import { trackToMediaSource } from "../../../utils/streamingUrl";
-import { useMultiServerLibrary } from "../../../hooks/useMultiServerLibrary";
 import { useSelectionStore } from "../../../stores/selectionStore";
 import { SelectionActionBar } from "../../../components/SelectionActionBar";
-import { IconCheckbox } from "@tabler/icons-react";
-
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      duration: 0.2,
-    },
-  },
-};
-
-// PERFORMANCE: Virtual scrolling threshold
-const VIRTUAL_SCROLL_THRESHOLD = 100;
 
 type SortField = "title" | "artist" | "album" | "year" | "duration" | "genre";
 type SortOrder = "asc" | "desc";
@@ -67,7 +51,7 @@ export function TracksPage() {
 
   const filteredTracks = getFilteredTracks();
 
-  // Sort tracks (Client-side sort of loaded tracks to maintain consistency)
+  // Sort tracks
   const sortedTracks = useMemo(() => {
     const tracksToSort = [...filteredTracks];
 
@@ -112,125 +96,31 @@ export function TracksPage() {
     return tracksToSort;
   }, [filteredTracks, sortField, sortOrder]);
 
-  // PERFORMANCE: Virtual scrolling for large lists
-  const useVirtualScroll = sortedTracks.length > VIRTUAL_SCROLL_THRESHOLD;
-
-  const { scanServer } = useMultiServerLibrary();
-
-  // Reload from server when sort changes
-  useEffect(() => {
-    // Debounce sort reload to avoid double fetch on mount if default matches
-    const timeout = setTimeout(() => {
-      // We need to reload ALL servers with the new sort to get the correct "First Page"
-      // We cannot use 'scanAllServers' because it doesn't accept options yet easily.
-      // Let's iterate manually or add helper.
-      // For now, assume 1 server or iterate manually.
-
-      // Access services to get config directly or use hook helper?
-      // Hook doesn't expose config.
-      // Let's use a simple heuristic: trigger loadMore logic but with reset?
-      // No, loadMore appends. We need REPLACE.
-      // scanServer(..., false) replacs.
-
-      // Helper to reload all
-      // This is a bit hacky accessing internal logic from UI but valid for now.
-      import("../../../services/LibraryService").then(
-        ({ getServersConfig }) => {
-          const config = getServersConfig();
-          config.servers.forEach((s) => {
-            scanServer(s.id, false, "tracks", 0, {
-              sort: sortField,
-              order: sortOrder,
-            });
-          });
-        }
-      );
-    }, 300);
-
-    return () => clearTimeout(timeout);
-  }, [sortField, sortOrder, scanServer]);
-
-  const virtualizer = useVirtualizer({
-    count: sortedTracks.length,
-    getScrollElement: () =>
-      document.getElementById("main-content") as HTMLDivElement,
-    estimateSize: () => 76, // Estimated height of TrackItem
-    overscan: 10, // Increased overscan for smoother scrolling on mobile
-    enabled: useVirtualScroll,
-  });
-
-  const handleTrackClick = async (_track: any, index: number) => {
-    try {
-      // Create context from ALL sorted tracks (not just visible ones)
-      const mediaSources = sortedTracks.map(trackToMediaSource);
-
-      // Play from context with all tracks, starting at clicked track
-      await playFromContext(mediaSources, index);
-    } catch (error) {
-      console.error("Failed to play track:", error);
-    }
-  };
+  const handleTrackClick = useCallback(
+    async (_track: any, index: number) => {
+      try {
+        const mediaSources = sortedTracks.map(trackToMediaSource);
+        await playFromContext(mediaSources, index);
+      } catch (error) {
+        console.error("Failed to play track:", error);
+      }
+    },
+    [sortedTracks]
+  );
 
   const handleLetterClick = (index: number, _letter: string) => {
-    // Local navigation - we have all data loaded
     const main = document.getElementById("main-content");
     if (!main) return;
 
-    if (useVirtualScroll) {
-      // For virtual scrolling, use the virtualizer's scrollToIndex method
-      // This ensures the item is rendered and visible
-      virtualizer.scrollToIndex(index, {
-        align: "start",
-        behavior: "auto", // Use "auto" for instant scroll, then smooth scroll to fine-tune
-      });
-
-      // Small delay to ensure rendering, then smooth scroll to exact position
-      setTimeout(() => {
-        const element = document.getElementById(`track-${index}`);
-        if (element) {
-          const elementTop = element.offsetTop;
-          const headerOffset = 100;
-          const scrollPosition = elementTop - headerOffset;
-          main.scrollTo({
-            top: scrollPosition,
-            behavior: "smooth",
-          });
-        }
-      }, 50);
+    const element = document.getElementById(`item-${index}`);
+    if (element) {
+      const top = element.offsetTop - 100;
+      main.scrollTo({ top, behavior: "smooth" });
     } else {
-      // For regular scrolling, scroll to element
-      scrollToTrack(index, main);
+      // Fallback for virtualized items not yet rendered
+      const estimate = index * 76;
+      main.scrollTo({ top: estimate, behavior: "smooth" });
     }
-  };
-
-  const scrollToTrack = (index: number, main: HTMLElement) => {
-    // Try multiple times with increasing delays to ensure element is rendered
-    let attempts = 0;
-    const maxAttempts = 5;
-
-    const tryScroll = () => {
-      const element = document.getElementById(`track-${index}`);
-
-      if (element) {
-        // Element found, scroll to it
-        const top = element.offsetTop - 80; // Account for sticky header
-        main.scrollTo({ top, behavior: "smooth" });
-      } else if (attempts < maxAttempts) {
-        // Element not found yet, try again
-        attempts++;
-        setTimeout(tryScroll, 50 * attempts); // Exponential backoff
-      } else {
-        // Fallback: estimate scroll position based on track item height
-        const trackHeight = 76; // Height of TrackItem
-        const estimatedTop = index * trackHeight;
-        main.scrollTo({ top: estimatedTop, behavior: "smooth" });
-      }
-    };
-
-    // Start scrolling attempt
-    requestAnimationFrame(() => {
-      requestAnimationFrame(tryScroll);
-    });
   };
 
   const handlePlayAll = async () => {
@@ -253,242 +143,102 @@ export function TracksPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 pb-24 sm:pb-32">
-      {/* Sticky Header */}
-      <motion.div
-        initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        className="sticky top-0 z-30 bg-bg/95 backdrop-blur-md border-b border-border/50 -mx-3 sm:-mx-4 md:-mx-6 px-3 sm:px-4 md:px-6 py-4 mb-6"
-      >
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-              Tracks
-            </h1>
-            <AnimatePresence>
-              {stats.totalTracks > 0 && (
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="text-sm text-text-muted mt-1"
-                >
-                  {stats.totalTracks} track{stats.totalTracks !== 1 ? "s" : ""}{" "}
-                  in library
-                  {useVirtualScroll && (
-                    <span className="ml-2 text-xs text-accent">
-                      (Virtual Scrolling Active)
-                    </span>
-                  )}
-                </motion.p>
-              )}
-            </AnimatePresence>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            {/* Sort Controls */}
-            {/* Hide controls if no tracks unless searching? Actually keep them. */}
-            {stats.totalTracks > 0 && (
-              <div className="flex items-center gap-2 flex-1 sm:flex-initial">
-                <select
-                  value={sortField}
-                  onChange={(e) => setSortField(e.target.value as SortField)}
-                  className="flex-1 sm:flex-initial px-2 sm:px-3 py-2 bg-surface-elevated border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent/50"
-                >
-                  <option value="title">Title</option>
-                  <option value="artist">Artist</option>
-                  <option value="album">Album</option>
-                  <option value="year">Year</option>
-                  <option value="duration">Duration</option>
-                  <option value="genre">Genre</option>
-                </select>
-
-                <Button
-                  onClick={() =>
-                    setSortOrder(sortOrder === "asc" ? "desc" : "asc")
-                  }
-                  variant="ghost"
-                  size="sm"
-                  className="flex items-center gap-1 flex-shrink-0"
-                >
-                  {sortOrder === "asc" ? (
-                    <IconSortAscending size={18} />
-                  ) : (
-                    <IconSortDescending size={18} />
-                  )}
-                </Button>
-              </div>
-            )}
-
-            {/* Play All Button */}
-            {sortedTracks.length > 0 && (
-              <>
-                <Button
-                  onClick={handlePlayAll}
-                  variant="secondary"
-                  className="flex items-center gap-2 flex-1 sm:flex-initial justify-center"
-                >
-                  <IconPlayerPlay size={18} />
-                  <span className="hidden sm:inline">Play All</span>
-                </Button>
-
-                <Button
-                  onClick={handleShuffle}
-                  variant="secondary"
-                  className="flex items-center gap-2 flex-1 sm:flex-initial justify-center"
-                >
-                  <IconArrowsShuffle size={18} />
-                  <span className="hidden sm:inline">Shuffle</span>
-                </Button>
-
-                {/* Multi-Select Button */}
-                <Button
-                  onClick={() =>
-                    isSelectionMode
-                      ? exitSelectionMode()
-                      : enterSelectionMode("track")
-                  }
-                  variant={isSelectionMode ? "primary" : "ghost"}
-                  className="flex items-center gap-2"
-                  title="Multi-Select"
-                >
-                  <IconCheckbox size={18} />
-                  {isSelectionMode && (
-                    <span className="hidden sm:inline">Done</span>
-                  )}
-                </Button>
-
-                {/* Select All Toggle (only in selection mode) */}
-                {isSelectionMode && (
-                  <Button
-                    onClick={() => {
-                      if (selectedIds.size === sortedTracks.length) {
-                        clearSelection();
-                      } else {
-                        selectAll(sortedTracks.map((t) => t.id));
-                      }
-                    }}
-                    variant="ghost"
-                    size="sm"
-                    className="text-xs"
-                  >
-                    {selectedIds.size === sortedTracks.length
-                      ? "Deselect All"
-                      : "Select All"}
-                  </Button>
-                )}
-              </>
-            )}
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Selection Action Bar */}
-      <SelectionActionBar />
-
-      {/* Content */}
-      <AnimatePresence mode="wait">
-        {stats.totalTracks === 0 ? (
-          <EmptyState
-            key="empty"
-            icon={
-              <IconMusic size={40} stroke={1.5} className="sm:w-12 sm:h-12" />
-            }
-            title="No music found"
-            description="Your library is empty. Go to settings to add music folders."
-            action={
-              <Link href="/settings">
-                <Button variant="primary">Configure Library</Button>
-              </Link>
-            }
-          />
-        ) : filteredTracks.length === 0 ? (
-          <EmptyState
-            key="no-results"
-            variant="minimal"
-            icon={<IconSearch size={40} className="text-text-muted/30" />}
-            title={`No tracks found matching "${searchQuery}"`}
-          />
-        ) : useVirtualScroll ? (
-          // PERFORMANCE: Virtual scrolling for large lists - Using main container for scrolling
+      <LibraryPageHeader
+        title="Tracks"
+        subtitle={
+          stats.totalTracks > 0
+            ? `${stats.totalTracks} track${
+                stats.totalTracks !== 1 ? "s" : ""
+              } in library`
+            : undefined
+        }
+        sortOptions={[
+          { value: "title", label: "Title" },
+          { value: "artist", label: "Artist" },
+          { value: "album", label: "Album" },
+          { value: "year", label: "Year" },
+          { value: "duration", label: "Duration" },
+          { value: "genre", label: "Genre" },
+        ]}
+        sortValue={sortField}
+        sortDirection={sortOrder}
+        onSortChange={(val: string) => setSortField(val as SortField)}
+        onSortDirectionChange={setSortOrder}
+        enableMultiSelect
+        isSelectionMode={isSelectionMode}
+        onEnterSelectionMode={() => enterSelectionMode("track")}
+        onExitSelectionMode={exitSelectionMode}
+        enableSelectAll
+        allSelected={
+          selectedIds.size === sortedTracks.length && sortedTracks.length > 0
+        }
+        onSelectAll={() => selectAll(sortedTracks.map((t) => t.id))}
+        onDeselectAll={clearSelection}
+        customActions={
           <>
-            <div
-              style={{
-                height: `${virtualizer.getTotalSize()}px`,
-                width: "100%",
-                position: "relative",
-                contain: "strict",
-              }}
+            <Button
+              onClick={handlePlayAll}
+              variant="secondary"
+              className="flex items-center gap-2 flex-1 sm:flex-initial justify-center"
             >
-              {virtualizer.getVirtualItems().map((virtualItem) => {
-                const track = sortedTracks[virtualItem.index];
-                return (
-                  <div
-                    key={virtualItem.key}
-                    data-index={virtualItem.index}
-                    ref={virtualizer.measureElement}
-                    style={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      width: "100%",
-                      transform: `translateY(${virtualItem.start}px)`,
-                    }}
-                  >
-                    <TrackItem
-                      track={track}
-                      onClick={() => handleTrackClick(track, virtualItem.index)}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-            <div className="py-3 sm:py-4 text-center text-xs text-text-muted/30">
-              Showing {sortedTracks.length} tracks (Virtual Scrolling)
-            </div>
+              <IconPlayerPlay size={18} />
+              <span className="hidden sm:inline">Play All</span>
+            </Button>
+
+            <Button
+              onClick={handleShuffle}
+              variant="secondary"
+              className="flex items-center gap-2 flex-1 sm:flex-initial justify-center"
+            >
+              <IconArrowsShuffle size={18} />
+              <span className="hidden sm:inline">Shuffle</span>
+            </Button>
           </>
-        ) : (
-          // Standard rendering for small lists
-          <motion.div
-            key="list"
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            className="space-y-1"
-          >
-            {sortedTracks.map((track: any, index: number) => (
-              <div key={track.id} id={`track-${index}`}>
-                <TrackItem
-                  track={track}
-                  onClick={() => handleTrackClick(track, index)}
-                />
-              </div>
-            ))}
+        }
+      />
 
-            <div className="py-3 sm:py-4 text-center text-xs text-text-muted/30">
-              Showing {sortedTracks.length} tracks
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Alphabet Navigator */}
-      {sortedTracks.length > 50 &&
-        (sortField === "title" ||
-          sortField === "artist" ||
-          sortField === "album") && (
-          <AlphabetNavigator
-            items={sortedTracks.map((t) => ({
-              name:
-                sortField === "title"
-                  ? t.title
-                  : sortField === "artist"
-                  ? t.artist
-                  : t.album,
-            }))}
-            onLetterClick={handleLetterClick}
-            forceScrollOnly={isCramped}
-            mode="local"
+      <VirtualizedList
+        items={sortedTracks}
+        keyExtractor={(t: any) => t.id}
+        renderItem={(track: any, index: number) => (
+          <TrackItem
+            track={track}
+            onClick={() => handleTrackClick(track, index)}
           />
         )}
+        emptyState={{
+          icon: <IconMusic size={40} stroke={1.5} />,
+          title: "No music found",
+          description:
+            "Your library is empty. Go to settings to add music folders.",
+          action: (
+            <Link href="/settings">
+              <Button variant="primary">Configure Library</Button>
+            </Link>
+          ),
+        }}
+        noResultsState={{
+          icon: <IconSearch size={40} className="text-text-muted/30" />,
+          title: "No tracks found",
+          description: `No tracks found matching "${searchQuery}"`,
+        }}
+        isFiltered={!!searchQuery}
+        alphabetNav={{
+          enabled: true,
+          onLetterClick: handleLetterClick,
+          forceScrollOnly: isCramped,
+          getLetterItem: (t: any) => ({
+            name:
+              sortField === "title"
+                ? t.title
+                : sortField === "artist"
+                ? t.artist
+                : t.album,
+          }),
+        }}
+      />
+
+      <SelectionActionBar />
     </div>
   );
 }
