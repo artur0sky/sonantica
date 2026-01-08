@@ -251,9 +251,9 @@ Este documento detalla el plan completo para refactorizar los componentes de la 
 
 | Utilidad | Descripción | Prioridad |
 |----------|-------------|-----------|
-| `useSortable` | Hook para sorting genérico | 🟠 Media |
-| `useVirtualScroll` | Hook para virtualización | 🟠 Media |
-| `useAlphabetNav` | Hook para navegación alfabética | 🟡 Baja |
+| `useSortable` | Hook para sorting genérico | ✅ 100% |
+| `useVirtualScroll` | Hook para virtualización | 📋 0% |
+| `useAlphabetNav` | Hook para navegación alfabética | ✅ 100% |
 
 ---
 

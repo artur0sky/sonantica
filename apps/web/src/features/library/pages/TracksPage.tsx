@@ -6,7 +6,7 @@
  * Uses Framer Motion for page transitions (controlled by Settings)
  */
 
-import { useState, useMemo, useCallback } from "react";
+import { useCallback } from "react";
 import { Link } from "wouter";
 import {
   LibraryPageHeader,
@@ -15,6 +15,7 @@ import {
   useUIStore,
 } from "@sonantica/ui";
 import { useLibraryStore } from "@sonantica/media-library";
+import { useSortable, useAlphabetNav } from "@sonantica/shared";
 import { TrackItem } from "../components/TrackItem";
 import {
   IconMusic,
@@ -31,15 +32,45 @@ import { trackToMediaSource } from "../../../utils/streamingUrl";
 import { useSelectionStore } from "../../../stores/selectionStore";
 import { SelectionActionBar } from "../../../components/SelectionActionBar";
 
-type SortField = "title" | "artist" | "album" | "year" | "duration" | "genre";
-type SortOrder = "asc" | "desc";
-
 export function TracksPage() {
   const { stats, searchQuery, getFilteredTracks } = useLibraryStore();
   const isCramped = useUIStore((state) => state.isCramped);
 
-  const [sortField, setSortField] = useState<SortField>("title");
-  const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
+  const filteredTracks = getFilteredTracks();
+
+  const {
+    sortField,
+    setSortField,
+    sortOrder,
+    setSortOrder,
+    sortedItems: sortedTracks,
+  } = useSortable(filteredTracks, {
+    initialField: "title",
+    getValue: (item: any, field: string) => {
+      switch (field) {
+        case "title":
+          return item.title || "";
+        case "artist":
+          return item.artist || "";
+        case "album":
+          return item.album || "";
+        case "year":
+          return item.year || 0;
+        case "duration":
+          return item.duration || 0;
+        case "genre":
+          return item.genre || "";
+        default:
+          return 0;
+      }
+    },
+  });
+
+  const { scrollToLetter } = useAlphabetNav({
+    idPrefix: "item",
+    headerOffset: 100,
+  });
+
   const {
     isSelectionMode,
     enterSelectionMode,
@@ -48,53 +79,6 @@ export function TracksPage() {
     clearSelection,
     selectedIds,
   } = useSelectionStore();
-
-  const filteredTracks = getFilteredTracks();
-
-  // Sort tracks
-  const sortedTracks = useMemo(() => {
-    const tracksToSort = [...filteredTracks];
-
-    tracksToSort.sort((a, b) => {
-      let aVal: any;
-      let bVal: any;
-
-      switch (sortField) {
-        case "title":
-          aVal = a.title?.toLowerCase() || "";
-          bVal = b.title?.toLowerCase() || "";
-          break;
-        case "artist":
-          aVal = a.artist?.toLowerCase() || "";
-          bVal = b.artist?.toLowerCase() || "";
-          break;
-        case "album":
-          aVal = a.album?.toLowerCase() || "";
-          bVal = b.album?.toLowerCase() || "";
-          break;
-        case "year":
-          aVal = a.year || 0;
-          bVal = b.year || 0;
-          break;
-        case "duration":
-          aVal = a.duration || 0;
-          bVal = b.duration || 0;
-          break;
-        case "genre":
-          aVal = a.genre?.toLowerCase() || "";
-          bVal = b.genre?.toLowerCase() || "";
-          break;
-        default:
-          return 0;
-      }
-
-      if (aVal < bVal) return sortOrder === "asc" ? -1 : 1;
-      if (aVal > bVal) return sortOrder === "asc" ? 1 : -1;
-      return 0;
-    });
-
-    return tracksToSort;
-  }, [filteredTracks, sortField, sortOrder]);
 
   const handleTrackClick = useCallback(
     async (_track: any, index: number) => {
@@ -107,21 +91,6 @@ export function TracksPage() {
     },
     [sortedTracks]
   );
-
-  const handleLetterClick = (index: number, _letter: string) => {
-    const main = document.getElementById("main-content");
-    if (!main) return;
-
-    const element = document.getElementById(`item-${index}`);
-    if (element) {
-      const top = element.offsetTop - 100;
-      main.scrollTo({ top, behavior: "smooth" });
-    } else {
-      // Fallback for virtualized items not yet rendered
-      const estimate = index * 76;
-      main.scrollTo({ top: estimate, behavior: "smooth" });
-    }
-  };
 
   const handlePlayAll = async () => {
     try {
@@ -162,7 +131,7 @@ export function TracksPage() {
         ]}
         sortValue={sortField}
         sortDirection={sortOrder}
-        onSortChange={(val: string) => setSortField(val as SortField)}
+        onSortChange={(val: string) => setSortField(val)}
         onSortDirectionChange={setSortOrder}
         enableMultiSelect
         isSelectionMode={isSelectionMode}
@@ -172,7 +141,7 @@ export function TracksPage() {
         allSelected={
           selectedIds.size === sortedTracks.length && sortedTracks.length > 0
         }
-        onSelectAll={() => selectAll(sortedTracks.map((t) => t.id))}
+        onSelectAll={() => selectAll(sortedTracks.map((t: any) => t.id))}
         onDeselectAll={clearSelection}
         customActions={
           <>
@@ -225,7 +194,7 @@ export function TracksPage() {
         isFiltered={!!searchQuery}
         alphabetNav={{
           enabled: true,
-          onLetterClick: handleLetterClick,
+          onLetterClick: scrollToLetter,
           forceScrollOnly: isCramped,
           getLetterItem: (t: any) => ({
             name:

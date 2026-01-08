@@ -6,6 +6,7 @@
 
 import { useState, useMemo } from "react";
 import { useLibraryStore } from "@sonantica/media-library";
+import { useSortable } from "@sonantica/shared";
 import { PlaylistCard } from "@sonantica/ui";
 import { IconPlaylist, IconSearch, IconPlus } from "@tabler/icons-react";
 import {
@@ -31,6 +32,32 @@ export function PlaylistsPage() {
   const { createPlaylist } = usePlaylistCRUD();
   const { dialogState, showPrompt, handleConfirm, handleCancel } = useDialog();
 
+  // Filter playlists first
+  const filterBaseRaw = useMemo(() => {
+    let filtered = [...playlists];
+
+    // Filter by type
+    if (filterType !== "all") {
+      filtered = filtered.filter((p) => p.type === filterType);
+    }
+
+    // Filter by search query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((p) => p.name.toLowerCase().includes(query));
+    }
+    return filtered;
+  }, [playlists, filterType, searchQuery]);
+
+  const { sortedItems: filteredPlaylists } = useSortable(filterBaseRaw, {
+    initialField: "updatedAt",
+    initialOrder: "desc",
+    getValue: (item: any, field: string) => {
+      if (field === "updatedAt") return new Date(item.updatedAt).getTime();
+      return (item as any)[field];
+    },
+  });
+
   const {
     isSelectionMode,
     enterSelectionMode,
@@ -45,29 +72,6 @@ export function PlaylistsPage() {
 
   const isInSelectionModeForPlaylists =
     isSelectionMode && itemType === "playlist";
-
-  // Filter playlists
-  const filteredPlaylists = useMemo(() => {
-    let filtered = [...playlists];
-
-    // Filter by type
-    if (filterType !== "all") {
-      filtered = filtered.filter((p) => p.type === filterType);
-    }
-
-    // Filter by search query
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter((p) => p.name.toLowerCase().includes(query));
-    }
-
-    // Sort by updated date (newest first)
-    return filtered.sort((a, b) => {
-      const aDate = new Date(a.updatedAt).getTime();
-      const bDate = new Date(b.updatedAt).getTime();
-      return bDate - aDate;
-    });
-  }, [playlists, searchQuery, filterType]);
 
   const handlePlaylistClick = (playlist: any) => {
     trackAccess(playlist.id);

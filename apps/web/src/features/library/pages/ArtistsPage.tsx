@@ -4,8 +4,8 @@
  * Browse library by artists.
  */
 
-import { useState, useMemo } from "react";
 import { useLibraryStore } from "@sonantica/media-library";
+import { useSortable, useAlphabetNav } from "@sonantica/shared";
 import { ArtistCard } from "../components/ArtistCard";
 import { IconMicrophone, IconSearch } from "@tabler/icons-react";
 import { LibraryPageHeader, VirtualizedGrid, useUIStore } from "@sonantica/ui";
@@ -13,16 +13,33 @@ import { useLocation } from "wouter";
 import { useSelectionStore } from "../../../stores/selectionStore";
 import { SelectionActionBar } from "../../../components/SelectionActionBar";
 
-type SortField = "name" | "trackCount";
-type SortOrder = "asc" | "desc";
-
 export function ArtistsPage() {
   const { stats, searchQuery, getFilteredArtists } = useLibraryStore();
   const isCramped = useUIStore((state) => state.isCramped);
   const [, setLocation] = useLocation();
 
-  const [sortField, setSortField] = useState<SortField>("name");
-  const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
+  const filteredArtists = getFilteredArtists();
+
+  const {
+    sortField,
+    setSortField,
+    sortOrder,
+    setSortOrder,
+    sortedItems: sortedArtists,
+  } = useSortable(filteredArtists, {
+    initialField: "name",
+    getValue: (item: any, field: string) => {
+      if (field === "name") return item.name;
+      if (field === "trackCount") return item.trackCount || 0;
+      return 0;
+    },
+  });
+
+  const { scrollToLetter } = useAlphabetNav({
+    idPrefix: "artist",
+    headerOffset: 120,
+  });
+
   const {
     isSelectionMode,
     enterSelectionMode,
@@ -35,57 +52,8 @@ export function ArtistsPage() {
     selectedIds,
   } = useSelectionStore();
 
-  const filteredArtists = getFilteredArtists();
-
-  // Sort artists
-  const sortedArtists = useMemo(() => {
-    const artists = [...filteredArtists];
-
-    artists.sort((a, b) => {
-      let aVal: any;
-      let bVal: any;
-
-      switch (sortField) {
-        case "name":
-          aVal = a.name.toLowerCase();
-          bVal = b.name.toLowerCase();
-          break;
-        case "trackCount":
-          aVal = a.trackCount || 0;
-          bVal = b.trackCount || 0;
-          break;
-        default:
-          return 0;
-      }
-
-      if (aVal < bVal) return sortOrder === "asc" ? -1 : 1;
-      if (aVal > bVal) return sortOrder === "asc" ? 1 : -1;
-      return 0;
-    });
-
-    return artists;
-  }, [filteredArtists, sortField, sortOrder]);
-
-  // Sync with server if needed? (Page maintains original logic)
   const handleArtistClick = (artist: any) => {
     setLocation(`/artist/${artist.id}`);
-  };
-
-  const handleLetterClick = (index: number, _letter: string) => {
-    const element = document.getElementById(`artist-${index}`);
-    const container = document.getElementById("main-content");
-
-    if (element && container) {
-      const elementTop = element.offsetTop;
-      const headerOffset = 120;
-      const scrollPosition = elementTop - headerOffset;
-      container.scrollTo({
-        top: scrollPosition,
-        behavior: "smooth",
-      });
-    } else if (element) {
-      element.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
   };
 
   return (
@@ -105,7 +73,7 @@ export function ArtistsPage() {
         ]}
         sortValue={sortField}
         sortDirection={sortOrder}
-        onSortChange={(val) => setSortField(val as SortField)}
+        onSortChange={(val: string) => setSortField(val)}
         onSortDirectionChange={setSortOrder}
         enableMultiSelect
         isSelectionMode={isSelectionMode && itemType === "artist"}
@@ -115,15 +83,15 @@ export function ArtistsPage() {
         allSelected={
           selectedIds.size === sortedArtists.length && sortedArtists.length > 0
         }
-        onSelectAll={() => selectAll(sortedArtists.map((a) => a.id))}
+        onSelectAll={() => selectAll(sortedArtists.map((a: any) => a.id))}
         onDeselectAll={clearSelection}
       />
 
       <VirtualizedGrid
         items={sortedArtists}
-        keyExtractor={(artist) => artist.id}
+        keyExtractor={(artist: any) => artist.id}
         idPrefix="artist"
-        renderItem={(artist) => (
+        renderItem={(artist: any) => (
           <ArtistCard
             artist={artist}
             onClick={() => handleArtistClick(artist)}
@@ -147,7 +115,7 @@ export function ArtistsPage() {
         isFiltered={!!searchQuery}
         alphabetNav={{
           enabled: true,
-          onLetterClick: handleLetterClick,
+          onLetterClick: scrollToLetter,
           forceScrollOnly: isCramped,
         }}
       />
