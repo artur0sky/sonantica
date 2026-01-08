@@ -20,9 +20,7 @@ import {
 import { Header } from "./Header";
 import { LeftSidebar } from "./LeftSidebar";
 import { IconPlaylistAdd } from "@tabler/icons-react";
-import { useLibraryStore } from "@sonantica/media-library";
 import { DownloadButton } from "../DownloadButton";
-import { cn } from "@sonantica/shared";
 
 import { useWaveformLoader } from "../../features/player/hooks/useWaveformLoader";
 import { PlaybackPersistence } from "../../features/player/components/PlaybackPersistence";
@@ -30,9 +28,12 @@ import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { useMediaSession } from "../../hooks/useMediaSession";
 import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
 import { useSidebarResize } from "../../hooks/useSidebarResize"; // New Hook
-import { useDominantColor } from "../../hooks/useDominantColor";
 import { MobileOverlays } from "./mobile/MobileOverlays";
 import { DesktopSidebars } from "./desktop/DesktopSidebars";
+import {
+  LayoutThemeManager,
+  useLayoutTheme,
+} from "./managers/LayoutThemeManager";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -49,12 +50,6 @@ export function MainLayout({ children }: MainLayoutProps) {
   useKeyboardShortcuts();
 
   const currentTrack = usePlayerStore((s) => s.currentTrack);
-  const tracks = useLibraryStore((s) => s.tracks);
-
-  // Find full track data from library
-  const fullTrack = currentTrack
-    ? tracks.find((t) => t.id === currentTrack.id)
-    : null;
 
   const {
     isLeftSidebarOpen,
@@ -133,33 +128,18 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   const setIsCramped = useUIStore((state) => state.setIsCramped);
 
-  // Extract dominant color from cover art for solid theme
-  const { color: dominantColor, contrastColor } = useDominantColor(
-    fullTrack?.coverArt
-  );
-  const mutedColor =
-    contrastColor === "#ffffff" ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.6)";
+  // Extract theme colors using the theme manager hook
+  const { dominantColor, contrastColor, mutedColor, fullTrack } =
+    useLayoutTheme();
 
   useEffect(() => {
     setIsCramped(isCramped);
   }, [isCramped, setIsCramped]);
 
   return (
-    <div
-      className={cn(
-        "h-[100dvh] transition-all duration-300 flex flex-col bg-bg text-text overflow-hidden relative",
-        isPlayerExpanded
-          ? "pt-0"
-          : "pt-[max(env(safe-area-inset-top),2rem)] lg:pt-[env(safe-area-inset-top)]"
-      )}
-      style={
-        {
-          "--alphabet-right": `${totalRightOffset}px`,
-          "--dominant-color": dominantColor,
-          "--contrast-color": contrastColor,
-          "--color-accent-foreground": dominantColor,
-        } as React.CSSProperties
-      }
+    <LayoutThemeManager
+      totalRightOffset={totalRightOffset}
+      isPlayerExpanded={isPlayerExpanded}
     >
       {/* Persistence Layer */}
       <PlaybackPersistence />
@@ -324,6 +304,6 @@ export function MainLayout({ children }: MainLayoutProps) {
           </div>
         )}
       </AnimatePresence>
-    </div>
+    </LayoutThemeManager>
   );
 }
