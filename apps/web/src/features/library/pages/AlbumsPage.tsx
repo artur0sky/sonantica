@@ -4,44 +4,56 @@
  * Browse library by albums.
  */
 
-import { useState, useEffect, useMemo } from "react";
 import { useLibraryStore } from "@sonantica/media-library";
+import { useSortable, useAlphabetNav } from "@sonantica/shared";
 import { AlbumCard } from "../components/AlbumCard";
+import { IconDisc, IconSearch } from "@tabler/icons-react";
 import {
-  IconDisc,
-  IconSearch,
-  IconSortAscending,
-  IconSortDescending,
-} from "@tabler/icons-react";
-import { AlphabetNavigator, Button, useUIStore } from "@sonantica/ui";
-import { motion, AnimatePresence } from "framer-motion";
+  LibraryPageHeader,
+  VirtualizedGrid,
+  useUIStore,
+  GenericPageWrapper,
+} from "@sonantica/ui";
 import { useLocation } from "wouter";
-import { useMultiServerLibrary } from "../../../hooks/useMultiServerLibrary";
 import { useSelectionStore } from "../../../stores/selectionStore";
 import { SelectionActionBar } from "../../../components/SelectionActionBar";
-import { IconCheckbox } from "@tabler/icons-react";
-
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      duration: 0.2,
-    },
-  },
-};
-
-type SortField = "title" | "artist" | "year" | "trackCount";
-type SortOrder = "asc" | "desc";
 
 export function AlbumsPage() {
   const { stats, searchQuery, getFilteredAlbums } = useLibraryStore();
   const isCramped = useUIStore((state) => state.isCramped);
   const [, setLocation] = useLocation();
 
-  const [sortField, setSortField] = useState<SortField>("title");
-  const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
-  const { scanServer } = useMultiServerLibrary();
+  const filteredAlbums = getFilteredAlbums();
+
+  const {
+    sortField,
+    setSortField,
+    sortOrder,
+    setSortOrder,
+    sortedItems: sortedAlbums,
+  } = useSortable(filteredAlbums, {
+    initialField: "title",
+    getValue: (item: any, field: string) => {
+      switch (field) {
+        case "title":
+          return item.title;
+        case "artist":
+          return item.artist;
+        case "year":
+          return item.year || 0;
+        case "trackCount":
+          return item.trackCount || 0;
+        default:
+          return 0;
+      }
+    },
+  });
+
+  const { scrollToLetter } = useAlphabetNav({
+    idPrefix: "album",
+    headerOffset: 120,
+  });
+
   const {
     isSelectionMode,
     enterSelectionMode,
@@ -49,240 +61,75 @@ export function AlbumsPage() {
     selectAll,
     clearSelection,
     selectedIds,
+    itemType,
   } = useSelectionStore();
-
-  const filteredAlbums = getFilteredAlbums();
-
-  // Sort albums
-  const sortedAlbums = useMemo(() => {
-    const albums = [...filteredAlbums];
-
-    albums.sort((a, b) => {
-      let aVal: any;
-      let bVal: any;
-
-      switch (sortField) {
-        case "title":
-          aVal = a.title.toLowerCase();
-          bVal = b.title.toLowerCase();
-          break;
-        case "artist":
-          aVal = a.artist.toLowerCase();
-          bVal = b.artist.toLowerCase();
-          break;
-        case "year":
-          aVal = a.year || 0;
-          bVal = b.year || 0;
-          break;
-        case "trackCount":
-          aVal = a.trackCount || 0;
-          bVal = b.trackCount || 0;
-          break;
-        default:
-          return 0;
-      }
-
-      if (aVal < bVal) return sortOrder === "asc" ? -1 : 1;
-      if (aVal > bVal) return sortOrder === "asc" ? 1 : -1;
-      return 0;
-    });
-
-    return albums;
-  }, [filteredAlbums, sortField, sortOrder]);
-
-  // Reload from server when sort changes
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      import("../../../services/LibraryService").then(
-        ({ getServersConfig }) => {
-          const config = getServersConfig();
-          config.servers.forEach((s) => {
-            scanServer(s.id, false, "albums", 0, {
-              sort: sortField,
-              order: sortOrder,
-            });
-          });
-        }
-      );
-    }, 300);
-    return () => clearTimeout(timeout);
-  }, [sortField, sortOrder, scanServer]);
 
   const handleAlbumClick = (album: any) => {
     setLocation(`/album/${album.id}`);
   };
 
-  const handleLetterClick = (index: number, _letter: string) => {
-    // Local navigation - we have all data loaded
-    const element = document.getElementById(`album-${index}`);
-    const container = document.getElementById("main-content");
-
-    if (element && container) {
-      // Calculate exact position accounting for sticky header
-      const elementTop = element.offsetTop;
-      const headerOffset = 120; // Adjust based on your header height
-      const scrollPosition = elementTop - headerOffset;
-
-      // Scroll directly to position
-      container.scrollTo({
-        top: scrollPosition,
-        behavior: "smooth",
-      });
-    } else if (element) {
-      // Fallback to scrollIntoView
-      element.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  };
-
   return (
-    <div className="max-w-6xl mx-auto px-6 pb-32">
-      {/* Sticky Header */}
-      <motion.div
-        initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        className="sticky top-0 z-30 bg-bg/95 backdrop-blur-md border-b border-border/50 -mx-6 px-6 py-4 mb-6"
-      >
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Albums</h1>
-            {stats.totalAlbums > 0 && (
-              <p className="text-sm text-text-muted mt-1">
-                {stats.totalAlbums} album{stats.totalAlbums !== 1 ? "s" : ""} in
-                library
-              </p>
-            )}
-          </div>
+    <GenericPageWrapper>
+      <LibraryPageHeader
+        title="Albums"
+        subtitle={
+          stats.totalAlbums > 0
+            ? `${stats.totalAlbums} album${
+                stats.totalAlbums !== 1 ? "s" : ""
+              } in library`
+            : undefined
+        }
+        sortOptions={[
+          { value: "title", label: "Name" },
+          { value: "artist", label: "Artist" },
+          { value: "year", label: "Year" },
+          { value: "trackCount", label: "Track Count" },
+        ]}
+        sortValue={sortField}
+        sortDirection={sortOrder}
+        onSortChange={(val: string) => setSortField(val)}
+        onSortDirectionChange={setSortOrder}
+        enableMultiSelect
+        isSelectionMode={isSelectionMode && itemType === "album"}
+        onEnterSelectionMode={() => enterSelectionMode("album")}
+        onExitSelectionMode={exitSelectionMode}
+        enableSelectAll
+        allSelected={
+          selectedIds.size === sortedAlbums.length && sortedAlbums.length > 0
+        }
+        onSelectAll={() => selectAll(sortedAlbums.map((a: any) => a.id))}
+        onDeselectAll={clearSelection}
+      />
 
-          {/* Sort Controls */}
-          {stats.totalAlbums > 0 && (
-            <div className="flex items-center gap-2">
-              <select
-                value={sortField}
-                onChange={(e) => setSortField(e.target.value as SortField)}
-                className="px-3 py-2 bg-surface-elevated border border-border rounded-lg text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent/50"
-              >
-                <option value="title">Name</option>
-                <option value="artist">Artist</option>
-                <option value="year">Year</option>
-                <option value="trackCount">Track Count</option>
-              </select>
+      <VirtualizedGrid
+        items={sortedAlbums}
+        keyExtractor={(album: any) => album.id}
+        idPrefix="album"
+        renderItem={(album: any) => (
+          <AlbumCard album={album} onClick={() => handleAlbumClick(album)} />
+        )}
+        emptyState={{
+          icon: <IconDisc size={40} className="text-text-muted/30" />,
+          title: "Library Empty",
+          description: "No albums in your library.",
+        }}
+        noResultsState={{
+          icon: <IconSearch size={40} className="text-text-muted/30" />,
+          title: "No results found",
+          description: `No albums found matching "${searchQuery}"`,
+        }}
+        isFiltered={!!searchQuery}
+        alphabetNav={{
+          enabled: true,
+          onLetterClick: scrollToLetter,
+          forceScrollOnly: isCramped,
+          getLetterItem: (a: any) => ({
+            name: sortField === "title" ? a.title : a.artist,
+          }),
+        }}
+      />
 
-              <Button
-                onClick={() =>
-                  setSortOrder(sortOrder === "asc" ? "desc" : "asc")
-                }
-                variant="ghost"
-                size="sm"
-                className="flex items-center gap-1"
-              >
-                {sortOrder === "asc" ? (
-                  <IconSortAscending size={18} />
-                ) : (
-                  <IconSortDescending size={18} />
-                )}
-              </Button>
-
-              {/* Multi-Select Button */}
-              <Button
-                onClick={() =>
-                  isSelectionMode
-                    ? exitSelectionMode()
-                    : enterSelectionMode("album")
-                }
-                variant={isSelectionMode ? "primary" : "ghost"}
-                size="sm"
-                className="flex items-center gap-2"
-                title="Multi-Select"
-              >
-                <IconCheckbox size={18} />
-                {isSelectionMode && (
-                  <span className="hidden sm:inline">Done</span>
-                )}
-              </Button>
-
-              {/* Select All Toggle (only in selection mode) */}
-              {isSelectionMode && (
-                <Button
-                  onClick={() => {
-                    if (selectedIds.size === sortedAlbums.length) {
-                      clearSelection();
-                    } else {
-                      selectAll(sortedAlbums.map((a) => a.id));
-                    }
-                  }}
-                  variant="ghost"
-                  size="sm"
-                  className="text-xs"
-                >
-                  {selectedIds.size === sortedAlbums.length
-                    ? "Deselect All"
-                    : "Select All"}
-                </Button>
-              )}
-            </div>
-          )}
-        </div>
-      </motion.div>
-
-      {/* Selection Action Bar */}
       <SelectionActionBar />
-
-      {/* Content */}
-      <AnimatePresence mode="wait">
-        {filteredAlbums.length === 0 && searchQuery ? (
-          <motion.div
-            key="empty"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center py-20"
-          >
-            <IconSearch size={48} className="mx-auto text-text-muted/30 mb-4" />
-            <p className="text-text-muted">
-              No albums found matching "{searchQuery}"
-            </p>
-          </motion.div>
-        ) : filteredAlbums.length === 0 ? (
-          <motion.div
-            key="empty-library"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center py-20"
-          >
-            <IconDisc size={48} className="mx-auto text-text-muted/30 mb-4" />
-            <p className="text-text-muted">No albums in library</p>
-          </motion.div>
-        ) : (
-          <motion.div
-            key="list"
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"
-          >
-            {sortedAlbums.map((album: any, index: number) => (
-              <div key={album.id} id={`album-${index}`}>
-                <AlbumCard
-                  album={album}
-                  onClick={() => handleAlbumClick(album)}
-                />
-              </div>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Navigator */}
-      {sortedAlbums.length > 50 &&
-        (sortField === "title" || sortField === "artist") && (
-          <AlphabetNavigator
-            items={sortedAlbums.map((a) => ({
-              name: sortField === "title" ? a.title : a.artist,
-            }))}
-            onLetterClick={handleLetterClick}
-            forceScrollOnly={isCramped}
-            mode="local"
-          />
-        )}
-    </div>
+    </GenericPageWrapper>
   );
 }

@@ -2,17 +2,22 @@
  * Artist Detail Page
  *
  * Displays albums belonging to a specific artist.
+ * No external animation library dependencies
  */
 
 import { useMemo } from "react";
 import { useParams, useLocation } from "wouter";
 import { useLibraryStore } from "@sonantica/media-library";
-import { AlbumCard } from "../components/AlbumCard";
-import { IconChevronLeft } from "@tabler/icons-react";
-import { motion } from "framer-motion";
-import { Button, ArtistImage } from "@sonantica/ui";
+import { IconChevronLeft, IconMusic } from "@tabler/icons-react";
+import {
+  Button,
+  ArtistImage,
+  DetailPageHeader,
+  VirtualizedGrid,
+} from "@sonantica/ui";
 import { useArtistSimilarArtists } from "@sonantica/recommendations";
 import { ArtistCard } from "../components/ArtistCard";
+import { AlbumCard } from "../components/AlbumCard";
 import { ArtistAnalyticsSection } from "../../analytics/components/ArtistAnalyticsSection";
 
 export function ArtistDetailPage() {
@@ -59,65 +64,64 @@ export function ArtistDetailPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-6 pb-32">
+    <div className="max-w-6xl mx-auto p-3 sm:p-4 md:p-6 pb-24 sm:pb-32">
       {/* Back Button */}
       <Button
         variant="ghost"
         size="sm"
         onClick={() => setLocation("/artists")}
-        className="mb-8 -ml-2 text-text-muted hover:text-text"
+        className="mb-8 -ml-2 text-text-muted hover:text-text animate-in fade-in slide-in-from-left-4 duration-300"
       >
         <IconChevronLeft size={20} className="mr-1" />
         Back to Artists
       </Button>
 
       {/* Artist Header */}
-      <div className="flex items-center gap-8 mb-12">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="w-32 h-32 md:w-48 md:h-48 flex-shrink-0"
-        >
+      <DetailPageHeader
+        type="Artist"
+        title={artist.name}
+        image={
           <ArtistImage
             src={artistAlbums[0]?.coverArt}
             alt={artist.name}
             className="w-full h-full shadow-xl"
             iconSize={64}
+            priority={true}
           />
-        </motion.div>
-
-        <div>
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.1 }}
-          >
-            <span className="text-accent font-semibold tracking-wider text-sm uppercase mb-2 block">
-              Artist
-            </span>
-            <h1 className="text-4xl md:text-6xl font-bold mb-2 tracking-tight">
-              {artist.name}
-            </h1>
-            <p className="text-lg text-text-muted">
+        }
+        subtitle={
+          <>
+            <span>
               {artistAlbums.length} album
-              {artistAlbums.length !== 1 ? "s" : ""} • {artistTrackCount} track
+              {artistAlbums.length !== 1 ? "s" : ""}
+            </span>
+            <span className="opacity-30">•</span>
+            <span>
+              {artistTrackCount} track
               {artistTrackCount !== 1 ? "s" : ""}
-            </p>
-          </motion.div>
-        </div>
-      </div>
+            </span>
+          </>
+        }
+      />
 
       {/* Albums Section */}
       <h2 className="text-2xl font-bold mb-6">Albums</h2>
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-        {artistAlbums.map((album) => (
+      <VirtualizedGrid
+        items={artistAlbums}
+        keyExtractor={(album: any) => album.id}
+        idPrefix="album"
+        renderItem={(album: any) => (
           <AlbumCard
-            key={album.id}
             album={album}
             onClick={() => setLocation(`/album/${album.id}`)}
           />
-        ))}
-      </div>
+        )}
+        emptyState={{
+          icon: <IconMusic size={40} stroke={1.5} />,
+          title: "No albums found",
+          description: "This artist has no albums in your library.",
+        }}
+      />
 
       {/* Analytics Section */}
       <ArtistAnalyticsSection artistName={artist.name} artistId={artist.id} />
@@ -128,15 +132,23 @@ export function ArtistDetailPage() {
           <h2 className="text-xl font-bold mb-6 text-text-muted">
             Similar Artists
           </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
-            {similarArtists.map((rec) => (
+          <VirtualizedGrid
+            items={similarArtists.map((rec) => rec.item)}
+            keyExtractor={(item: any) => item.id}
+            idPrefix="similar"
+            renderItem={(recArtist: any) => (
               <ArtistCard
-                key={rec.item.id}
-                artist={rec.item}
-                onClick={() => setLocation(`/artist/${rec.item.id}`)}
+                artist={recArtist}
+                onClick={() => setLocation(`/artist/${recArtist.id}`)}
               />
-            ))}
-          </div>
+            )}
+            emptyState={{
+              icon: <IconMusic size={40} stroke={1.5} />,
+              title: "No similar artists",
+              description: "Couldn't find any similar artists.",
+            }}
+            className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6"
+          />
         </div>
       )}
     </div>

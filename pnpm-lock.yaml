@@ -363,7 +363,14 @@ importers:
         version: 5.9.3
 
   packages/shared:
+    dependencies:
+      react:
+        specifier: 19.2.3
+        version: 19.2.3
     devDependencies:
+      '@types/react':
+        specifier: 19.2.3
+        version: 19.2.3
       rimraf:
         specifier: 6.1.2
         version: 6.1.2

@@ -1,5 +1,5 @@
-import { motion } from "framer-motion";
-import { cn, entranceVariants } from "../../utils";
+import React from "react";
+import { cn } from "../../utils";
 
 interface AnalyticsCardProps {
   children: React.ReactNode;
@@ -15,6 +15,7 @@ interface AnalyticsCardProps {
 /**
  * Base container for dashboard items.
  * Implements premium aesthetics with optional glassmorphism.
+ * Refactored to use CSS animations and no Framer Motion.
  */
 export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
   children,
@@ -27,13 +28,10 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
   loading = false,
 }) => {
   return (
-    <motion.div
-      variants={entranceVariants.slideUp}
-      initial="hidden"
-      animate="visible"
-      exit="exit"
+    <div
       className={cn(
         "relative rounded-2xl border border-border/50 overflow-hidden flex flex-col transition-all",
+        "animate-in fade-in slide-in-from-bottom-4 duration-500",
         glassmorphism ? "bg-surface/40 backdrop-blur-xl" : "bg-surface",
         "hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:border-accent/30",
         className
@@ -69,7 +67,7 @@ export const AnalyticsCard: React.FC<AnalyticsCardProps> = ({
           children
         )}
       </div>
-    </motion.div>
+    </div>
   );
 };
 

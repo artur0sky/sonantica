@@ -223,6 +223,20 @@ func GetAlphabetIndex(ctx context.Context, entityType string, target interface{}
 	return Get(ctx, key, target)
 }
 
+// SetAlbumCover caches the path to an album's cover art
+func SetAlbumCover(ctx context.Context, albumID string, path string) error {
+	key := fmt.Sprintf("library:cover:album:%s", albumID)
+	return Set(ctx, key, path, 24*time.Hour)
+}
+
+// GetAlbumCover retrieves the cached path to an album's cover art
+func GetAlbumCover(ctx context.Context, albumID string) (string, error) {
+	key := fmt.Sprintf("library:cover:album:%s", albumID)
+	var path string
+	err := Get(ctx, key, &path)
+	return path, err
+}
+
 // ============================================
 // Playlist-specific cache functions
 // ============================================

@@ -78,7 +78,8 @@ app.conf.update(
 
 
 
-from sqlalchemy.dialects.postgresql import insert, UUID
+from sqlalchemy.dialects import postgresql
+from sqlalchemy.dialects.postgresql import insert, UUID, JSONB
 
 
 # --- DOMAIN MODELS (ORM) ---

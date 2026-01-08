@@ -2,6 +2,9 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { usePlayerStore, useQueueStore } from "@sonantica/player-core";
 import { useLibraryStore } from "@sonantica/media-library";
 import { useUIStore } from "@sonantica/ui";
+import { useOfflineStore } from "@sonantica/offline-manager";
+import { useSettingsStore } from "../stores/settingsStore";
+import { OfflineStatus } from "@sonantica/shared";
 
 export function useQueueLogic() {
   const currentTrack = usePlayerStore((s) => s.currentTrack);
@@ -16,7 +19,52 @@ export function useQueueLogic() {
   } = useQueueStore();
   const libraryTracks = useLibraryStore((s) => s.tracks);
 
-  const upcomingQueue = getRemainingTracks();
+  const { offlineMode, hideUnavailableOffline } = useSettingsStore();
+  const offlineItems = useOfflineStore((state: any) => state.items);
+
+  /**
+   * Enrich queue tracks with library data
+   * Queue tracks come from player-core with nested metadata
+   * Library tracks have flat structure (title, artist, album, etc.)
+   * This ensures TrackItem receives consistent data structure
+   */
+  const enrichTrackWithLibraryData = (queueTrack: any) => {
+    const libraryTrack = libraryTracks.find((t: any) => t.id === queueTrack.id);
+    
+    if (libraryTrack) {
+      // Use library track data (already has flat structure)
+      return libraryTrack;
+    }
+    
+    // Fallback: flatten metadata if no library match
+    return {
+      ...queueTrack,
+      title: queueTrack.metadata?.title || queueTrack.title || queueTrack.filename || "Unknown Title",
+      artist: queueTrack.metadata?.artist || queueTrack.artist || "Unknown Artist",
+      album: queueTrack.metadata?.album || queueTrack.album,
+      duration: queueTrack.metadata?.duration || queueTrack.duration || 0,
+      coverArt: queueTrack.metadata?.coverArt || queueTrack.coverArt,
+      bitrate: queueTrack.metadata?.bitrate || queueTrack.bitrate,
+      year: queueTrack.metadata?.year || queueTrack.year,
+      genre: queueTrack.metadata?.genre || queueTrack.genre,
+    };
+  };
+
+  const upcomingQueue = useMemo(() => {
+    const remaining = getRemainingTracks();
+    
+    // Enrich with library data
+    let enriched = remaining.map(enrichTrackWithLibraryData);
+    
+    // Apply offline filtering if needed
+    if (offlineMode && hideUnavailableOffline) {
+      enriched = enriched.filter((track: any) => 
+        offlineItems[track.id]?.status === OfflineStatus.COMPLETED
+      );
+    }
+    
+    return enriched;
+  }, [getRemainingTracks, libraryTracks, offlineMode, hideUnavailableOffline, offlineItems]);
 
   // Infinite Scroll State
   const [displayedCount, setDisplayedCount] = useState(50);
@@ -52,6 +100,17 @@ export function useQueueLogic() {
     reorderUpcoming([...newVisibleQueue, ...remaining]);
   };
 
+  // Reorder by indices (for drag-and-drop)
+  const handleReorderByIndex = (fromIndex: number, toIndex: number) => {
+    const newQueue = [...visibleQueue];
+    const [movedItem] = newQueue.splice(fromIndex, 1);
+    newQueue.splice(toIndex, 0, movedItem);
+    
+    // Merge reordered visible tracks with the rest of the upcoming tracks
+    const remaining = upcomingQueue.slice(displayedCount);
+    reorderUpcoming([...newQueue, ...remaining]);
+  };
+
   const getExtension = (url: string): string => {
     try {
       const filename = url.split("/").pop() || "";
@@ -74,20 +133,32 @@ export function useQueueLogic() {
     return "";
   };
 
-  async function handlePlay(track: any, index: number) {
+  async function handlePlay(track: any) {
     const queueStore = useQueueStore.getState();
-    queueStore.jumpTo(queueStore.currentIndex + index + 1);
-    await loadTrack(track);
-    await play();
+    const absoluteIndex = queueStore.queue.findIndex(
+      (t, idx) => idx > queueStore.currentIndex && t.id === track.id
+    );
+
+    if (absoluteIndex !== -1) {
+      queueStore.jumpTo(absoluteIndex);
+      await loadTrack(track);
+      await play();
+    }
   }
 
-  function handleRemove(index: number) {
-     const queueStore = useQueueStore.getState();
-     queueStore.removeFromQueue(queueStore.currentIndex + index + 1);
+  function handleRemove(trackId: string) {
+    const queueStore = useQueueStore.getState();
+    const absoluteIndex = queueStore.queue.findIndex(
+      (t, idx) => idx > queueStore.currentIndex && t.id === trackId
+    );
+
+    if (absoluteIndex !== -1) {
+      queueStore.removeFromQueue(absoluteIndex);
+    }
   }
 
   return {
-    currentTrack,
+    currentTrack: currentTrack ? enrichTrackWithLibraryData(currentTrack) : null,
     toggleQueue,
     fullQueue,
     currentIndex,
@@ -97,10 +168,11 @@ export function useQueueLogic() {
     observerTarget,
     visibleQueue,
     handleReorder,
+    handleReorderByIndex,
     getExtension,
     getBadgeClass,
     clearQueue,
     handlePlay,
-    handleRemove
+    handleRemove,
   };
 }

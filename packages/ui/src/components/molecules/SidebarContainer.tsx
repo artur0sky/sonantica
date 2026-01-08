@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { motion } from "framer-motion";
+
 import { IconX } from "@tabler/icons-react";
 import { cn } from "../../utils";
 
@@ -51,15 +51,13 @@ export function SidebarContainer({
           {headerActions}
 
           {onClose && (
-            <motion.button
+            <button
               onClick={onClose}
-              whileHover={{ scale: 1.1, rotate: 90 }}
-              whileTap={{ scale: 0.9 }}
-              className="text-text-muted hover:text-text p-1 transition-fast"
+              className="text-text-muted hover:text-text p-1 transition-transform duration-200 hover:scale-110 hover:rotate-90 active:scale-90"
               aria-label="Close sidebar"
             >
               <IconX size={20} stroke={1.5} />
-            </motion.button>
+            </button>
           )}
         </div>
       </div>

@@ -1,46 +1,107 @@
-import { motion } from "framer-motion";
-import { ReactNode } from "react";
-import { cn, gpuAnimations } from "@sonantica/shared";
+/**
+ * EmptyState Component
+ *
+ * Generic empty state component for displaying when no data is available.
+ * Follows Sonántica's minimalist design philosophy.
+ * Optimized with CSS-only animations for better performance.
+ */
 
-interface EmptyStateProps {
-  icon?: React.ElementType | React.ReactNode;
+import type { ReactNode } from "react";
+import { cn } from "@sonantica/shared";
+
+export interface EmptyStateProps {
+  /** Icon to display (ReactNode for flexibility) */
+  icon?: ReactNode;
+  /** Main title text */
   title?: string;
+  /** Description text */
   description?: string;
+  /** Action button or link */
   action?: ReactNode;
+  /** Additional CSS classes */
   className?: string;
+  /** Variant for different styles */
+  variant?: "default" | "compact" | "minimal";
 }
 
 export function EmptyState({
-  icon: Icon,
+  icon,
   title,
   description,
   action,
   className,
+  variant = "default",
 }: EmptyStateProps) {
+  const isCompact = variant === "compact";
+  const isMinimal = variant === "minimal";
+
   return (
-    <motion.div
-      {...gpuAnimations.fadeInUp}
+    <div
       className={cn(
-        "flex flex-col items-center justify-center text-center py-20 px-4",
+        "flex flex-col items-center justify-center text-center",
+        "animate-in fade-in slide-in-from-bottom-4 duration-300",
+        "gpu-accelerated",
+        !isMinimal &&
+          "bg-surface/50 border border-border/50 rounded-2xl border-dashed",
+        isCompact
+          ? "py-12 px-4"
+          : isMinimal
+          ? "py-8 px-4"
+          : "py-16 sm:py-24 px-4",
         className
       )}
     >
-      {Icon && (
-        <div className="mb-4 text-text-muted/30 p-4 bg-surface-elevated/50 rounded-full">
-          {typeof Icon === 'function' ? (
-            <Icon size={48} stroke={1.5} />
-          ) : (
-            Icon
+      {/* Icon Container */}
+      {icon && (
+        <div
+          className={cn(
+            "inline-flex items-center justify-center bg-surface-elevated rounded-full text-accent",
+            "animate-in zoom-in duration-500 delay-150",
+            isCompact
+              ? "p-3 mb-3"
+              : isMinimal
+              ? "p-2 mb-2"
+              : "p-4 sm:p-6 mb-4 sm:mb-6"
           )}
+        >
+          {icon}
         </div>
       )}
+
+      {/* Title */}
       {title && (
-        <h3 className="text-lg font-semibold text-text mb-2">{title}</h3>
+        <h3
+          className={cn(
+            "font-semibold mb-2",
+            isCompact
+              ? "text-base"
+              : isMinimal
+              ? "text-sm"
+              : "text-lg sm:text-xl"
+          )}
+        >
+          {title}
+        </h3>
       )}
+
+      {/* Description */}
       {description && (
-        <p className="text-text-muted max-w-md mb-6">{description}</p>
+        <p
+          className={cn(
+            "text-text-muted max-w-md",
+            isCompact
+              ? "text-xs mb-4"
+              : isMinimal
+              ? "text-xs mb-3"
+              : "text-sm sm:text-base mb-6 sm:mb-8"
+          )}
+        >
+          {description}
+        </p>
       )}
-      {action}
-    </motion.div>
+
+      {/* Action */}
+      {action && <div className="mt-2">{action}</div>}
+    </div>
   );
 }

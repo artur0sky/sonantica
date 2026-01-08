@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sonantica-core/cache"
 	"sonantica-core/database"
 
 	"github.com/go-chi/chi/v5"
@@ -59,7 +60,6 @@ func StreamTrack(w http.ResponseWriter, r *http.Request) {
 func GetAlbumCover(w http.ResponseWriter, r *http.Request) {
 	albumID := chi.URLParam(r, "id")
 	if albumID == "" {
-		// Try to catch subpaths if chi pattern fails or wildcard used
 		albumID = chi.URLParam(r, "*")
 	}
 
@@ -68,12 +68,21 @@ func GetAlbumCover(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	slog.Info("Requesting cover", "album_id", albumID)
+	// 1. Try Cache First
+	coverArtPath, err := cache.GetAlbumCover(r.Context(), albumID)
+	if err == nil && coverArtPath != "" {
+		slog.Info("Requesting cover (cached)", "album_id", albumID)
+		serveCover(w, r, coverArtPath, albumID)
+		return
+	}
 
-	var coverArtPath *string
+	slog.Info("Requesting cover (database)", "album_id", albumID)
+
+	// 2. Database Fallback
+	var dbPath *string
 	query := `SELECT cover_art FROM albums WHERE id = $1`
 
-	err := database.DB.QueryRow(r.Context(), query, albumID).Scan(&coverArtPath)
+	err = database.DB.QueryRow(r.Context(), query, albumID).Scan(&dbPath)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			slog.Warn("Album not found", "album_id", albumID)
@@ -85,14 +94,22 @@ func GetAlbumCover(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if coverArtPath == nil || *coverArtPath == "" {
+	if dbPath == nil || *dbPath == "" {
 		slog.Warn("No cover art path for album", "album_id", albumID)
 		http.NotFound(w, r)
 		return
 	}
 
-	fullPath := resolveMediaPath(*coverArtPath)
-	slog.Info("Serving cover", "path", fullPath)
+	// 3. Save to Cache
+	if err := cache.SetAlbumCover(r.Context(), albumID, *dbPath); err != nil {
+		slog.Warn("Failed to cache album cover", "album_id", albumID, "error", err)
+	}
+
+	serveCover(w, r, *dbPath, albumID)
+}
+
+func serveCover(w http.ResponseWriter, r *http.Request, path string, albumID string) {
+	fullPath := resolveMediaPath(path)
 
 	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
 		slog.Warn("Cover file does not exist", "path", fullPath, "album_id", albumID)
@@ -100,5 +117,7 @@ func GetAlbumCover(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Add Cache-Control Header (1 year for images since they are immutable in this flow)
+	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 	http.ServeFile(w, r, fullPath)
 }

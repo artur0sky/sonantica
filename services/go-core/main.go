@@ -151,8 +151,17 @@ func main() {
 	workDir, _ := os.Getwd()
 	slog.Info("Server Config", "work_dir", workDir, "log_dir", logDir)
 
-	r.Handle("/covers/*", http.StripPrefix("/covers/", http.FileServer(http.Dir("/covers"))))
-	r.Handle("/api/covers/*", http.StripPrefix("/api/covers/", http.FileServer(http.Dir("/covers"))))
+	// Helper for static immutable assets
+	staticWithCache := func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+			h.ServeHTTP(w, r)
+		})
+	}
+
+	coverServer := http.FileServer(http.Dir("/covers"))
+	r.Handle("/covers/*", http.StripPrefix("/covers/", staticWithCache(coverServer)))
+	r.Handle("/api/covers/*", http.StripPrefix("/api/covers/", staticWithCache(coverServer)))
 
 	// Start Server
 	port := os.Getenv("PORT")

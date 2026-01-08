@@ -2,9 +2,9 @@
  * Expanded Player - Mobile Layout (Template)
  * Traditional vertical layout with gesture interactions
  * Following Template pattern from Atomic Design
+ * No external animation library dependencies
  */
 
-import { motion } from "framer-motion";
 import { PlayerButton } from "../../atoms";
 import { TrackRating } from "../../molecules";
 import { IconChevronDown, IconDots } from "@tabler/icons-react";
@@ -125,18 +125,12 @@ export function ExpandedPlayerMobile({
             {/* Track Info */}
             <div className="flex flex-col gap-4">
               <div className="text-center w-full">
-                <motion.h1
-                  layoutId="player-title-mobile"
-                  className="text-2xl md:text-4xl font-black tracking-tight line-clamp-2"
-                >
+                <h1 className="text-2xl md:text-4xl font-black tracking-tight line-clamp-2">
                   {currentTrack.metadata?.title || "Unknown Title"}
-                </motion.h1>
-                <motion.p
-                  layoutId="player-artist-mobile"
-                  className="text-lg md:text-2xl text-text-muted font-bold mt-1"
-                >
+                </h1>
+                <p className="text-lg md:text-2xl text-text-muted font-bold mt-1">
                   {formatArtists(currentTrack.metadata?.artist)}
-                </motion.p>
+                </p>
               </div>
 
               <div className="flex items-center justify-between w-full px-4">

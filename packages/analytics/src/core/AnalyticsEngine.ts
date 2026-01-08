@@ -147,7 +147,8 @@ export class AnalyticsEngine {
   private config: AnalyticsConfig;
   private sessionId: string | null = null;
   private eventBuffer: AnalyticsEvent[] = [];
-  private flushTimer: NodeJS.Timeout | null = null;
+  private flushTimer: any = null; // Use any to avoid NodeJS/Browser type conflicts
+  private isPaused = false;
   private platformInfo: {
     platform: Platform;
     browser: string;
@@ -282,8 +283,14 @@ export class AnalyticsEngine {
    * Flush buffered events to the server
    */
   async flush(): Promise<void> {
-    if (this.eventBuffer.length === 0) {
-      this.log('No events to flush');
+    if (this.isPaused || this.eventBuffer.length === 0) {
+      if (this.isPaused) this.log('Analytics is paused, skipping flush');
+      return;
+    }
+    
+    // Simple online check
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      this.log('Device is offline, buffering events');
       return;
     }
     
@@ -352,6 +359,30 @@ export class AnalyticsEngine {
    */
   getPlatformInfo() {
     return { ...this.platformInfo };
+  }
+  
+  /**
+   * Pause analytics (e.g. when entering offline mode)
+   */
+  pause(): void {
+    this.isPaused = true;
+    this.log('Analytics paused');
+  }
+  
+  /**
+   * Resume analytics
+   */
+  resume(): void {
+    this.isPaused = false;
+    this.log('Analytics resumed');
+    this.flush(); // Try to flush buffered events
+  }
+
+  /**
+   * Check if analytics is currently paused
+   */
+  isAnalyticsPaused(): boolean {
+    return this.isPaused;
   }
   
   // ============================================================================

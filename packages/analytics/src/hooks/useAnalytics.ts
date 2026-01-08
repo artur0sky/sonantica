@@ -92,25 +92,29 @@ export function useAnalytics(initialConfig?: Partial<AnalyticsConfig>) {
   );
 
   const flush = useCallback(() => flushStore(), [flushStore]);
-  
+  const pause = useCallback(() => useAnalyticsStore.getState().pause(), []);
+  const resume = useCallback(() => useAnalyticsStore.getState().resume(), []);
+
   return {
     // State
     sessionId,
     enabled: config.enabled,
-    
+
     // Core methods
     track,
     flush,
-    
+    pause,
+    resume,
+
     // Convenience methods
     trackPageView,
     trackSearch,
     trackDSPChange,
     trackLibraryAction,
-    
+
     // Configuration
     updateConfig,
-    
+
     // Session control
     startSession,
     endSession,
