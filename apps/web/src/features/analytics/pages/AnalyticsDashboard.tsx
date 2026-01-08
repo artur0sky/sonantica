@@ -133,6 +133,43 @@ export const AnalyticsDashboard = () => {
     }));
   }, [data]);
 
+  const topArtistsData = useMemo(() => {
+    if (!data?.topArtists || data.topArtists.length === 0) return [];
+    const maxPlays = data.topArtists[0].playCount || 1;
+    return data.topArtists.map((artist) => ({
+      id: artist.artistId,
+      title: artist.artistName,
+      subtitle: `${artist.playCount} plays`,
+      value: artist.playCount,
+      percentage: (artist.playCount / maxPlays) * 100,
+    }));
+  }, [data]);
+
+  const topAlbumsData = useMemo(() => {
+    if (!data?.topAlbums || data.topAlbums.length === 0) return [];
+    const maxPlays = data.topAlbums[0].playCount || 1;
+    return data.topAlbums.map((album) => ({
+      id: album.albumId,
+      title: album.albumTitle,
+      subtitle: album.artistName,
+      value: album.playCount,
+      image: album.coverArt,
+      percentage: (album.playCount / maxPlays) * 100,
+    }));
+  }, [data]);
+
+  const recentlyPlayedData = useMemo(() => {
+    if (!data?.recentlyPlayed || data.recentlyPlayed.length === 0) return [];
+    return data.recentlyPlayed.map((track) => ({
+      id: track.trackId + track.playedAt, // unique key
+      title: track.trackTitle,
+      subtitle: new Date(track.playedAt).toLocaleString(),
+      value: 0, // No progress bar needed for history
+      image: track.albumArt,
+      percentage: 0,
+    }));
+  }, [data]);
+
   const genreData = useMemo(() => {
     if (!data?.genreDistribution || data.genreDistribution.length === 0)
       return [];
@@ -254,9 +291,45 @@ export const AnalyticsDashboard = () => {
         colSpan: 2 as const,
         component: (
           <TopList
-            title="Most Played"
+            title="Most Played Tracks"
             items={topTracks}
             icon={<IconFlame size={18} />}
+            loading={loading}
+          />
+        ),
+      },
+      {
+        id: "top-artists",
+        colSpan: 2 as const,
+        component: (
+          <TopList
+            title="Most Played Artists"
+            items={topArtistsData}
+            icon={<IconUsers size={18} />}
+            loading={loading}
+          />
+        ),
+      },
+      {
+        id: "top-albums",
+        colSpan: 2 as const,
+        component: (
+          <TopList
+            title="Most Played Albums"
+            items={topAlbumsData}
+            icon={<IconAlbum size={18} />}
+            loading={loading}
+          />
+        ),
+      },
+      {
+        id: "recent-activity",
+        colSpan: 2 as const,
+        component: (
+          <TopList
+            title="Recently Played"
+            items={recentlyPlayedData}
+            icon={<IconClock size={18} />}
             loading={loading}
           />
         ),

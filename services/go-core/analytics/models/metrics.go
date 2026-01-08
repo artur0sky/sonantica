@@ -4,16 +4,20 @@ import "time"
 
 // DashboardMetrics represents the main dashboard data
 type DashboardMetrics struct {
-	StartDate         string           `json:"startDate"`
-	EndDate           string           `json:"endDate"`
-	Overview          OverviewStats    `json:"overview"`
-	TopTracks         []TopTrack       `json:"topTracks"`
-	ListeningHeatmap  []HeatmapData    `json:"listeningHeatmap"`
-	PlaybackTimeline  []TimelineData   `json:"playbackTimeline"`
-	GenreDistribution []GenreStats     `json:"genreDistribution"`
-	PlatformStats     []PlatformStats  `json:"platformStats"`
-	RecentSessions    []SessionSummary `json:"recentSessions"`
-	ListeningStreak   StreakData       `json:"listeningStreak"`
+	StartDate         string                `json:"startDate"`
+	EndDate           string                `json:"endDate"`
+	Overview          OverviewStats         `json:"overview"`
+	TopTracks         []TopTrack            `json:"topTracks"`
+	TopArtists        []TopArtist           `json:"topArtists"`
+	TopAlbums         []TopAlbum            `json:"topAlbums"`
+	TopPlaylists      []TopPlaylist         `json:"topPlaylists"`
+	ListeningHeatmap  []HeatmapData         `json:"listeningHeatmap"`
+	PlaybackTimeline  []TimelineData        `json:"playbackTimeline"`
+	GenreDistribution []GenreStats          `json:"genreDistribution"`
+	PlatformStats     []PlatformStats       `json:"platformStats"`
+	RecentSessions    []SessionSummary      `json:"recentSessions"`
+	RecentlyPlayed    []RecentlyPlayedTrack `json:"recentlyPlayed"`
+	ListeningStreak   StreakData            `json:"listeningStreak"`
 }
 
 // OverviewStats represents high-level statistics
@@ -98,10 +102,44 @@ type GenreStats struct {
 	TopArtist  *TopArtist `json:"topArtist,omitempty"`
 }
 
-// TopArtist represents the top artist in a genre
+// TopArtist represents a top played artist
 type TopArtist struct {
-	Name      string `json:"name"`
-	PlayCount int    `json:"playCount"`
+	ArtistID   string `json:"artistId"`
+	ArtistName string `json:"artistName"`
+	PlayCount  int    `json:"playCount"`
+	PlayTime   int    `json:"playTime"`
+	Rank       int    `json:"rank"`
+}
+
+// TopAlbum represents a top played album
+type TopAlbum struct {
+	AlbumID    string `json:"albumId"`
+	AlbumTitle string `json:"albumTitle"`
+	ArtistName string `json:"artistName"`
+	CoverArt   string `json:"coverArt,omitempty"`
+	PlayCount  int    `json:"playCount"`
+	PlayTime   int    `json:"playTime"`
+	Rank       int    `json:"rank"`
+}
+
+// TopPlaylist represents a top played playlist
+type TopPlaylist struct {
+	PlaylistID   string `json:"playlistId"`
+	PlaylistName string `json:"playlistName"`
+	PlayCount    int    `json:"playCount"`
+	PlayTime     int    `json:"playTime"`
+	Rank         int    `json:"rank"`
+}
+
+// RecentlyPlayedTrack represents a recently played track
+type RecentlyPlayedTrack struct {
+	TrackID    string `json:"trackId"`
+	TrackTitle string `json:"trackTitle"`
+	ArtistName string `json:"artistName"`
+	AlbumTitle string `json:"albumTitle"`
+	AlbumArt   string `json:"albumArt"`
+	PlayedAt   string `json:"playedAt"`
+	Duration   int    `json:"duration"`
 }
 
 // PlatformStats represents platform usage statistics
