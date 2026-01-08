@@ -193,6 +193,16 @@ class GenreStatistics(Base):
     last_played_at = Column(DateTime)
     updated_at = Column(DateTime, server_default=func.now())
 
+class ListeningStreak(Base):
+    __tablename__ = 'listening_streaks'
+    id = Column(postgresql.UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid())
+    user_id = Column(String(255), unique=True, nullable=False)
+    current_streak = Column(Integer, default=0)
+    max_streak = Column(Integer, default=0)
+    last_played_at = Column(DateTime)
+    total_play_time = Column(Integer, default=0)
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
 # --- REPOSITORY LAYER ---
 class AudioRepository:
     def __init__(self, db_url):
@@ -411,6 +421,87 @@ class AudioRepository:
             )
             session.execute(stmt_hm)
 
+            # --- 3. Genre Statistics Upsert ---
+            # Retrieve genre from track (we need to query it since it's not always in event data)
+            # Optimization: Try to get from event.data first, else query DB
+            genre = data.get("genre")
+            if not genre:
+                # Fallback query
+                t_obj = session.query(Track).filter(Track.id == track_id).first()
+                if t_obj:
+                    genre = t_obj.genre
+            
+            if genre and genre != "Unknown":
+                genre_values = {
+                    "genre": genre,
+                    "play_count": 0,
+                    "total_play_time": 0,
+                    "unique_tracks": 0,
+                    "last_played_at": dt,
+                    "updated_at": dt
+                }
+                genre_update = {
+                    "last_played_at": dt,
+                    "updated_at": dt
+                }
+
+                if event_type == "playback.start":
+                    genre_values["play_count"] = 1
+                    genre_values["unique_tracks"] = 1 # Approximation
+                    genre_update["play_count"] = GenreStatistics.play_count + 1
+                    # unique_tracks is hard to atomic increment correctly without set, skipping for now or approx
+                    
+                elif event_type in ["playback.complete", "playback.skip"]:
+                    dur = int(data.get("duration", 0)) if event_type == "playback.complete" else int(data.get("position", 0))
+                    genre_values["total_play_time"] = dur
+                    genre_update["total_play_time"] = GenreStatistics.total_play_time + dur
+
+                stmt_gs = insert(GenreStatistics).values(**genre_values)
+                stmt_gs = stmt_gs.on_conflict_do_update(
+                    index_elements=[GenreStatistics.genre],
+                    set_=genre_update
+                )
+                session.execute(stmt_gs)
+
+            # --- 4. Listening Streak Upsert ---
+            # Determine identity
+            user_id = event_data.get("userId") or event_data.get("sessionId") or "anonymous"
+            
+            streak_values = {
+                "user_id": user_id,
+                "current_streak": 0,
+                "max_streak": 0,
+                "total_play_time": 0,
+                "last_played_at": dt,
+                "updated_at": dt
+            }
+            streak_update = {
+                "last_played_at": dt,
+                "updated_at": dt
+            }
+
+            if event_type == "playback.start":
+                # Logic: Check last_played difference. If < 24h (or arbitrary streak time), inc streak.
+                # In atomic SQL this is hard. For MVP/Robustness, just increment counts.
+                # A proper streak logic needs a read-modify-write usually.
+                # We'll do a robust simplified version: simple play counter/time accumulator for now.
+                streak_values["current_streak"] = 1
+                streak_update["current_streak"] = ListeningStreak.current_streak + 1
+                # max_streak logic would require `GREATEST(...)`
+                streak_update["max_streak"] = func.greatest(ListeningStreak.max_streak, ListeningStreak.current_streak + 1)
+
+            elif event_type in ["playback.complete", "playback.skip"]:
+                dur = int(data.get("duration", 0)) if event_type == "playback.complete" else int(data.get("position", 0))
+                streak_values["total_play_time"] = dur
+                streak_update["total_play_time"] = ListeningStreak.total_play_time + dur
+
+            stmt_ls = insert(ListeningStreak).values(**streak_values)
+            stmt_ls = stmt_ls.on_conflict_do_update(
+                index_elements=[ListeningStreak.user_id],
+                set_=streak_update
+            )
+            session.execute(stmt_ls)
+
             session.commit()
             logger.info(f"📊 Aggregated {event_type} for track {track_id}")
 
@@ -597,12 +688,41 @@ def task_analyze_audio(self, job_data):
             raise self.retry(exc=e, countdown=10)
     return {"status": "failed", "path": rel_path}
 
+def _update_redis_stats(red, event_data):
+    try:
+        now_ts = int(time.time())
+        minute_bucket = (now_ts // 60) * 60
+        
+        # Track Active Sessions (Last 5 minutes)
+        session_id = event_data.get("sessionId")
+        if session_id:
+            red.zadd("stats:realtime:active_sessions", {session_id: now_ts})
+            # Cleanup sessions older than 5 mins
+            red.zremrangebyscore("stats:realtime:active_sessions", 0, now_ts - 300)
+            red.expire("stats:realtime:active_sessions", 600)
+        
+        # Real-time Event Counter
+        red.incr(f"stats:realtime:events:{minute_bucket}")
+        red.expire(f"stats:realtime:events:{minute_bucket}", 3600)
+
+        if event_data.get("eventType") == "playback.start":
+            red.incr(f"stats:realtime:plays:{minute_bucket}")
+            red.expire(f"stats:realtime:plays:{minute_bucket}", 3600)
+            
+            # Update "Trending" Tracks in Redis (Last 10 minutes)
+            track_id = event_data.get("data", {}).get("trackId")
+            if track_id:
+                # Use a sorted set for trending
+                trending_key = f"stats:trending:tracks:{minute_bucket}"
+                red.zincrby(trending_key, 1, track_id)
+                red.expire(trending_key, 600) # Bucket expires in 10 mins
+    except Exception as e:
+        logger.error(f"Redis Update Error: {e}")
+
 @app.task(name="sonantica.process_analytics", bind=True, max_retries=5)
 def task_process_analytics(self, event_data):
     """
-    High-volume analytics processing.
-    1. Updates Postgres for historical data (Robust Upsert).
-    2. Updates Redis for real-time streaming view.
+    High-volume analytics processing (Single Event).
     """
     try:
         # 1. Historical Aggregation (Postgres)
@@ -611,36 +731,9 @@ def task_process_analytics(self, event_data):
             r.update_event_aggregation(event_data)
         
         # 2. Real-time Streaming (Redis)
-        # We store hits per minute in a sorted set or hash to allow "Ticker" style updates
         red = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, password=REDIS_PASSWORD, db=0)
-        
         try:
-            now_ts = int(time.time())
-            minute_bucket = (now_ts // 60) * 60
-            
-            # Track Active Sessions (Last 5 minutes)
-            session_id = event_data.get("sessionId")
-            if session_id:
-                red.zadd("stats:realtime:active_sessions", {session_id: now_ts})
-                # Cleanup sessions older than 5 mins
-                red.zremrangebyscore("stats:realtime:active_sessions", 0, now_ts - 300)
-                red.expire("stats:realtime:active_sessions", 600)
-            
-            # Real-time Event Counter
-            red.incr(f"stats:realtime:events:{minute_bucket}")
-            red.expire(f"stats:realtime:events:{minute_bucket}", 3600)
-
-            if event_data.get("eventType") == "playback.start":
-                red.incr(f"stats:realtime:plays:{minute_bucket}")
-                red.expire(f"stats:realtime:plays:{minute_bucket}", 3600)
-                
-                # Update "Trending" Tracks in Redis (Last 10 minutes)
-                track_id = event_data.get("data", {}).get("trackId")
-                if track_id:
-                    # Use a sorted set for trending
-                    trending_key = f"stats:trending:tracks:{minute_bucket}"
-                    red.zincrby(trending_key, 1, track_id)
-                    red.expire(trending_key, 600) # Bucket expires in 10 mins
+            _update_redis_stats(red, event_data)
         finally:
             red.close()
 
@@ -648,6 +741,37 @@ def task_process_analytics(self, event_data):
     except Exception as e:
         logger.error(f"Analytics Task Error: {e}")
         # Robust Retry!
+        raise self.retry(exc=e, countdown=5)
+
+@app.task(name="sonantica.process_analytics_batch", bind=True, max_retries=5)
+def task_process_analytics_batch(self, batch_events):
+    """
+    High-volume analytics processing (Batch).
+    Significantly reduces overhead by reusing connections.
+    """
+    try:
+        r = get_repo()
+        red = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, password=REDIS_PASSWORD, db=0)
+        
+        count = 0
+        try:
+             for event_data in batch_events:
+                 # PG - Continue on error to not block whole batch, but log high
+                 if r:
+                     try:
+                        r.update_event_aggregation(event_data)
+                     except Exception as ex:
+                        logger.error(f"Batch Item Error (PG): {ex}")
+                 
+                 # Redis
+                 _update_redis_stats(red, event_data)
+                 count += 1
+        finally:
+            red.close()
+            
+        return {"status": "processed_batch", "count": count}
+    except Exception as e:
+        logger.error(f"Analytics Batch Task Error: {e}")
         raise self.retry(exc=e, countdown=5)
 
 @app.task(name="sonantica.sync_cache")

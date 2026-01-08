@@ -101,11 +101,10 @@ func (h *AnalyticsHandler) IngestEventBatch(w http.ResponseWriter, r *http.Reque
 	}
 
 	// OFFLOAD TO CELERY: Aggregate stats & Update real-time cache
+	// OFFLOAD TO CELERY: Aggregate stats & Update real-time cache (Batched)
 	go func() {
-		for i := range batch.Events {
-			if err := cache.EnqueueCeleryTask(context.Background(), "sonantica.process_analytics", batch.Events[i]); err != nil {
-				log.Printf("Failed to enqueue analytics task for batch event: %v", err)
-			}
+		if err := cache.EnqueueCeleryTask(context.Background(), "sonantica.process_analytics_batch", batch.Events); err != nil {
+			log.Printf("Failed to enqueue analytics batch task: %v", err)
 		}
 	}()
 
