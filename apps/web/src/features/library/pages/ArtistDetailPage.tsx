@@ -86,6 +86,7 @@ export function ArtistDetailPage() {
             alt={artist.name}
             className="w-full h-full shadow-xl"
             iconSize={64}
+            priority={true}
           />
         }
         subtitle={

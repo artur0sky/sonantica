@@ -102,6 +102,7 @@ export function AlbumDetailPage() {
             alt={album.title}
             className="w-full h-full shadow-2xl"
             iconSize={64}
+            priority={true}
           />
         }
         subtitle={

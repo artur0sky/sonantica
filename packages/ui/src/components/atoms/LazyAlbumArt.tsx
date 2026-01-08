@@ -29,6 +29,8 @@ interface LazyAlbumArtProps {
     className?: string;
     stroke?: number;
   }>;
+  /** Whether this is a high-priority image (e.g. LCP) */
+  priority?: boolean;
 }
 
 /**
@@ -47,6 +49,7 @@ export const LazyAlbumArt = memo(function LazyAlbumArt({
   iconSize = 20,
   threshold = 0.1,
   fallbackIcon: FallbackIcon = IconMusic,
+  priority = false, // Default false
 }: LazyAlbumArtProps) {
   // No src = show fallback immediately
   if (!src) {
@@ -63,6 +66,39 @@ export const LazyAlbumArt = memo(function LazyAlbumArt({
           stroke={1.5}
         />
       </div>
+    );
+  }
+
+  // If priority, use standard img for LCP and pre-JS performance
+  if (priority) {
+    return (
+      <img
+        src={src}
+        alt={alt}
+        // @ts-expect-error - fetchpriority is a valid attribute for browsers but missing in React types
+        fetchpriority="high"
+        decoding="async"
+        className={cn("w-full h-full object-cover", className)}
+        onError={(e) => {
+          const target = e.target as HTMLImageElement;
+          target.style.display = "none";
+          if (target.parentElement) {
+            target.parentElement.classList.add(
+              "flex",
+              "items-center",
+              "justify-center",
+              "bg-surface-elevated"
+            );
+            // Simple manual SVG injection for error since we are inside raw img handler
+            target.parentElement.innerHTML = `
+              <div class="w-full h-full flex items-center justify-center bg-surface-elevated">
+                <svg width="${iconSize}" height="${iconSize}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="text-text-muted/30">
+                  <path d="M9 18V5l12-2v13M9 18c0 1.657-1.343 3-3 3s-3-1.343-3-3 1.343-3 3-3 3 1.343 3 3zm12-2c0 1.657-1.343 3-3 3s-3-1.343-3-3 1.343-3 3-3 3 1.343 3 3z"/>
+                </svg>
+              </div>`;
+          }
+        }}
+      />
     );
   }
 

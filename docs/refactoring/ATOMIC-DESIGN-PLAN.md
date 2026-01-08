@@ -403,6 +403,20 @@ Este documento detalla el plan completo para refactorizar los componentes de la 
 1. 📋 `ContextMenu.tsx" (New)
 1. 📋 `Atoms (PlayerButton, ScanButton, PlayButton, UserButton, AlphabetNavigator)" (New)
 
+
+---
+
+## ⚡ 11. Optimización de Performance (LCP & Assets)
+
+**Objetivo:** Asegurar que la carga de imágenes (portadas, artistas) y recursos críticos no penalice el Largest Contentful Paint (LCP) y mantenga la fluidez de Sonántica.
+
+### **Tareas de Verificación**
+
+1. 📋 **Priorización de Imágenes (LCP):** Identificar imágenes principales en detail pages y aplicar `fetchpriority="high"`.
+1. 📋 **Optimización de Grids:** Asegurar que las imágenes "above the fold" no tengan lazy-load diferido excesivo.
+1. 📋 **Auditoría de Recursos:** Revisar el peso de fuentes e iconos y su impacto en el tiempo de carga inicial.
+1. 📋 **Core Web Vitals:** Medir LCP y CLS en rutas críticas (`/`, `/albums`, `/album/:id`) tras la migración de CSS.
+
 ---
 
 ## 🏆 10. Logros y Beneficios

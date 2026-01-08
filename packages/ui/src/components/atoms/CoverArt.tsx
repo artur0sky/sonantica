@@ -24,6 +24,8 @@ interface CoverArtProps {
     className?: string;
     stroke?: number;
   }>;
+  /** Whether this is a high-priority image (e.g. LCP) */
+  priority?: boolean;
 }
 
 export const CoverArt = memo(function CoverArt({
@@ -34,6 +36,7 @@ export const CoverArt = memo(function CoverArt({
   shine = false,
   shadow = false,
   fallbackIcon,
+  priority = false, // Default false
 }: CoverArtProps) {
   return (
     <div
@@ -51,6 +54,7 @@ export const CoverArt = memo(function CoverArt({
         className="w-full h-full object-cover"
         iconSize={iconSize}
         fallbackIcon={fallbackIcon}
+        priority={priority}
       />
 
       {shine && (

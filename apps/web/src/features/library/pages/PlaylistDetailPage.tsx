@@ -143,6 +143,7 @@ export function PlaylistDetailPage() {
                   alt=""
                   className="w-full h-full"
                   iconSize={24}
+                  priority={true}
                 />
               ))}
             </div>
@@ -152,6 +153,7 @@ export function PlaylistDetailPage() {
               alt={playlist.name}
               className="w-full h-full shadow-2xl"
               iconSize={64}
+              priority={true}
             />
           )
         }
