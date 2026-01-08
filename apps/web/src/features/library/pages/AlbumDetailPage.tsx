@@ -2,6 +2,7 @@
  * Album Detail Page
  *
  * Displays tracks belonging to a specific album.
+ * No external animation library dependencies
  */
 
 import { useMemo } from "react";
@@ -9,7 +10,6 @@ import { useParams, useLocation } from "wouter";
 import { useLibraryStore } from "@sonantica/media-library";
 import { TrackItem } from "../components/TrackItem";
 import { IconChevronLeft, IconPlayerPlay } from "@tabler/icons-react";
-import { motion } from "framer-motion";
 import { Button, CoverArt } from "@sonantica/ui";
 import { useAlbumSimilarAlbums } from "@sonantica/recommendations";
 import { AlbumCard } from "../components/AlbumCard";
@@ -84,25 +84,17 @@ export function AlbumDetailPage() {
 
       {/* Album Header */}
       <div className="flex flex-col md:flex-row gap-8 mb-12">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="w-48 h-48 md:w-64 md:h-64 flex-shrink-0"
-        >
+        <div className="w-48 h-48 md:w-64 md:h-64 flex-shrink-0 animate-in fade-in zoom-in-95 duration-500">
           <CoverArt
             src={album.coverArt}
             alt={album.title}
             className="w-full h-full shadow-2xl"
             iconSize={64}
           />
-        </motion.div>
+        </div>
 
         <div className="flex flex-col justify-end">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-          >
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
             <span className="text-accent font-semibold tracking-wider text-sm uppercase mb-2 block">
               Album
             </span>
@@ -148,7 +140,7 @@ export function AlbumDetailPage() {
                 Play Album
               </Button>
             </div>
-          </motion.div>
+          </div>
         </div>
       </div>
 

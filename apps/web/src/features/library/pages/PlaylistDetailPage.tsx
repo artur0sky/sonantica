@@ -2,6 +2,7 @@
  * Playlist Detail Page
  *
  * Displays tracks belonging to a specific playlist.
+ * No external animation library dependencies
  */
 
 import { useMemo, useEffect } from "react";
@@ -16,7 +17,6 @@ import {
   IconTrash,
   IconEdit,
 } from "@tabler/icons-react";
-import { motion } from "framer-motion";
 import { Button, CoverArt } from "@sonantica/ui";
 import { playFromContext } from "../../../utils/playContext";
 import { trackToMediaSource } from "../../../utils/streamingUrl";
@@ -154,11 +154,7 @@ export function PlaylistDetailPage() {
 
       {/* Playlist Header */}
       <div className="flex flex-col md:flex-row gap-8 mb-12">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="w-48 h-48 md:w-64 md:h-64 flex-shrink-0 relative"
-        >
+        <div className="w-48 h-48 md:w-64 md:h-64 flex-shrink-0 relative animate-in fade-in zoom-in-95 duration-500">
           {hasGrid ? (
             <div className="grid grid-cols-2 grid-rows-2 w-full h-full rounded-md overflow-hidden shadow-2xl">
               {coverArts.slice(0, 4).map((art: string, i: number) => (
@@ -179,14 +175,10 @@ export function PlaylistDetailPage() {
               iconSize={64}
             />
           )}
-        </motion.div>
+        </div>
 
         <div className="flex flex-col justify-end">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-          >
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
             <div className="flex items-center gap-2 mb-2">
               <span className="text-accent font-semibold tracking-wider text-sm uppercase block">
                 {playlist.type === "HISTORY_SNAPSHOT"
@@ -259,7 +251,7 @@ export function PlaylistDetailPage() {
                 </>
               )}
             </div>
-          </motion.div>
+          </div>
         </div>
       </div>
 

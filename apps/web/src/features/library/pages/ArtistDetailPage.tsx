@@ -2,6 +2,7 @@
  * Artist Detail Page
  *
  * Displays albums belonging to a specific artist.
+ * No external animation library dependencies
  */
 
 import { useMemo } from "react";
@@ -9,7 +10,6 @@ import { useParams, useLocation } from "wouter";
 import { useLibraryStore } from "@sonantica/media-library";
 import { AlbumCard } from "../components/AlbumCard";
 import { IconChevronLeft } from "@tabler/icons-react";
-import { motion } from "framer-motion";
 import { Button, ArtistImage } from "@sonantica/ui";
 import { useArtistSimilarArtists } from "@sonantica/recommendations";
 import { ArtistCard } from "../components/ArtistCard";
@@ -73,37 +73,27 @@ export function ArtistDetailPage() {
 
       {/* Artist Header */}
       <div className="flex items-center gap-8 mb-12">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="w-32 h-32 md:w-48 md:h-48 flex-shrink-0"
-        >
+        <div className="w-32 h-32 md:w-48 md:h-48 flex-shrink-0 animate-in fade-in zoom-in-95 duration-500">
           <ArtistImage
             src={artistAlbums[0]?.coverArt}
             alt={artist.name}
             className="w-full h-full shadow-xl"
             iconSize={64}
           />
-        </motion.div>
+        </div>
 
-        <div>
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.1 }}
-          >
-            <span className="text-accent font-semibold tracking-wider text-sm uppercase mb-2 block">
-              Artist
-            </span>
-            <h1 className="text-4xl md:text-6xl font-bold mb-2 tracking-tight">
-              {artist.name}
-            </h1>
-            <p className="text-lg text-text-muted">
-              {artistAlbums.length} album
-              {artistAlbums.length !== 1 ? "s" : ""} • {artistTrackCount} track
-              {artistTrackCount !== 1 ? "s" : ""}
-            </p>
-          </motion.div>
+        <div className="animate-in fade-in slide-in-from-left-4 duration-500 delay-100">
+          <span className="text-accent font-semibold tracking-wider text-sm uppercase mb-2 block">
+            Artist
+          </span>
+          <h1 className="text-4xl md:text-6xl font-bold mb-2 tracking-tight">
+            {artist.name}
+          </h1>
+          <p className="text-lg text-text-muted">
+            {artistAlbums.length} album
+            {artistAlbums.length !== 1 ? "s" : ""} • {artistTrackCount} track
+            {artistTrackCount !== 1 ? "s" : ""}
+          </p>
         </div>
       </div>
 

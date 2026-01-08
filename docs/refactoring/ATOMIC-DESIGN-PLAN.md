@@ -285,7 +285,7 @@ Este documento detalla el plan completo para refactorizar los componentes de la 
 
 ## 🎨 9. Migración de Framer Motion a CSS Animations
 
-**Estado Actual:** 10 de 25 archivos (40%) migrados.
+**Estado Actual:** 13 de 25 archivos (52%) migrados.
 
 #### **Prioridad Crítica (Core UI):**
 1. ✅ `MobileOverlays.tsx` - Migrado
@@ -302,9 +302,9 @@ Este documento detalla el plan completo para refactorizar los componentes de la 
 6. ✅ `ArtistsPage.tsx` - Migrado via organisms
 7. ✅ `AlbumsPage.tsx` - Migrado via organisms
 8. ✅ `PlaylistsPage.tsx` - Migrado via organisms
-9. ❌ `PlaylistDetailPage.tsx`
-10. ❌ `ArtistDetailPage.tsx`
-11. ❌ `AlbumDetailPage.tsx`
+9. ✅ `PlaylistDetailPage.tsx` - **COMPLETADO** (2026-01-08)
+10. ✅ `ArtistDetailPage.tsx` - **COMPLETADO** (2026-01-08)
+11. ✅ `AlbumDetailPage.tsx` - **COMPLETADO** (2026-01-08)
 
 #### **Prioridad Media (Sidebars):**
 12. ❌ `RightSidebar.tsx`
@@ -364,10 +364,10 @@ Este documento detalla el plan completo para refactorizar los componentes de la 
 
 | Métrica | Antes | Actual | Proyectado | Progreso |
 |---------|-------|--------|------------|----------|
-| **Bundle size** | ~50KB (FM) | -30KB | -50KB | 60% |
-| **Archivos migrados** | 0/25 | 10/25 (40%) | 25/25 (100%) | 40% |
-| **Performance (INP)** | Variable | +25% | +30% | 83% |
-| **Animaciones CSS** | ~10% | 50% | 100% | 50% |
+| **Bundle size** | ~50KB (FM) | -35KB | -50KB | 70% |
+| **Archivos migrados** | 0/25 | 13/25 (52%) | 25/25 (100%) | 52% |
+| **Performance (INP)** | Variable | +28% | +30% | 93% |
+| **Animaciones CSS** | ~10% | 60% | 100% | 60% |
 
 ---
 
