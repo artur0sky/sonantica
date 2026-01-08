@@ -9,7 +9,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "wouter";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { Button } from "@sonantica/ui";
+import { Button, EmptyState } from "@sonantica/ui";
 import { useLibraryStore } from "@sonantica/media-library";
 import { useUIStore } from "@sonantica/ui";
 import { TrackItem } from "../components/TrackItem";
@@ -387,46 +387,26 @@ export function TracksPage() {
       {/* Content */}
       <AnimatePresence mode="wait">
         {stats.totalTracks === 0 ? (
-          <motion.div
+          <EmptyState
             key="empty"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            className="text-center py-16 sm:py-24 bg-surface/50 border border-border/50 rounded-2xl border-dashed"
-          >
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.2, type: "spring" }}
-              className="inline-flex items-center justify-center p-4 sm:p-6 bg-surface-elevated rounded-full mb-4 sm:mb-6 text-accent"
-            >
+            icon={
               <IconMusic size={40} stroke={1.5} className="sm:w-12 sm:h-12" />
-            </motion.div>
-            <h2 className="text-lg sm:text-xl font-semibold mb-2 px-4">
-              No music found
-            </h2>
-            <p className="text-sm sm:text-base text-text-muted mb-6 sm:mb-8 max-w-md mx-auto px-4">
-              Your library is empty. Go to settings to add music folders.
-            </p>
-            <Link href="/settings">
-              <Button variant="primary">Configure Library</Button>
-            </Link>
-          </motion.div>
+            }
+            title="No music found"
+            description="Your library is empty. Go to settings to add music folders."
+            action={
+              <Link href="/settings">
+                <Button variant="primary">Configure Library</Button>
+              </Link>
+            }
+          />
         ) : filteredTracks.length === 0 ? (
-          <motion.div
+          <EmptyState
             key="no-results"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center py-16 sm:py-20"
-          >
-            <IconSearch
-              size={40}
-              className="mx-auto text-text-muted/30 mb-4 sm:w-12 sm:h-12"
-            />
-            <p className="text-sm sm:text-base text-text-muted px-4">
-              No tracks found matching "{searchQuery}"
-            </p>
-          </motion.div>
+            variant="minimal"
+            icon={<IconSearch size={40} className="text-text-muted/30" />}
+            title={`No tracks found matching "${searchQuery}"`}
+          />
         ) : useVirtualScroll ? (
           // PERFORMANCE: Virtual scrolling for large lists - Using main container for scrolling
           <>

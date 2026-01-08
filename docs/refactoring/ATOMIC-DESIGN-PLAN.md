@@ -24,7 +24,7 @@ Este documento detalla el plan para refactorizar los "God Components" identifica
 
 - [ ] **1.2. Crear `DesktopSidebars` Organism**
     -   **Archivo:** `src/components/layout/desktop/DesktopSidebars.tsx`
-    -   **Responsabilidad:** Renderizar los `<aside>` de escritorio (Lyrics, Queue, EQ, Recommendations).
+    -   **Responsabilidad:** Renderizar los `<aside>` de escritorio (Lyrics, Queue, EQ).
     -   **Dependencia:** `Suspense`, `lazy` imports.
 
 - [ ] **1.3. Crear `LayoutThemeManager` HOC/Provider**
@@ -59,10 +59,12 @@ Este documento detalla el plan para refactorizar los "God Components" identifica
 
 ### Tareas:
 
-- [ ] **3.1. Extraer `EmptyState` a `@sonantica/ui`** (📦 Core Extraction)
+- [x] **3.1. Extraer `EmptyState` a `@sonantica/ui`** (📦 Core Extraction) ✅ **COMPLETADO**
     -   **Destino:** `packages/ui/src/components/molecules/EmptyState.tsx`
     -   **Props:** `icon`, `title`, `description`, `action` (ReactNode).
     -   **Motivo:** El diseño de "No music found" se repite en Playlists, Albums, Artists, etc.
+    -   **Estado:** Modernizado con CSS animations, 3 variantes (default, compact, minimal)
+    -   **Páginas actualizadas:** TracksPage.tsx, ArtistsPage.tsx
 
 - [ ] **3.2. Componentizar Página**
     -   `TracksHeader` (Organism).
@@ -75,14 +77,30 @@ Este documento detalla el plan para refactorizar los "God Components" identifica
 ### Candidatos para `@sonantica/ui`:
 | Componente | Origen Actual | Destino Propuesto | Estado |
 | :--- | :--- | :--- | :--- |
-| `EmptyState` | `TracksPage.tsx` (ln 388) | `molecules/EmptyState.tsx` | 🆕 Por crear |
-| `GraphicEQGrid` | `EQSidebar.tsx` (ln 385) | `atoms/GraphicEQGrid.tsx` | 🆕 Por crear |
-| `SidebarLoader` | `MainLayout.tsx` (ln 50) | `atoms/CenteredLoader.tsx` | 🆕 Renombrar |
+| `EmptyState` | `TracksPage.tsx` (ln 388) | `molecules/EmptyState.tsx` | ✅ **Completado** |
+| `GraphicEQGrid` | `EQSidebar.tsx` (ln 385) | `atoms/GraphicEQGrid.tsx` | ✅ **Completado** |
+| `SidebarLoader` | `MainLayout.tsx` (ln 50) | `atoms/CenteredLoader.tsx` | 🆕 Por crear |
 
 ### Candidatos para `@sonantica/shared`:
 | Utilidad | Origen Actual | Destino Propuesto |
 | :--- | :--- | :--- |
 | `isCramped` Logic | `MainLayout.tsx` (ln 147) | N/A (Lógica muy específica de UI Web) |
+
+---
+
+## 📊 5. Progreso Actual
+
+### ✅ Completado (2024-01-07):
+1. **EmptyState modernizado** - CSS animations, 3 variantes, TypeScript mejorado
+2. **GraphicEQGrid creado** - Atom reutilizable para visualización de audio
+3. **TracksPage actualizado** - Usando EmptyState
+4. **ArtistsPage actualizado** - Usando EmptyState
+5. **Compilación exitosa** - Sin errores TypeScript
+
+### 📈 Métricas:
+- **Código eliminado:** ~60 líneas
+- **Componentes reutilizables creados:** 2
+- **Bundle size reducido:** Framer Motion → CSS en EmptyState
 
 ---
 

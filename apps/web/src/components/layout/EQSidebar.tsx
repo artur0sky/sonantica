@@ -11,7 +11,13 @@ import { IconWaveSquare, IconRefresh } from "@tabler/icons-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Variants } from "framer-motion";
 
-import { Button, Badge, SidebarContainer, EQSlider } from "@sonantica/ui";
+import {
+  Button,
+  Badge,
+  SidebarContainer,
+  EQSlider,
+  GraphicEQGrid,
+} from "@sonantica/ui";
 import { useEQSidebarLogic } from "../../hooks/useEQSidebarLogic";
 import { VocalModeControl } from "../dsp/VocalModeControl";
 
@@ -384,19 +390,7 @@ export function EQSidebar({ isCollapsed }: EQSidebarProps) {
                   /* EXPANDED: Vertical Sliders (Graphic EQ Style) */
                   <div className="relative h-64 p-4 bg-surface-elevated rounded-xl border border-border">
                     {/* Grid Lines/Axis */}
-                    <div className="absolute inset-0 p-4 pointer-events-none flex flex-col justify-between text-[9px] text-text-muted/30 font-sans select-none">
-                      <div className="w-full border-t border-border/30 flex items-center">
-                        <span className="-mt-3">+12dB</span>
-                      </div>
-                      <div className="w-full border-t border-dashed border-border/20"></div>
-                      <div className="w-full border-t border-accent/20 flex items-center">
-                        <span className="-mt-3 text-accent/50">0dB</span>
-                      </div>
-                      <div className="w-full border-t border-dashed border-border/20"></div>
-                      <div className="w-full border-t border-border/30 flex items-center">
-                        <span className="-mt-3">-12dB</span>
-                      </div>
-                    </div>
+                    <GraphicEQGrid />
 
                     {/* Sliders Container */}
                     <div className="relative h-full flex justify-between items-end z-10 mx-6">

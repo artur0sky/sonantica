@@ -27,3 +27,4 @@ export { ArtistImage } from './ArtistImage';
 export { AddFolderButton } from './AddFolderButton';
 export { Switch } from './Switch';
 export * from './AnalyticsAtoms';
+export { GraphicEQGrid } from './GraphicEQGrid';

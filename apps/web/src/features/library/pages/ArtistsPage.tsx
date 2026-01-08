@@ -197,13 +197,16 @@ export function ArtistsPage() {
       <AnimatePresence mode="wait">
         {filteredArtists.length === 0 && searchQuery ? (
           <EmptyState
-            icon={IconSearch}
+            key="no-results"
+            variant="minimal"
+            icon={<IconSearch size={40} className="text-text-muted/30" />}
             title="No results found"
             description={`No artists found matching "${searchQuery}"`}
           />
         ) : filteredArtists.length === 0 ? (
           <EmptyState
-            icon={IconMicrophone}
+            key="empty"
+            icon={<IconMicrophone size={40} stroke={1.5} />}
             title="Library Empty"
             description="No artists in your library."
           />
