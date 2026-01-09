@@ -1,12 +1,13 @@
-import os
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from typing import Optional
 
-class Settings:
-    REDIS_HOST: str = os.environ.get("REDIS_HOST", "redis")
-    REDIS_PORT: int = int(os.environ.get("REDIS_PORT", 6379))
-    REDIS_PASSWORD: str = os.environ.get("REDIS_PASSWORD", "")
-    POSTGRES_URL: str = os.environ.get("POSTGRES_URL", "")
-    MEDIA_PATH: str = os.environ.get("MEDIA_PATH", "/media")
-    LOG_LEVEL: str = os.environ.get("LOG_LEVEL", "INFO")
+class Settings(BaseSettings):
+    REDIS_HOST: str = "redis"
+    REDIS_PORT: int = 6379
+    REDIS_PASSWORD: str = ""
+    POSTGRES_URL: str = ""
+    MEDIA_PATH: str = "/media"
+    LOG_LEVEL: str = "INFO"
     
     @property
     def redis_url(self) -> str:
@@ -19,5 +20,7 @@ class Settings:
         if not self.POSTGRES_URL:
             return ""
         return self.POSTGRES_URL.replace("postgres://", "postgresql://")
+
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
 settings = Settings()

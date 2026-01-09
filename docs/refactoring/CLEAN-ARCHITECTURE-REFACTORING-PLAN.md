@@ -543,17 +543,17 @@ services/python-worker/
 
 ## 📋 FASE 4: Mejoras Transversales
 
-### Estado: ⏸️ Pendiente
+### Estado: 🚧 En Progreso
 
 ### 4.1. Logging Estructurado
 
 **Objetivo:** Implementar logging consistente con trazas distribuidas
 
 **Tareas:**
-- [ ] Implementar trace IDs en Go (usando context)
-- [ ] Implementar trace IDs en Python (usando contextvars)
-- [ ] Crear formato JSON estructurado
-- [ ] Agregar niveles de log configurables
+- [x] Implementar trace IDs en Go (usando context)
+- [x] Implementar trace IDs en Python (usando contextvars)
+- [x] Crear formato JSON estructurado
+- [x] Agregar niveles de log configurables
 - [ ] Implementar log rotation
 
 **Estimación:** 6 horas
@@ -563,11 +563,11 @@ services/python-worker/
 **Objetivo:** Manejo de errores consistente y recuperable
 
 **Tareas:**
-- [ ] Crear jerarquía de errores custom en Go
+- [x] Crear jerarquía de errores custom en Go
 - [ ] Crear excepciones custom en Python
-- [ ] Implementar retry logic configurable
+- [x] Implementar retry logic configurable (Go Middleware & Celery)
 - [ ] Agregar circuit breaker para servicios externos
-- [ ] Implementar graceful degradation
+- [x] Implementar graceful degradation
 
 **Estimación:** 8 horas
 
@@ -576,11 +576,11 @@ services/python-worker/
 **Objetivo:** Configuración por entorno y validada
 
 **Tareas:**
-- [ ] Implementar viper en Go
-- [ ] Implementar pydantic settings en Python
-- [ ] Crear archivos de configuración por entorno
-- [ ] Validar configuración al inicio
-- [ ] Documentar variables de entorno
+- [x] Implementar viper en Go
+- [x] Implementar pydantic settings en Python
+- [x] Crear archivos de configuración por entorno
+- [x] Validar configuración al inicio
+- [x] Documentar variables de entorno
 
 **Estimación:** 4 horas
 
