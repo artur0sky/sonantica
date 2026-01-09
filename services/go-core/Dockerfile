@@ -10,7 +10,10 @@ RUN go build -o main .
 
 # Run stage
 FROM alpine:latest
-WORKDIR /root/
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+USER appuser
+
+WORKDIR /home/appuser
 COPY --from=builder /app/main .
 
 EXPOSE 8080

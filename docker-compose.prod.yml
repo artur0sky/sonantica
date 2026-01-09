@@ -1,4 +1,4 @@
-version: '3.8'
+dame version: '3.8'
 
 # Sonántica - Production Docker Compose
 # Architecture: Traefik Reverse Proxy + HTTPS + Core Services
@@ -27,8 +27,10 @@ services:
       # Providers
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
-      # API & Dashboard (Secure this in real prod!)
+      # API & Dashboard
       - "--api.dashboard=false" 
+      # Global Timeouts
+      - "--entrypoints.websecure.transport.respondingtimeouts.readtimeout=60" 
       # Certificates (Let's Encrypt)
       - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
       - "--certificatesresolvers.myresolver.acme.email=${ACME_EMAIL:-admin@localhost}"
@@ -43,9 +45,20 @@ services:
       - sonantica-net
     labels:
       - "traefik.enable=true"
-      # Optional: Dashboard enabled on localhost only if needed, or disable completely
+      # Optional: Dashboard
       - "traefik.http.routers.dashboard.rule=Host(`traefik.localhost`)"
       - "traefik.http.routers.dashboard.service=api@internal"
+      # Security Headers Middleware
+      - "traefik.http.middlewares.security-headers.headers.framedeny=true"
+      - "traefik.http.middlewares.security-headers.headers.sslredirect=true"
+      - "traefik.http.middlewares.security-headers.headers.browserxssfilter=true"
+      - "traefik.http.middlewares.security-headers.headers.contenttypenosniff=true"
+      - "traefik.http.middlewares.security-headers.headers.stsincludesubdomains=true"
+      - "traefik.http.middlewares.security-headers.headers.stspreload=true"
+      - "traefik.http.middlewares.security-headers.headers.stsseconds=31536000"
+      # Rate Limit Middleware
+      - "traefik.http.middlewares.rate-limit.ratelimit.average=100"
+      - "traefik.http.middlewares.rate-limit.ratelimit.burst=50"
 
   # ============================================
   # PERSISTENCE LAYER
@@ -73,6 +86,14 @@ services:
       timeout: 5s
       retries: 5
     # No ports exposed to host in production for security
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
 
   redis:
     build:
@@ -98,6 +119,14 @@ services:
       timeout: 5s
       retries: 5
     # No ports exposed to host in production for security
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
 
   # ============================================
   # CORE SERVICES
@@ -141,16 +170,25 @@ services:
       - "traefik.http.routers.core-stream.entrypoints=websecure"
       - "traefik.http.routers.core-stream.tls.certresolver=myresolver"
       - "traefik.http.middlewares.strip-stream.stripprefix.prefixes=/api/stream"
-      - "traefik.http.routers.core-stream.middlewares=strip-stream"
+      - "traefik.http.routers.core-stream.middlewares=strip-stream,rate-limit,security-headers"
       
       # Route 2: Analytics API (matches /api/v1/analytics...)
       # Does NOT strip prefix (assuming core expects full path for this standard API)
       - "traefik.http.routers.core-analytics.rule=Host(`${DOMAIN_NAME:-localhost}`) && PathPrefix(`/api/v1/analytics`)"
       - "traefik.http.routers.core-analytics.entrypoints=websecure"
       - "traefik.http.routers.core-analytics.tls.certresolver=myresolver"
+      - "traefik.http.routers.core-analytics.middlewares=rate-limit,security-headers"
       
       # Service definition
       - "traefik.http.services.sonantica-core.loadbalancer.server.port=8080"
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1024M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
 
   audio-worker:
     build:
@@ -181,6 +219,14 @@ services:
     networks:
       - sonantica-net
     command: ["celery", "-A", "worker.app", "worker", "--loglevel=info", "-Q", "celery", "-c", "2", "-E"]
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2048M
+        reservations:
+          cpus: '0.5'
+          memory: 512M
 
   celery-beat:
     build:
@@ -232,6 +278,9 @@ services:
       - "traefik.http.routers.flower.entrypoints=websecure"
       - "traefik.http.routers.flower.tls.certresolver=myresolver"
       - "traefik.http.services.flower.loadbalancer.server.port=5555"
+      # Basic Auth (user:admin, pass:mi_pass_seguro)
+      - "traefik.http.middlewares.flower-auth.basicauth.users=admin:$$apr1$$u40FnthY$$kL2k.z8QuJG4O.0A3G6VE."
+      - "traefik.http.routers.flower.middlewares=flower-auth,security-headers"
 
   # ============================================
   # FRONTEND (Web App)
@@ -267,6 +316,15 @@ services:
       - "traefik.http.routers.web.entrypoints=websecure"
       - "traefik.http.routers.web.tls.certresolver=myresolver"
       - "traefik.http.services.web.loadbalancer.server.port=80"
+      - "traefik.http.routers.web.middlewares=rate-limit,security-headers"
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
 
 networks:
   sonantica-net:
