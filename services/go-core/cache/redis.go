@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -317,7 +318,7 @@ func InvalidateAnalyticsCache(ctx context.Context) error {
 	return Invalidate(ctx, "analytics:*")
 }
 
-// CeleryTask represents the structure expected by Celery
+// CeleryTask represents the task body
 type CeleryTask struct {
 	ID      string        `json:"id"`
 	Task    string        `json:"task"`
@@ -333,8 +334,12 @@ func EnqueueCeleryTask(ctx context.Context, taskName string, args ...interface{}
 		return fmt.Errorf("redis client not initialized")
 	}
 
-	task := CeleryTask{
-		ID:      fmt.Sprintf("%d", time.Now().UnixNano()), // Proper UUID would be better but this works for scale
+	taskID := fmt.Sprintf("%d", time.Now().UnixNano())
+
+	// Construct the task body
+	// Note: Celery expects the body to be the task specification itself when using json serialization
+	taskBody := CeleryTask{
+		ID:      taskID,
 		Task:    taskName,
 		Args:    args,
 		Kwargs:  map[string]interface{}{},
@@ -342,11 +347,40 @@ func EnqueueCeleryTask(ctx context.Context, taskName string, args ...interface{}
 		ETA:     nil,
 	}
 
-	jsonData, err := json.Marshal(task)
+	bodyBytes, err := json.Marshal(taskBody)
 	if err != nil {
-		return fmt.Errorf("failed to marshal celery task: %w", err)
+		return fmt.Errorf("failed to marshal celery task body: %w", err)
 	}
 
-	// Celery usually looks in 'celery' list by default
-	return rdb.LPush(ctx, "celery", jsonData).Err()
+	// Base64 encode the body
+	encodedBody := base64.StdEncoding.EncodeToString(bodyBytes)
+
+	// Construct the full Celery message envelope
+	// This structure is required by Kombu/Celery to properly parse the message from Redis
+	message := map[string]interface{}{
+		"body":             encodedBody,
+		"content-encoding": "utf-8",
+		"content-type":     "application/json",
+		"headers":          map[string]interface{}{},
+		"properties": map[string]interface{}{
+			"body_encoding":  "base64",
+			"correlation_id": taskID,
+			"delivery_info": map[string]interface{}{
+				"exchange":    "",
+				"routing_key": "celery",
+			},
+			"delivery_mode": 2,
+			"delivery_tag":  taskID,
+			"priority":      0,
+			"reply_to":      taskID, // Use taskID as uuid for simplicity
+		},
+	}
+
+	finalJSON, err := json.Marshal(message)
+	if err != nil {
+		return fmt.Errorf("failed to marshal celery message envelope: %w", err)
+	}
+
+	// Push to 'celery' list
+	return rdb.LPush(ctx, "celery", finalJSON).Err()
 }

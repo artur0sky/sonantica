@@ -149,6 +149,8 @@ export class AnalyticsEngine {
   private eventBuffer: AnalyticsEvent[] = [];
   private flushTimer: any = null; // Use any to avoid NodeJS/Browser type conflicts
   private isPaused = false;
+  private isFlushing = false;
+  private readonly STORAGE_KEY = 'sonantica_analytics_buffer';
   private platformInfo: {
     platform: Platform;
     browser: string;
@@ -178,7 +180,37 @@ export class AnalyticsEngine {
       timezone: PlatformDetector.getTimezone(),
     };
     
+    // Load persisted events
+    this.loadPersistedBuffer();
+
     this.log('Analytics Engine initialized', this.platformInfo);
+  }
+
+  private loadPersistedBuffer() {
+    if (typeof window === 'undefined') return;
+    try {
+      const stored = localStorage.getItem(this.STORAGE_KEY);
+      if (stored) {
+        const events = JSON.parse(stored);
+        if (Array.isArray(events)) {
+          this.eventBuffer = [...events, ...this.eventBuffer];
+          this.log(`Loaded ${events.length} events from persistent storage`);
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to load analytics buffer', err);
+    }
+  }
+
+  private persistBuffer() {
+    if (typeof window === 'undefined') return;
+    try {
+      // Limit persistence to avoid quota instructions
+      const toPersist = this.eventBuffer.slice(-200); 
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(toPersist));
+    } catch (err) {
+      console.warn('Failed to persist analytics buffer', err);
+    }
   }
   
   /**
@@ -272,6 +304,7 @@ export class AnalyticsEngine {
     
     // Add to buffer
     this.eventBuffer.push(event);
+    this.persistBuffer();
     
     // Check if we should flush
     if (this.eventBuffer.length >= this.config.batchSize) {
@@ -283,19 +316,15 @@ export class AnalyticsEngine {
    * Flush buffered events to the server
    */
   async flush(): Promise<void> {
-    if (this.isPaused || this.eventBuffer.length === 0) {
-      if (this.isPaused) this.log('Analytics is paused, skipping flush');
+    
+    if (this.isFlushing) {
       return;
     }
-    
-    // Simple online check
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      this.log('Device is offline, buffering events');
-      return;
-    }
-    
+
+    this.isFlushing = true;
     const eventsToSend = [...this.eventBuffer];
     this.eventBuffer = [];
+    this.persistBuffer(); // Should be empty now
     
     this.log(`Flushing ${eventsToSend.length} events`);
     
@@ -321,6 +350,9 @@ export class AnalyticsEngine {
         ...eventsToSend.slice(0, this.config.maxBufferSize - this.eventBuffer.length),
         ...this.eventBuffer,
       ];
+      this.persistBuffer();
+    } finally {
+      this.isFlushing = false;
     }
   }
   

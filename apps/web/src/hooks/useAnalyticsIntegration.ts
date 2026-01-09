@@ -6,7 +6,9 @@
  */
 
 import { useMemo, useEffect } from "react";
+import { useLocation } from "wouter";
 import { useAnalytics } from "@sonantica/analytics";
+import { useAnalyticsStore } from "@sonantica/analytics";
 import { getServerConfig } from "../services/LibraryService";
 import { useSettingsStore } from "../stores/settingsStore";
 
@@ -36,21 +38,29 @@ export function useAnalyticsIntegration() {
     apiEndpoint: analyticsEndpoint,
     debug: false, // Disabled to reduce noise
     collectPlaybackData: true,
-    collectUIInteractions: false, // Disabled to reduce events
+    collectUIInteractions: true, // Enabled for page views
     collectSearchData: true, // Disabled to reduce events
-    batchSize: 50, // Send in batches of 50
+    batchSize: 100, // Reduced network impact
     flushInterval: 300000, // 5 minutes
     maxBufferSize: 500,
   });
 
   // Sync analytics with offline mode
+  const trackInOfflineMode = useAnalyticsStore((state) => state.config.trackInOfflineMode);
+  
   useEffect(() => {
-    if (offlineMode) {
+    if (offlineMode && !trackInOfflineMode) {
       analytics.pause();
     } else {
       analytics.resume();
     }
-  }, [offlineMode, analytics]);
+  }, [offlineMode, trackInOfflineMode, analytics]);
+
+  // Track Page Views
+  const [location] = useLocation();
+  useEffect(() => {
+    analytics.trackPageView(location);
+  }, [location, analytics]);
 
   return analytics;
 }

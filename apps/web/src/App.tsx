@@ -18,8 +18,8 @@ import { useSettingsStore } from "./stores/settingsStore";
 import { useDSPIntegration } from "./hooks/useDSPIntegration";
 import { useAutoScan } from "./hooks/useAutoScan";
 import { useAnalyticsIntegration } from "./hooks/useAnalyticsIntegration";
-import { usePlaybackAnalytics } from "./hooks/usePlaybackAnalytics";
 import { useVersionManager } from "./hooks/useVersionManager";
+import { AnalyticsTracker } from "./features/analytics/components/AnalyticsTracker";
 
 // Lazy load pages
 const ServerSetupPage = lazy(() =>
@@ -97,7 +97,6 @@ function App() {
   useDSPIntegration();
   useAutoScan();
   useAnalyticsIntegration();
-  usePlaybackAnalytics();
 
   const animationsEnabled = useSettingsStore((s) => s.animations);
   const animationStyles = useAnimationStyles();
@@ -162,6 +161,9 @@ function App() {
 
           {/* PWA Update Prompt */}
           <PWAUpdatePrompt />
+
+          {/* Analytics Tracker (Isolated for performance) */}
+          <AnalyticsTracker />
         </MotionConfig>
       </div>
     </ErrorBoundary>
