@@ -43,10 +43,16 @@ def analyze_audio(file_path: str, media_path: str):
 
         tags = audio.tags
         if tags:
-            metadata["title"] = str(tags.get("title", [path.stem])[0])
-            metadata["artist"] = str(tags.get("artist", ["Unknown Artist"])[0])
-            metadata["album"] = str(tags.get("album", ["Unknown Album"])[0])
-            metadata["genre"] = str(tags.get("genre", ["Unknown"])[0])
+            import bleach
+            
+            def clean(text):
+                if not text: return "Unknown"
+                return bleach.clean(str(text), tags=[], strip=True)
+
+            metadata["title"] = clean(tags.get("title", [path.stem])[0])
+            metadata["artist"] = clean(tags.get("artist", ["Unknown Artist"])[0])
+            metadata["album"] = clean(tags.get("album", ["Unknown Album"])[0])
+            metadata["genre"] = clean(tags.get("genre", ["Unknown"])[0])
             
             # Extract Year
             year_raw = str(tags.get("date", tags.get("year", ["0"]))[0])

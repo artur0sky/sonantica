@@ -1,6 +1,7 @@
 import os
 import hashlib
 import logging
+from src.config.settings import settings
 
 logger = logging.getLogger("AudioWorker")
 
@@ -39,18 +40,48 @@ def extract_cover_art(audio, full_path: str, rel_path: str, album_name: str = No
         identifier = f"{artist_name}_{album_name}".encode('utf-8')
         file_hash = hashlib.md5(identifier).hexdigest()
         
-        cache_dir = "/covers"
+        cache_dir = settings.COVER_PATH
         os.makedirs(cache_dir, exist_ok=True)
             
         save_path = os.path.join(cache_dir, f"{file_hash}.jpg")
         
         if not os.path.exists(save_path):
             try:
-                with open(save_path, "wb") as f:
-                    f.write(art_data)
-                logger.info(f"🖼️ Extracted cover art to {save_path}")
+                # Security: Use Pillow to sanitize image
+                from PIL import Image
+                import io
+
+                image = Image.open(io.BytesIO(art_data))
+                
+                # Convert to RGB to avoid issues with CMYK/RGBA in JPEGs
+                if image.mode in ("RGBA", "P"):
+                    image = image.convert("RGB")
+                
+                # Verify it's a valid image structure
+                image.verify()
+                
+                # Re-open to save (verify closes the file)
+                image = Image.open(io.BytesIO(art_data))
+                if image.mode in ("RGBA", "P"):
+                    image = image.convert("RGB")
+
+                # Save new file (strips EXIF/Metadata payloads)
+                # Respect original quality and format as much as possible
+                original_format = image.format if image.format else "JPEG"
+                if original_format == "JPEG":
+                    image.save(save_path, format="JPEG", quality=95, optimize=True, subsampling=0)
+                elif original_format == "PNG":
+                     image.save(save_path, format="PNG", optimize=True)
+                else:
+                    # Fallback for others (BMP, etc) -> Convert to high quality JPEG
+                    if image.mode != "RGB":
+                         image = image.convert("RGB")
+                    image.save(save_path, format="JPEG", quality=95, subsampling=0)
+
+                logger.info(f"🖼️ Extracted and sanitized cover art to {save_path} (fmt={original_format})")
+                
             except Exception as e:
-                logger.error(f"Failed to write cover art to cache: {e}")
+                logger.error(f"Failed to process cover art (security check failed): {e}")
                 return None
         
         return save_path

@@ -38,6 +38,18 @@ func Load() *Config {
 	v.AutomaticEnv()
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
+	// Explicit bindings to catch environment variables reliably
+	_ = v.BindEnv("PORT")
+	_ = v.BindEnv("POSTGRES_URL")
+	_ = v.BindEnv("REDIS_HOST")
+	_ = v.BindEnv("REDIS_PORT")
+	_ = v.BindEnv("REDIS_PASSWORD")
+	_ = v.BindEnv("MEDIA_PATH")
+	_ = v.BindEnv("ALLOWED_ORIGINS")
+	_ = v.BindEnv("LOG_LEVEL")
+	_ = v.BindEnv("ANALYTICS_ENABLED")
+	_ = v.BindEnv("COVER_PATH")
+
 	// 3. Read from Config File (Optional)
 	v.SetConfigName("config")
 	v.SetConfigType("yaml")

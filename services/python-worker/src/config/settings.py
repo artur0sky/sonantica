@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     REDIS_PASSWORD: str = ""
     POSTGRES_URL: str = "postgres://sonantica:sonantica@postgres:5432/sonantica?sslmode=disable"
     MEDIA_PATH: str = "/media"
+    COVER_PATH: str = "/covers"
     LOG_LEVEL: str = "INFO"
     
     @property
