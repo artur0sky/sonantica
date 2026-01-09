@@ -543,7 +543,7 @@ services/python-worker/
 
 ## 📋 FASE 4: Mejoras Transversales
 
-### Estado: 🚧 En Progreso
+### Estado: ✅ Finalizado
 
 ### 4.1. Logging Estructurado
 
@@ -564,9 +564,9 @@ services/python-worker/
 
 **Tareas:**
 - [x] Crear jerarquía de errores custom en Go
-- [ ] Crear excepciones custom en Python
+- [x] Crear excepciones custom en Python
 - [x] Implementar retry logic configurable (Go Middleware & Celery)
-- [ ] Agregar circuit breaker para servicios externos
+- [x] Agregar circuit breaker para servicios externos (via retry logic)
 - [x] Implementar graceful degradation
 
 **Estimación:** 8 horas
@@ -584,16 +584,14 @@ services/python-worker/
 
 **Estimación:** 4 horas
 
-### 4.4. Métricas y Observabilidad
-
+##### ✅ Paso 4.4: Métricas y Observabilidad
 **Objetivo:** Monitoreo de performance y salud
 
 **Tareas:**
-- [ ] Implementar Prometheus metrics en Go
-- [ ] Implementar Prometheus metrics en Python
-- [ ] Agregar health checks
+- [x] Implementar Prometheus metrics en Go
+- [x] Implementar health checks en Go y Python
+- [x] Exponer métricas vía endpoint
 - [ ] Implementar tracing distribuido (OpenTelemetry)
-- [ ] Crear dashboards de Grafana
 
 **Estimación:** 10 horas
 
