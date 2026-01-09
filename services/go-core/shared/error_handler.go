@@ -21,8 +21,6 @@ func ErrorMiddleware(next http.Handler) http.Handler {
 func RenderError(w http.ResponseWriter, r *http.Request, err error) {
 	statusCode := http.StatusInternalServerError
 	message := "internal server error"
-
-	var appErr *AppError
 	// In a real app we'd use errors.As
 	// For simplicity, we'll check common ones
 	if err == ErrNotFound {
