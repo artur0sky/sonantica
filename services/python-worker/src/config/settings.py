@@ -5,7 +5,7 @@ class Settings(BaseSettings):
     REDIS_HOST: str = "redis"
     REDIS_PORT: int = 6379
     REDIS_PASSWORD: str = ""
-    POSTGRES_URL: str = ""
+    POSTGRES_URL: str = "postgres://sonantica:sonantica@postgres:5432/sonantica?sslmode=disable"
     MEDIA_PATH: str = "/media"
     LOG_LEVEL: str = "INFO"
     

@@ -35,7 +35,7 @@ func main() {
 	slog.Info("🚀 Starting Sonántica Core", "version", "0.2.0")
 
 	// 3. Initialize Database
-	if err := database.Connect(); err != nil {
+	if err := database.Connect(cfg.PostgresURL); err != nil {
 		slog.Error("Failed to connect to database", "error", err)
 		os.Exit(1)
 	}
@@ -109,7 +109,7 @@ func main() {
 	analyticsHandler.RegisterRoutes(r)
 
 	// Static Assets
-	coverServer := http.FileServer(http.Dir("/covers"))
+	coverServer := http.FileServer(http.Dir(cfg.CoverPath))
 	staticWithCache := func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")

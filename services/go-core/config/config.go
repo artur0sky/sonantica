@@ -8,14 +8,16 @@ import (
 )
 
 type Config struct {
-	Port           string   `mapstructure:"PORT"`
-	PostgresURL    string   `mapstructure:"POSTGRES_URL"`
-	RedisHost      string   `mapstructure:"REDIS_HOST"`
-	RedisPort      string   `mapstructure:"REDIS_PORT"`
-	RedisPassword  string   `mapstructure:"REDIS_PASSWORD"`
-	MediaPath      string   `mapstructure:"MEDIA_PATH"`
-	AllowedOrigins []string `mapstructure:"ALLOWED_ORIGINS"`
-	LogLevel       string   `mapstructure:"LOG_LEVEL"`
+	Port             string   `mapstructure:"PORT"`
+	PostgresURL      string   `mapstructure:"POSTGRES_URL"`
+	RedisHost        string   `mapstructure:"REDIS_HOST"`
+	RedisPort        string   `mapstructure:"REDIS_PORT"`
+	RedisPassword    string   `mapstructure:"REDIS_PASSWORD"`
+	MediaPath        string   `mapstructure:"MEDIA_PATH"`
+	AllowedOrigins   []string `mapstructure:"ALLOWED_ORIGINS"`
+	LogLevel         string   `mapstructure:"LOG_LEVEL"`
+	AnalyticsEnabled bool     `mapstructure:"ANALYTICS_ENABLED"`
+	CoverPath        string   `mapstructure:"COVER_PATH"`
 }
 
 func Load() *Config {
@@ -25,8 +27,11 @@ func Load() *Config {
 	v.SetDefault("PORT", "8080")
 	v.SetDefault("REDIS_HOST", "redis")
 	v.SetDefault("REDIS_PORT", "6379")
+	v.SetDefault("POSTGRES_URL", "postgres://sonantica:sonantica@postgres:5432/sonantica?sslmode=disable")
 	v.SetDefault("MEDIA_PATH", "/media")
 	v.SetDefault("LOG_LEVEL", "info")
+	v.SetDefault("ANALYTICS_ENABLED", true)
+	v.SetDefault("COVER_PATH", "/covers")
 	v.SetDefault("ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:3000,http://localhost,capacitor://localhost")
 
 	// 2. Read from Environment
