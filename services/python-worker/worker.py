@@ -8,8 +8,8 @@ from src.celery_app import app
 from src.infrastructure.logging.logger_config import setup_logger
 from src.config.settings import settings
 
-logger = setup_logger("AudioWorker", settings.LOG_LEVEL)
+# Initialize Global Worker Logger
+logger = setup_logger("AudioWorker", settings.LOG_LEVEL, settings.LOG_FORMAT, settings.LOG_ENABLED)
 
-if __name__ == '__main__':
-    logger.info("🚀 Sonántica Worker Entrypoint Starting...")
+if __name__ == "__main__":
     app.start()

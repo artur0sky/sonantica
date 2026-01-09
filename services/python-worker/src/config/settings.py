@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     MEDIA_PATH: str = "/media"
     COVER_PATH: str = "/covers"
     LOG_LEVEL: str = "INFO"
+    LOG_FORMAT: str = "json"
+    LOG_ENABLED: bool = True
     
     @property
     def redis_url(self) -> str:
