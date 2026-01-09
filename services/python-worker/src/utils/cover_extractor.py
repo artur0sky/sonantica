@@ -1,6 +1,7 @@
 import os
 import hashlib
 import logging
+from src.config.settings import settings
 
 logger = logging.getLogger("AudioWorker")
 
