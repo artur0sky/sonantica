@@ -3,7 +3,6 @@ package database
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -11,10 +10,9 @@ import (
 
 var DB *pgxpool.Pool
 
-func Connect() error {
-	dbURL := os.Getenv("POSTGRES_URL")
+func Connect(dbURL string) error {
 	if dbURL == "" {
-		return fmt.Errorf("POSTGRES_URL environment variable is not set")
+		return fmt.Errorf("database URL is empty")
 	}
 
 	config, err := pgxpool.ParseConfig(dbURL)

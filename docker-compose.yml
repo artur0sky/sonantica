@@ -18,12 +18,8 @@ services:
     restart: always
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-sonantica}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sonantica}
+      PSQL_PASSWORD: ${PSQL_PASSWORD:-sonantica}
       POSTGRES_DB: ${POSTGRES_DB:-sonantica}
-      # Variables for custom entrypoint.sh in data/psql
-      PSQL_NAME: ${POSTGRES_DB:-sonantica}
-      PSQL_USER: ${POSTGRES_USER:-sonantica}
-      PSQL_PASSWORD: ${POSTGRES_PASSWORD:-sonantica}
       ENCODING: UTF8
     volumes:
       # Data persistence - Uses named volume for safety
@@ -34,9 +30,9 @@ services:
       - sonantica-net
     command: [ "postgres", "-p", "${PSQL_PORT:-5432}" ]
     ports:
-      - "${PSQL_PORT:-5432}:${PSQL_PORT:-5432}"
+      - "127.0.0.1:${PSQL_PORT:-5432}:${PSQL_PORT:-5432}"
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${PSQL_USER:-sonantica} -p ${PSQL_PORT:-5432}" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sonantica} -p ${PSQL_PORT:-5432}" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -63,7 +59,7 @@ services:
     networks:
       - sonantica-net
     ports:
-      - "${REDIS_PORT:-6379}:${REDIS_PORT:-6379}"
+      - "127.0.0.1:${REDIS_PORT:-6379}:${REDIS_PORT:-6379}"
     command: [ "redis-server", "/usr/local/etc/redis/redis.conf", "--port", "${REDIS_PORT:-6379}", "--requirepass", "${REDIS_PASSWORD:-sonantica}" ]
     healthcheck:
       test: [ "CMD", "redis-cli", "-p", "${REDIS_PORT:-6379}", "-a", "${REDIS_PASSWORD:-sonantica}", "ping" ]
@@ -84,7 +80,7 @@ services:
     ports:
       - "${CORE_PORT:-8090}:8080"
     environment:
-      - POSTGRES_URL=postgres://${PSQL_USER:-sonantica}:${PSQL_PASSWORD:-sonantica}@postgres:${PSQL_PORT:-5432}/${PSQL_NAME:-sonantica}?sslmode=disable
+      - POSTGRES_URL=postgres://${POSTGRES_USER:-sonantica}:${PSQL_PASSWORD:-sonantica}@postgres:${PSQL_PORT:-5432}/${POSTGRES_DB:-sonantica}?sslmode=disable
       - REDIS_HOST=${REDIS_HOST:-redis}
       - REDIS_PORT=${REDIS_PORT:-6379}
       - REDIS_PASSWORD=${REDIS_PASSWORD:-sonantica}
@@ -92,10 +88,14 @@ services:
       - ANALYTICS_ENABLED=${ANALYTICS_ENABLED:-true}
       - ANALYTICS_RETENTION_DAYS=${ANALYTICS_RETENTION_DAYS:-90}
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost,http://localhost:3000,http://localhost:5173,capacitor://localhost,http://192.168.100.6:3000,http://192.168.100.6:5173,http://192.168.100.6}
+      # Logging Configuration
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+      - LOG_ENABLED=${LOG_ENABLED:-true}
     volumes:
       - ${MEDIA_PATH:-./media}:/media:ro
       - ${BUCKETS_PATH:-./buckets}:/buckets:ro
-      - F:\Music:/media:ro
+      - ${MEDIA_PATH:-./media}:/media:ro
       - ./config:/config:ro
       - ./logs/core:/var/log/sonantica
       - sonantica_cache:/covers
@@ -114,16 +114,22 @@ services:
       context: ./services/python-worker
       dockerfile: Dockerfile
     container_name: sonantica-worker
+    restart: unless-stopped
     environment:
-      - POSTGRES_URL=postgres://${PSQL_USER:-sonantica}:${PSQL_PASSWORD:-sonantica}@postgres:${PSQL_PORT:-5432}/${PSQL_NAME:-sonantica}?sslmode=disable
+      - POSTGRES_URL=postgres://${POSTGRES_USER:-sonantica}:${PSQL_PASSWORD:-sonantica}@postgres:${PSQL_PORT:-5432}/${POSTGRES_DB:-sonantica}?sslmode=disable
       - REDIS_HOST=${REDIS_HOST:-redis}
       - REDIS_PORT=${REDIS_PORT:-6379}
       - REDIS_PASSWORD=${REDIS_PASSWORD:-sonantica}
       - MEDIA_PATH=/media
+      - PYTHONPATH=/app:/app/src
+      # Logging Configuration
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+      - LOG_ENABLED=${LOG_ENABLED:-true}
     volumes:
       - ${MEDIA_PATH:-./media}:/media:ro
       - ${BUCKETS_PATH:-./buckets}:/buckets:ro
-      - F:\Music:/media:ro
+      - ${MEDIA_PATH:-./media}:/media:ro
       - ./logs/worker:/var/log/sonantica
       - sonantica_cache:/covers
     depends_on:
@@ -133,7 +139,7 @@ services:
         condition: service_healthy
     networks:
       - sonantica-net
-    command: ["celery", "-A", "worker.app", "worker", "--loglevel=info", "-Q", "celery", "-c", "2"]
+    command: ["celery", "-A", "worker.app", "worker", "--loglevel=info", "-Q", "celery", "-c", "2", "-E"]
     labels:
       com.sonantica.description: "Audio Analysis & Analytics Worker (Celery)"
 
@@ -142,10 +148,17 @@ services:
       context: ./services/python-worker
       dockerfile: Dockerfile
     container_name: sonantica-beat
+    restart: unless-stopped
     environment:
       - REDIS_HOST=${REDIS_HOST:-redis}
       - REDIS_PORT=${REDIS_PORT:-6379}
       - REDIS_PASSWORD=${REDIS_PASSWORD:-sonantica}
+      - POSTGRES_URL=postgres://${POSTGRES_USER:-sonantica}:${PSQL_PASSWORD:-sonantica}@postgres:${PSQL_PORT:-5432}/${POSTGRES_DB:-sonantica}?sslmode=disable
+      - PYTHONPATH=/app:/app/src
+      # Logging Configuration
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+      - LOG_ENABLED=${LOG_ENABLED:-true}
     depends_on:
       redis:
         condition: service_healthy
@@ -160,10 +173,17 @@ services:
       context: ./services/python-worker
       dockerfile: Dockerfile
     container_name: sonantica-flower
+    restart: unless-stopped
     environment:
       - REDIS_HOST=${REDIS_HOST:-redis}
       - REDIS_PORT=${REDIS_PORT:-6379}
       - REDIS_PASSWORD=${REDIS_PASSWORD:-sonantica}
+      - POSTGRES_URL=postgres://${POSTGRES_USER:-sonantica}:${PSQL_PASSWORD:-sonantica}@postgres:${PSQL_PORT:-5432}/${POSTGRES_DB:-sonantica}?sslmode=disable
+      - PYTHONPATH=/app:/app/src
+      # Logging Configuration
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+      - LOG_ENABLED=${LOG_ENABLED:-true}
     ports:
       - "5555:5555"
     depends_on:
@@ -171,7 +191,7 @@ services:
         condition: service_healthy
     networks:
       - sonantica-net
-    command: ["celery", "-A", "worker.app", "flower", "--port=5555"]
+    command: ["celery", "-A", "worker.app", "flower", "--port=5555", "--inspect-timeout=3000"]
     labels:
       com.sonantica.description: "Celery Task Monitor"
 
@@ -189,11 +209,14 @@ services:
     volumes:
       - ${MEDIA_PATH:-./media}:/media:ro
       - ${BUCKETS_PATH:-./buckets}:/buckets:ro
-      - F:/Music:/media:ro
+      - ${MEDIA_PATH:-./media}:/media:ro
       - ${CONFIG_PATH:-./config}:/config:rw
     environment:
       - NODE_ENV=production
       - SONANTICA_VERSION=${SONANTICA_VERSION:-0.1.0}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+      - LOG_ENABLED=${LOG_ENABLED:-true}
     restart: unless-stopped
     depends_on:
       - stream-core

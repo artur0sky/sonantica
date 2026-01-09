@@ -2,6 +2,7 @@ package analytics
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -25,6 +26,8 @@ type Logger struct {
 	serviceName string
 	logLevel    LogLevel
 	logger      *log.Logger
+	format      string // "json" or "text"
+	enabled     bool
 }
 
 // LogEntry represents a structured log entry
@@ -50,10 +53,23 @@ func NewLogger(serviceName string) *Logger {
 		logLevel = "INFO"
 	}
 
+	logFormat := os.Getenv("LOG_FORMAT") // "json" by default in prod, but let's default to text/empty
+	if logFormat == "" {
+		logFormat = "text"
+	}
+
+	logEnabledStr := os.Getenv("LOG_ENABLED")
+	logEnabled := true
+	if logEnabledStr == "false" {
+		logEnabled = false
+	}
+
 	return &Logger{
 		serviceName: serviceName,
 		logLevel:    LogLevel(logLevel),
 		logger:      log.New(os.Stdout, "", 0),
+		format:      logFormat,
+		enabled:     logEnabled,
 	}
 }
 
@@ -199,6 +215,10 @@ func (cl *ContextLogger) Warn(message string, metadata ...map[string]interface{}
 // Private methods
 
 func (l *Logger) shouldLog(level LogLevel) bool {
+	if !l.enabled {
+		return false
+	}
+
 	levels := map[LogLevel]int{
 		LogLevelDebug: 0,
 		LogLevelInfo:  1,
@@ -243,9 +263,16 @@ func (l *Logger) log(level LogLevel, message string, errMsg string, duration *ti
 		}
 	}
 
-	// Format log output
+	// JSON Format
+	if l.format == "json" {
+		importJson, _ := json.Marshal(entry)
+		l.logger.Println(string(importJson))
+		return
+	}
+
+	// Format log output (Text/Pretty)
 	logMsg := fmt.Sprintf("[%s] [%s] %s",
-		entry.Timestamp.Format("2006-01-02 15:04:05.000"),
+		entry.Timestamp.Format("2006-01-02 15:04:05.000000000"),
 		entry.Level,
 		entry.Message,
 	)
@@ -278,20 +305,7 @@ func (l *Logger) log(level LogLevel, message string, errMsg string, duration *ti
 		logMsg += fmt.Sprintf(" | error=%s", entry.Error)
 	}
 
-	// Add icon based on level
-	icon := ""
-	switch level {
-	case LogLevelDebug:
-		icon = "🔍"
-	case LogLevelInfo:
-		icon = "ℹ️"
-	case LogLevelWarn:
-		icon = "⚠️"
-	case LogLevelError:
-		icon = "❌"
-	}
-
-	l.logger.Println(icon + " " + logMsg)
+	l.logger.Println(logMsg)
 }
 
 func (cl *ContextLogger) mergeMetadata(metadata ...map[string]interface{}) map[string]interface{} {
