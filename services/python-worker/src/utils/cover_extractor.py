@@ -65,8 +65,19 @@ def extract_cover_art(audio, full_path: str, rel_path: str, album_name: str = No
                     image = image.convert("RGB")
 
                 # Save new file (strips EXIF/Metadata payloads)
-                image.save(save_path, format="JPEG", quality=85, optimize=True)
-                logger.info(f"🖼️ Extracted and sanitized cover art to {save_path}")
+                # Respect original quality and format as much as possible
+                original_format = image.format if image.format else "JPEG"
+                if original_format == "JPEG":
+                    image.save(save_path, format="JPEG", quality=95, optimize=True, subsampling=0)
+                elif original_format == "PNG":
+                     image.save(save_path, format="PNG", optimize=True)
+                else:
+                    # Fallback for others (BMP, etc) -> Convert to high quality JPEG
+                    if image.mode != "RGB":
+                         image = image.convert("RGB")
+                    image.save(save_path, format="JPEG", quality=95, subsampling=0)
+
+                logger.info(f"🖼️ Extracted and sanitized cover art to {save_path} (fmt={original_format})")
                 
             except Exception as e:
                 logger.error(f"Failed to process cover art (security check failed): {e}")

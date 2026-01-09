@@ -22,6 +22,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	"github.com/go-chi/httprate"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
@@ -66,7 +67,8 @@ func main() {
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
-	r.Use(shared.ErrorMiddleware) // Global error handling and panic recovery
+	r.Use(httprate.LimitByIP(100, 1*time.Minute)) // Rate Limit: 100 req/min per IP
+	r.Use(shared.ErrorMiddleware)                 // Global error handling and panic recovery
 	r.Use(middleware.Compress(5))
 
 	r.Use(cors.Handler(cors.Options{
