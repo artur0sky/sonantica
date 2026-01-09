@@ -19,11 +19,11 @@ open http://localhost:3000
 ### Development Mode
 
 ```bash
-# Run with hot-reload
-docker-compose --profile dev up sonantica-dev
+# Start the full stack (Core, Worker, Web, DB, Redis)
+docker compose up -d
 
 # Access the app
-open http://localhost:5173
+open http://localhost:3000
 ```
 
 ## 📁 Volume Structure
