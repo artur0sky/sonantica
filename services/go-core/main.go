@@ -7,13 +7,13 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"sonantica-core/analytics"
 	"sonantica-core/analytics/handlers"
 	"sonantica-core/api"
 	"sonantica-core/cache"
+	"sonantica-core/config"
 	"sonantica-core/database"
 	"sonantica-core/scanner"
 
@@ -92,24 +92,20 @@ func main() {
 	slog.Info("Starting Scanner Scheduler", "path", mediaPath, "interval", "1h")
 	scanner.StartScanner(mediaPath, 1*time.Hour)
 
+	// Load Centralized Configuration
+	cfg := config.Load()
+
 	r := chi.NewRouter()
 
 	// Middleware Stack
-	r.Use(middleware.RequestID) // Inject X-Request-Id
+	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
-	r.Use(middleware.Compress(5)) // Enable Gzip compression
-
-	// Configurable CORS
-	allowedOrigins := os.Getenv("ALLOWED_ORIGINS")
-	originsList := []string{"http://localhost:5173", "http://localhost:3000", "http://localhost", "capacitor://localhost"}
-	if allowedOrigins != "" {
-		originsList = append(originsList, strings.Split(allowedOrigins, ",")...)
-	}
+	r.Use(middleware.Compress(5))
 
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   originsList,
+		AllowedOrigins:   cfg.AllowedOrigins,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token", "Range", "Origin"},
 		ExposedHeaders:   []string{"Link", "Content-Length", "Content-Range", "Accept-Ranges"},
@@ -164,13 +160,8 @@ func main() {
 	r.Handle("/api/covers/*", http.StripPrefix("/api/covers/", staticWithCache(coverServer)))
 
 	// Start Server
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-
-	slog.Info("Sonántica High-Performance Core Listenin", "port", port)
-	if err := http.ListenAndServe(":"+port, r); err != nil {
+	slog.Info("Sonántica High-Performance Core Listening", "port", cfg.Port)
+	if err := http.ListenAndServe(":"+cfg.Port, r); err != nil {
 		slog.Error("Server failed to start", "error", err)
 	}
 }
