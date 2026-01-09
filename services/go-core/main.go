@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"time"
@@ -17,8 +18,6 @@ import (
 	"sonantica-core/shared/logger"
 	"sonantica-core/shared/metrics"
 
-	"log/slog"
-
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
@@ -30,9 +29,8 @@ func main() {
 	// 1. Load Configuration
 	cfg := config.Load()
 
-	// 2. Setup Structured Logging
-	logger.Init(cfg.LogLevel)
-
+	// 2. Initialize Logger
+	logger.Init(cfg.LogLevel, cfg.LogFormat, cfg.LogEnabled)
 	slog.Info("🚀 Starting Sonántica Core", "version", "0.2.0")
 
 	// 3. Initialize Database

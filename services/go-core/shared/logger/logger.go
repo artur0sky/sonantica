@@ -8,7 +8,14 @@ import (
 	"path/filepath"
 )
 
-func Init(logLevel string) {
+func Init(logLevel, logFormat string, logEnabled bool) {
+	if !logEnabled {
+		// Discard all logs if disabled
+		logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+		slog.SetDefault(logger)
+		return
+	}
+
 	logDir := "/var/log/sonantica"
 	if err := os.MkdirAll(logDir, 0755); err != nil {
 		fmt.Fprintf(os.Stderr, "⚠️ Failed to create log directory: %v\n", err)
@@ -36,12 +43,28 @@ func Init(logLevel string) {
 		level = slog.LevelInfo
 	}
 
-	baseHandler := slog.NewJSONHandler(logOutput, &slog.HandlerOptions{
+	opts := &slog.HandlerOptions{
 		Level: level,
-	})
+		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+			// High precision timestamp for everyone
+			if a.Key == slog.TimeKey {
+				t := a.Value.Time()
+				// 2006-01-02 15:04:05.000000000 (Nano precision)
+				return slog.String(slog.TimeKey, t.Format("2006-01-02 15:04:05.000000000"))
+			}
+			return a
+		},
+	}
+
+	var baseHandler slog.Handler
+	if logFormat == "text" {
+		baseHandler = slog.NewTextHandler(logOutput, opts)
+	} else {
+		baseHandler = slog.NewJSONHandler(logOutput, opts)
+	}
 
 	logger := slog.New(NewTraceHandler(baseHandler))
 	slog.SetDefault(logger)
 
-	slog.Info("Logger initialized", "level", logLevel)
+	slog.Info("Logger initialized", "level", logLevel, "format", logFormat)
 }
