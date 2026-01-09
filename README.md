@@ -183,6 +183,27 @@ We stand on the shoulders of giants. Sonántica is made possible by:
 
 ---
 
+## 🤝 Contributing
+
+Sonántica welcomes contributions from the community. Like a violinist joining an orchestra, every contribution must follow the rhythm.
+
+**Contribution Flow:**
+```
+your_feature_branch → development → qa → main
+```
+
+All pull requests must:
+- Target the `development` branch (not `main`)
+- Follow our architectural principles (SOLID, Clean Architecture)
+- Pass automated checks (TypeScript, linting, builds)
+- Be approved by @artur0sky
+
+**Want to contribute?** Read our comprehensive [**Contributing Guide**](./CONTRIBUTING.md) to get started.
+
+**Want to create your own remix?** Sonántica is open-source! Fork the project and make it your own. See the [Forking & Remixing](./CONTRIBUTING.md#-forking--remixing) section for details.
+
+---
+
 ## 📄 License
 
 Licensed under the **Apache License, Version 2.0**.
