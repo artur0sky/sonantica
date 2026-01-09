@@ -98,49 +98,27 @@ Sonántica is built to be **invisible**. It should never compete with your music
 See the full [Performance Guide](./docs/PERFORMANCE_OPTIMIZATIONS.md).
 
 ## 🎧 Getting Started
+Sonántica gives you full control. For detailed deployment instructions, including production hardening, resource quotas, and volume configuration, please consult our **[Docker Deployment Guide](./docs/DOCKER.md)**.
 
-Sonántica is designed to be self-hosted, giving you absolute control over your library and data.
+### Quick Start (Dev Mode)
+For a quick test drive:
 
-### 1. Prepare Your Environment
+1.  **Clone the repo:**
+    ```bash
+    git clone https://github.com/artur0sky/sonantica.git
+    cd sonantica
+    ```
 
-Create a dedicated folder for your installation. Inside, you'll need three subfolders to persist your data:
+2.  **Launch with Docker Compose:**
+    ```bash
+    # Mounts ./media by default. Music added there will appear automatically.
+    docker compose up -d
+    ```
 
-```bash
-/sonantica
-  ├── /media      # Put your music here (FLAC, MP3, WAV, etc.)
-  ├── /buckets    # (Optional) For object storage
-  └── /config     # Where Sonántica stores database and preferences
-```
+3.  **Start Listening:**
+    Open [http://localhost:3000](http://localhost:3000).
 
-### 2. Configure the System
-
-Copy the `.env.example` file to `.env` and adjust it to match your paths.
-
-**Important:** You can mount **any** folder on your computer as your media library by setting `MEDIA_PATH`.
-
-```properties
-# .env
-
-# Example: Pointing to an external drive or common music folder
-MEDIA_PATH=D:\Music\HiFi_Collection
-# or for Linux/Mac:
-# MEDIA_PATH=/mnt/external_drive/Music
-
-CONFIG_PATH=./config
-WEB_PORT=3000
-```
-
-Sonántica will mount the path defined in `MEDIA_PATH` as read-only inside the container to ensure safety.
-
-### 3. Launch with Docker 🐳
-
-The recommended way to run Sonántica is via Docker Compose. This spins up the Player, the Stream Core (Go), the Database (Postgres), and the Analysis Worker (Python).
-
-```bash
-docker compose up -d
-```
-
-> **Note for First Run:** The system will immediately begin indexing your `/media` folder. Depending on the size of your library (e.g., >1TB), the initial scan and acoustic analysis may take some time. The UI will update in real-time as tracks are discovered.
+> **Note:** The system immediately starts indexing your `/media` folder. Initial scanning and acoustic analysis may take time depending on library size. The UI updates in real-time.
 
 ### 4. Access the Player
 
