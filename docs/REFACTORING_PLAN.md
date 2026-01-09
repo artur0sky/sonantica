@@ -642,9 +642,9 @@ services:
     container_name: sonantica-postgres
     restart: always
     environment:
-      POSTGRES_DB: ${PSQL_NAME}
-      POSTGRES_USER: ${PSQL_USER}
-      POSTGRES_PASSWORD: ${PSQL_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      PSQL_PASSWORD: ${PSQL_PASSWORD}
       PGDATA: /var/lib/postgresql/data
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -654,7 +654,7 @@ services:
     ports:
       - "${PSQL_PORT}:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${PSQL_USER}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -688,7 +688,7 @@ services:
     restart: always
     environment:
       - NODE_ENV=production
-      - POSTGRES_URL=postgres://${PSQL_USER}:${PSQL_PASSWORD}@postgres:5432/${PSQL_NAME}
+      - POSTGRES_URL=postgres://${POSTGRES_USER}:${PSQL_PASSWORD}@postgres:5432/${POSTGRES_DB}
       - REDIS_URL=redis://redis:6379
       - JWT_SECRET=${JWT_SECRET}
       - STREAM_CORE_URL=http://stream-core:8080
@@ -732,7 +732,7 @@ services:
     restart: always
     environment:
       - NODE_ENV=production
-      - POSTGRES_URL=postgres://${PSQL_USER}:${PSQL_PASSWORD}@postgres:5432/${PSQL_NAME}
+      - POSTGRES_URL=postgres://${POSTGRES_USER}:${PSQL_PASSWORD}@postgres:5432/${POSTGRES_DB}
       - REDIS_URL=redis://redis:6379
       - MEDIA_PATH=/media
     volumes:
@@ -755,7 +755,7 @@ services:
     restart: always
     environment:
       - NODE_ENV=production
-      - POSTGRES_URL=postgres://${PSQL_USER}:${PSQL_PASSWORD}@postgres:5432/${PSQL_NAME}
+      - POSTGRES_URL=postgres://${POSTGRES_USER}:${PSQL_PASSWORD}@postgres:5432/${POSTGRES_DB}
       - REDIS_URL=redis://redis:6379
     ports:
       - "8082:8082"
@@ -794,7 +794,7 @@ services:
     container_name: sonantica-audio-worker
     restart: always
     environment:
-      - POSTGRES_URL=postgres://${PSQL_USER}:${PSQL_PASSWORD}@postgres:5432/${PSQL_NAME}
+      - POSTGRES_URL=postgres://${POSTGRES_USER}:${PSQL_PASSWORD}@postgres:5432/${POSTGRES_DB}
       - REDIS_URL=redis://redis:6379
       - MEDIA_PATH=/media
     volumes:
