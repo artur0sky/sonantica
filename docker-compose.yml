@@ -108,6 +108,15 @@ services:
       - sonantica-net
     labels:
       com.sonantica.description: "High-Performance Streaming & Analytics Core (Go)"
+    user: root # Dev: Avoid permission issues with bind mounts
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
 
   audio-worker:
     build:
@@ -142,6 +151,15 @@ services:
     command: ["celery", "-A", "worker.app", "worker", "--loglevel=info", "-Q", "celery", "-c", "2", "-E"]
     labels:
       com.sonantica.description: "Audio Analysis & Analytics Worker (Celery)"
+    user: root
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 1024M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
 
   celery-beat:
     build:
@@ -167,6 +185,7 @@ services:
     command: ["celery", "-A", "worker.app", "beat", "--loglevel=info"]
     labels:
       com.sonantica.description: "Periodic Task Scheduler (Celery Beat)"
+    user: root
 
   flower:
     build:
@@ -194,6 +213,7 @@ services:
     command: ["celery", "-A", "worker.app", "flower", "--port=5555", "--inspect-timeout=3000"]
     labels:
       com.sonantica.description: "Celery Task Monitor"
+    user: root
 
   # ============================================
   # FRONTEND & PROXY

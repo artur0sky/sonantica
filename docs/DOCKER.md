@@ -80,175 +80,215 @@ volumes:
 
 ## 🚀 Deployment Options
 
-### Option 1: Docker Compose (Recommended)
+### Option 1: Development Environment
+Optimized for debugging, hot-reloading, and ease of use.
 
 ```bash
-# Production
-docker-compose up -d sonantica-web
+# Start development environment
+docker compose up -d
 
-# Development
-docker-compose --profile dev up sonantica-dev
-
-# Stop
-docker-compose down
-
-# Rebuild
-docker-compose build --no-cache
+# Stop environment
+docker compose down
 ```
 
-### Option 2: Docker CLI
+### Option 2: Production Environment (`docker-compose.prod.yml`)
+Optimized for security, performance, and stability.
+
+**Key Features:**
+- **Traefik Reverse Proxy:** Auto HTTPS, Rate Limiting, Security Headers.
+- **Hardened Containers:** Services run as non-root `appuser`.
+- **Resource Limits:** CPU/RAM quotas to prevent DoS.
+- **Service Isolation:** Frontend, Backend, and Worker separation.
 
 ```bash
-# Build
-docker build -t sonantica:latest .
+# 1. Create your production .env
+cp .env.example .env
 
-# Run with volumes
-docker run -d \
-  --name sonantica \
-  -p 3000:80 \
-  -v $(pwd)/media:/media:ro \
-  -v $(pwd)/buckets:/buckets:ro \
-  -v $(pwd)/config:/config:rw \
-  sonantica:latest
+# 2. Configure critical variables in .env (see below)
 
-# Stop
-docker stop sonantica
-docker rm sonantica
+# 3. Start production services
+docker compose -f docker-compose.prod.yml up -d
 ```
 
-### Option 3: Docker with Cloud Storage
+## 📚 Table of Contents
 
-#### AWS S3 Mount
-```bash
-# Install s3fs
-apt-get install s3fs
+1. [Quick Start](#quick-start)
+2. [Environment Configuration (.env)](#environment-configuration)
+3. [Production Architecture](#production-architecture)
+4. [Logging & Observability](#logging--observability)
+5. [Traefik Labels & Routing](#traefik-labels--routing)
+6. [Security & Customization](#security--customization)
 
-# Mount S3 bucket
-s3fs my-music-bucket ./buckets -o passwd_file=~/.passwd-s3fs
+---
 
-# Run Docker
-docker-compose up -d
-```
+## <a name="production-architecture"></a> 🏗️ Production Architecture
 
-#### Google Cloud Storage
-```bash
-# Install gcsfuse
-gcsfuse my-music-bucket ./buckets
+This diagram reflects the services defined in `docker-compose.prod.yml`:
 
-# Run Docker
-docker-compose up -d
-```
-
-## 🔧 Configuration
-
-### Environment Variables
-
-Create a `.env` file:
-
-```env
-# Application
-NODE_ENV=production
-SONANTICA_VERSION=0.1.0
-
-# Ports
-WEB_PORT=3000
-DEV_PORT=5173
-
-# Volumes
-MEDIA_PATH=./media
-BUCKETS_PATH=./buckets
-CONFIG_PATH=./config
-
-# Optional: API Configuration
-API_URL=http://localhost:8080
-```
-
-### Custom Nginx Configuration
-
-Override the default nginx config:
-
-```yaml
-volumes:
-  - ./docker/nginx.custom.conf:/etc/nginx/conf.d/default.conf:ro
-```
-
-## 📊 Volume Permissions
-
-### Linux/macOS
-
-```bash
-# Create directories
-mkdir -p media buckets config
-
-# Set permissions
-chmod 755 media buckets
-chmod 775 config
-
-# Set ownership (if needed)
-sudo chown -R 101:101 config  # nginx user
-```
-
-### Windows
-
-```powershell
-# Create directories
-New-Item -ItemType Directory -Path media, buckets, config
-
-# Permissions are handled automatically
-```
-
-## 🔒 Security Best Practices
-
-1. **Read-only media volumes**: Prevent accidental modifications
-   ```yaml
-   - ./media:/media:ro
-   ```
-
-2. **Restrict config access**: Only the app should write
-   ```yaml
-   - ./config:/config:rw
-   ```
-
-3. **Use secrets for API keys**: Never commit credentials
-   ```yaml
-   secrets:
-     - s3_credentials
-   ```
-
-4. **Enable HTTPS**: Use a reverse proxy
-   ```bash
-   # Example with Traefik
-   docker-compose -f docker-compose.yml -f docker-compose.traefik.yml up -d
-   ```
-
-## 🌐 Reverse Proxy Examples
-
-### Nginx Reverse Proxy
-
-```nginx
-server {
-    listen 443 ssl http2;
-    server_name sonantica.example.com;
+```mermaid
+graph TD
+    User((User)) -->|HTTPS/443| Traefik[Traefik Proxy]
+    Traefik -->|/api/stream| StreamCore[Go Stream Core]
+    Traefik -->|/api/v1/analytics| StreamCore
+    Traefik -->|/dashboard| Flower[Flower Monitor]
+    Traefik -->|/*| Web[Web App (Nginx)]
     
-    ssl_certificate /path/to/cert.pem;
-    ssl_certificate_key /path/to/key.pem;
+    StreamCore -->|Read/Write| Postgres[(PostgreSQL)]
+    StreamCore -->|Cache/Broker| Redis[(Redis)]
     
-    location / {
-        proxy_pass http://localhost:3000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-}
+    AudioWorker[Python Worker] -->|Tasks| Redis
+    AudioWorker -->|Metadata| Postgres
+    
+    Beat[Celery Beat] -->|Schedule| Redis
 ```
 
-### Traefik
+### Core Services
+1.  **Traefik:** The single entry point. Handles SSL termination (Let's Encrypt), rate limiting, and routing.
+2.  **Stream Core (Go):** High-performance streaming engine and analytics API.
+3.  **Web (React/Nginx):** Serves the generic PWA frontend.
+4.  **Worker (Python):** Background processing for audio analysis (FFmpeg) and metadata extraction.
+5.  **Persistence:**
+    *   **PostgreSQL:** Relational data (Users, Library Index).
+    *   **Redis:** Caching and Message Broker for Celery.
+
+---
+
+## <a name="environment-configuration"></a> ⚙️ Environment Configuration
+
+Sonántica is highly configurable via the `.env` file. Below is the complete reference of all available parameters.
+*Use `.env.example` as your template.*
+
+### 🌍 Application & Network
+| User Variable | Description | Default | Context |
+| :--- | :--- | :--- | :--- |
+| `DOMAIN_NAME` | Public domain for remote access (HTTPS). | `sonantica.local` | **Prod** |
+| `ACME_EMAIL` | Email for Let's Encrypt SSL certificates. | `admin@localhost` | **Prod** |
+| `TZ` | Container TimeZone. | `America/Chihuahua` | All |
+| `ALLOWED_ORIGINS`| CORS whitelist (comma separated). | `http://localhost...` | Security |
+
+### 💾 Persistence & Paths
+| User Variable | Description | Default | Context |
+| :--- | :--- | :--- | :--- |
+| `MEDIA_PATH` | **Critical.** Host path to your music library. | `./media` | Storage |
+| `BUCKETS_PATH`| Path for additional storage buckets (S3/NAS).| `./buckets` | Storage |
+| `CONFIG_PATH` | Path for app config/playlists persistence. | `./config` | Storage |
+
+### 🔍 Logging & Observability
+| User Variable | Description | Default | Values |
+| :--- | :--- | :--- | :--- |
+| `LOG_LEVEL` | Verbosity of logs. | `INFO` | `DEBUG`, `INFO`, `WARN`, `ERROR` |
+| `LOG_FORMAT` | Log output format. | `json` | `json` (Prod), `text` (Dev) |
+| `LOG_ENABLED` | Master switch for logging. | `true` | `true`, `false` |
+
+### 🔐 Security & Internal Services
+| User Variable | Description | Default | Critical? |
+| :--- | :--- | :--- | :--- |
+| `PSQL_PASSWORD` | PostgreSQL Database password. | `sonantica` | ⚠️ **CHANGE IN PROD** |
+| `REDIS_PASSWORD`| Redis Cache password. | `sonantica` | ⚠️ **CHANGE IN PROD** |
+| `ANALYTICS_ENABLED` | Enable internal analytics engine. | `true` | Feature |
+
+---
+
+## <a name="logging--observability"></a> 📝 Logging & Observability
+
+Sonántica uses a structured logging system compatible with **Loki, ELK, and Splunk**.
+
+### 1. Configuration (Production)
+In production, modify `.env` to output structured JSON logs:
+```bash
+LOG_LEVEL=INFO
+LOG_FORMAT=json
+```
+**Why JSON?** It allows log aggregators to parse fields like `track_id`, `user_id`, or `duration` automatically.
+
+### 2. Configuration (Development)
+For readable logs in your terminal, use:
+```bash
+LOG_LEVEL=DEBUG
+LOG_FORMAT=text
+```
+
+### 3. Viewing Logs
+You can inspect logs per service:
+```bash
+# View Core Streamer logs
+docker compose -f docker-compose.prod.yml logs -f stream-core
+
+# View Worker/Analysis logs
+docker compose -f docker-compose.prod.yml logs -f audio-worker
+
+# View Access Logs (Traefik)
+docker compose -f docker-compose.prod.yml logs -f traefik
+```
+
+---
+
+## <a name="traefik-labels--routing"></a> 🏷️ Production Labels & Routing
+
+Sonántica uses **Traefik Labels** to configure routing without touching config files. These are defined in `docker-compose.prod.yml`.
+
+### How Routing Works
+Traefik reads `labels` from running containers to auto-configure routes.
+
+| Label Category | Function | Example |
+| :--- | :--- | :--- |
+| `router.rule` | When to route traffic? | `Host('music.com') && PathPrefix('/api')` |
+| `middleware` | Modifications before reach app. | `strip-prefix`, `rate-limit`, `basic-auth` |
+| `service.port` | Where to send traffic? | `8080` (Internal container port) |
+
+### Key Middlewares Used
+1.  **`security-headers`**: Proactively adds HSTS, XSS-Protection, and Frame-Deny headers.
+2.  **`rate-limit`**: Protects APIs from abuse (configured to ~100 req/s typically).
+3.  **`flower-auth`**: Adds password protection to the Flower Admin Dashboard.
+4.  **`strip-stream`**: Removes `/api/stream` prefix so the backend receives clean paths.
+
+### Customizing Routing
+If you need to run Sonántica under a subpath (e.g., `example.com/music`), you would edit `docker-compose.prod.yml`:
+
+### Customizing Routing
+If you need to run Sonántica under a subpath (e.g., `example.com/music`), you would edit `docker-compose.prod.yml`:
 
 ```yaml
 labels:
-  - "traefik.enable=true"
-  - "traefik.http.routers.sonantica.rule=Host(`sonantica.example.com`)"
-  - "traefik.http.routers.sonantica.tls=true"
-  - "traefik.http.routers.sonantica.tls.certresolver=letsencrypt"
+  - "traefik.http.routers.web.rule=Host(`example.com`) && PathPrefix(`/music`)"
+  - "traefik.http.middlewares.web-strip.stripprefix.prefixes=/music"
+  - "traefik.http.routers.web.middlewares=web-strip,rate-limit,security-headers"
+```
+
+---
+
+## <a name="security--customization"></a> 🔒 Security & Customization
+
+Sonántica is secure by default, but production often requires specific tuning.
+
+### 1. Hardening Checklist
+- [ ] **Change Passwords:** Set `PSQL_PASSWORD` and `REDIS_PASSWORD` in `.env`.
+- [ ] **Secure Admin:** Change ` फ्लावर` (Flower) password (see above).
+- [ ] **HTTPS:** Ensure `ACME_EMAIL` is valid for certificate renewal.
+- [ ] **Firewall:** Only ports `80` and `443` should be exposed to the internet.
+
+### 2. Volume Permissions
+If you encounter permission errors with mounted volumes:
+
+**Linux/macOS:**
+```bash
+# Fix ownership for user 1000 (standard appuser)
+sudo chown -R 1000:1000 ./media ./config ./buckets
+```
+
+**Windows:**
+Usually not required, but ensure Docker Desktop has file sharing enabled for the drive.
+
+### 3. Resource Limits
+If your server is crashing, you might need to adjust the limits in `docker-compose.prod.yml`.
+*Lower for Raspberry Pi, Higher for Dedicated Servers.*
+
+```yaml
+deploy:
+  resources:
+    limits:
+      cpus: '0.5'    # Limit to half a core
+      memory: 256M   # Strict RAM limit
 ```
 
 ## 📈 Monitoring

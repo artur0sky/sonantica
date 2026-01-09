@@ -1,0 +1,340 @@
+dame version: '3.8'
+
+# Sonántica - Production Docker Compose
+# Architecture: Traefik Reverse Proxy + HTTPS + Core Services
+#
+# Usage:
+#   1. Create .env: cp .env.example .env
+#   2. Set DOMAIN_NAME=yourdomain.com in .env
+#   3. Set ACME_EMAIL=your@email.com in .env
+#   4. Run: docker compose -f docker-compose.prod.yml up -d
+
+services:
+  # ============================================
+  # TRAEFIK (Reverse Proxy & SSL)
+  # ============================================
+  traefik:
+    image: traefik:v3.0
+    container_name: sonantica-traefik
+    restart: always
+    command:
+      # Entrypoints
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      # Redirect HTTP to HTTPS
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      # Providers
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      # API & Dashboard
+      - "--api.dashboard=false" 
+      # Global Timeouts
+      - "--entrypoints.websecure.transport.respondingtimeouts.readtimeout=60" 
+      # Certificates (Let's Encrypt)
+      - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
+      - "--certificatesresolvers.myresolver.acme.email=${ACME_EMAIL:-admin@localhost}"
+      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "./docker/acme:/letsencrypt"
+    networks:
+      - sonantica-net
+    labels:
+      - "traefik.enable=true"
+      # Optional: Dashboard
+      - "traefik.http.routers.dashboard.rule=Host(`traefik.localhost`)"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      # Security Headers Middleware
+      - "traefik.http.middlewares.security-headers.headers.framedeny=true"
+      - "traefik.http.middlewares.security-headers.headers.sslredirect=true"
+      - "traefik.http.middlewares.security-headers.headers.browserxssfilter=true"
+      - "traefik.http.middlewares.security-headers.headers.contenttypenosniff=true"
+      - "traefik.http.middlewares.security-headers.headers.stsincludesubdomains=true"
+      - "traefik.http.middlewares.security-headers.headers.stspreload=true"
+      - "traefik.http.middlewares.security-headers.headers.stsseconds=31536000"
+      # Rate Limit Middleware
+      - "traefik.http.middlewares.rate-limit.ratelimit.average=100"
+      - "traefik.http.middlewares.rate-limit.ratelimit.burst=50"
+
+  # ============================================
+  # PERSISTENCE LAYER
+  # ============================================
+  postgres:
+    build:
+      context: ./data/psql
+      dockerfile: Dockerfile
+    container_name: sonantica-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sonantica}
+      PSQL_PASSWORD: ${PSQL_PASSWORD:-sonantica}
+      POSTGRES_DB: ${POSTGRES_DB:-sonantica}
+      ENCODING: UTF8
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./data/psql/init.d:/config
+      - ./data/psql/logs:/var/log/postgresql
+    networks:
+      - sonantica-net
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sonantica}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # No ports exposed to host in production for security
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+  redis:
+    build:
+      context: ./data/redis
+      dockerfile: Dockerfile
+    container_name: sonantica-redis
+    restart: always
+    environment:
+      TZ: ${TZ:-UTC}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-sonantica}
+    volumes:
+      - redis_data:/data
+      - ./data/redis/dump:/dump
+      - ./data/redis/logs:/var/log/redis
+    networks:
+      - sonantica-net
+    command: [ "redis-server", "/usr/local/etc/redis/redis.conf", "--requirepass", "${REDIS_PASSWORD:-sonantica}" ]
+    healthcheck:
+      test: [ "CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-sonantica}", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # No ports exposed to host in production for security
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+  # ============================================
+  # CORE SERVICES
+  # ============================================
+  stream-core:
+    build:
+      context: ./services/go-core
+      dockerfile: Dockerfile
+    container_name: sonantica-core
+    restart: always
+    environment:
+      - POSTGRES_URL=postgres://${POSTGRES_USER:-sonantica}:${PSQL_PASSWORD:-sonantica}@postgres:5432/${POSTGRES_DB:-sonantica}?sslmode=disable
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-sonantica}
+      - MEDIA_PATH=/media
+      - ANALYTICS_ENABLED=${ANALYTICS_ENABLED:-true}
+      - ANALYTICS_RETENTION_DAYS=${ANALYTICS_RETENTION_DAYS:-90}
+      - ALLOWED_ORIGINS=https://${DOMAIN_NAME:-localhost}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+      - LOG_ENABLED=${LOG_ENABLED:-true}
+    volumes:
+      - ${MEDIA_PATH:-./media}:/media:ro
+      - ${BUCKETS_PATH:-./buckets}:/buckets:ro
+      - ./config:/config:ro
+      - ./logs/core:/var/log/sonantica
+      - sonantica_cache:/covers
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - sonantica-net
+    labels:
+      - "traefik.enable=true"
+      # Route 1: Streaming API (matches /api/stream/...)
+      # Strips prefix to map /api/stream/foo -> /foo on backend
+      - "traefik.http.routers.core-stream.rule=Host(`${DOMAIN_NAME:-localhost}`) && PathPrefix(`/api/stream/`)"
+      - "traefik.http.routers.core-stream.entrypoints=websecure"
+      - "traefik.http.routers.core-stream.tls.certresolver=myresolver"
+      - "traefik.http.middlewares.strip-stream.stripprefix.prefixes=/api/stream"
+      - "traefik.http.routers.core-stream.middlewares=strip-stream,rate-limit,security-headers"
+      
+      # Route 2: Analytics API (matches /api/v1/analytics...)
+      # Does NOT strip prefix (assuming core expects full path for this standard API)
+      - "traefik.http.routers.core-analytics.rule=Host(`${DOMAIN_NAME:-localhost}`) && PathPrefix(`/api/v1/analytics`)"
+      - "traefik.http.routers.core-analytics.entrypoints=websecure"
+      - "traefik.http.routers.core-analytics.tls.certresolver=myresolver"
+      - "traefik.http.routers.core-analytics.middlewares=rate-limit,security-headers"
+      
+      # Service definition
+      - "traefik.http.services.sonantica-core.loadbalancer.server.port=8080"
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1024M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  audio-worker:
+    build:
+      context: ./services/python-worker
+      dockerfile: Dockerfile
+    container_name: sonantica-worker
+    restart: unless-stopped
+    environment:
+      - POSTGRES_URL=postgres://${POSTGRES_USER:-sonantica}:${PSQL_PASSWORD:-sonantica}@postgres:5432/${POSTGRES_DB:-sonantica}?sslmode=disable
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-sonantica}
+      - MEDIA_PATH=/media
+      - PYTHONPATH=/app:/app/src
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+      - LOG_ENABLED=${LOG_ENABLED:-true}
+    volumes:
+      - ${MEDIA_PATH:-./media}:/media:ro
+      - ${BUCKETS_PATH:-./buckets}:/buckets:ro
+      - ./logs/worker:/var/log/sonantica
+      - sonantica_cache:/covers
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    networks:
+      - sonantica-net
+    command: ["celery", "-A", "worker.app", "worker", "--loglevel=info", "-Q", "celery", "-c", "2", "-E"]
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2048M
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  celery-beat:
+    build:
+      context: ./services/python-worker
+      dockerfile: Dockerfile
+    container_name: sonantica-beat
+    restart: unless-stopped
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-sonantica}
+      - POSTGRES_URL=postgres://${POSTGRES_USER:-sonantica}:${PSQL_PASSWORD:-sonantica}@postgres:5432/${POSTGRES_DB:-sonantica}?sslmode=disable
+      - PYTHONPATH=/app:/app/src
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+      - LOG_ENABLED=${LOG_ENABLED:-true}
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - sonantica-net
+    command: ["celery", "-A", "worker.app", "beat", "--loglevel=info"]
+
+  flower:
+    build:
+      context: ./services/python-worker
+      dockerfile: Dockerfile
+    container_name: sonantica-flower
+    restart: unless-stopped
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-sonantica}
+      - POSTGRES_URL=postgres://${POSTGRES_USER:-sonantica}:${PSQL_PASSWORD:-sonantica}@postgres:5432/${POSTGRES_DB:-sonantica}?sslmode=disable
+      - PYTHONPATH=/app:/app/src
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+      - LOG_ENABLED=${LOG_ENABLED:-true}
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - sonantica-net
+    # Protected by Basic Auth via Traefik in a real scenario, but kept hidden for now
+    command: ["celery", "-A", "worker.app", "flower", "--port=5555", "--inspect-timeout=3000"]
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.flower.rule=Host(`flower.${DOMAIN_NAME:-localhost}`)"
+      - "traefik.http.routers.flower.entrypoints=websecure"
+      - "traefik.http.routers.flower.tls.certresolver=myresolver"
+      - "traefik.http.services.flower.loadbalancer.server.port=5555"
+      # Basic Auth (user:admin, pass:mi_pass_seguro)
+      - "traefik.http.middlewares.flower-auth.basicauth.users=admin:$$apr1$$u40FnthY$$kL2k.z8QuJG4O.0A3G6VE."
+      - "traefik.http.routers.flower.middlewares=flower-auth,security-headers"
+
+  # ============================================
+  # FRONTEND (Web App)
+  # ============================================
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+      args:
+        - VITE_LOG_LEVEL=${LOG_LEVEL:-info}
+        - VITE_LOG_ENABLED=${LOG_ENABLED:-true}
+    container_name: sonantica-web
+    volumes:
+      - ${MEDIA_PATH:-./media}:/media:ro
+      - ${BUCKETS_PATH:-./buckets}:/buckets:ro
+      - ${CONFIG_PATH:-./config}:/config:rw
+    environment:
+      - NODE_ENV=production
+      - SONANTICA_VERSION=${SONANTICA_VERSION:-0.1.0}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+      - LOG_ENABLED=${LOG_ENABLED:-true}
+    restart: unless-stopped
+    depends_on:
+      - stream-core
+    networks:
+      - sonantica-net
+    labels:
+      - "traefik.enable=true"
+      # Main Entry Point
+      - "traefik.http.routers.web.rule=Host(`${DOMAIN_NAME:-localhost}`)"
+      - "traefik.http.routers.web.entrypoints=websecure"
+      - "traefik.http.routers.web.tls.certresolver=myresolver"
+      - "traefik.http.services.web.loadbalancer.server.port=80"
+      - "traefik.http.routers.web.middlewares=rate-limit,security-headers"
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+
+networks:
+  sonantica-net:
+    driver: bridge
+    name: sonantica-network
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  sonantica_cache:
+    driver: local
