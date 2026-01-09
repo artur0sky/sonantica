@@ -16,6 +16,8 @@ type Config struct {
 	MediaPath        string   `mapstructure:"MEDIA_PATH"`
 	AllowedOrigins   []string `mapstructure:"ALLOWED_ORIGINS"`
 	LogLevel         string   `mapstructure:"LOG_LEVEL"`
+	LogFormat        string   `mapstructure:"LOG_FORMAT"`
+	LogEnabled       bool     `mapstructure:"LOG_ENABLED"`
 	AnalyticsEnabled bool     `mapstructure:"ANALYTICS_ENABLED"`
 	CoverPath        string   `mapstructure:"COVER_PATH"`
 }
@@ -30,6 +32,8 @@ func Load() *Config {
 	v.SetDefault("POSTGRES_URL", "postgres://sonantica:sonantica@postgres:5432/sonantica?sslmode=disable")
 	v.SetDefault("MEDIA_PATH", "/media")
 	v.SetDefault("LOG_LEVEL", "info")
+	v.SetDefault("LOG_FORMAT", "json")
+	v.SetDefault("LOG_ENABLED", true)
 	v.SetDefault("ANALYTICS_ENABLED", true)
 	v.SetDefault("COVER_PATH", "/covers")
 	v.SetDefault("ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:3000,http://localhost,capacitor://localhost")
@@ -47,6 +51,8 @@ func Load() *Config {
 	_ = v.BindEnv("MEDIA_PATH")
 	_ = v.BindEnv("ALLOWED_ORIGINS")
 	_ = v.BindEnv("LOG_LEVEL")
+	_ = v.BindEnv("LOG_FORMAT")
+	_ = v.BindEnv("LOG_ENABLED")
 	_ = v.BindEnv("ANALYTICS_ENABLED")
 	_ = v.BindEnv("COVER_PATH")
 
