@@ -114,12 +114,14 @@ services:
       context: ./services/python-worker
       dockerfile: Dockerfile
     container_name: sonantica-worker
+    restart: unless-stopped
     environment:
       - POSTGRES_URL=postgres://${PSQL_USER:-sonantica}:${PSQL_PASSWORD:-sonantica}@postgres:${PSQL_PORT:-5432}/${PSQL_NAME:-sonantica}?sslmode=disable
       - REDIS_HOST=${REDIS_HOST:-redis}
       - REDIS_PORT=${REDIS_PORT:-6379}
       - REDIS_PASSWORD=${REDIS_PASSWORD:-sonantica}
       - MEDIA_PATH=/media
+      - PYTHONPATH=/app:/app/src
     volumes:
       - ${MEDIA_PATH:-./media}:/media:ro
       - ${BUCKETS_PATH:-./buckets}:/buckets:ro
@@ -133,7 +135,7 @@ services:
         condition: service_healthy
     networks:
       - sonantica-net
-    command: ["celery", "-A", "worker.app", "worker", "--loglevel=info", "-Q", "celery", "-c", "2"]
+    command: ["celery", "-A", "worker.app", "worker", "--loglevel=info", "-Q", "celery", "-c", "2", "-E"]
     labels:
       com.sonantica.description: "Audio Analysis & Analytics Worker (Celery)"
 
@@ -142,10 +144,13 @@ services:
       context: ./services/python-worker
       dockerfile: Dockerfile
     container_name: sonantica-beat
+    restart: unless-stopped
     environment:
       - REDIS_HOST=${REDIS_HOST:-redis}
       - REDIS_PORT=${REDIS_PORT:-6379}
       - REDIS_PASSWORD=${REDIS_PASSWORD:-sonantica}
+      - POSTGRES_URL=postgres://${PSQL_USER:-sonantica}:${PSQL_PASSWORD:-sonantica}@postgres:${PSQL_PORT:-5432}/${PSQL_NAME:-sonantica}?sslmode=disable
+      - PYTHONPATH=/app:/app/src
     depends_on:
       redis:
         condition: service_healthy
@@ -160,10 +165,13 @@ services:
       context: ./services/python-worker
       dockerfile: Dockerfile
     container_name: sonantica-flower
+    restart: unless-stopped
     environment:
       - REDIS_HOST=${REDIS_HOST:-redis}
       - REDIS_PORT=${REDIS_PORT:-6379}
       - REDIS_PASSWORD=${REDIS_PASSWORD:-sonantica}
+      - POSTGRES_URL=postgres://${PSQL_USER:-sonantica}:${PSQL_PASSWORD:-sonantica}@postgres:${PSQL_PORT:-5432}/${PSQL_NAME:-sonantica}?sslmode=disable
+      - PYTHONPATH=/app:/app/src
     ports:
       - "5555:5555"
     depends_on:
@@ -171,7 +179,7 @@ services:
         condition: service_healthy
     networks:
       - sonantica-net
-    command: ["celery", "-A", "worker.app", "flower", "--port=5555"]
+    command: ["celery", "-A", "worker.app", "flower", "--port=5555", "--inspect-timeout=3000"]
     labels:
       com.sonantica.description: "Celery Task Monitor"
 
