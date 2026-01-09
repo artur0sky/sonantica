@@ -2,9 +2,9 @@
  * Info Section (Molecule)
  * Track metadata display with rating and actions
  * Responsive typography and layout
+ * No external animation library dependencies
  */
 
-import { motion } from "framer-motion";
 import { TrackRating } from "../../../molecules";
 import type { InfoSectionProps } from "../types";
 
@@ -18,18 +18,12 @@ export function InfoSection({
   return (
     <div className="flex flex-col justify-between border border-white/5 bg-white/[0.02] rounded-lg p-6 xl:p-8">
       <div>
-        <motion.h1
-          layoutId="player-title-desktop"
-          className="text-3xl xl:text-4xl 2xl:text-5xl font-black tracking-tight line-clamp-3"
-        >
+        <h1 className="text-3xl xl:text-4xl 2xl:text-5xl font-black tracking-tight line-clamp-3">
           {title}
-        </motion.h1>
-        <motion.p
-          layoutId="player-artist-desktop"
-          className="text-xl xl:text-2xl 2xl:text-3xl text-text-muted font-bold mt-2 xl:mt-3"
-        >
+        </h1>
+        <p className="text-xl xl:text-2xl 2xl:text-3xl text-text-muted font-bold mt-2 xl:mt-3">
           {artist}
-        </motion.p>
+        </p>
         {album && (
           <p className="text-sm xl:text-base text-text-muted/60 mt-2 font-medium">
             {album}

@@ -58,6 +58,24 @@ registerRoute(
   })
 );
 
+// 2b. Online Covers & API Covers (Optimized)
+registerRoute(
+  // Match /api/cover/* OR /covers/*
+  ({ url }) => url.pathname.startsWith('/api/cover/') || url.pathname.startsWith('/covers/'),
+  new CacheFirst({
+    cacheName: 'sonantica-covers',
+    plugins: [
+      new CacheableResponsePlugin({
+        statuses: [0, 200],
+      }),
+      new ExpirationPlugin({
+        maxEntries: 500, // Keep more covers
+        maxAgeSeconds: 90 * 24 * 60 * 60, // 3 months
+      }),
+    ],
+  })
+);
+
 // ---------------------------------------------------------------------------
 // CACHING STRATEGIES
 // ---------------------------------------------------------------------------

@@ -198,7 +198,7 @@ We stand on the shoulders of giants. Sonántica is made possible by:
 - **[React](https://reactjs.org/)**: For a reactive and expressive UI.
 - **[TypeScript](https://www.typescriptlang.org/)**: For technical reliability and clarity.
 - **[Vite](https://vitejs.dev/)**: For a fast and modern development experience.
-- **[Framer Motion](https://www.framer.com/motion/)**: For subtle, functional animations.
+- **[CSS Animations](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Animations/Using_CSS_animations)**: For high-performance, layout-stable animations (Zero Framer Motion).
 - **[Zustand](https://github.com/pmndrs/zustand)**: For minimalist and predictable state management.
 - **[Tailwind CSS](https://tailwindcss.com/)**: For our token-based design system.
 - **[Tabler Icons](https://tabler.io/icons)**: For clear, professional iconography.

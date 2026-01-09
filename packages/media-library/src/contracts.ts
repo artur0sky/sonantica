@@ -12,6 +12,8 @@ import type {
   LibraryStats,
   ScanProgress,
   LibraryFilter,
+  Playlist,
+  PlaylistType,
 } from "./types";
 
 /**
@@ -71,5 +73,55 @@ export interface IMediaLibrary {
   /**
    * Clear the library
    */
+  /**
+   * Clear the library
+   */
   clear(): void;
+
+  // --- Playlist Management ---
+
+  /**
+   * Create a new playlist
+   */
+  createPlaylist(name: string, type: PlaylistType, trackIds?: string[]): Promise<Playlist>;
+
+  /**
+   * Get playlists (optional filtering)
+   */
+  getPlaylists(filter?: { type?: PlaylistType }): Playlist[];
+
+  /**
+   * Get specific playlist
+   */
+  getPlaylist(id: string): Playlist | undefined;
+
+  /**
+   * Update playlist metadata
+   */
+  updatePlaylist(id: string, updates: Partial<Omit<Playlist, 'id' | 'type' | 'createdAt'>>): Promise<Playlist>;
+
+  /**
+   * Delete playlist
+   */
+  deletePlaylist(id: string): Promise<void>;
+
+  /**
+   * Add tracks to playlist
+   */
+  addTracksToPlaylist(playlistId: string, trackIds: string[]): Promise<Playlist>;
+
+  /**
+   * Remove tracks from playlist
+   */
+  removeTracksFromPlaylist(playlistId: string, trackIds: string[]): Promise<Playlist>;
+
+  /**
+   * Reorder tracks in playlist
+   */
+  reorderPlaylist(playlistId: string, newTrackIds: string[]): Promise<Playlist>;
+
+  /**
+   * Save current queue as a history snapshot
+   */
+  saveQueueSnapshot(trackIds: string[]): Promise<Playlist>;
 }

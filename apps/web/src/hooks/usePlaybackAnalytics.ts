@@ -19,15 +19,14 @@ import { PlaybackState } from '@sonantica/shared';
 export function usePlaybackAnalytics() {
   const currentTrack = usePlayerStore((state) => state.currentTrack);
   const state = usePlayerStore((state) => state.state);
-  const currentTime = usePlayerStore((state) => state.currentTime);
   const duration = usePlayerStore((state) => state.duration);
   const volume = usePlayerStore((state) => state.volume);
-
+  
   const playerState = useMemo(() => ({
     isPlaying: state === PlaybackState.PLAYING,
-    position: currentTime,
+    getPosition: () => usePlayerStore.getState().currentTime,
     volume: volume,
-  }), [state, currentTime, volume]);
+  }), [state, volume]);
 
   const trackOptions = useMemo(() => ({
     trackId: currentTrack?.id || '',

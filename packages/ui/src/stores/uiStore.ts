@@ -72,7 +72,7 @@ export const useUIStore = create<UIState>((set) => ({
   isLeftSidebarOpen: true,
   isRightSidebarOpen: false,
   isMetadataPanelOpen: false,
-  leftSidebarWidth: 280,
+  leftSidebarWidth: 240,
   rightSidebarWidth: 320,
   lyricsSidebarWidth: 320,
   eqSidebarWidth: 320,
@@ -131,10 +131,40 @@ export const useUIStore = create<UIState>((set) => ({
   },
 
   toggleLeftSidebar: () => {
-    set((state) => ({ 
-      isLeftSidebarOpen: !state.isLeftSidebarOpen,
-      activeContextMenuId: null
-    }));
+    set((state) => {
+      // On mobile, keep it simple: toggle between open/closed
+      const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
+      
+      if (isMobile) {
+        return { 
+          isLeftSidebarOpen: !state.isLeftSidebarOpen,
+          activeContextMenuId: null
+        };
+      }
+
+      // On desktop, cycle through states: Expanded -> Collapsed (Icon-only) -> Hidden
+      if (!state.isLeftSidebarOpen) {
+        // Closed -> Expanded
+        return {
+          isLeftSidebarOpen: true,
+          leftSidebarWidth: 240,
+          activeContextMenuId: null
+        };
+      } else if (state.leftSidebarWidth > 72) {
+        // Expanded -> Collapsed (Icon-only)
+        return {
+          isLeftSidebarOpen: true,
+          leftSidebarWidth: 72,
+          activeContextMenuId: null
+        };
+      } else {
+        // Collapsed -> Hidden
+        return {
+          isLeftSidebarOpen: false,
+          activeContextMenuId: null
+        };
+      }
+    });
   },
 
   toggleRightSidebar: () => {

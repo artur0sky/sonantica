@@ -1,23 +1,90 @@
--- Analytics Schema Migration Script
--- Version: 1.0.0
--- Date: 2026-01-05
--- Description: Initial analytics schema for Sonántica
+-- ============================================================================
+-- SONANTICA UNIFIED INITIAL SCHEMA (v1.0.0)
+-- ============================================================================
+-- All entities use UUIDs for IDs and Foreign Keys.
+
+-- Enable UUID extension
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- ============================================================================
--- Pre-Migration Checks
+-- CORE LIBRARY TABLES
 -- ============================================================================
 
-DO $$
-BEGIN
-    RAISE NOTICE 'Starting Analytics Schema Migration v1.0.0';
-    RAISE NOTICE 'Timestamp: %', NOW();
-END $$;
+-- Artists Table
+CREATE TABLE IF NOT EXISTS artists (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    bio TEXT,
+    cover_art TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
--- ============================================================================
--- Create Tables
--- ============================================================================
+-- Albums Table
+CREATE TABLE IF NOT EXISTS albums (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title TEXT NOT NULL,
+    artist_id UUID REFERENCES artists(id) ON DELETE SET NULL,
+    release_date DATE,
+    cover_art TEXT,
+    genre TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
 
--- Sessions Table
+-- Tracks Table
+CREATE TABLE IF NOT EXISTS tracks (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title TEXT NOT NULL,
+    album_id UUID REFERENCES albums(id) ON DELETE SET NULL,
+    artist_id UUID REFERENCES artists(id) ON DELETE SET NULL,
+    file_path TEXT NOT NULL,
+    duration_seconds REAL NOT NULL DEFAULT 0,
+    format TEXT,
+    bitrate INTEGER,
+    sample_rate INTEGER,
+    channels INTEGER,
+    track_number INTEGER,
+    disc_number INTEGER,
+    genre TEXT,
+    year INTEGER,
+    play_count INTEGER DEFAULT 0,
+    is_favorite BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ============================================
+-- PLAYLIST TABLES
+-- ============================================
+
+-- Playlists Table
+CREATE TABLE IF NOT EXISTS playlists (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    type TEXT NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    snapshot_date TIMESTAMP WITH TIME ZONE,
+    rules JSONB
+);
+
+-- Playlist Tracks (Many-to-Many)
+CREATE TABLE IF NOT EXISTS playlist_tracks (
+    playlist_id UUID REFERENCES playlists(id) ON DELETE CASCADE,
+    track_id UUID REFERENCES tracks(id) ON DELETE CASCADE,
+    position INTEGER NOT NULL,
+    added_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    PRIMARY KEY (playlist_id, track_id)
+);
+
+-- ============================================
+-- ANALYTICS TABLES
+-- ============================================
+
+-- Analytics Sessions
 CREATE TABLE IF NOT EXISTS analytics_sessions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     session_id VARCHAR(255) UNIQUE NOT NULL,
@@ -36,9 +103,9 @@ CREATE TABLE IF NOT EXISTS analytics_sessions (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
--- Events Table (Raw events)
+-- Analytics Events (Raw)
 CREATE TABLE IF NOT EXISTS analytics_events (
-    id BIGSERIAL PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     event_id UUID UNIQUE NOT NULL,
     session_id VARCHAR(255) NOT NULL REFERENCES analytics_sessions(session_id) ON DELETE CASCADE,
     event_type VARCHAR(100) NOT NULL,
@@ -49,11 +116,11 @@ CREATE TABLE IF NOT EXISTS analytics_events (
 
 -- Playback Sessions (Aggregated)
 CREATE TABLE IF NOT EXISTS playback_sessions (
-    id BIGSERIAL PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     session_id VARCHAR(255) NOT NULL,
-    track_id VARCHAR(255) NOT NULL,
-    album_id VARCHAR(255),
-    artist_id VARCHAR(255),
+    track_id UUID NOT NULL REFERENCES tracks(id) ON DELETE CASCADE,
+    album_id UUID REFERENCES albums(id) ON DELETE SET NULL,
+    artist_id UUID REFERENCES artists(id) ON DELETE SET NULL,
     started_at TIMESTAMP NOT NULL,
     ended_at TIMESTAMP,
     duration_played INTEGER,
@@ -67,9 +134,9 @@ CREATE TABLE IF NOT EXISTS playback_sessions (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
--- Track Statistics (Pre-aggregated)
+-- Track Statistics
 CREATE TABLE IF NOT EXISTS track_statistics (
-    track_id VARCHAR(255) PRIMARY KEY,
+    track_id UUID PRIMARY KEY REFERENCES tracks(id) ON DELETE CASCADE,
     play_count INTEGER DEFAULT 0,
     complete_count INTEGER DEFAULT 0,
     skip_count INTEGER DEFAULT 0,
@@ -81,7 +148,7 @@ CREATE TABLE IF NOT EXISTS track_statistics (
 
 -- Listening Heatmap
 CREATE TABLE IF NOT EXISTS listening_heatmap (
-    id BIGSERIAL PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     date DATE NOT NULL,
     hour INTEGER NOT NULL CHECK (hour >= 0 AND hour < 24),
     play_count INTEGER DEFAULT 0,
@@ -94,8 +161,8 @@ CREATE TABLE IF NOT EXISTS listening_heatmap (
 
 -- Track Segments
 CREATE TABLE IF NOT EXISTS track_segments (
-    id BIGSERIAL PRIMARY KEY,
-    track_id VARCHAR(255) NOT NULL,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    track_id UUID NOT NULL REFERENCES tracks(id) ON DELETE CASCADE,
     segment_start INTEGER NOT NULL,
     segment_end INTEGER NOT NULL,
     play_count INTEGER DEFAULT 0,
@@ -106,7 +173,8 @@ CREATE TABLE IF NOT EXISTS track_segments (
 
 -- Genre Statistics
 CREATE TABLE IF NOT EXISTS genre_statistics (
-    genre VARCHAR(100) PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    genre VARCHAR(100) UNIQUE NOT NULL,
     play_count INTEGER DEFAULT 0,
     total_play_time INTEGER DEFAULT 0,
     unique_tracks INTEGER DEFAULT 0,
@@ -117,7 +185,7 @@ CREATE TABLE IF NOT EXISTS genre_statistics (
 
 -- Listening Streaks
 CREATE TABLE IF NOT EXISTS listening_streaks (
-    id BIGSERIAL PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id VARCHAR(255),
     date DATE NOT NULL,
     tracks_played INTEGER DEFAULT 0,
@@ -126,108 +194,56 @@ CREATE TABLE IF NOT EXISTS listening_streaks (
     UNIQUE(user_id, date)
 );
 
-DO $$
-BEGIN
-    RAISE NOTICE 'Tables created successfully';
-END $$;
-
 -- ============================================================================
--- Create Indexes
+-- INDEXES
 -- ============================================================================
 
--- Sessions indexes
+CREATE INDEX IF NOT EXISTS idx_artists_name ON artists(name);
+CREATE INDEX IF NOT EXISTS idx_albums_artist ON albums(artist_id);
+CREATE INDEX IF NOT EXISTS idx_albums_title ON albums(title);
+CREATE INDEX IF NOT EXISTS idx_tracks_album ON tracks(album_id);
+CREATE INDEX IF NOT EXISTS idx_tracks_artist ON tracks(artist_id);
+CREATE INDEX IF NOT EXISTS idx_tracks_title ON tracks(title);
+CREATE INDEX IF NOT EXISTS idx_playlists_type ON playlists(type);
+CREATE INDEX IF NOT EXISTS idx_playlist_tracks_playlist ON playlist_tracks(playlist_id);
+CREATE INDEX IF NOT EXISTS idx_playlist_tracks_position ON playlist_tracks(playlist_id, position);
 CREATE INDEX IF NOT EXISTS idx_sessions_session_id ON analytics_sessions(session_id);
-CREATE INDEX IF NOT EXISTS idx_sessions_started_at ON analytics_sessions(started_at);
-CREATE INDEX IF NOT EXISTS idx_sessions_platform ON analytics_sessions(platform);
-
--- Events indexes
 CREATE INDEX IF NOT EXISTS idx_events_session ON analytics_events(session_id);
-CREATE INDEX IF NOT EXISTS idx_events_type ON analytics_events(event_type);
-CREATE INDEX IF NOT EXISTS idx_events_timestamp ON analytics_events(timestamp);
-CREATE INDEX IF NOT EXISTS idx_events_data_gin ON analytics_events USING GIN (data);
-
--- Playback sessions indexes
 CREATE INDEX IF NOT EXISTS idx_playback_track ON playback_sessions(track_id);
-CREATE INDEX IF NOT EXISTS idx_playback_album ON playback_sessions(album_id);
-CREATE INDEX IF NOT EXISTS idx_playback_artist ON playback_sessions(artist_id);
-CREATE INDEX IF NOT EXISTS idx_playback_started ON playback_sessions(started_at);
-CREATE INDEX IF NOT EXISTS idx_playback_session ON playback_sessions(session_id);
-
--- Track statistics indexes
 CREATE INDEX IF NOT EXISTS idx_track_stats_play_count ON track_statistics(play_count DESC);
-CREATE INDEX IF NOT EXISTS idx_track_stats_last_played ON track_statistics(last_played_at DESC);
-
--- Heatmap indexes
 CREATE INDEX IF NOT EXISTS idx_heatmap_date ON listening_heatmap(date);
-CREATE INDEX IF NOT EXISTS idx_heatmap_date_hour ON listening_heatmap(date, hour);
-
--- Segments indexes
-CREATE INDEX IF NOT EXISTS idx_segments_track ON track_segments(track_id);
-CREATE INDEX IF NOT EXISTS idx_segments_play_count ON track_segments(play_count DESC);
-
--- Genre statistics indexes
-CREATE INDEX IF NOT EXISTS idx_genre_stats_play_count ON genre_statistics(play_count DESC);
-
--- Streaks indexes
-CREATE INDEX IF NOT EXISTS idx_streaks_user ON listening_streaks(user_id);
-CREATE INDEX IF NOT EXISTS idx_streaks_date ON listening_streaks(date DESC);
-
-DO $$
-BEGIN
-    RAISE NOTICE 'Indexes created successfully';
-END $$;
 
 -- ============================================================================
--- Create Functions and Triggers
+-- TRIGGERS
 -- ============================================================================
 
--- Function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
     NEW.updated_at = NOW();
     RETURN NEW;
 END;
-$$ language 'plpgsql';
+$$ LANGUAGE plpgsql;
 
--- Triggers for updated_at
-DROP TRIGGER IF EXISTS update_track_statistics_updated_at ON track_statistics;
-CREATE TRIGGER update_track_statistics_updated_at 
-    BEFORE UPDATE ON track_statistics
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-DROP TRIGGER IF EXISTS update_listening_heatmap_updated_at ON listening_heatmap;
-CREATE TRIGGER update_listening_heatmap_updated_at 
-    BEFORE UPDATE ON listening_heatmap
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-DROP TRIGGER IF EXISTS update_track_segments_updated_at ON track_segments;
-CREATE TRIGGER update_track_segments_updated_at 
-    BEFORE UPDATE ON track_segments
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-DROP TRIGGER IF EXISTS update_genre_statistics_updated_at ON genre_statistics;
-CREATE TRIGGER update_genre_statistics_updated_at 
-    BEFORE UPDATE ON genre_statistics
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-DO $$
-BEGIN
-    RAISE NOTICE 'Triggers created successfully';
-END $$;
+CREATE TRIGGER update_artists_updated_at BEFORE UPDATE ON artists FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_albums_updated_at BEFORE UPDATE ON albums FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_tracks_updated_at BEFORE UPDATE ON tracks FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_playlists_updated_at BEFORE UPDATE ON playlists FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_track_statistics_updated_at BEFORE UPDATE ON track_statistics FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_listening_heatmap_updated_at BEFORE UPDATE ON listening_heatmap FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_genre_statistics_updated_at BEFORE UPDATE ON genre_statistics FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ============================================================================
--- Create Views
+-- VIEWS
 -- ============================================================================
 
--- View: Top Tracks with metadata
 CREATE OR REPLACE VIEW v_top_tracks AS
 SELECT 
     ts.track_id,
     COALESCE(t.title, 'Unknown') as track_title,
     COALESCE(ar.name, 'Unknown Artist') as artist_name,
     COALESCE(al.title, 'Unknown Album') as album_title,
-    al.cover_art_path as album_art,
+    al.cover_art as album_art,
     ts.play_count,
     ts.total_play_time,
     ts.average_completion,
@@ -237,60 +253,3 @@ LEFT JOIN tracks t ON ts.track_id = t.id
 LEFT JOIN artists ar ON t.artist_id = ar.id
 LEFT JOIN albums al ON t.album_id = al.id
 ORDER BY ts.play_count DESC;
-
--- View: Platform usage summary
-CREATE OR REPLACE VIEW v_platform_summary AS
-SELECT 
-    platform,
-    COUNT(*) as session_count,
-    COUNT(DISTINCT DATE(started_at)) as active_days,
-    MAX(started_at) as last_used
-FROM analytics_sessions
-GROUP BY platform
-ORDER BY session_count DESC;
-
--- View: Daily listening activity
-CREATE OR REPLACE VIEW v_daily_activity AS
-SELECT 
-    date,
-    SUM(play_count) as total_plays,
-    SUM(total_duration) as total_duration,
-    SUM(unique_tracks) as unique_tracks
-FROM listening_heatmap
-GROUP BY date
-ORDER BY date DESC;
-
-DO $$
-BEGIN
-    RAISE NOTICE 'Views created successfully';
-END $$;
-
--- ============================================================================
--- Add Comments
--- ============================================================================
-
-COMMENT ON TABLE analytics_sessions IS 'User sessions with platform and browser information';
-COMMENT ON TABLE analytics_events IS 'Raw analytics events with JSONB data for flexibility';
-COMMENT ON TABLE playback_sessions IS 'Aggregated playback sessions for track listening analysis';
-COMMENT ON TABLE track_statistics IS 'Pre-aggregated statistics per track for performance';
-COMMENT ON TABLE listening_heatmap IS 'Time-based listening patterns (hourly)';
-COMMENT ON TABLE track_segments IS 'Most listened parts within tracks';
-COMMENT ON TABLE genre_statistics IS 'Aggregated statistics by genre';
-COMMENT ON TABLE listening_streaks IS 'Daily listening activity for streak calculation';
-
--- ============================================================================
--- Migration Complete
--- ============================================================================
-
-DO $$
-BEGIN
-    RAISE NOTICE '========================================';
-    RAISE NOTICE 'Analytics Schema Migration COMPLETED';
-    RAISE NOTICE 'Version: 1.0.0';
-    RAISE NOTICE 'Tables: 8';
-    RAISE NOTICE 'Indexes: 17';
-    RAISE NOTICE 'Triggers: 4';
-    RAISE NOTICE 'Views: 3';
-    RAISE NOTICE 'Timestamp: %', NOW();
-    RAISE NOTICE '========================================';
-END $$;

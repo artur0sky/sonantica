@@ -4,9 +4,9 @@
  * Coordinates mobile and desktop layouts
  * Applies Golden Ratio (φ ≈ 1.618) to desktop grid proportions
  * Following Clean Architecture and SOLID principles
+ * No external animation library dependencies
  */
 
-import { motion, AnimatePresence } from "framer-motion";
 import { usePlayerStore, useQueueStore } from "@sonantica/player-core";
 import { useUIStore } from "../../../stores/uiStore";
 import { PlaybackState } from "@sonantica/shared";
@@ -84,12 +84,8 @@ export function ExpandedPlayer({
   };
 
   return (
-    <motion.div
-      initial={{ y: "100%", opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      exit={{ y: "100%", opacity: 0 }}
-      transition={{ type: "spring", damping: 30, stiffness: 200 }}
-      className="fixed inset-0 lg:relative lg:inset-auto h-[100dvh] lg:h-full z-[100] lg:z-10 flex flex-col bg-[var(--dominant-color)] lg:bg-transparent overflow-hidden overscroll-none"
+    <div
+      className="fixed inset-0 lg:relative lg:inset-auto h-[100dvh] lg:h-full z-[100] lg:z-10 flex flex-col bg-[var(--dominant-color)] lg:bg-transparent overflow-hidden overscroll-none animate-in slide-in-from-bottom-4 fade-in duration-300"
       style={
         dominantColor
           ? { backgroundColor: dominantColor, color: contrastColor }
@@ -108,6 +104,6 @@ export function ExpandedPlayer({
         {/* Desktop Layout with Golden Ratio */}
         <ExpandedPlayerDesktop {...sharedProps} />
       </div>
-    </motion.div>
+    </div>
   );
 }

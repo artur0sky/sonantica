@@ -91,7 +91,7 @@ services:
       - MEDIA_PATH=/media
       - ANALYTICS_ENABLED=${ANALYTICS_ENABLED:-true}
       - ANALYTICS_RETENTION_DAYS=${ANALYTICS_RETENTION_DAYS:-90}
-      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost,http://localhost:3000,http://localhost:5173,capacitor://localhost,http://192.168.100.12:3000,http://192.168.100.12:5173,http://192.168.100.12}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost,http://localhost:3000,http://localhost:5173,capacitor://localhost,http://192.168.100.6:3000,http://192.168.100.6:5173,http://192.168.100.6}
     volumes:
       - ${MEDIA_PATH:-./media}:/media:ro
       - ${BUCKETS_PATH:-./buckets}:/buckets:ro
@@ -129,10 +129,51 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+      postgres:
+        condition: service_healthy
     networks:
       - sonantica-net
+    command: ["celery", "-A", "worker.app", "worker", "--loglevel=info", "-Q", "celery", "-c", "2"]
     labels:
-      com.sonantica.description: "Audio Analysis Worker (Python)"
+      com.sonantica.description: "Audio Analysis & Analytics Worker (Celery)"
+
+  celery-beat:
+    build:
+      context: ./services/python-worker
+      dockerfile: Dockerfile
+    container_name: sonantica-beat
+    environment:
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-sonantica}
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - sonantica-net
+    command: ["celery", "-A", "worker.app", "beat", "--loglevel=info"]
+    labels:
+      com.sonantica.description: "Periodic Task Scheduler (Celery Beat)"
+
+  flower:
+    build:
+      context: ./services/python-worker
+      dockerfile: Dockerfile
+    container_name: sonantica-flower
+    environment:
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-sonantica}
+    ports:
+      - "5555:5555"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - sonantica-net
+    command: ["celery", "-A", "worker.app", "flower", "--port=5555"]
+    labels:
+      com.sonantica.description: "Celery Task Monitor"
 
   # ============================================
   # FRONTEND & PROXY

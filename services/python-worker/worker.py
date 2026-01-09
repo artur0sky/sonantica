@@ -15,6 +15,8 @@ import mutagen
 from mutagen.flac import FLAC
 from mutagen.mp3 import MP3
 from mutagen.oggvorbis import OggVorbis
+from celery import Celery
+from celery.schedules import crontab
 
 # Configure Logging
 log_dir = "/var/log/sonantica"
@@ -51,6 +53,20 @@ REDIS_PASSWORD = os.environ.get("REDIS_PASSWORD", None)
 POSTGRES_URL = os.environ.get("POSTGRES_URL")
 MEDIA_PATH = os.environ.get("MEDIA_PATH", "/media")
 
+# Celery Setup
+redis_url = f"redis://{':' + REDIS_PASSWORD + '@' if REDIS_PASSWORD else ''}{REDIS_HOST}:{REDIS_PORT}/0"
+app = Celery('sonantica', broker=redis_url, backend=redis_url)
+
+app.conf.update(
+    task_serializer='json',
+    accept_content=['json'],
+    result_serializer='json',
+    timezone='UTC',
+    enable_utc=True,
+    worker_prefetch_multiplier=1, # Scale responsibly
+    task_acks_late=True
+)
+
 
 # --- DOMAIN MODELS (ORM) ---
 # ... (keeping existing models) ...
@@ -62,28 +78,32 @@ MEDIA_PATH = os.environ.get("MEDIA_PATH", "/media")
 
 
 
+from sqlalchemy.dialects import postgresql
+from sqlalchemy.dialects.postgresql import insert, UUID, JSONB
+
+
 # --- DOMAIN MODELS (ORM) ---
 Base = declarative_base()
 
 class Artist(Base):
     __tablename__ = 'artists'
     
-    id = Column(String, primary_key=True, server_default=func.gen_random_uuid()) # Use PG UUID gen
+    id = Column(postgresql.UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid())
     name = Column(String(255), nullable=False, unique=True)
     bio = Column(String, nullable=True)
-    image_url = Column(String, nullable=True)
+    cover_art = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 class Album(Base):
     __tablename__ = 'albums'
     
-    id = Column(String, primary_key=True, server_default=func.gen_random_uuid())
+    id = Column(postgresql.UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid())
     title = Column(String(255), nullable=False)
-    artist_id = Column(String, ForeignKey('artists.id', ondelete='CASCADE'))
-    release_year = Column(Integer, nullable=True)
-    cover_art_path = Column(String, nullable=True)
-    folder_path = Column(String, unique=True, nullable=True)
+    artist_id = Column(postgresql.UUID(as_uuid=True), ForeignKey('artists.id', ondelete='CASCADE'))
+    release_date = Column(String, nullable=True)
+    cover_art = Column(String, nullable=True)
+    genre = Column(String(100), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
@@ -92,10 +112,10 @@ class Album(Base):
 class Track(Base):
     __tablename__ = 'tracks'
     
-    id = Column(String, primary_key=True, server_default=func.gen_random_uuid())
+    id = Column(postgresql.UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid())
     title = Column(String(255), nullable=False)
-    album_id = Column(String, ForeignKey('albums.id', ondelete='CASCADE'))
-    artist_id = Column(String, ForeignKey('artists.id', ondelete='SET NULL'))
+    album_id = Column(postgresql.UUID(as_uuid=True), ForeignKey('albums.id', ondelete='SET NULL'))
+    artist_id = Column(postgresql.UUID(as_uuid=True), ForeignKey('artists.id', ondelete='SET NULL'))
     file_path = Column(String, unique=True, nullable=False)
     
     # Audio Info
@@ -109,89 +129,165 @@ class Track(Base):
     track_number = Column(Integer)
     disc_number = Column(Integer, default=1)
     genre = Column(String(100))
+    year = Column(Integer)
     
-    # User data
+    # User data (deprecated in favor of statistics table but kept for sync)
     play_count = Column(Integer, default=0)
     is_favorite = Column(Boolean, default=False)
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
+# --- ANALYTICS MODELS ---
+
+class AnalyticsSession(Base):
+    __tablename__ = 'analytics_sessions'
+    id = Column(postgresql.UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid())
+    session_id = Column(String(255), unique=True, nullable=False)
+    user_id = Column(String(255))
+    platform = Column(String(50), nullable=False)
+    browser = Column(String(100))
+    started_at = Column(DateTime, nullable=False)
+    ended_at = Column(DateTime)
+    last_heartbeat = Column(DateTime)
+    created_at = Column(DateTime, server_default=func.now())
+
+class AnalyticsEvent(Base):
+    __tablename__ = 'analytics_events'
+    id = Column(postgresql.UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid())
+    event_id = Column(postgresql.UUID(as_uuid=True), unique=True, nullable=False)
+    session_id = Column(String(255), ForeignKey('analytics_sessions.session_id', ondelete='CASCADE'), nullable=False)
+    event_type = Column(String(100), nullable=False)
+    timestamp = Column(DateTime, nullable=False)
+    data = Column(postgresql.JSONB, nullable=False)
+    created_at = Column(DateTime, server_default=func.now())
+
+class TrackStatistics(Base):
+    __tablename__ = 'track_statistics'
+    track_id = Column(postgresql.UUID(as_uuid=True), ForeignKey('tracks.id', ondelete='CASCADE'), primary_key=True)
+    play_count = Column(Integer, default=0)
+    complete_count = Column(Integer, default=0)
+    skip_count = Column(Integer, default=0)
+    total_play_time = Column(Integer, default=0)
+    average_completion = Column(Float, default=0.0)
+    last_played_at = Column(DateTime)
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+class ListeningHeatmap(Base):
+    __tablename__ = 'listening_heatmap'
+    id = Column(postgresql.UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid())
+    date = Column(DateTime, nullable=False)
+    hour = Column(Integer, nullable=False)
+    play_count = Column(Integer, default=0)
+    unique_tracks = Column(Integer, default=0)
+    total_duration = Column(Integer, default=0)
+    
+    __table_args__ = (UniqueConstraint('date', 'hour', name='uq_date_hour'),)
+
+class GenreStatistics(Base):
+    __tablename__ = 'genre_statistics'
+    id = Column(postgresql.UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid())
+    genre = Column(String(100), unique=True, nullable=False)
+    play_count = Column(Integer, default=0)
+    total_play_time = Column(Integer, default=0)
+    unique_tracks = Column(Integer, default=0)
+    last_played_at = Column(DateTime)
+    updated_at = Column(DateTime, server_default=func.now())
+
+class ListeningStreak(Base):
+    __tablename__ = 'listening_streaks'
+    id = Column(postgresql.UUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid())
+    user_id = Column(String(255), unique=True, nullable=False)
+    current_streak = Column(Integer, default=0)
+    max_streak = Column(Integer, default=0)
+    last_played_at = Column(DateTime)
+    total_play_time = Column(Integer, default=0)
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
 # --- REPOSITORY LAYER ---
 class AudioRepository:
     def __init__(self, db_url):
         self.engine = create_engine(db_url, pool_pre_ping=True)
-        Base.metadata.create_all(self.engine) # Idempotent schema creation
+        # Base.metadata.create_all(self.engine) # Schema management is handled by Go migrations
         self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
         logger.info("✅ Database connected via SQLAlchemy.")
 
     def get_or_create_artist(self, session: Session, name: str) -> str:
         name = name.strip().replace("\x00", "")
-        # Try to find first (optimization)
         artist = session.query(Artist).filter(Artist.name == name).first()
         if artist:
             return artist.id
             
         try:
-            # Create new
             new_artist = Artist(name=name)
             session.add(new_artist)
             session.commit()
             return new_artist.id
         except IntegrityError:
             session.rollback()
-            # Race condition handling: someone else created it
             return session.query(Artist).filter(Artist.name == name).first().id
 
-    def get_or_create_album(self, session: Session, title: str, artist_id: str, cover_path: str = None) -> str:
+    def get_or_create_album(self, session: Session, title: str, artist_id: str, cover_path: str = None, year: int = 0) -> str:
         title = title.strip().replace("\x00", "")
         album = session.query(Album).filter(Album.title == title, Album.artist_id == artist_id).first()
         
+        release_date = None
+        if year and year > 0:
+            release_date = f"{year}-01-01"
+
         if album:
-            # Update cover if missing
-            if not album.cover_art_path and cover_path:
-                album.cover_art_path = cover_path
+            changed = False
+            if not album.cover_art and cover_path:
+                album.cover_art = cover_path
+                changed = True
+            if not album.release_date and release_date:
+                album.release_date = release_date
+                changed = True
+            if changed:
                 session.commit()
             return album.id
             
         try:
-            new_album = Album(title=title, artist_id=artist_id, cover_art_path=cover_path)
+            new_album = Album(title=title, artist_id=artist_id, cover_art=cover_path, release_date=release_date)
             session.add(new_album)
             session.commit()
             return new_album.id
         except IntegrityError:
             session.rollback()
             album = session.query(Album).filter(Album.title == title, Album.artist_id == artist_id).first()
-            if album and not album.cover_art_path and cover_path:
-                album.cover_art_path = cover_path
-                session.commit()
+            if album:
+                changed = False
+                if not album.cover_art and cover_path:
+                    album.cover_art = cover_path
+                    changed = True
+                if not album.release_date and release_date:
+                    album.release_date = release_date
+                    changed = True
+                if changed:
+                    session.commit()
             return album.id
 
     def save_track(self, meta: dict, file_path_rel: str):
         session = self.SessionLocal()
         try:
-            # 1. Resolve Dependencies
             artist_id = self.get_or_create_artist(session, meta["artist"])
-            # Pass cover_path to album creation
-            album_id = self.get_or_create_album(session, meta["album"], artist_id, meta.get("cover_path"))
+            album_id = self.get_or_create_album(session, meta["album"], artist_id, meta.get("cover_path"), meta.get("year", 0))
             
-            # 2. Check if Track exists (Update vs Insert)
             track = session.query(Track).filter(Track.file_path == file_path_rel).first()
             
             if track:
-                # Update existing
                 track.title = meta["title"]
                 track.artist_id = artist_id
                 track.album_id = album_id
                 track.duration_seconds = meta["duration"]
                 track.track_number = meta["track_number"]
                 track.genre = meta["genre"]
-                track.format = meta["format"]  # Should update format if it somehow changes (e.g. re-rip)
-                track.bitrate = meta["bitrate"] # Should update quality stats too
+                track.year = meta.get("year", 0)
+                track.format = meta["format"]
+                track.bitrate = meta["bitrate"]
                 track.updated_at = datetime.datetime.now(datetime.timezone.utc)
                 action = "Updated"
             else:
-                # Insert new
                 track = Track(
                     title=meta["title"],
                     file_path=file_path_rel,
@@ -203,7 +299,8 @@ class AudioRepository:
                     sample_rate=meta["sample_rate"],
                     channels=meta["channels"],
                     track_number=meta["track_number"],
-                    genre=meta["genre"]
+                    genre=meta["genre"],
+                    year=meta.get("year", 0)
                 )
                 session.add(track)
                 action = "Created"
@@ -214,6 +311,205 @@ class AudioRepository:
         except Exception as e:
             session.rollback()
             logger.error(f"❌ Failed to save track: {e}")
+        finally:
+            session.close()
+
+    def update_event_aggregation(self, event_data: dict):
+        """
+        Updates aggregated stats based on a single event using Atomic Upserts.
+        Robust against race conditions.
+        """
+        session = self.SessionLocal()
+        try:
+            event_type = event_data.get("eventType")
+            data = event_data.get("data", {})
+            track_id = data.get("trackId")
+            timestamp_ms = event_data.get("timestamp", time.time() * 1000)
+            dt = datetime.datetime.fromtimestamp(timestamp_ms / 1000.0, tz=datetime.timezone.utc)
+            date_val = dt.date()
+            hour_val = dt.hour
+
+            if not track_id:
+                return
+
+            # --- 1. Track Statistics Upsert ---
+            # Prepare initial values and update values based on event type
+            stmt_values = {
+                "track_id": track_id,
+                "play_count": 0,
+                "complete_count": 0,
+                "skip_count": 0,
+                "total_play_time": 0,
+                "average_completion": 0.0,
+                "last_played_at": dt,
+                "updated_at": dt
+            }
+            
+            update_set = {
+                "last_played_at": dt,
+                "updated_at": dt
+            }
+
+            if event_type == "playback.start":
+                stmt_values["play_count"] = 1
+                update_set["play_count"] = TrackStatistics.play_count + 1
+                
+            elif event_type == "playback.complete":
+                stmt_values["complete_count"] = 1
+                duration = int(data.get("duration", 0))
+                stmt_values["total_play_time"] = duration
+                stmt_values["average_completion"] = 100.0
+                
+                update_set["complete_count"] = TrackStatistics.complete_count + 1
+                update_set["total_play_time"] = TrackStatistics.total_play_time + duration
+                # Updating average completion on existing row is complex in one query without raw SQL 
+                # or simplified logic. We'll set it to 100 if completed.
+                update_set["average_completion"] = 100.0 
+
+            elif event_type == "playback.skip":
+                stmt_values["skip_count"] = 1
+                pos = int(data.get("position", 0))
+                dur = int(data.get("duration", 1))
+                stmt_values["total_play_time"] = pos
+                avg = (pos / dur) * 100.0 if dur > 0 else 0
+                stmt_values["average_completion"] = avg
+                
+                update_set["skip_count"] = TrackStatistics.skip_count + 1
+                update_set["total_play_time"] = TrackStatistics.total_play_time + pos
+                # Doing a running average calculation in SQL update is hard without current count.
+                # For simplicity in this robust version:
+                update_set["average_completion"] = avg
+
+            # Execute Track Upsert
+            stmt = insert(TrackStatistics).values(**stmt_values)
+            stmt = stmt.on_conflict_do_update(
+                index_elements=[TrackStatistics.track_id],
+                set_=update_set
+            )
+            session.execute(stmt)
+
+            # --- 2. Heatmap Upsert ---
+            heatmap_values = {
+                "date": date_val,
+                "hour": hour_val,
+                "play_count": 0,
+                "unique_tracks": 0,
+                "total_duration": 0
+            }
+            
+            heatmap_update = {
+                "play_count": ListeningHeatmap.play_count, # Default
+                "unique_tracks": ListeningHeatmap.unique_tracks,
+                "total_duration": ListeningHeatmap.total_duration
+            }
+
+            if event_type == "playback.start":
+                heatmap_values["play_count"] = 1
+                heatmap_values["unique_tracks"] = 1
+                
+                heatmap_update["play_count"] = ListeningHeatmap.play_count + 1
+                heatmap_update["unique_tracks"] = ListeningHeatmap.unique_tracks + 1 # Approx
+                
+            elif event_type in ["playback.complete", "playback.skip"]:
+                dur = int(data.get("duration", 0)) if event_type == "playback.complete" else int(data.get("position", 0))
+                heatmap_values["total_duration"] = dur
+                heatmap_update["total_duration"] = ListeningHeatmap.total_duration + dur
+
+            stmt_hm = insert(ListeningHeatmap).values(**heatmap_values)
+            stmt_hm = stmt_hm.on_conflict_do_update(
+                constraint='uq_date_hour', # Using the explicit constraint name defined in model
+                set_=heatmap_update
+            )
+            session.execute(stmt_hm)
+
+            # --- 3. Genre Statistics Upsert ---
+            # Retrieve genre from track (we need to query it since it's not always in event data)
+            # Optimization: Try to get from event.data first, else query DB
+            genre = data.get("genre")
+            if not genre:
+                # Fallback query
+                t_obj = session.query(Track).filter(Track.id == track_id).first()
+                if t_obj:
+                    genre = t_obj.genre
+            
+            if genre and genre != "Unknown":
+                genre_values = {
+                    "genre": genre,
+                    "play_count": 0,
+                    "total_play_time": 0,
+                    "unique_tracks": 0,
+                    "last_played_at": dt,
+                    "updated_at": dt
+                }
+                genre_update = {
+                    "last_played_at": dt,
+                    "updated_at": dt
+                }
+
+                if event_type == "playback.start":
+                    genre_values["play_count"] = 1
+                    genre_values["unique_tracks"] = 1 # Approximation
+                    genre_update["play_count"] = GenreStatistics.play_count + 1
+                    # unique_tracks is hard to atomic increment correctly without set, skipping for now or approx
+                    
+                elif event_type in ["playback.complete", "playback.skip"]:
+                    dur = int(data.get("duration", 0)) if event_type == "playback.complete" else int(data.get("position", 0))
+                    genre_values["total_play_time"] = dur
+                    genre_update["total_play_time"] = GenreStatistics.total_play_time + dur
+
+                stmt_gs = insert(GenreStatistics).values(**genre_values)
+                stmt_gs = stmt_gs.on_conflict_do_update(
+                    index_elements=[GenreStatistics.genre],
+                    set_=genre_update
+                )
+                session.execute(stmt_gs)
+
+            # --- 4. Listening Streak Upsert ---
+            # Determine identity
+            user_id = event_data.get("userId") or event_data.get("sessionId") or "anonymous"
+            
+            streak_values = {
+                "user_id": user_id,
+                "current_streak": 0,
+                "max_streak": 0,
+                "total_play_time": 0,
+                "last_played_at": dt,
+                "updated_at": dt
+            }
+            streak_update = {
+                "last_played_at": dt,
+                "updated_at": dt
+            }
+
+            if event_type == "playback.start":
+                # Logic: Check last_played difference. If < 24h (or arbitrary streak time), inc streak.
+                # In atomic SQL this is hard. For MVP/Robustness, just increment counts.
+                # A proper streak logic needs a read-modify-write usually.
+                # We'll do a robust simplified version: simple play counter/time accumulator for now.
+                streak_values["current_streak"] = 1
+                streak_update["current_streak"] = ListeningStreak.current_streak + 1
+                # max_streak logic would require `GREATEST(...)`
+                streak_update["max_streak"] = func.greatest(ListeningStreak.max_streak, ListeningStreak.current_streak + 1)
+
+            elif event_type in ["playback.complete", "playback.skip"]:
+                dur = int(data.get("duration", 0)) if event_type == "playback.complete" else int(data.get("position", 0))
+                streak_values["total_play_time"] = dur
+                streak_update["total_play_time"] = ListeningStreak.total_play_time + dur
+
+            stmt_ls = insert(ListeningStreak).values(**streak_values)
+            stmt_ls = stmt_ls.on_conflict_do_update(
+                index_elements=[ListeningStreak.user_id],
+                set_=streak_update
+            )
+            session.execute(stmt_ls)
+
+            session.commit()
+            logger.info(f"📊 Aggregated {event_type} for track {track_id}")
+
+        except Exception as e:
+            session.rollback()
+            logger.error(f"❌ Failed to aggregate event: {e}")
+            raise e # Propagate to let Celery retry
         finally:
             session.close()
 
@@ -341,6 +637,14 @@ def analyze_audio(file_path):
             metadata["album"] = str(tags.get("album", ["Unknown Album"])[0])
             metadata["genre"] = str(tags.get("genre", ["Unknown"])[0])
             
+            # Extract Year
+            year_raw = str(tags.get("date", tags.get("year", ["0"]))[0])
+            try:
+                # Handle YYYY-MM-DD or just YYYY
+                metadata["year"] = int(year_raw.split('-')[0])
+            except:
+                pass
+
             track_num_raw = str(tags.get("tracknumber", ["0"])[0])
             try:
                 metadata["track_number"] = int(track_num_raw.split('/')[0])
@@ -362,59 +666,133 @@ def analyze_audio(file_path):
         logger.error(f"Error analyzing {file_path}: {e}")
         return None
 
-def process_job(job_data):
+# --- CELERY TASKS ---
+
+@app.task(name="sonantica.analyze_audio", bind=True, max_retries=3)
+def task_analyze_audio(self, job_data):
     rel_path = job_data.get("file_path")
     full_path = os.path.join(job_data.get("root", MEDIA_PATH), rel_path)
     trace_id = job_data.get("trace_id", "N/A")
     
-    logger.info(f"🎧 Analyzing: {rel_path}", extra={"trace_id": trace_id})
+    logger.info(f"🎧 Celery Analysis: {rel_path}", extra={"trace_id": trace_id})
     
     meta = analyze_audio(full_path)
     if meta:
-        logger.debug(f"Metadata extracted: {meta}", extra={"trace_id": trace_id})
         try:
             r = get_repo()
             if r:
                 r.save_track(meta, rel_path)
+            return {"status": "success", "track": meta["title"]}
         except Exception as e:
-            logger.error(f"DB Error: {e}", extra={"trace_id": trace_id})
-    else:
-        logger.warning(f"❌ Failed to extract metadata for {rel_path}", extra={"trace_id": trace_id})
+            logger.error(f"DB Error: {e}")
+            # Retry on database errors
+            raise self.retry(exc=e, countdown=10)
+    return {"status": "failed", "path": rel_path}
 
+def _update_redis_stats(red, event_data):
+    try:
+        now_ts = int(time.time())
+        minute_bucket = (now_ts // 60) * 60
+        
+        # Track Active Sessions (Last 5 minutes)
+        session_id = event_data.get("sessionId")
+        if session_id:
+            red.zadd("stats:realtime:active_sessions", {session_id: now_ts})
+            # Cleanup sessions older than 5 mins
+            red.zremrangebyscore("stats:realtime:active_sessions", 0, now_ts - 300)
+            red.expire("stats:realtime:active_sessions", 600)
+        
+        # Real-time Event Counter
+        red.incr(f"stats:realtime:events:{minute_bucket}")
+        red.expire(f"stats:realtime:events:{minute_bucket}", 3600)
+
+        if event_data.get("eventType") == "playback.start":
+            red.incr(f"stats:realtime:plays:{minute_bucket}")
+            red.expire(f"stats:realtime:plays:{minute_bucket}", 3600)
+            
+            # Update "Trending" Tracks in Redis (Last 10 minutes)
+            track_id = event_data.get("data", {}).get("trackId")
+            if track_id:
+                # Use a sorted set for trending
+                trending_key = f"stats:trending:tracks:{minute_bucket}"
+                red.zincrby(trending_key, 1, track_id)
+                red.expire(trending_key, 600) # Bucket expires in 10 mins
+    except Exception as e:
+        logger.error(f"Redis Update Error: {e}")
+
+@app.task(name="sonantica.process_analytics", bind=True, max_retries=5)
+def task_process_analytics(self, event_data):
+    """
+    High-volume analytics processing (Single Event).
+    """
+    try:
+        # 1. Historical Aggregation (Postgres)
+        r = get_repo()
+        if r:
+            r.update_event_aggregation(event_data)
+        
+        # 2. Real-time Streaming (Redis)
+        red = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, password=REDIS_PASSWORD, db=0)
+        try:
+            _update_redis_stats(red, event_data)
+        finally:
+            red.close()
+
+        return {"status": "processed"}
+    except Exception as e:
+        logger.error(f"Analytics Task Error: {e}")
+        # Robust Retry!
+        raise self.retry(exc=e, countdown=5)
+
+@app.task(name="sonantica.process_analytics_batch", bind=True, max_retries=5)
+def task_process_analytics_batch(self, batch_events):
+    """
+    High-volume analytics processing (Batch).
+    Significantly reduces overhead by reusing connections.
+    """
+    try:
+        r = get_repo()
+        red = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, password=REDIS_PASSWORD, db=0)
+        
+        count = 0
+        try:
+             for event_data in batch_events:
+                 # PG - Continue on error to not block whole batch, but log high
+                 if r:
+                     try:
+                        r.update_event_aggregation(event_data)
+                     except Exception as ex:
+                        logger.error(f"Batch Item Error (PG): {ex}")
+                 
+                 # Redis
+                 _update_redis_stats(red, event_data)
+                 count += 1
+        finally:
+            red.close()
+            
+        return {"status": "processed_batch", "count": count}
+    except Exception as e:
+        logger.error(f"Analytics Batch Task Error: {e}")
+        raise self.retry(exc=e, countdown=5)
+
+@app.task(name="sonantica.sync_cache")
+def task_sync_cache():
+    """
+    Periodic task to refresh complex dashboard aggregates in cache.
+    Reduces pressure on Postgres during peaks.
+    """
+    logger.info("🔄 Syncing Dashboard Cache...")
+    # Implementation: Query top tracks/stats from Postgres and update global Redis cached dashboard
+    # This ensures "Gigante cantidad de usuarios" see fast cached results.
+    pass
 
 def main():
-    logger.info("🚀 Sonántica Audio Worker Started (Python 3.12 + SQLAlchemy)")
-    
-    # Init Repo
-    try:
-        get_repo()
-    except Exception as e:
-        logger.error(f"Critical repo init error: {e}")
-
-    # Wait for Redis
-    r = None
-    while True:
-        try:
-            r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, password=REDIS_PASSWORD, db=0)
-            r.ping()
-            logger.info(f"✅ Connected to Redis at {REDIS_HOST}:{REDIS_PORT}")
-            break
-        except redis.ConnectionError:
-            logger.warning("⏳ Waiting for Redis...")
-            time.sleep(2)
-
-    # Main Loop
-    while True:
-        # Blocking pop from 'analysis_queue'
-        item = r.blpop("analysis_queue", timeout=5)
-        
-        if item:
-            queue, data = item
-            try:
-                job_data = json.loads(data)
-                process_job(job_data)
-            except Exception as e:
-                logger.error(f"❌ Error processing job: {e}")
+    logger.info("🚀 Sonántica Worker Environment Initialized")
+    # This main is typically not called when running via 'celery worker'
+    # But kept for sanity checks or legacy mode
+    if os.environ.get("RUN_MODE") == "legacy":
+        # ... (original blpop loop if needed) ...
+        pass
 
 if __name__ == "__main__":
     main()

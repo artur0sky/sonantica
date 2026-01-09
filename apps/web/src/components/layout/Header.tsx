@@ -2,11 +2,11 @@
  * Header Component
  *
  * Application header with global search and navigation.
+ * Refactored to use CSS transitions instead of Framer Motion.
  */
 
 import { Link, useLocation } from "wouter";
 import { IconSettings, IconLogout } from "@tabler/icons-react";
-import { motion } from "framer-motion";
 import {
   SearchBar as GlobalSearchBar,
   UserButton,
@@ -17,6 +17,7 @@ import {
 } from "@sonantica/ui";
 import { useHeaderLogic } from "../../hooks/useHeaderLogic";
 import logo from "../../assets/logo.png";
+import { cn } from "@sonantica/shared";
 
 export function Header() {
   const { toggleLeftSidebar, handleSearchResultSelect } = useHeaderLogic();
@@ -52,42 +53,31 @@ export function Header() {
 
   return (
     <>
-      <motion.header
-        initial={{ y: -20, opacity: 0 }}
-        animate={{
-          y: isPlayerExpanded ? -80 : 0,
-          opacity: isPlayerExpanded ? 0 : 1,
-          height: isPlayerExpanded ? 0 : undefined,
-          minHeight: isPlayerExpanded ? 0 : undefined,
-        }}
-        transition={{ duration: 0.3, ease: "easeInOut" }}
-        className={`h-14 sm:h-16 flex items-center px-3 sm:px-4 md:px-6 gap-2 sm:gap-4 select-none transition-all duration-300 ${
-          isPlayerExpanded
-            ? "z-0 pointer-events-none"
-            : "z-30 bg-surface border-b border-border"
-        }`}
+      <header
+        className={cn(
+          "flex items-center px-3 sm:px-4 md:px-6 gap-2 sm:gap-4 select-none transition-all duration-500 ease-in-out",
+          "h-14 sm:h-16 border-b border-border bg-surface z-30",
+          isPlayerExpanded &&
+            "opacity-0 -translate-y-full h-0 min-h-0 pointer-events-none z-0 border-none"
+        )}
       >
         {/* Left: Logo (Toggles Sidebar) */}
         <div className="flex items-center flex-shrink-0">
           <Link href="/">
             <a
               className="flex items-center gap-2 group cursor-pointer px-2 py-1 rounded-lg hover:bg-surface-elevated transition-all active:scale-95"
-              onClick={() => {
-                // Toggle sidebar on click
+              onClick={(e) => {
+                e.preventDefault();
                 toggleLeftSidebar();
               }}
             >
-              <motion.div
-                whileHover={{ rotate: 180 }}
-                transition={{ duration: 0.5 }}
-                className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center flex-shrink-0"
-              >
+              <div className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center flex-shrink-0 transition-transform duration-700 group-hover:rotate-[360deg]">
                 <img
                   src={logo}
                   alt="Sonántica Logo"
                   className="w-full h-full object-contain"
                 />
-              </motion.div>
+              </div>
               <span className="text-lg sm:text-xl font-bold tracking-tight group-hover:text-accent transition-colors hidden sm:inline">
                 Sonántica
               </span>
@@ -113,15 +103,13 @@ export function Header() {
               }
             }}
             onMouseDown={(e: React.MouseEvent) => {
-              // Prevent mousedown from closing the menu via ContextMenu's click-outside handler
-              // when we actually want to toggle it via the onClick handler
               if (contextMenu.isOpen) {
                 e.stopPropagation();
               }
             }}
           />
         </div>
-      </motion.header>
+      </header>
 
       {/* User Menu */}
       <ContextMenu

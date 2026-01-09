@@ -26,9 +26,15 @@ export interface DashboardMetrics {
   playbackTimeline: TimelineData[];
   genreDistribution: GenreStats[];
   platformStats: PlatformStats[];
-  
+
+  // Top Lists
+  topArtists: TopArtist[];
+  topAlbums: TopAlbum[];
+  topPlaylists: TopPlaylist[];
+
   // Recent Activity
   recentSessions: SessionSummary[];
+  recentlyPlayed: RecentlyPlayedTrack[];
   listeningStreak: StreakData;
 }
 
@@ -120,6 +126,42 @@ export interface TopTrack {
   
   rank: number;
   rankChange: number; // vs previous period
+}
+
+export interface TopArtist {
+  artistId: string;
+  artistName: string;
+  playCount: number;
+  playTime: number; // total seconds
+  rank: number;
+}
+
+export interface TopAlbum {
+  albumId: string;
+  albumTitle: string;
+  artistName: string;
+  coverArt?: string;
+  playCount: number;
+  playTime: number; // total seconds
+  rank: number;
+}
+
+export interface TopPlaylist {
+  playlistId: string;
+  playlistName: string;
+  playCount: number;
+  playTime: number; // total seconds
+  rank: number;
+}
+
+export interface RecentlyPlayedTrack {
+  trackId: string;
+  trackTitle: string;
+  artistName: string;
+  albumTitle: string;
+  albumArt?: string;
+  playedAt: string; // ISO timestamp
+  duration?: number; // seconds
 }
 
 // ============================================================================

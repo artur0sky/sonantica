@@ -9,6 +9,7 @@
 
 import type { Track, Artist, Album } from '@sonantica/shared';
 import type { ILibraryAdapter, LibraryStats, ScanProgress, ScanOptions } from '../contracts/ILibraryAdapter';
+import type { Playlist, PlaylistType } from '../types';
 
 export interface RemoteLibraryConfig {
   serverUrl: string;
@@ -266,5 +267,69 @@ export class RemoteLibraryAdapter implements ILibraryAdapter {
     } catch {
       return false;
     }
+  }
+  
+  // --- Playlist Methods ---
+
+  async createPlaylist(name: string, type: PlaylistType, trackIds: string[] = []): Promise<Playlist> {
+    const payload = { name, type, trackIds };
+    console.log('[RemoteLibraryAdapter] POST /api/library/playlists', payload);
+    
+    const response = await this.fetch('/api/library/playlists', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    
+    const result = await response.json();
+    console.log('[RemoteLibraryAdapter] Playlist created response:', result);
+    return result;
+  }
+
+  async getPlaylists(filter?: { type?: PlaylistType }): Promise<Playlist[]> {
+    const params = new URLSearchParams();
+    if (filter?.type) params.append('type', filter.type);
+    
+    const response = await this.fetch(`/api/library/playlists?${params.toString()}`);
+    return response.json();
+  }
+
+  async getPlaylist(id: string): Promise<Playlist> {
+    const response = await this.fetch(`/api/library/playlists/${id}`);
+    return response.json();
+  }
+
+  async updatePlaylist(id: string, updates: Partial<Omit<Playlist, 'id' | 'type' | 'createdAt'>>): Promise<Playlist> {
+    const response = await this.fetch(`/api/library/playlists/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates)
+    });
+    return response.json();
+  }
+
+  async deletePlaylist(id: string): Promise<void> {
+    await this.fetch(`/api/library/playlists/${id}`, {
+      method: 'DELETE'
+    });
+  }
+
+  async addTracksToPlaylist(playlistId: string, trackIds: string[]): Promise<Playlist> {
+    const response = await this.fetch(`/api/library/playlists/${playlistId}/tracks`, {
+      method: 'POST',
+      body: JSON.stringify({ trackIds })
+    });
+    return response.json();
+  }
+
+  async removeTracksFromPlaylist(playlistId: string, trackIds: string[]): Promise<Playlist> {
+    const response = await this.fetch(`/api/library/playlists/${playlistId}/tracks`, {
+      method: 'DELETE',
+      body: JSON.stringify({ trackIds })
+    });
+    return response.json();
+  }
+
+  async saveQueueSnapshot(trackIds: string[]): Promise<Playlist> {
+    const dateStr = new Date().toLocaleString();
+    return this.createPlaylist(`Queue ${dateStr}`, 'HISTORY_SNAPSHOT', trackIds);
   }
 }

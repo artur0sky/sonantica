@@ -86,7 +86,14 @@ export function useAnalyticsDashboard(initialFilters?: AnalyticsFilters) {
         recentSessions: successfulData.flatMap(d => d.recentSessions || []).sort((a, b) => 
           new Date(b.startTime).getTime() - new Date(a.startTime).getTime()
         ).slice(0, 10),
-        listeningStreak: aggregateStreak(successfulData.map(d => d.listeningStreak))
+        listeningStreak: aggregateStreak(successfulData.map(d => d.listeningStreak)),
+        // Simple aggregation for new fields (filtering unique by ID would be better but simple slice for now)
+        topArtists: successfulData.flatMap(d => d.topArtists || []).sort((a, b) => b.playCount - a.playCount).slice(0, 20),
+        topAlbums: successfulData.flatMap(d => d.topAlbums || []).sort((a, b) => b.playCount - a.playCount).slice(0, 20),
+        topPlaylists: successfulData.flatMap(d => d.topPlaylists || []).sort((a, b) => b.playCount - a.playCount).slice(0, 20),
+        recentlyPlayed: successfulData.flatMap(d => d.recentlyPlayed || []).sort((a, b) => 
+          new Date(b.playedAt).getTime() - new Date(a.playedAt).getTime()
+        ).slice(0, 20)
       };
 
       setData(aggregated);

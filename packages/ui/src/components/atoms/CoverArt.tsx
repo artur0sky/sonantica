@@ -18,6 +18,14 @@ interface CoverArtProps {
   shine?: boolean;
   /** Whether to show a subtle shadow (for Expanded Player) */
   shadow?: boolean;
+  /** Custom fallback icon */
+  fallbackIcon?: React.ComponentType<{
+    size?: number;
+    className?: string;
+    stroke?: number;
+  }>;
+  /** Whether this is a high-priority image (e.g. LCP) */
+  priority?: boolean;
 }
 
 export const CoverArt = memo(function CoverArt({
@@ -27,6 +35,8 @@ export const CoverArt = memo(function CoverArt({
   iconSize = 24,
   shine = false,
   shadow = false,
+  fallbackIcon,
+  priority = false, // Default false
 }: CoverArtProps) {
   return (
     <div
@@ -43,6 +53,8 @@ export const CoverArt = memo(function CoverArt({
         alt={alt}
         className="w-full h-full object-cover"
         iconSize={iconSize}
+        fallbackIcon={fallbackIcon}
+        priority={priority}
       />
 
       {shine && (

@@ -2,8 +2,10 @@ package cache
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -208,4 +210,177 @@ func SetAllAlbums(ctx context.Context, albums interface{}) error {
 // GetAllAlbums retrieves the complete albums library from cache
 func GetAllAlbums(ctx context.Context, target interface{}) error {
 	return Get(ctx, "library:all:albums", target)
+}
+
+// SetAlphabetIndex caches alphabet index for a type
+func SetAlphabetIndex(ctx context.Context, entityType string, index interface{}) error {
+	key := fmt.Sprintf("library:index:%s", entityType)
+	return Set(ctx, key, index, 30*time.Minute)
+}
+
+// GetAlphabetIndex retrieves cached alphabet index
+func GetAlphabetIndex(ctx context.Context, entityType string, target interface{}) error {
+	key := fmt.Sprintf("library:index:%s", entityType)
+	return Get(ctx, key, target)
+}
+
+// SetAlbumCover caches the path to an album's cover art
+func SetAlbumCover(ctx context.Context, albumID string, path string) error {
+	key := fmt.Sprintf("library:cover:album:%s", albumID)
+	return Set(ctx, key, path, 24*time.Hour)
+}
+
+// GetAlbumCover retrieves the cached path to an album's cover art
+func GetAlbumCover(ctx context.Context, albumID string) (string, error) {
+	key := fmt.Sprintf("library:cover:album:%s", albumID)
+	var path string
+	err := Get(ctx, key, &path)
+	return path, err
+}
+
+// ============================================
+// Playlist-specific cache functions
+// ============================================
+
+// SetAllPlaylists caches the complete playlists list
+func SetAllPlaylists(ctx context.Context, pType string, playlists interface{}) error {
+	key := "playlist:all"
+	if pType != "" {
+		key = fmt.Sprintf("playlist:all:%s", pType)
+	}
+	return Set(ctx, key, playlists, 5*time.Minute)
+}
+
+// GetAllPlaylists retrieves the complete playlists list from cache
+func GetAllPlaylists(ctx context.Context, pType string, target interface{}) error {
+	key := "playlist:all"
+	if pType != "" {
+		key = fmt.Sprintf("playlist:all:%s", pType)
+	}
+	return Get(ctx, key, target)
+}
+
+// SetPlaylist caches a single playlist
+func SetPlaylist(ctx context.Context, id string, playlist interface{}) error {
+	key := fmt.Sprintf("playlist:%s", id)
+	return Set(ctx, key, playlist, 10*time.Minute)
+}
+
+// GetPlaylist retrieves a cached single playlist
+func GetPlaylist(ctx context.Context, id string, target interface{}) error {
+	key := fmt.Sprintf("playlist:%s", id)
+	return Get(ctx, key, target)
+}
+
+// InvalidatePlaylistCache clears all playlist-related cache
+func InvalidatePlaylistCache(ctx context.Context) error {
+	if rdb == nil {
+		return fmt.Errorf("redis client not initialized")
+	}
+
+	patterns := []string{
+		"playlist:*",
+	}
+
+	for _, pattern := range patterns {
+		iter := rdb.Scan(ctx, 0, pattern, 0).Iterator()
+		for iter.Next(ctx) {
+			if err := rdb.Del(ctx, iter.Val()).Err(); err != nil {
+				slog.Warn("Failed to delete cache key", "key", iter.Val(), "error", err)
+			}
+		}
+		if err := iter.Err(); err != nil {
+			slog.Error("Redis scan error", "pattern", pattern, "error", err)
+			return err
+		}
+	}
+	return nil
+}
+
+// ============================================
+// Analytics-specific cache functions
+// ============================================
+
+// SetAnalyticsData caches analytics results (dashboard, top tracks, etc.)
+func SetAnalyticsData(ctx context.Context, key string, data interface{}, ttl time.Duration) error {
+	fullKey := fmt.Sprintf("analytics:%s", key)
+	return Set(ctx, fullKey, data, ttl)
+}
+
+// GetAnalyticsData retrieves cached analytics results
+func GetAnalyticsData(ctx context.Context, key string, target interface{}) error {
+	fullKey := fmt.Sprintf("analytics:%s", key)
+	return Get(ctx, fullKey, target)
+}
+
+// InvalidateAnalyticsCache clears analytics-related cache
+func InvalidateAnalyticsCache(ctx context.Context) error {
+	return Invalidate(ctx, "analytics:*")
+}
+
+// CeleryTask represents the task body
+type CeleryTask struct {
+	ID      string        `json:"id"`
+	Task    string        `json:"task"`
+	Args    []interface{} `json:"args"`
+	Kwargs  interface{}   `json:"kwargs"`
+	Retries int           `json:"retries"`
+	ETA     *string       `json:"eta"`
+}
+
+// EnqueueCeleryTask pushes a task to the Celery default queue (Redis list)
+func EnqueueCeleryTask(ctx context.Context, taskName string, args ...interface{}) error {
+	if rdb == nil {
+		return fmt.Errorf("redis client not initialized")
+	}
+
+	taskID := fmt.Sprintf("%d", time.Now().UnixNano())
+
+	// Construct the task body
+	// Note: Celery expects the body to be the task specification itself when using json serialization
+	taskBody := CeleryTask{
+		ID:      taskID,
+		Task:    taskName,
+		Args:    args,
+		Kwargs:  map[string]interface{}{},
+		Retries: 0,
+		ETA:     nil,
+	}
+
+	bodyBytes, err := json.Marshal(taskBody)
+	if err != nil {
+		return fmt.Errorf("failed to marshal celery task body: %w", err)
+	}
+
+	// Base64 encode the body
+	encodedBody := base64.StdEncoding.EncodeToString(bodyBytes)
+
+	// Construct the full Celery message envelope
+	// This structure is required by Kombu/Celery to properly parse the message from Redis
+	message := map[string]interface{}{
+		"body":             encodedBody,
+		"content-encoding": "utf-8",
+		"content-type":     "application/json",
+		"headers":          map[string]interface{}{},
+		"properties": map[string]interface{}{
+			"body_encoding":  "base64",
+			"correlation_id": taskID,
+			"delivery_info": map[string]interface{}{
+				"exchange":    "",
+				"routing_key": "celery",
+			},
+			"delivery_mode": 2,
+			"delivery_tag":  taskID,
+			"priority":      0,
+			"reply_to":      taskID, // Use taskID as uuid for simplicity
+		},
+	}
+
+	finalJSON, err := json.Marshal(message)
+	if err != nil {
+		return fmt.Errorf("failed to marshal celery message envelope: %w", err)
+	}
+
+	// Push to 'celery' list
+	return rdb.LPush(ctx, "celery", finalJSON).Err()
 }

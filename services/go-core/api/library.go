@@ -72,10 +72,10 @@ func GetTracks(w http.ResponseWriter, r *http.Request) {
 			SELECT 
 				t.id, t.title, t.album_id, t.artist_id, t.file_path, t.duration_seconds, 
 				t.format, t.bitrate, t.sample_rate, t.channels, t.track_number, t.disc_number, 
-				t.genre, t.play_count, t.is_favorite, t.created_at, t.updated_at,
+				t.genre, t.year, t.play_count, t.is_favorite, t.created_at, t.updated_at,
 				a.name as artist_name,
 				al.title as album_title,
-				al.cover_art_path as album_cover_art
+				al.cover_art as album_cover_art
 			FROM tracks t
 			LEFT JOIN artists a ON t.artist_id = a.id
 			LEFT JOIN albums al ON t.album_id = al.id
@@ -149,10 +149,10 @@ func GetTracks(w http.ResponseWriter, r *http.Request) {
 		SELECT 
 			t.id, t.title, t.album_id, t.artist_id, t.file_path, t.duration_seconds, 
 			t.format, t.bitrate, t.sample_rate, t.channels, t.track_number, t.disc_number, 
-			t.genre, t.play_count, t.is_favorite, t.created_at, t.updated_at,
+			t.genre, t.year, t.play_count, t.is_favorite, t.created_at, t.updated_at,
 			a.name as artist_name,
 			al.title as album_title,
-			al.cover_art_path as album_cover_art
+			al.cover_art as album_cover_art
 		FROM tracks t
 		LEFT JOIN artists a ON t.artist_id = a.id
 		LEFT JOIN albums al ON t.album_id = al.id
@@ -235,7 +235,7 @@ func GetArtists(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		query := fmt.Sprintf("SELECT id, name, bio, image_url, created_at FROM artists ORDER BY %s", orderBy)
+		query := fmt.Sprintf("SELECT id, name, bio, cover_art, created_at, (SELECT count(*) FROM tracks WHERE artist_id = artists.id) as track_count FROM artists ORDER BY %s", orderBy)
 
 		rows, err := database.DB.Query(r.Context(), query)
 		if err != nil {
@@ -278,11 +278,19 @@ func GetArtists(w http.ResponseWriter, r *http.Request) {
 		} else {
 			orderBy = "name ASC"
 		}
-	} else if sortParam == "trackCount" {
-		orderBy = "name ASC"
 	}
 
-	query := fmt.Sprintf("SELECT id, name, bio, image_url, created_at FROM artists ORDER BY %s LIMIT $1 OFFSET $2", orderBy)
+	slog.Info("Fetching artists", "limit", limit, "offset", offset, "sort", sortParam, "order", orderParam)
+
+	// Try cache first
+	var artists []models.Artist
+	if err := cache.GetArtists(r.Context(), offset, limit, sortParam, orderParam, &artists); err == nil {
+		slog.Debug("Artist cache hit")
+		json.NewEncoder(w).Encode(map[string]interface{}{"artists": artists, "limit": limit, "offset": offset, "cached": true})
+		return
+	}
+
+	query := fmt.Sprintf("SELECT id, name, bio, cover_art, created_at, (SELECT count(*) FROM tracks WHERE artist_id = artists.id) as track_count FROM artists ORDER BY %s LIMIT $1 OFFSET $2", orderBy)
 
 	rows, err := database.DB.Query(r.Context(), query, limit, offset)
 	if err != nil {
@@ -292,17 +300,23 @@ func GetArtists(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 
-	artists, err := pgx.CollectRows(rows, pgx.RowToStructByName[models.Artist])
+	artists, err = pgx.CollectRows(rows, pgx.RowToStructByName[models.Artist])
 	if err != nil {
 		slog.Error("Failed to scan artists rows", "error", err)
 		http.Error(w, fmt.Sprintf("Row scan error: %v", err), http.StatusInternalServerError)
 		return
 	}
 
+	// Cache the result
+	if err := cache.SetArtists(r.Context(), offset, limit, sortParam, orderParam, artists); err != nil {
+		slog.Warn("Failed to cache artists", "error", err)
+	}
+
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"artists": artists,
 		"limit":   limit,
 		"offset":  offset,
+		"cached":  false,
 	})
 }
 
@@ -352,7 +366,7 @@ func GetAlbums(w http.ResponseWriter, r *http.Request) {
 		case "artist":
 			orderBy = "a.name"
 		case "year":
-			orderBy = "al.release_year"
+			orderBy = "al.release_date"
 		}
 
 		if orderParam == "desc" {
@@ -363,8 +377,9 @@ func GetAlbums(w http.ResponseWriter, r *http.Request) {
 
 		query := fmt.Sprintf(`
 			SELECT 
-				al.id, al.title, al.artist_id, al.release_year, al.cover_art_path, al.folder_path, al.created_at,
-				a.name as artist_name
+				al.id, al.title, al.artist_id, al.release_date::TEXT, al.cover_art, al.genre, al.created_at,
+				a.name as artist_name,
+				(SELECT count(*) FROM tracks WHERE album_id = al.id) as track_count
 			FROM albums al
 			LEFT JOIN artists a ON al.artist_id = a.id
 			ORDER BY %s
@@ -412,7 +427,7 @@ func GetAlbums(w http.ResponseWriter, r *http.Request) {
 	case "artist":
 		orderBy = "a.name"
 	case "year":
-		orderBy = "al.release_year"
+		orderBy = "al.release_date"
 	}
 
 	if orderParam == "desc" {
@@ -424,15 +439,24 @@ func GetAlbums(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Ensure we don't end up with just " ASC" if sortParam was empty but default used
-	if orderBy == " ASC" || orderBy == " DESC" {
-		orderBy = "al.title ASC"
+	// Try cache for paginated albums
+	var albums []models.Album
+	if err := cache.GetAlbums(r.Context(), offset, limit, sortParam, orderParam, &albums); err == nil {
+		slog.Debug("Albums cache hit")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"albums": albums,
+			"limit":  limit,
+			"offset": offset,
+			"cached": true,
+		})
+		return
 	}
 
 	query := fmt.Sprintf(`
 		SELECT 
-			al.id, al.title, al.artist_id, al.release_year, al.cover_art_path, al.folder_path, al.created_at,
-			a.name as artist_name
+			al.id, al.title, al.artist_id, al.release_date::TEXT, al.cover_art, al.genre, al.created_at,
+			a.name as artist_name,
+			(SELECT count(*) FROM tracks WHERE album_id = al.id) as track_count
 		FROM albums al
 		LEFT JOIN artists a ON al.artist_id = a.id
 		ORDER BY %s
@@ -447,17 +471,23 @@ func GetAlbums(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 
-	albums, err := pgx.CollectRows(rows, pgx.RowToStructByName[models.Album])
+	albums, err = pgx.CollectRows(rows, pgx.RowToStructByName[models.Album])
 	if err != nil {
 		slog.Error("Failed to scan albums rows", "error", err)
 		http.Error(w, fmt.Sprintf("Row scan error: %v", err), http.StatusInternalServerError)
 		return
 	}
 
+	// Cache the result
+	if err := cache.SetAlbums(r.Context(), offset, limit, sortParam, orderParam, albums); err != nil {
+		slog.Warn("Failed to cache albums", "error", err)
+	}
+
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"albums": albums,
 		"limit":  limit,
 		"offset": offset,
+		"cached": false,
 	})
 }
 
@@ -534,15 +564,15 @@ func GetTracksByArtist(w http.ResponseWriter, r *http.Request) {
 		SELECT 
 			t.id, t.title, t.album_id, t.artist_id, t.file_path, t.duration_seconds, 
 			t.format, t.bitrate, t.sample_rate, t.channels, t.track_number, t.disc_number, 
-			t.genre, t.play_count, t.is_favorite, t.created_at, t.updated_at,
+			t.genre, t.year, t.play_count, t.is_favorite, t.created_at, t.updated_at,
 			a.name as artist_name,
 			al.title as album_title,
-			al.cover_art_path as album_cover_art
+			al.cover_art as album_cover_art
 		FROM tracks t
 		LEFT JOIN artists a ON t.artist_id = a.id
 		LEFT JOIN albums al ON t.album_id = al.id
 		WHERE t.artist_id = $1
-		ORDER BY al.release_year DESC, t.track_number ASC
+		ORDER BY al.release_date DESC, t.track_number ASC
 	`
 
 	rows, err := database.DB.Query(r.Context(), query, artistID)
@@ -576,10 +606,10 @@ func GetTracksByAlbum(w http.ResponseWriter, r *http.Request) {
 		SELECT 
 			t.id, t.title, t.album_id, t.artist_id, t.file_path, t.duration_seconds, 
 			t.format, t.bitrate, t.sample_rate, t.channels, t.track_number, t.disc_number, 
-			t.genre, t.play_count, t.is_favorite, t.created_at, t.updated_at,
+			t.genre, t.year, t.play_count, t.is_favorite, t.created_at, t.updated_at,
 			a.name as artist_name,
 			al.title as album_title,
-			al.cover_art_path as album_cover_art
+			al.cover_art as album_cover_art
 		FROM tracks t
 		LEFT JOIN artists a ON t.artist_id = a.id
 		LEFT JOIN albums al ON t.album_id = al.id
@@ -662,6 +692,13 @@ func GetAlphabetIndex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var index map[string]int
+	if err := cache.GetAlphabetIndex(r.Context(), entityType, &index); err == nil {
+		slog.Debug("Alphabet index cache hit", "type", entityType)
+		json.NewEncoder(w).Encode(index)
+		return
+	}
+
 	rows, err := database.DB.Query(r.Context(), query)
 	if err != nil {
 		slog.Error("Failed to query alphabet index", "error", err, "type", entityType)
@@ -670,7 +707,7 @@ func GetAlphabetIndex(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 
-	index := make(map[string]int)
+	index = make(map[string]int)
 	for rows.Next() {
 		var letter string
 		var offset int
@@ -678,6 +715,11 @@ func GetAlphabetIndex(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		index[letter] = offset
+	}
+
+	// Cache the result
+	if err := cache.SetAlphabetIndex(r.Context(), entityType, index); err != nil {
+		slog.Warn("Failed to cache alphabet index", "error", err)
 	}
 
 	json.NewEncoder(w).Encode(index)
