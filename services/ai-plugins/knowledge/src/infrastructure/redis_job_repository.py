@@ -24,6 +24,8 @@ class RedisJobRepository:
         
         await redis.hset(f"{self.key_prefix}:{job.id}", mapping=job_data)
         await redis.expire(f"{self.key_prefix}:{job.id}", self.ttl)
+        # Index by track
+        await redis.set(f"knowledge:track:{job.track_id}", job.id, ex=self.ttl)
 
     async def get_by_id(self, job_id: str) -> Optional[KnowledgeJob]:
         redis = await RedisClient.get_instance()
@@ -31,3 +33,10 @@ class RedisJobRepository:
         if not data:
             return None
         return KnowledgeJob(**data)
+
+    async def find_by_track_id(self, track_id: str) -> Optional[KnowledgeJob]:
+        redis = await RedisClient.get_instance()
+        job_id = await redis.get(f"knowledge:track:{track_id}")
+        if not job_id:
+            return None
+        return await self.get_by_id(job_id)

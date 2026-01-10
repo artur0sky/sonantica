@@ -7,24 +7,27 @@ from fastapi import FastAPI, Request, HTTPException, Header, BackgroundTasks, De
 from fastapi.responses import JSONResponse
 import httpx
 import json
+import asyncio
 
 from src.infrastructure.config import settings
 from src.infrastructure.redis_client import RedisClient
 from src.infrastructure.redis_job_repository import RedisJobRepository
 from src.domain.entities import KnowledgeJob, JobStatus
 
+from src.infrastructure.logging.logger_config import setup_logger
+from src.infrastructure.logging.context import set_trace_id
+
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='{"timestamp": "%(asctime)s", "level": "%(levelname)s", "service": "knowledge-plugin", "message": "%(message)s"}'
-)
-logger = logging.getLogger(__name__)
+logger = setup_logger("knowledge-plugin")
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
     description="AI Knowledge Enrichment Plugin (Ollama Client)"
 )
+
+# Global Semaphore to avoid overloading Ollama
+ollama_semaphore = asyncio.Semaphore(2) 
 
 # Helpers
 def get_value(x):
@@ -75,6 +78,18 @@ async def create_job(request: Request, background_tasks: BackgroundTasks):
             raise HTTPException(status_code=400, detail="track_id is required")
 
         repo = RedisJobRepository()
+        
+        # Deduplication
+        existing = await repo.find_by_track_id(track_id)
+        if existing and existing.status in [JobStatus.COMPLETED, JobStatus.PROCESSING, JobStatus.PENDING]:
+            return {
+                "id": existing.id,
+                "track_id": existing.track_id,
+                "status": get_value(existing.status),
+                "created_at": existing.created_at.strftime('%Y-%m-%dT%H:%M:%SZ'),
+                "updated_at": existing.updated_at.strftime('%Y-%m-%dT%H:%M:%SZ')
+            }
+
         job_id = f"knw_{track_id}_{int(time.time())}"
         now = datetime.utcnow()
         
@@ -119,9 +134,12 @@ async def get_job(job_id: str):
     }
 
 async def process_job(job_id: str):
+    set_trace_id(job_id)
     repo = RedisJobRepository()
     job = await repo.get_by_id(job_id)
-    if not job: return
+    if not job: 
+        logger.warning(f"SKIP | Job {job_id} not found")
+        return
 
     try:
         job.status = JobStatus.PROCESSING
@@ -132,27 +150,30 @@ async def process_job(job_id: str):
         # In a real scenario, we'd fetch track info from Postgres first
         prompt = f"Provide 3 interesting facts about the musical context of track ID {job.track_id}. Keep it concise."
         
-        async with httpx.AsyncClient() as client:
-            resp = await client.post(
-                f"{settings.OLLAMA_HOST}/api/generate",
-                json={
-                    "model": settings.LLM_MODEL,
-                    "prompt": prompt,
-                    "stream": False
-                },
-                timeout=30.0
-            )
+        async with ollama_semaphore:
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(
+                    f"{settings.OLLAMA_HOST}/api/generate",
+                    json={
+                        "model": settings.LLM_MODEL,
+                        "prompt": prompt,
+                        "stream": False
+                    },
+                    timeout=30.0
+                )
             
             if resp.status_code == 200:
                 result_data = resp.json()
                 job.result = {"enrichment": result_data.get("response"), "model": settings.LLM_MODEL}
                 job.status = JobStatus.COMPLETED
+                logger.info(f"DONE | Successfully enriched track {job.track_id}")
             else:
                 job.error = f"Ollama error: {resp.status_code}"
                 job.status = JobStatus.FAILED
+                logger.error(f"FAIL | Ollama response {resp.status_code}")
                 
     except Exception as e:
-        logger.error(f"Processing failed for {job_id}: {e}")
+        logger.exception(f"FAIL | Processing job {job_id} | Error: {str(e)}")
         job.status = JobStatus.FAILED
         job.error = str(e)
     
@@ -162,13 +183,16 @@ async def process_job(job_id: str):
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     start_time = time.time()
-    response = await call_next(request)
-    process_time = (time.time() - start_time) * 1000
-    
-    logger.info(
-        f"Request {request.method} {request.url.path} processed in {process_time:.2f}ms. Status: {response.status_code}"
-    )
-    return response
+    set_trace_id()
+    try:
+        response = await call_next(request)
+        process_time = (time.time() - start_time) * 1000
+        logger.info(f"DONE | {request.method} {request.url.path} | {response.status_code} | {process_time:.2f}ms")
+        return response
+    except Exception as e:
+        process_time = (time.time() - start_time) * 1000
+        logger.exception(f"FAIL | {request.method} {request.url.path} | {process_time:.2f}ms | Error: {str(e)}")
+        return JSONResponse(status_code=500, content={"detail": "Internal Server Error"})
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8080, reload=True)
