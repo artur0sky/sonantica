@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"sonantica-core/internal/analytics/scanner"
 	"sonantica-core/internal/plugins/domain"
 
 	"github.com/google/uuid"
@@ -19,15 +20,17 @@ import (
 type Manager struct {
 	client  domain.IPluginClient
 	db      *pgxpool.Pool
+	scanner *scanner.SmartScanner
 	plugins map[string]*domain.AIPlugin
 	mu      sync.RWMutex
 }
 
 // NewManager crea una instancia del manejador de plugins
-func NewManager(client domain.IPluginClient, db *pgxpool.Pool) *Manager {
+func NewManager(client domain.IPluginClient, db *pgxpool.Pool, scanner *scanner.SmartScanner) *Manager {
 	return &Manager{
 		client:  client,
 		db:      db,
+		scanner: scanner,
 		plugins: make(map[string]*domain.AIPlugin),
 	}
 }
@@ -259,6 +262,20 @@ func (m *Manager) TogglePlugin(ctx context.Context, pluginID string, enabled boo
 	}
 
 	p.IsEnabled = enabled
+
+	// Trigger smart scan if enabled and capability is consistent with background analysis
+	if enabled && m.scanner != nil {
+		switch p.Manifest.Capability {
+		case domain.CapabilityRecommendations, domain.CapabilityEmbeddings, domain.CapabilityKnowledge:
+			slog.Info("Triggering background scan for newly enabled ecosystem", "plugin", p.Manifest.Name)
+			// Trigger medium & low priority scans
+			// Medium: Queue/Recent
+			// Low: Rest of Library
+			m.scanner.TriggerScan(context.Background(), scanner.PriorityMedium, nil)
+			m.scanner.TriggerScan(context.Background(), scanner.PriorityLow, nil)
+		}
+	}
+
 	return nil
 }
 

@@ -14,6 +14,7 @@ import (
 	"sonantica-core/cache"
 	"sonantica-core/config"
 	"sonantica-core/database"
+	smart_scanner "sonantica-core/internal/analytics/scanner"
 	"sonantica-core/internal/plugins/application"
 	domain "sonantica-core/internal/plugins/domain"
 	"sonantica-core/internal/plugins/infrastructure"
@@ -59,9 +60,12 @@ func main() {
 	slog.Info("Starting Scanner Scheduler", "path", cfg.MediaPath, "interval", "1h")
 	scanner.StartScanner(cfg.MediaPath, 1*time.Hour)
 
+	// 6.0 Initialize Smart Scanner
+	smartScanner := smart_scanner.NewSmartScanner(database.DB, cache.GetClient())
+
 	// 6.1 Initialize AI Plugins
 	pluginClient := infrastructure.NewPluginClient(cfg.InternalAPISecret)
-	pluginManager := application.NewManager(pluginClient, database.DB)
+	pluginManager := application.NewManager(pluginClient, database.DB, smartScanner)
 
 	// Register known internal plugins from config
 	ctx := context.Background()
@@ -113,9 +117,6 @@ func main() {
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
-	r.Use(httprate.LimitByIP(100, 1*time.Minute)) // Rate Limit: 100 req/min per IP
-	r.Use(shared.ErrorMiddleware)                 // Global error handling and panic recovery
-	r.Use(middleware.Compress(5))
 
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   cfg.AllowedOrigins,
@@ -125,6 +126,10 @@ func main() {
 		AllowCredentials: true,
 		MaxAge:           300,
 	}))
+
+	r.Use(httprate.LimitByIP(1000, 1*time.Minute)) // Rate Limit: 1000 req/min per IP (Increased for streaming/queuing)
+	r.Use(shared.ErrorMiddleware)                  // Global error handling and panic recovery
+	r.Use(middleware.Compress(5))
 
 	// 9. Routes
 	r.HandleFunc("/metrics", promhttp.Handler().ServeHTTP)
