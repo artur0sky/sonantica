@@ -12,19 +12,18 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { Capacitor } from '@capacitor/core';
-import { App as CapApp } from '@capacitor/app';
-import { Filesystem, Directory } from '@capacitor/filesystem';
-import { StatusBar, Style } from '@capacitor/status-bar';
-import { Keyboard } from '@capacitor/keyboard';
-import { Haptics, ImpactStyle } from '@capacitor/haptics';
-import { LocalNotifications } from '@capacitor/local-notifications';
+
+// Note: To avoid bundling these in the main web app on non-native platforms,
+// we use dynamic imports inside the hooks or check for native platform.
 
 /**
  * Hook to manage app permissions
  */
 export function usePermissions() {
   const requestNotificationPermission = useCallback(async () => {
+    if (!Capacitor.isNativePlatform()) return true;
     try {
+      const { LocalNotifications } = await import('@capacitor/local-notifications');
       const status = await LocalNotifications.checkPermissions();
       if (status.display !== 'granted') {
         const result = await LocalNotifications.requestPermissions();
@@ -44,22 +43,7 @@ export function usePermissions() {
  * Hook to detect if running in Capacitor (native mobile)
  */
 export function useIsNative(): boolean {
-  const [isNative, setIsNative] = useState(false);
-
-  useEffect(() => {
-    // Check if Capacitor is available
-    const checkNative = async () => {
-      try {
-        const info = await CapApp.getInfo();
-        setIsNative(!!info);
-      } catch {
-        setIsNative(false);
-      }
-    };
-    checkNative();
-  }, []);
-
-  return isNative;
+  return Capacitor.isNativePlatform();
 }
 
 /**
@@ -72,17 +56,25 @@ export function useAppState(callbacks: {
   onBackground?: () => void;
 }) {
   useEffect(() => {
-    const stateListener = CapApp.addListener('appStateChange', ({ isActive }) => {
-      if (isActive) {
-        callbacks.onActive?.();
-      } else {
-        callbacks.onInactive?.();
-        callbacks.onBackground?.();
-      }
-    });
+    if (!Capacitor.isNativePlatform()) return;
+
+    let listener: any;
+    const setupListener = async () => {
+      const { App } = await import('@capacitor/app');
+      listener = App.addListener('appStateChange', ({ isActive }: { isActive: boolean }) => {
+        if (isActive) {
+          callbacks.onActive?.();
+        } else {
+          callbacks.onInactive?.();
+          callbacks.onBackground?.();
+        }
+      });
+    };
+
+    setupListener();
 
     return () => {
-      stateListener.then((h) => h.remove());
+      if (listener) listener.then((h: any) => h.remove());
     };
   }, [callbacks]);
 }
@@ -93,13 +85,15 @@ export function useAppState(callbacks: {
  */
 export function useStatusBar(style: 'dark' | 'light' = 'dark') {
   useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
     const setStyle = async () => {
       try {
+        const { StatusBar, Style } = await import('@capacitor/status-bar');
         await StatusBar.setStyle({
           style: style === 'dark' ? Style.Dark : Style.Light,
         });
       } catch (error) {
-        // StatusBar not available (web)
         console.debug('StatusBar not available:', error);
       }
     };
@@ -113,7 +107,9 @@ export function useStatusBar(style: 'dark' | 'light' = 'dark') {
  */
 export function useHaptics() {
   const light = useCallback(async () => {
+    if (!Capacitor.isNativePlatform()) return;
     try {
+      const { Haptics, ImpactStyle } = await import('@capacitor/haptics');
       await Haptics.impact({ style: ImpactStyle.Light });
     } catch {
       // Haptics not available
@@ -121,7 +117,9 @@ export function useHaptics() {
   }, []);
 
   const medium = useCallback(async () => {
+    if (!Capacitor.isNativePlatform()) return;
     try {
+      const { Haptics, ImpactStyle } = await import('@capacitor/haptics');
       await Haptics.impact({ style: ImpactStyle.Medium });
     } catch {
       // Haptics not available
@@ -129,7 +127,9 @@ export function useHaptics() {
   }, []);
 
   const heavy = useCallback(async () => {
+    if (!Capacitor.isNativePlatform()) return;
     try {
+      const { Haptics, ImpactStyle } = await import('@capacitor/haptics');
       await Haptics.impact({ style: ImpactStyle.Heavy });
     } catch {
       // Haptics not available
@@ -147,22 +147,34 @@ export function useKeyboard() {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    const showListener = Keyboard.addListener('keyboardWillShow', () => {
-      setIsVisible(true);
-    });
+    if (!Capacitor.isNativePlatform()) return;
 
-    const hideListener = Keyboard.addListener('keyboardWillHide', () => {
-      setIsVisible(false);
-    });
+    let showListener: any;
+    let hideListener: any;
+
+    const setupListeners = async () => {
+      const { Keyboard } = await import('@capacitor/keyboard');
+      showListener = Keyboard.addListener('keyboardWillShow', () => {
+        setIsVisible(true);
+      });
+
+      hideListener = Keyboard.addListener('keyboardWillHide', () => {
+        setIsVisible(false);
+      });
+    };
+
+    setupListeners();
 
     return () => {
-      showListener.then((h) => h.remove());
-      hideListener.then((h) => h.remove());
+      if (showListener) showListener.then((h: any) => h.remove());
+      if (hideListener) hideListener.then((h: any) => h.remove());
     };
   }, []);
 
   const hide = useCallback(async () => {
+    if (!Capacitor.isNativePlatform()) return;
     try {
+      const { Keyboard } = await import('@capacitor/keyboard');
       await Keyboard.hide();
     } catch {
       // Keyboard not available
@@ -178,7 +190,9 @@ export function useKeyboard() {
  */
 export function useFilesystem() {
   const readDir = useCallback(async (path: string) => {
+    if (!Capacitor.isNativePlatform()) return [];
     try {
+      const { Filesystem, Directory } = await import('@capacitor/filesystem');
       const result = await Filesystem.readdir({
         path,
         directory: Directory.ExternalStorage,
@@ -191,7 +205,9 @@ export function useFilesystem() {
   }, []);
 
   const readFile = useCallback(async (path: string) => {
+    if (!Capacitor.isNativePlatform()) return null;
     try {
+      const { Filesystem, Directory } = await import('@capacitor/filesystem');
       const result = await Filesystem.readFile({
         path,
         directory: Directory.ExternalStorage,
@@ -212,15 +228,23 @@ export function useFilesystem() {
  */
 export function useBackButton(handler: () => boolean) {
   useEffect(() => {
-    const listener = CapApp.addListener('backButton', ({ canGoBack }) => {
-      const shouldPreventDefault = handler();
-      if (!shouldPreventDefault && !canGoBack) {
-        CapApp.exitApp();
-      }
-    });
+    if (!Capacitor.isNativePlatform()) return;
+
+    let listener: any;
+    const setupListener = async () => {
+      const { App } = await import('@capacitor/app');
+      listener = App.addListener('backButton', ({ canGoBack }: { canGoBack: boolean }) => {
+        const shouldPreventDefault = handler();
+        if (!shouldPreventDefault && !canGoBack) {
+          App.exitApp();
+        }
+      });
+    };
+
+    setupListener();
 
     return () => {
-      listener.then((h) => h.remove());
+      if (listener) listener.then((h: any) => h.remove());
     };
   }, [handler]);
 }
@@ -237,9 +261,12 @@ export function useAppInfo() {
   } | null>(null);
 
   useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
     const getInfo = async () => {
       try {
-        const appInfo = await CapApp.getInfo();
+        const { App } = await import('@capacitor/app');
+        const appInfo = await App.getInfo();
         setInfo(appInfo);
       } catch {
         setInfo(null);

@@ -9,7 +9,7 @@ import {
 import { formatArtists, PlaybackState } from "@sonantica/shared";
 import { usePlayerStore, useQueueStore } from "@sonantica/player-core";
 import { useLibraryStore } from "@sonantica/media-library";
-import { useState } from "react";
+import { useState, Suspense, lazy } from "react";
 import {
   ContextMenu,
   useContextMenu,
@@ -23,7 +23,12 @@ import { useOfflineStore } from "@sonantica/offline-manager";
 import { useSettingsStore } from "../../../stores/settingsStore";
 import { OfflineStatus } from "@sonantica/shared";
 import { useOfflineManager } from "../../../hooks/useOfflineManager";
-import { AddToPlaylistModal } from "../../../components/AddToPlaylistModal";
+
+const AddToPlaylistModal = lazy(() =>
+  import("../../../components/AddToPlaylistModal").then((m) => ({
+    default: m.AddToPlaylistModal,
+  }))
+);
 import { useSelectionStore } from "../../../stores/selectionStore";
 
 interface TrackItemProps {
@@ -207,12 +212,16 @@ export function TrackItem({
       />
 
       {/* Add to Playlist Modal */}
-      <AddToPlaylistModal
-        isOpen={showPlaylistModal}
-        onClose={() => setShowPlaylistModal(false)}
-        trackId={track.id}
-        trackTitle={track.title}
-      />
+      <Suspense fallback={null}>
+        {showPlaylistModal && (
+          <AddToPlaylistModal
+            isOpen={showPlaylistModal}
+            onClose={() => setShowPlaylistModal(false)}
+            trackId={track.id}
+            trackTitle={track.title}
+          />
+        )}
+      </Suspense>
     </>
   );
 }

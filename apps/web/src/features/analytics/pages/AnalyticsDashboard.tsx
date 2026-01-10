@@ -1,16 +1,28 @@
-import { useMemo } from "react";
+import { Suspense, lazy, useMemo } from "react";
 import {
   StatCard,
   DashboardGrid,
   TopList,
-  PlaybackLineChart,
-  GenreBarChart,
-  PlatformPieChart,
-  ActivityHeatmap,
-  ListeningCalendar,
   PageHeader,
   EmptyState,
 } from "@sonantica/ui";
+
+// Lazy load heavy chart components
+const PlaybackLineChart = lazy(() =>
+  import("@sonantica/ui").then((m) => ({ default: m.PlaybackLineChart }))
+);
+const GenreBarChart = lazy(() =>
+  import("@sonantica/ui").then((m) => ({ default: m.GenreBarChart }))
+);
+const PlatformPieChart = lazy(() =>
+  import("@sonantica/ui").then((m) => ({ default: m.PlatformPieChart }))
+);
+const ActivityHeatmap = lazy(() =>
+  import("@sonantica/ui").then((m) => ({ default: m.ActivityHeatmap }))
+);
+const ListeningCalendar = lazy(() =>
+  import("@sonantica/ui").then((m) => ({ default: m.ListeningCalendar }))
+);
 import {
   IconHeadphones,
   IconClock,
@@ -278,12 +290,18 @@ export const AnalyticsDashboard = () => {
         id: "playback-history",
         colSpan: 2 as const,
         component: (
-          <PlaybackLineChart
-            title="Playback Volume"
-            data={playbackData}
-            height={300}
-            loading={loading}
-          />
+          <Suspense
+            fallback={
+              <div className="h-[300px] animate-pulse bg-surface/20 rounded-2xl" />
+            }
+          >
+            <PlaybackLineChart
+              title="Playback Volume"
+              data={playbackData}
+              height={300}
+              loading={loading}
+            />
+          </Suspense>
         ),
       },
       {
@@ -338,87 +356,123 @@ export const AnalyticsDashboard = () => {
         id: "genres",
         colSpan: 2 as const,
         component: (
-          <GenreBarChart
-            title="Genre Breakdown"
-            data={genreData}
-            height={350}
-            loading={loading}
-          />
+          <Suspense
+            fallback={
+              <div className="h-[350px] animate-pulse bg-surface/20 rounded-2xl" />
+            }
+          >
+            <GenreBarChart
+              title="Genre Breakdown"
+              data={genreData}
+              height={350}
+              loading={loading}
+            />
+          </Suspense>
         ),
       },
       {
         id: "platforms",
         colSpan: 1 as const,
         component: (
-          <PlatformPieChart
-            title="Device Usage"
-            data={platformData}
-            height={350}
-            loading={loading}
-          />
+          <Suspense
+            fallback={
+              <div className="h-[350px] animate-pulse bg-surface/20 rounded-2xl" />
+            }
+          >
+            <PlatformPieChart
+              title="Device Usage"
+              data={platformData}
+              height={350}
+              loading={loading}
+            />
+          </Suspense>
         ),
       },
       {
         id: "formats",
         colSpan: 1 as const,
         component: (
-          <PlatformPieChart
-            title="File Formats"
-            data={formatData}
-            height={350}
-            innerRadius={0.5}
-            padAngle={1}
-            cornerRadius={3}
-            loading={loading}
-          />
+          <Suspense
+            fallback={
+              <div className="h-[350px] animate-pulse bg-surface/20 rounded-2xl" />
+            }
+          >
+            <PlatformPieChart
+              title="File Formats"
+              data={formatData}
+              height={350}
+              innerRadius={0.5}
+              padAngle={1}
+              cornerRadius={3}
+              loading={loading}
+            />
+          </Suspense>
         ),
       },
       {
         id: "coverart",
         colSpan: 2 as const,
         component: (
-          <PlatformPieChart
-            title="Cover Art Status"
-            data={coverArtData}
-            height={350}
-            innerRadius={0.7}
-            padAngle={2}
-            cornerRadius={3}
-            loading={loading}
-          />
+          <Suspense
+            fallback={
+              <div className="h-[350px] animate-pulse bg-surface/20 rounded-2xl" />
+            }
+          >
+            <PlatformPieChart
+              title="Cover Art Status"
+              data={coverArtData}
+              height={350}
+              innerRadius={0.7}
+              padAngle={2}
+              cornerRadius={3}
+              loading={loading}
+            />
+          </Suspense>
         ),
       },
       {
         id: "heatmap",
         colSpan: 4 as const,
         component: (
-          <ActivityHeatmap
-            title="Listening Times (Heatmap)"
-            data={heatmapData}
-            loading={loading}
-          />
+          <Suspense
+            fallback={
+              <div className="h-[350px] animate-pulse bg-surface/20 rounded-2xl" />
+            }
+          >
+            <ActivityHeatmap
+              title="Listening Times (Heatmap)"
+              data={heatmapData}
+              loading={loading}
+            />
+          </Suspense>
         ),
       },
       {
         id: "calendar",
         colSpan: 4 as const,
         component: (
-          <ListeningCalendar
-            title="Consistency Calendar"
-            data={calendarData}
-            from={
-              new Date(new Date().getFullYear(), 0, 1)
-                .toISOString()
-                .split("T")[0]
+          <Suspense
+            fallback={
+              <div className="h-[200px] animate-pulse bg-surface/20 rounded-2xl" />
             }
-            to={
-              new Date(new Date().getFullYear(), 11, 31)
-                .toISOString()
-                .split("T")[0]
-            }
-            height={200}
-            loading={loading}
-          />
+          >
+            <ListeningCalendar
+              title="Consistency Calendar"
+              data={calendarData}
+              from={
+                new Date(new Date().getFullYear(), 0, 1)
+                  .toISOString()
+                  .split("T")[0]
+              }
+              to={
+                new Date(new Date().getFullYear(), 11, 31)
+                  .toISOString()
+                  .split("T")[0]
+              }
+              height={200}
+              loading={loading}
+            />
+          </Suspense>
         ),
       },
     ];

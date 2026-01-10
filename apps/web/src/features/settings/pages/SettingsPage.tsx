@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, Suspense, lazy } from "react";
 import { Tabs, type Tab } from "@sonantica/ui";
 import {
   IconMusic,
@@ -7,16 +7,48 @@ import {
   IconInfoCircle,
   IconPalette,
   IconCloudDownload,
+  IconChartBar,
+  IconLoader,
 } from "@tabler/icons-react";
 
-// Sub-pages
-import { AudioSettings } from "../components/AudioSettings";
-import { LibrarySettings } from "../components/LibrarySettings";
-import { InterfaceSettings } from "../components/InterfaceSettings";
-import { OfflineSettings } from "../components/OfflineSettings";
-import { AnalyticsSettings } from "../components/AnalyticsSettings";
-import { ServersSection } from "../../library/components/ServersSection";
-import { IconChartBar } from "@tabler/icons-react";
+// Lazy load sub-pages
+const AudioSettings = lazy(() =>
+  import("../components/AudioSettings").then((m) => ({
+    default: m.AudioSettings,
+  }))
+);
+const LibrarySettings = lazy(() =>
+  import("../components/LibrarySettings").then((m) => ({
+    default: m.LibrarySettings,
+  }))
+);
+const InterfaceSettings = lazy(() =>
+  import("../components/InterfaceSettings").then((m) => ({
+    default: m.InterfaceSettings,
+  }))
+);
+const OfflineSettings = lazy(() =>
+  import("../components/OfflineSettings").then((m) => ({
+    default: m.OfflineSettings,
+  }))
+);
+const AnalyticsSettings = lazy(() =>
+  import("../components/AnalyticsSettings").then((m) => ({
+    default: m.AnalyticsSettings,
+  }))
+);
+const ServersSection = lazy(() =>
+  import("../../library/components/ServersSection").then((m) => ({
+    default: m.ServersSection,
+  }))
+);
+
+const SettingsLoader = () => (
+  <div className="flex flex-col items-center justify-center min-h-[300px] gap-3 text-text-muted animate-in fade-in duration-500">
+    <IconLoader className="animate-spin" size={32} />
+    <p className="text-sm font-medium">Loading settings...</p>
+  </div>
+);
 
 export function SettingsPage() {
   const [activeTab, setActiveTab] = useState("general"); // Default to General/Interface
@@ -85,62 +117,66 @@ export function SettingsPage() {
 
       {/* Content Area */}
       <div className="min-h-[400px]">
-        {activeTab === "general" && <InterfaceSettings />}
-        {activeTab === "audio" && <AudioSettings />}
-        {activeTab === "library" && <LibrarySettings />}
-        {activeTab === "offline" && <OfflineSettings />}
-        {activeTab === "analytics" && <AnalyticsSettings />}
+        <Suspense fallback={<SettingsLoader />}>
+          {activeTab === "general" && <InterfaceSettings />}
+          {activeTab === "audio" && <AudioSettings />}
+          {activeTab === "library" && <LibrarySettings />}
+          {activeTab === "offline" && <OfflineSettings />}
+          {activeTab === "analytics" && <AnalyticsSettings />}
 
-        {activeTab === "servers" && (
-          <div className="bg-surface-elevated border border-border rounded-xl p-4 sm:p-6 animate-in fade-in duration-500">
-            <div className="mb-6">
-              <h2 className="text-xl font-semibold mb-1">Media Servers</h2>
-              <p className="text-sm text-text-muted">
-                Manage your connections to Sonántica API servers.
-              </p>
-            </div>
-            <ServersSection />
-          </div>
-        )}
-
-        {activeTab === "info" && (
-          <div className="bg-surface-elevated border border-border rounded-xl p-4 sm:p-6 space-y-8 animate-in fade-in duration-500">
-            <div>
-              <h2 className="text-xl font-semibold mb-4">About Sonántica</h2>
-              <div className="prose prose-invert max-w-none text-text-muted">
-                <p className="mb-4 leading-relaxed">
-                  <strong className="text-text-primary">
-                    The Wise Craftsman.
-                  </strong>{" "}
-                  Sonántica is an open-source multimedia player designed for
-                  audio fidelity and user autonomy.
+          {activeTab === "servers" && (
+            <div className="bg-surface-elevated border border-border rounded-xl p-4 sm:p-6 animate-in fade-in duration-500">
+              <div className="mb-6">
+                <h2 className="text-xl font-semibold mb-1">Media Servers</h2>
+                <p className="text-sm text-text-muted">
+                  Manage your connections to Sonántica API servers.
                 </p>
-                <div className="italic text-accent/80 border-l-2 border-accent/20 pl-4 py-1">
-                  "Sound is not noise, but language."
+              </div>
+              <ServersSection />
+            </div>
+          )}
+
+          {activeTab === "info" && (
+            <div className="bg-surface-elevated border border-border rounded-xl p-4 sm:p-6 space-y-8 animate-in fade-in duration-500">
+              <div>
+                <h2 className="text-xl font-semibold mb-4">About Sonántica</h2>
+                <div className="prose prose-invert max-w-none text-text-muted">
+                  <p className="mb-4 leading-relaxed">
+                    <strong className="text-text-primary">
+                      The Wise Craftsman.
+                    </strong>{" "}
+                    Sonántica is an open-source multimedia player designed for
+                    audio fidelity and user autonomy.
+                  </p>
+                  <div className="italic text-accent/80 border-l-2 border-accent/20 pl-4 py-1">
+                    "Sound is not noise, but language."
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-8 border-t border-border grid grid-cols-1 xs:grid-cols-2 gap-6 text-sm text-text-muted">
+                <div className="space-y-1">
+                  <p className="font-medium text-text-primary">Version</p>
+                  <p>0.1.0 Alpha</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="font-medium text-text-primary">Core Engine</p>
+                  <p className="font-mono text-xs">
+                    @sonantica/player-core v1.0
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="font-medium text-text-primary">License</p>
+                  <p>Apache-2.0</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="font-medium text-text-primary">Developer</p>
+                  <p>Arturo Sky</p>
                 </div>
               </div>
             </div>
-
-            <div className="pt-8 border-t border-border grid grid-cols-1 xs:grid-cols-2 gap-6 text-sm text-text-muted">
-              <div className="space-y-1">
-                <p className="font-medium text-text-primary">Version</p>
-                <p>0.1.0 Alpha</p>
-              </div>
-              <div className="space-y-1">
-                <p className="font-medium text-text-primary">Core Engine</p>
-                <p className="font-mono text-xs">@sonantica/player-core v1.0</p>
-              </div>
-              <div className="space-y-1">
-                <p className="font-medium text-text-primary">License</p>
-                <p>Apache-2.0</p>
-              </div>
-              <div className="space-y-1">
-                <p className="font-medium text-text-primary">Developer</p>
-                <p>Arturo Sky</p>
-              </div>
-            </div>
-          </div>
-        )}
+          )}
+        </Suspense>
       </div>
     </div>
   );

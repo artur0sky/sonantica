@@ -4,7 +4,12 @@ export * from './FullPlayerControls';
 export * from "./ExpandedPlayer";
 
 // Analytics Components - Charts
-export * from './AnalyticsCharts';
+export * from './analytics/PlaybackLineChart';
+export * from './analytics/GenreBarChart';
+export * from './analytics/PlatformPieChart';
+export * from './analytics/ActivityHeatmap';
+export * from './analytics/ListeningCalendar';
+export * from './analytics/NivoTheme';
 
 // Analytics Components - Visuals
 export * from './AnalyticsVisuals';

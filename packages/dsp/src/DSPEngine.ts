@@ -19,9 +19,11 @@ import type {
 } from './contracts';
 import { EQBandType, VocalMode } from './contracts';
 import { dbToGain } from './utils/audioUtils';
-import { VocalProcessor } from './processors/VocalProcessor';
 import { EQProcessor } from './processors/EQProcessor';
 import { PresetManager } from './managers/PresetManager';
+
+// Dynamic import type for VocalProcessor
+type VocalProcessorType = import('./processors/VocalProcessor').VocalProcessor;
 
 /**
  * Security constants
@@ -155,7 +157,7 @@ export class DSPEngine implements IDSPEngine {
   private onPlayHandler: (() => void) | null = null;
   
   // Sub-processors
-  private vocalProcessor: VocalProcessor;
+  private vocalProcessor: VocalProcessorType | null = null;
   private eqProcessor: EQProcessor;
   private presetManager: PresetManager;
 
@@ -172,7 +174,6 @@ export class DSPEngine implements IDSPEngine {
 
   constructor() {
     try {
-      this.vocalProcessor = new VocalProcessor();
       this.eqProcessor = new EQProcessor();
       this.presetManager = new PresetManager();
 
@@ -251,7 +252,7 @@ export class DSPEngine implements IDSPEngine {
       this.masterGainNode.gain.value = 1.0;
 
       // Build the initial chain
-      this.rebuildEQChain();
+      await this.rebuildEQChain();
 
       this.isInitialized = true;
       console.log('✅ DSP Engine initialized successfully');
@@ -824,10 +825,20 @@ export class DSPEngine implements IDSPEngine {
   /**
    * Rebuild the entire EQ chain
    */
-  private rebuildEQChain(): void {
+  private rebuildLock = false;
+  private async rebuildEQChain(): Promise<void> {
     if (!this.audioContext || !this.sourceNode || !this.preampNode || !this.analyzerNode || !this.masterGainNode) {
       return;
     }
+
+    // Basic concurrency control
+    if (this.rebuildLock) {
+      // If already rebuilding, wait and try again? 
+      // Or just return and let the current one finish if it's based on latest config.
+      // Usually config updates trigger this.
+      return;
+    }
+    this.rebuildLock = true;
 
     try {
       // Disconnect old nodes
@@ -864,12 +875,21 @@ export class DSPEngine implements IDSPEngine {
       let previousNode: AudioNode = this.sourceNode;
 
       // 1. Vocal Processing Stage
-      previousNode = this.vocalProcessor.buildVocalStage(
-        this.audioContext,
-        previousNode,
-        this.config.vocalMode
-      );
-      this.vocalNodes = this.vocalProcessor.getCreatedNodes();
+      if (this.config.vocalMode !== VocalMode.NORMAL) {
+        // Lazy load processor if needed
+        if (!this.vocalProcessor) {
+          console.log('📦 Loading VocalProcessor dynamically...');
+          const { VocalProcessor } = await import('./processors/VocalProcessor');
+          this.vocalProcessor = new VocalProcessor();
+        }
+
+        previousNode = this.vocalProcessor.buildVocalStage(
+          this.audioContext,
+          previousNode,
+          this.config.vocalMode
+        );
+        this.vocalNodes = this.vocalProcessor.getCreatedNodes();
+      }
 
       // 2. EQ Stage
       previousNode = this.eqProcessor.buildEQChain(
@@ -898,6 +918,8 @@ export class DSPEngine implements IDSPEngine {
       } catch (bypassError) {
         console.error('❌ Failed to bypass chain:', bypassError);
       }
+    } finally {
+      this.rebuildLock = false;
     }
   }
 
