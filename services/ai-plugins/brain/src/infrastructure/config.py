@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     # Default: laion/clap-htsat-unfused
     AI_MODEL_NAME: str = os.getenv("AI_MODEL_NAME", "laion/clap-htsat-unfused")
     AI_EMBEDDING_DIM: int = 512
+    # Default duration for embedding in seconds. 0 = full track.
+    AI_EMBEDDING_MAX_DURATION: float = float(os.getenv("AI_EMBEDDING_MAX_DURATION", 0)) 
     # Cache
     TORCH_HOME: str = os.getenv("TORCH_HOME", "/tmp/torch")
     HF_HOME: str = os.getenv("HF_HOME", "/tmp/huggingface")

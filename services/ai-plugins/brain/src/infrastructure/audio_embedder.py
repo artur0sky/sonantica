@@ -49,13 +49,24 @@ class ClapEmbedder(IAudioEmbedder):
                     raise FileNotFoundError(f"Audio file not found: {full_path}")
 
                 # Load audio
-                logger.info(f"🔊 Loading audio for embedding (max 60s): {full_path}")
+                max_duration = settings.AI_EMBEDDING_MAX_DURATION
+                num_frames = -1 # Default: load all
+                if max_duration > 0:
+                    logger.info(f"🔊 Loading audio sample ({max_duration}s): {full_path}")
+                    num_frames = int(48000 * max_duration)
+                else:
+                    logger.info(f"🔊 Loading full audio: {full_path}")
+
                 try:
-                    # CLAP doesn't need the whole song to get the "vibe"
-                    # Loading first 60 seconds is enough for similarity and prevents OOM
-                    # 48000 * 60 = 2,880,000 frames
-                    waveform, sample_rate = await asyncio.to_thread(torchaudio.load, full_path, frame_offset=0, num_frames=48000*60)
-                    logger.info(f"✅ Loaded audio sample: {waveform.shape}, sr={sample_rate}")
+                    # Torchaudio load can take frame_offset and num_frames
+                    # If num_frames is -1, it loads until EOF
+                    waveform, sample_rate = await asyncio.to_thread(
+                        torchaudio.load, 
+                        full_path, 
+                        frame_offset=0, 
+                        num_frames=num_frames
+                    )
+                    logger.info(f"✅ Loaded audio: {waveform.shape}, sr={sample_rate}")
                 except Exception as load_err:
                     logger.error(f"❌ Torchaudio failed to load {full_path}: {load_err}")
                     raise load_err

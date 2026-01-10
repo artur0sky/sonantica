@@ -7,6 +7,7 @@ from ...domain.entities import JobStatus
 from ...application.use_cases import CreateEmbeddingJob, GetJobStatus, ProcessEmbeddingJob
 from ...infrastructure.redis_client import get_redis_client # Need to create this
 from ...infrastructure.redis_job_repository import RedisJobRepository
+from ...infrastructure.postgres_vector_repository import PostgresVectorRepository
 from ...infrastructure.audio_embedder import ClapEmbedder
 
 router = APIRouter(prefix="/jobs", tags=["Jobs"])
@@ -24,6 +25,11 @@ async def get_embedder():
         _embedder = ClapEmbedder()
     return _embedder
 
+async def get_vector_repo():
+    if not settings.POSTGRES_URL:
+        raise HTTPException(status_code=501, detail="Postgres vector storage not configured")
+    return PostgresVectorRepository(settings.POSTGRES_URL)
+
 class CreateJobRequest(BaseModel):
     track_id: str
     file_path: str
@@ -34,7 +40,8 @@ async def create_job(
     background_tasks: BackgroundTasks,
     x_internal_secret: Optional[str] = Header(None),
     repo: RedisJobRepository = Depends(get_repository),
-    embedder: ClapEmbedder = Depends(get_embedder)
+    embedder: ClapEmbedder = Depends(get_embedder),
+    vector_repo: PostgresVectorRepository = Depends(get_vector_repo)
 ):
     if x_internal_secret != settings.INTERNAL_API_SECRET:
         raise HTTPException(status_code=401, detail="Unauthorized")
@@ -43,7 +50,7 @@ async def create_job(
     job = await use_case.execute(request.track_id, request.file_path)
     
     # Process in background
-    process_use_case = ProcessEmbeddingJob(repo, embedder)
+    process_use_case = ProcessEmbeddingJob(repo, embedder, vector_repo)
     background_tasks.add_task(process_use_case.execute, job.id)
     
     return job.to_dict()

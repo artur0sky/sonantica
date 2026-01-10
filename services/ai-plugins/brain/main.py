@@ -5,14 +5,13 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from src.infrastructure.config import settings
-from src.presentation.routes import jobs # Need to expose router
+from src.presentation.routes import jobs, recommendations
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='{"timestamp": "%(asctime)s", "level": "%(levelname)s", "service": "brain-plugin", "message": "%(message)s"}'
-)
-logger = logging.getLogger(__name__)
+from src.infrastructure.logging.logger_config import setup_logger
+from src.infrastructure.logging.context import set_trace_id
+
+# Initialize standard logger
+logger = setup_logger("brain-plugin")
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -22,6 +21,7 @@ app = FastAPI(
 
 # Routes
 app.include_router(jobs.router, prefix=settings.API_V1_STR)
+app.include_router(recommendations.router, prefix=settings.API_V1_STR)
 
 @app.get("/manifest")
 async def manifest():
@@ -46,13 +46,16 @@ async def health():
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     start_time = time.time()
-    response = await call_next(request)
-    process_time = (time.time() - start_time) * 1000
-    
-    logger.info(
-        f"Request {request.method} {request.url.path} processed in {process_time:.2f}ms. Status: {response.status_code}"
-    )
-    return response
+    set_trace_id()
+    try:
+        response = await call_next(request)
+        process_time = (time.time() - start_time) * 1000
+        logger.info(f"DONE | {request.method} {request.url.path} | {response.status_code} | {process_time:.2f}ms")
+        return response
+    except Exception as e:
+        process_time = (time.time() - start_time) * 1000
+        logger.exception(f"FAIL | {request.method} {request.url.path} | {process_time:.2f}ms | Error: {str(e)}")
+        return JSONResponse(status_code=500, content={"detail": "Internal Server Error"})
 
 if __name__ == "__main__":
     import torch # Import here to avoid overhead if not running as main

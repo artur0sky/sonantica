@@ -22,6 +22,8 @@ class RedisJobRepository(IJobRepository):
         # Store as JSON string
         data = job.to_dict()
         await self.redis.set(key, json.dumps(data), ex=86400 * 7) # 7 days TTL
+        # Index by track_id
+        await self.redis.set(f"brain:track:{job.track_id}", job.id, ex=86400 * 7)
 
     async def get_by_id(self, job_id: str) -> Optional[EmbeddingJob]:
         key = self._get_key(job_id)
@@ -47,3 +49,9 @@ class RedisJobRepository(IJobRepository):
         # This is a simplified version. In production we'd use a dedicated set for active jobs.
         keys = await self.redis.keys(f"{self.prefix}*")
         return len(keys)
+
+    async def find_by_track_id(self, track_id: str) -> Optional[EmbeddingJob]:
+        job_id = await self.redis.get(f"brain:track:{track_id}")
+        if not job_id:
+            return None
+        return await self.get_by_id(job_id)

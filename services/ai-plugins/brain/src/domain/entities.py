@@ -34,6 +34,31 @@ class EmbeddingJob:
     created_at: datetime = field(default_factory=datetime.now)
     updated_at: datetime = field(default_factory=datetime.now)
 
+    @property
+    def is_terminal(self) -> bool:
+        return self.status in [JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED]
+
+    def mark_processing(self) -> 'EmbeddingJob':
+        return EmbeddingJob(**{**self.__dict__, "status": JobStatus.PROCESSING, "updated_at": datetime.now()})
+
+    def mark_completed(self, embedding: List[float], model_version: str) -> 'EmbeddingJob':
+        return EmbeddingJob(**{
+            **self.__dict__,
+            "status": JobStatus.COMPLETED,
+            "progress": 100.0,
+            "embedding": embedding,
+            "model_version": model_version,
+            "updated_at": datetime.now()
+        })
+
+    def mark_failed(self, error: str) -> 'EmbeddingJob':
+        return EmbeddingJob(**{
+            **self.__dict__,
+            "status": JobStatus.FAILED,
+            "error": error,
+            "updated_at": datetime.now()
+        })
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "id": self.id,
@@ -57,3 +82,10 @@ class HealthStatus:
     gpu_name: Optional[str] = None
     memory_usage_mb: float = 0.0
     active_jobs: int = 0
+
+@dataclass(frozen=True)
+class Recommendation:
+    id: str
+    type: str # track, artist, album
+    score: float
+    reason: str
