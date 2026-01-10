@@ -86,7 +86,7 @@ export function DesktopSidebars({
     } as React.CSSProperties);
 
   const sidebarClasses =
-    "border-l border-white/10 h-full flex-shrink-0 z-20 relative shadow-[-10px_0_30px_rgba(0,0,0,0.2)]";
+    "border-l border-white/10 h-full flex-shrink-0 z-20 relative";
 
   return (
     <>
