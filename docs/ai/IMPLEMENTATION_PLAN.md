@@ -515,20 +515,37 @@ These AI features are tools, not magic. They help you **interpret** your music, 
 
 ## Component Implementation
 
-### [A] sonantica-core (Go)
+### [A] sonantica-core (Go) - 🚧 PENDING
 - **[NEW]** `services/go-core/internal/plugins/`
   - **Manager:** Handles registration and health checks.
   - **Client:** Generic HTTP client for communicating with plugins.
 - **[MODIFY]** `services/go-core/api/`
   - New endpoints for UI to query available AI features.
 
-### [B] sonantica-plugin-demucs (Python)
+### [B] sonantica-plugin-demucs (Python) - ✅ COMPLETED
+- **Status:** Fully implemented with Clean Architecture
+- **Architecture:**
+  - **Domain Layer:** Entities (SeparationJob, PluginCapability) and Interfaces (IJobRepository, IStemSeparator)
+  - **Application Layer:** Use Cases (CreateJob, GetStatus, CancelJob, ProcessJob, GetHealth)
+  - **Infrastructure Layer:** Redis adapter, Demucs adapter, Configuration management
+  - **Presentation Layer:** FastAPI routes (manifest, health, jobs)
 - **Base Image:** `python:3.10-slim` + `ffmpeg`.
-- **Libs:** `demucs`, `fastapi`, `uvicorn`.
-- **Function:**
-  - Exposes API.
-  - On `POST /jobs/separate`: Runs `demucs -n htdemucs {infile}`.
-  - **Output:** 4 stems in `/media/stems/{id}/`.
+- **Libs:** `demucs`, `fastapi`, `uvicorn`, `redis`, `torch`, `torchaudio`.
+- **Endpoints:**
+  - `GET /manifest`: Plugin discovery (public)
+  - `GET /health`: Health check with metrics
+  - `POST /jobs`: Create separation job (authenticated)
+  - `GET /jobs/{id}`: Get job status (authenticated)
+  - `DELETE /jobs/{id}`: Cancel job (authenticated)
+- **Features:**
+  - Async job processing with Redis queue
+  - GPU acceleration with CPU fallback
+  - Lazy loading of heavy dependencies
+  - Structured logging (JSON format)
+  - Graceful error handling and retry logic
+  - State machine for job lifecycle
+- **Output:** 4 stems (vocals, drums, bass, other) in `/stems/{job_id}/`
+- **Documentation:** See `services/ai-plugins/demucs/README.md`
 
 ### [C] sonantica-plugin-brain (Python)
 - **Base Image:** `pytorch/pytorch`.

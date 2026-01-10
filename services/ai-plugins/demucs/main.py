@@ -1,0 +1,90 @@
+"""
+Sonántica AI Plugin: Demucs Stem Separation
+Philosophy: "Respect for sound" - Preserve audio intention through isolation
+
+Entry point for the FastAPI application.
+Follows Clean Architecture principles with clear separation of concerns.
+"""
+
+import logging
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+from fastapi.responses import JSONResponse
+
+from src.infrastructure.config import settings
+from src.infrastructure.redis_client import RedisClient
+from src.presentation.routes import health, jobs, manifest
+
+# Configure logging
+logging.basicConfig(
+    level=settings.log_level,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger("sonantica.plugin.demucs")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Application lifespan manager.
+    Handles startup and shutdown events.
+    """
+    # Startup
+    logger.info("🚀 Starting Demucs Plugin...")
+    
+    try:
+        # Initialize Redis connection
+        await RedisClient.initialize()
+        logger.info("✓ Redis connection established")
+        
+        # Ensure output directory exists
+        settings.output_path.mkdir(parents=True, exist_ok=True)
+        logger.info(f"✓ Output directory ready: {settings.output_path}")
+        
+        # Check GPU availability
+        import torch
+        if torch.cuda.is_available():
+            gpu_name = torch.cuda.get_device_name(0)
+            logger.info(f"✓ GPU detected: {gpu_name}")
+        else:
+            logger.warning("⚠ No GPU detected, will use CPU (slow)")
+            
+    except Exception as e:
+        logger.error(f"✗ Startup failed: {e}")
+        raise
+    
+    yield
+    
+    # Shutdown
+    logger.info("🛑 Shutting down Demucs Plugin...")
+    await RedisClient.close()
+    logger.info("✓ Cleanup complete")
+
+
+# Initialize FastAPI app
+app = FastAPI(
+    title="Sonántica Demucs Plugin",
+    description="AI Stem Separation using Demucs",
+    version="1.0.0",
+    lifespan=lifespan
+)
+
+# Register routes
+app.include_router(manifest.router, tags=["Discovery"])
+app.include_router(health.router, tags=["Monitoring"])
+app.include_router(jobs.router, prefix="/jobs", tags=["Jobs"])
+
+# Global exception handler
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    logger.error(f"Unhandled exception: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"}
+    )
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8080)
