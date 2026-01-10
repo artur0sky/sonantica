@@ -5,7 +5,11 @@ export interface Plugin {
   baseUrl: string;
   isEnabled: boolean;
   config: Record<string, any>;
-  health?: { status: string; timestamp: string };
+  health?: { 
+    status: string; 
+    timestamp: string; 
+    storage_usage_bytes?: number; 
+  };
   manifest: {
     name: string;
     description: string;
@@ -51,16 +55,26 @@ export const PluginService = {
     if (!response.ok) throw new Error("Failed to register plugin");
   },
 
-  async togglePlugin(id: string, enabled: boolean): Promise<void> {
+  async togglePlugin(id: string, enabled: boolean, scope?: string): Promise<void> {
     const server = getServerConfig();
     if (!server) throw new Error("No server configured");
 
     const response = await fetch(`${server.serverUrl}/api/plugins/${id}/toggle`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ enabled }),
+      body: JSON.stringify({ enabled, scope }),
     });
     if (!response.ok) throw new Error("Failed to toggle plugin");
+  },
+
+  async deleteData(id: string): Promise<void> {
+    const server = getServerConfig();
+    if (!server) throw new Error("No server configured");
+
+    const response = await fetch(`${server.serverUrl}/api/plugins/${id}/data`, {
+      method: "DELETE",
+    });
+    if (!response.ok) throw new Error("Failed to delete plugin data");
   },
 
   async updateConfig(id: string, config: Record<string, any>): Promise<void> {

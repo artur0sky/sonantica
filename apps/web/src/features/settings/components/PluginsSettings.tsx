@@ -26,9 +26,9 @@ export function PluginsSettings() {
     fetchPlugins();
   }, []);
 
-  const handleToggle = async (id: string, enabled: boolean) => {
+  const handleToggle = async (id: string, enabled: boolean, scope?: string) => {
     try {
-      await PluginService.togglePlugin(id, enabled);
+      await PluginService.togglePlugin(id, enabled, scope);
       // Optimistic update or refetch
       setPlugins((prev) =>
         prev.map((p) => (p.id === id ? { ...p, isEnabled: enabled } : p))
@@ -108,6 +108,7 @@ export function PluginsSettings() {
           config={selectedPlugin.config}
           onSave={handleSaveConfig}
           pluginName={selectedPlugin.manifest.name}
+          pluginId={selectedPlugin.id}
         />
       )}
     </div>

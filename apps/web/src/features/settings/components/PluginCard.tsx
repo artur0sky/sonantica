@@ -7,95 +7,136 @@ import {
   IconCheck,
   IconActivity,
 } from "@tabler/icons-react";
+import { PluginActivationModal } from "./PluginActivationModal";
 
 interface PluginCardProps {
   plugin: Plugin;
-  onToggle: (id: string, enabled: boolean) => Promise<void>;
+  onToggle: (id: string, enabled: boolean, scope?: string) => Promise<void>;
   onConfigure: (plugin: Plugin) => void;
 }
 
 export function PluginCard({ plugin, onToggle, onConfigure }: PluginCardProps) {
   const [loading, setLoading] = useState(false);
+  const [showActivationModal, setShowActivationModal] = useState(false);
 
-  const handleToggle = async (checked: boolean) => {
+  const handleToggleClick = (checked: boolean) => {
+    if (checked) {
+      // Enabling: Show Modal
+      setShowActivationModal(true);
+    } else {
+      // Disabling: Confirm?
+      if (
+        confirm(
+          "Are you sure you want to disable this plugin? Any running jobs will be stopped."
+        )
+      ) {
+        handleConfirmToggle(false);
+      }
+    }
+  };
+
+  const handleConfirmToggle = async (enabled: boolean, scope?: string) => {
+    setShowActivationModal(false);
     setLoading(true);
     try {
-      await onToggle(plugin.id, checked);
+      await onToggle(plugin.id, enabled, scope);
     } finally {
       setLoading(false);
     }
   };
 
   const isHealthy = plugin.health?.status === "ok";
+  const storageBytes = plugin.health?.storage_usage_bytes || 0;
+  const storageUsed =
+    storageBytes > 0 ? (storageBytes / 1024 / 1024).toFixed(2) + " MB" : "0 MB";
 
   return (
-    <div className="bg-surface-base border border-border rounded-xl p-5 flex flex-col sm:flex-row gap-5 items-start sm:items-center justify-between transition-all hover:border-border-hover">
-      <div className="flex-1 space-y-2">
-        <div className="flex items-center gap-3">
-          <div
-            className={`p-2 rounded-lg ${
-              plugin.isEnabled
-                ? "bg-accent/10 text-accent"
-                : "bg-surface-highlight text-text-muted"
-            }`}
-          >
-            <IconActivity size={24} />
-          </div>
-          <div>
-            <h3 className="font-semibold text-lg leading-none">
-              {plugin.manifest.name}
-            </h3>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-xs font-mono text-text-muted bg-surface-highlight px-1.5 py-0.5 rounded">
-                v{plugin.manifest.version || "0.0.0"}
-              </span>
-              <span className="text-xs text-text-muted capitalize">
-                • {plugin.manifest.capability}
-              </span>
+    <>
+      <div className="bg-surface-base border border-border rounded-xl p-5 flex flex-col sm:flex-row gap-5 items-start sm:items-center justify-between transition-all hover:border-border-hover">
+        <div className="flex-1 space-y-2">
+          <div className="flex items-center gap-3">
+            <div
+              className={`p-2 rounded-lg ${
+                plugin.isEnabled
+                  ? "bg-accent/10 text-accent"
+                  : "bg-surface-highlight text-text-muted"
+              }`}
+            >
+              <IconActivity size={24} />
+            </div>
+            <div>
+              <h3 className="font-semibold text-lg leading-none">
+                {plugin.manifest.name}
+              </h3>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-xs font-mono text-text-muted bg-surface-highlight px-1.5 py-0.5 rounded">
+                  v{plugin.manifest.version || "0.0.0"}
+                </span>
+                <span className="text-xs text-text-muted capitalize">
+                  • {plugin.manifest.capability}
+                </span>
+              </div>
             </div>
           </div>
+
+          <p className="text-sm text-text-muted leading-relaxed max-w-xl">
+            {plugin.manifest.description || "No description provided."}
+          </p>
+
+          <div className="flex items-center gap-3 pt-1">
+            {plugin.isEnabled && (
+              <Badge
+                variant={isHealthy ? "success" : "error"}
+                className="gap-1"
+              >
+                {isHealthy ? (
+                  <IconCheck size={12} />
+                ) : (
+                  <IconAlertTriangle size={12} />
+                )}
+                {isHealthy ? "Operational" : "Issues Detected"}
+              </Badge>
+            )}
+            {!plugin.isEnabled && <Badge variant="default">Disabled</Badge>}
+
+            {plugin.isEnabled && (
+              <span className="text-xs text-text-muted border-l border-border pl-3 ml-1">
+                Storage: {storageUsed}
+              </span>
+            )}
+          </div>
         </div>
 
-        <p className="text-sm text-text-muted leading-relaxed max-w-xl">
-          {plugin.manifest.description || "No description provided."}
-        </p>
+        <div className="flex items-center gap-4 w-full sm:w-auto justify-end">
+          <Button variant="ghost" size="sm" onClick={() => onConfigure(plugin)}>
+            <IconSettings size={18} className="mr-2" />
+            Config
+          </Button>
 
-        <div className="flex items-center gap-3 pt-1">
-          {plugin.isEnabled && (
-            <Badge variant={isHealthy ? "success" : "error"} className="gap-1">
-              {isHealthy ? (
-                <IconCheck size={12} />
-              ) : (
-                <IconAlertTriangle size={12} />
-              )}
-              {isHealthy ? "Operational" : "Issues Detected"}
-            </Badge>
-          )}
-          {!plugin.isEnabled && <Badge variant="default">Disabled</Badge>}
+          <div className="flex items-center gap-2">
+            <span
+              className={`text-sm font-medium ${
+                plugin.isEnabled ? "text-text-primary" : "text-text-muted"
+              }`}
+            >
+              {plugin.isEnabled ? "On" : "Off"}
+            </span>
+            <Switch
+              checked={plugin.isEnabled}
+              onChange={handleToggleClick}
+              disabled={loading}
+            />
+          </div>
         </div>
       </div>
 
-      <div className="flex items-center gap-4 w-full sm:w-auto justify-end">
-        <Button variant="ghost" size="sm" onClick={() => onConfigure(plugin)}>
-          <IconSettings size={18} className="mr-2" />
-          Config
-        </Button>
-
-        <div className="flex items-center gap-2">
-          <span
-            className={`text-sm font-medium ${
-              plugin.isEnabled ? "text-text-primary" : "text-text-muted"
-            }`}
-          >
-            {plugin.isEnabled ? "On" : "Off"}
-          </span>
-          <Switch
-            checked={plugin.isEnabled}
-            onChange={handleToggle}
-            disabled={loading}
-          />
-        </div>
-      </div>
-    </div>
+      <PluginActivationModal
+        isOpen={showActivationModal}
+        onClose={() => setShowActivationModal(false)}
+        onConfirm={(scope) => handleConfirmToggle(true, scope)}
+        pluginName={plugin.manifest.name}
+        capability={plugin.manifest.capability}
+      />
+    </>
   );
 }
