@@ -161,7 +161,7 @@ export function SidebarButtonCarousel({
         className={cn(
           "flex items-center gap-1 transition-all duration-300",
           (showAll || desktop) &&
-            "bg-white/5 rounded-full p-1 border border-white/10 pr-2 overflow-x-auto overflow-y-hidden scrollbar-none",
+            "bg-[var(--color-surface-elevated)] rounded-full p-1 border border-[var(--color-border)] pr-2 overflow-x-auto overflow-y-hidden scrollbar-none",
           desktop && "max-w-full"
         )}
         onTouchStart={handleTouchStart}
@@ -212,7 +212,7 @@ export function SidebarButtonCarousel({
                 className={cn(
                   "transition-all",
                   isFeatured && !showAll && !desktop
-                    ? "bg-white/10"
+                    ? "bg-[var(--color-surface-elevated)]"
                     : "opacity-60 hover:opacity-100"
                 )}
               />

@@ -159,9 +159,9 @@ export function TrackInfo({
         {/* Drag indicator */}
         {showDragIndicator && enableSwipeGesture && (
           <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 flex gap-0.5">
-            <div className="w-1 h-1 rounded-full bg-white/30" />
-            <div className="w-1 h-1 rounded-full bg-white/30" />
-            <div className="w-1 h-1 rounded-full bg-white/30" />
+            <div className="w-1 h-1 rounded-full bg-[var(--color-text)]/30" />
+            <div className="w-1 h-1 rounded-full bg-[var(--color-text)]/30" />
+            <div className="w-1 h-1 rounded-full bg-[var(--color-text)]/30" />
           </div>
         )}
       </div>
