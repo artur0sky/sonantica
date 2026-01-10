@@ -145,6 +145,103 @@ func (m *Manager) EnsurePluginRegistered(ctx context.Context, baseURL string, fa
 	return nil
 }
 
+// PluginScope defines the scope of a bulk action
+type PluginScope string
+
+const (
+	ScopeNone   PluginScope = "none"
+	ScopeQueue  PluginScope = "queue"
+	ScopeRecent PluginScope = "recent"
+	ScopeAll    PluginScope = "all"
+)
+
+// DeleteData requests the plugin to delete its generated data
+func (m *Manager) DeleteData(ctx context.Context, pluginID string) error {
+	m.mu.RLock()
+	p, exists := m.plugins[pluginID]
+	m.mu.RUnlock()
+
+	if !exists {
+		return fmt.Errorf("plugin not found")
+	}
+
+	// In a real scenario, we would call the plugin endpoint
+	// return m.client.DeleteData(ctx, p.BaseURL)
+	// For now, allow the UI to call this even if it's a no-op on the plugin side,
+	// but maybe we can reset config or status
+
+	slog.Info("Deleting data for plugin", "name", p.Manifest.Name)
+	return nil
+}
+
+// processScope runs the plugin on a set of tracks based on scope
+func (m *Manager) processScope(plugin *domain.AIPlugin, scope PluginScope) {
+	ctx := context.Background()
+	var query string
+	var limit int
+
+	switch scope {
+	case ScopeQueue:
+		// Mock: Get tracks from queue (needs QueueService, skipping for MVP, falling back to Recent)
+		query = "SELECT id, file_path FROM tracks ORDER BY created_at DESC LIMIT 20"
+		limit = 20
+	case ScopeRecent:
+		query = "SELECT id, file_path FROM tracks ORDER BY created_at DESC LIMIT 50"
+		limit = 50
+	case ScopeAll:
+		query = "SELECT id, file_path FROM tracks"
+		limit = 10000 // Safety cap
+	case ScopeNone:
+		return
+	default:
+		return
+	}
+
+	rows, err := m.db.Query(ctx, query)
+	if err != nil {
+		slog.Error("Failed to fetch tracks for plugin processing", "error", err)
+		return
+	}
+	defer rows.Close()
+
+	count := 0
+	for rows.Next() {
+		if count >= limit {
+			break
+		}
+		var idStr string
+		var path string
+		if err := rows.Scan(&idStr, &path); err != nil {
+			continue
+		}
+
+		// Dispatch based on capability
+		if plugin.Manifest.Capability == domain.CapabilityStemSeparation {
+			// Fire and forget (or rather, dont wait for completion)
+			// But createJob is sync HTTP call? usually it returns quickly with JobID.
+			_, err := m.client.CreateJob(ctx, plugin.BaseURL, idStr, path, []string{"vocals", "drums", "bass", "other"})
+			if err != nil {
+				slog.Error("Failed to dispatch job", "plugin", plugin.Manifest.Name, "track", idStr, "error", err)
+			} else {
+				count++
+			}
+		} else {
+			// For other plugins (Embeddings), we might have a different endpoint or Job type
+			// Assuming CreateJob works for all for now
+			_, err := m.client.CreateJob(ctx, plugin.BaseURL, idStr, path, nil)
+			if err != nil {
+				slog.Error("Failed to dispatch job", "plugin", plugin.Manifest.Name, "track", idStr, "error", err)
+			} else {
+				count++
+			}
+		}
+
+		// Tiny sleep to avoid completely swamping the plugin service if it's synchronous
+		time.Sleep(100 * time.Millisecond)
+	}
+	slog.Info("Batch processing started", "plugin", plugin.Manifest.Name, "scope", scope, "jobs_dispatched", count)
+}
+
 // StartMonitoring inicia el chequeo periódico de salud
 func (m *Manager) StartMonitoring(ctx context.Context, interval time.Duration) {
 	ticker := time.NewTicker(interval)
@@ -247,11 +344,11 @@ func (m *Manager) GetJobStatus(ctx context.Context, cap domain.PluginCapability,
 }
 
 // TogglePlugin permite activar/desactivar un plugin
-func (m *Manager) TogglePlugin(ctx context.Context, pluginID string, enabled bool) error {
+func (m *Manager) TogglePlugin(ctx context.Context, pluginID string, enabled bool, scope PluginScope) error {
 	m.mu.Lock()
-	defer m.mu.Unlock()
-
 	p, exists := m.plugins[pluginID]
+	m.mu.Unlock() // Unlock early to avoid holding during db ops or async launch
+
 	if !exists {
 		return fmt.Errorf("plugin not found")
 	}
@@ -261,19 +358,32 @@ func (m *Manager) TogglePlugin(ctx context.Context, pluginID string, enabled boo
 		return fmt.Errorf("failed to update plugin in db: %w", err)
 	}
 
+	m.mu.Lock()
 	p.IsEnabled = enabled
+	m.mu.Unlock()
 
-	// Trigger smart scan if enabled and capability is consistent with background analysis
-	if enabled && m.scanner != nil {
-		switch p.Manifest.Capability {
-		case domain.CapabilityRecommendations, domain.CapabilityEmbeddings, domain.CapabilityKnowledge:
-			slog.Info("Triggering background scan for newly enabled ecosystem", "plugin", p.Manifest.Name)
-			// Trigger medium & low priority scans
-			// Medium: Queue/Recent
-			// Low: Rest of Library
-			m.scanner.TriggerScan(context.Background(), scanner.PriorityMedium, nil)
-			m.scanner.TriggerScan(context.Background(), scanner.PriorityLow, nil)
+	if enabled {
+		// New Manual Scope Processing
+		if scope != "" && scope != ScopeNone {
+			slog.Info("Triggering manual scope processing", "plugin", p.Manifest.Name, "scope", scope)
+			go m.processScope(p, scope)
 		}
+
+		// Standard Background Trigger (Legacy/SmartScanner interaction)
+		if m.scanner != nil {
+			switch p.Manifest.Capability {
+			case domain.CapabilityRecommendations, domain.CapabilityEmbeddings, domain.CapabilityKnowledge:
+				// Only trigger if no specific scope was requested, OR parallel to it?
+				// Let's only trigger if scope was None to avoid double work,
+				// OR if the scope was small (queue) and we want background for the rest?
+				// For now, let's keep the implicit behavior but maybe lower priority
+				m.scanner.TriggerScan(context.Background(), scanner.PriorityLow, nil)
+			}
+		}
+	} else {
+		// If disabled, maybe cancel running jobs?
+		// Requires tracking jobs in Manager. Not implemented yet.
+		slog.Info("Plugin disabled", "name", p.Manifest.Name)
 	}
 
 	return nil

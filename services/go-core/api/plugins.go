@@ -24,7 +24,22 @@ func (h *PluginsHandler) RegisterRoutes(r chi.Router) {
 		r.Post("/", h.RegisterPlugin)
 		r.Patch("/{id}/toggle", h.TogglePlugin)
 		r.Patch("/{id}/config", h.UpdateConfig)
+		r.Delete("/{id}/data", h.DeleteData)
 	})
+}
+
+func (h *PluginsHandler) DeleteData(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if _, err := uuid.Parse(id); err != nil {
+		http.Error(w, "Invalid UUID: "+id, http.StatusBadRequest)
+		return
+	}
+
+	if err := h.manager.DeleteData(r.Context(), id); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
 }
 
 func (h *PluginsHandler) GetAllPlugins(w http.ResponseWriter, r *http.Request) {
@@ -56,13 +71,17 @@ func (h *PluginsHandler) TogglePlugin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var body struct {
-		Enabled bool `json:"enabled"`
+		Enabled bool   `json:"enabled"`
+		Scope   string `json:"scope,omitempty"` // queue, recent, all
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, "Invalid body", http.StatusBadRequest)
 		return
 	}
-	if err := h.manager.TogglePlugin(r.Context(), id, body.Enabled); err != nil {
+
+	// Cast string to PluginScope (validation inside Manager or here?)
+	// Let's pass it as is, casting to PluginScope type
+	if err := h.manager.TogglePlugin(r.Context(), id, body.Enabled, application.PluginScope(body.Scope)); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

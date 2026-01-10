@@ -46,6 +46,7 @@ type HealthStatus struct {
 	GPUAvailable bool      `json:"gpu_available"`
 	ActiveJobs   int       `json:"active_jobs"`
 	ModelCached  bool      `json:"model_cached"`
+	StorageUsage int64     `json:"storage_usage_bytes"` // New field
 }
 
 // JobResponse representa la respuesta de un trabajo
