@@ -49,15 +49,17 @@ func (h *AnalyticsHandler) IngestEvent(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Error handling session event: %v", err)
 	}
 
-	// Insert event
+	// Insert raw event to Postgres (Historical log)
 	if err := h.storage.InsertEvent(r.Context(), &event); err != nil {
 		log.Printf("Error inserting event: %v", err)
-		http.Error(w, "Failed to store event", http.StatusInternalServerError)
-		return
 	}
 
-	// Process event for aggregation
-	go h.processEventForAggregation(&event)
+	// OFFLOAD TO CELERY: Aggregate stats & Update real-time cache
+	go func() {
+		if err := cache.EnqueueCeleryTask(context.Background(), "sonantica.process_analytics", event); err != nil {
+			log.Printf("Failed to enqueue analytics task: %v", err)
+		}
+	}()
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -93,17 +95,16 @@ func (h *AnalyticsHandler) IngestEventBatch(w http.ResponseWriter, r *http.Reque
 		}
 	}
 
-	// Insert events in batch
+	// Insert events in batch to Postgres
 	if err := h.storage.InsertEventBatch(r.Context(), batch.Events); err != nil {
 		log.Printf("Error inserting event batch: %v", err)
-		http.Error(w, "Failed to store events", http.StatusInternalServerError)
-		return
 	}
 
-	// Process events for aggregation asynchronously
+	// OFFLOAD TO CELERY: Aggregate stats & Update real-time cache
+	// OFFLOAD TO CELERY: Aggregate stats & Update real-time cache (Batched)
 	go func() {
-		for i := range batch.Events {
-			h.processEventForAggregation(&batch.Events[i])
+		if err := cache.EnqueueCeleryTask(context.Background(), "sonantica.process_analytics_batch", batch.Events); err != nil {
+			log.Printf("Failed to enqueue analytics batch task: %v", err)
 		}
 	}()
 
@@ -173,18 +174,60 @@ func (h *AnalyticsHandler) GetDashboard(w http.ResponseWriter, r *http.Request) 
 		overview = models.OverviewStats{}
 	}
 
+	// Get recent sessions
+	recentSessions, err := h.storage.GetRecentSessions(ctx, 10)
+	if err != nil {
+		log.Printf("Error getting recent sessions: %v", err)
+		recentSessions = []models.SessionSummary{}
+	}
+
+	// Get Top Artists
+	topArtists, err := h.storage.GetTopArtists(ctx, filters)
+	if err != nil {
+		log.Printf("Error getting top artists: %v", err)
+		topArtists = []models.TopArtist{}
+	}
+
+	// Get Top Albums
+	topAlbums, err := h.storage.GetTopAlbums(ctx, filters)
+	if err != nil {
+		log.Printf("Error getting top albums: %v", err)
+		topAlbums = []models.TopAlbum{}
+	}
+
+	// Get Top Playlists
+	topPlaylists, err := h.storage.GetTopPlaylists(ctx, filters)
+	if err != nil {
+		log.Printf("Error getting top playlists: %v", err)
+		topPlaylists = []models.TopPlaylist{}
+	}
+
+	// Get Recently Played
+	recentlyPlayed, err := h.storage.GetRecentlyPlayed(ctx, 10)
+	if err != nil {
+		log.Printf("Error getting recently played: %v", err)
+		recentlyPlayed = []models.RecentlyPlayedTrack{}
+	}
+
+	// Get streaks (using a default identity for global dashboard, or could be extracted from session)
+	streak, _ := h.storage.GetListeningStreak(ctx, "anonymous")
+
 	// Build dashboard response
 	dashboard = models.DashboardMetrics{
 		StartDate:         filters.StartDate.Format("2006-01-02"),
 		EndDate:           filters.EndDate.Format("2006-01-02"),
 		TopTracks:         topTracks,
+		TopArtists:        topArtists,
+		TopAlbums:         topAlbums,
+		TopPlaylists:      topPlaylists,
 		PlatformStats:     platformStats,
 		ListeningHeatmap:  heatmap,
 		Overview:          overview,
 		PlaybackTimeline:  timeline,
 		GenreDistribution: genres,
-		RecentSessions:    []models.SessionSummary{},
-		ListeningStreak:   models.StreakData{},
+		RecentSessions:    recentSessions,
+		RecentlyPlayed:    recentlyPlayed,
+		ListeningStreak:   streak,
 	}
 
 	// 3. Save to Cache (Async)
@@ -200,41 +243,167 @@ func (h *AnalyticsHandler) GetDashboard(w http.ResponseWriter, r *http.Request) 
 	json.NewEncoder(w).Encode(dashboard)
 }
 
+// GetRealtimeStats returns live stats from Redis
+func (h *AnalyticsHandler) GetRealtimeStats(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	now := time.Now().Unix()
+	// Get last 15 minutes of data
+	buckets := []int64{}
+	for i := 0; i < 15; i++ {
+		buckets = append(buckets, ((now-int64(i*60))/60)*60)
+	}
+
+	type RealtimePoint struct {
+		Timestamp int64 `json:"timestamp"`
+		Plays     int   `json:"plays"`
+		Events    int   `json:"events"`
+	}
+
+	results := []RealtimePoint{}
+
+	// Collect from Redis
+	red := cache.GetClient()
+	for _, b := range buckets {
+		plays, _ := red.Get(ctx, fmt.Sprintf("stats:realtime:plays:%d", b)).Int()
+		events, _ := red.Get(ctx, fmt.Sprintf("stats:realtime:events:%d", b)).Int()
+
+		results = append(results, RealtimePoint{
+			Timestamp: b * 1000, // Frontend expects ms
+			Plays:     plays,
+			Events:    events,
+		})
+	}
+
+	// Trending Tracks (Last 10 minutes)
+	currentBucket := (now / 60) * 60
+	trending, _ := red.ZRevRangeWithScores(ctx, fmt.Sprintf("stats:trending:tracks:%d", currentBucket), 0, 4).Result()
+
+	trendingTracks := []map[string]interface{}{}
+	for _, z := range trending {
+		trackID := z.Member.(string)
+		title, artist, err := h.storage.GetTrackDetails(ctx, trackID)
+		if err != nil {
+			title = "Unknown Track"
+			artist = "Unknown Artist"
+		}
+
+		trendingTracks = append(trendingTracks, map[string]interface{}{
+			"trackId":    trackID,
+			"trackTitle": title,
+			"artistName": artist,
+			"score":      z.Score,
+		})
+	}
+
+	// Active Users (Count in zset)
+	activeCount, _ := red.ZCard(ctx, "stats:realtime:active_sessions").Result()
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"timeline": results,
+		"trending": trendingTracks,
+		"active":   activeCount,
+	})
+}
+
 // GetTopTracks returns top played tracks
 func (h *AnalyticsHandler) GetTopTracks(w http.ResponseWriter, r *http.Request) {
 	filters := h.parseFilters(r)
+	ctx := r.Context()
 
-	tracks, err := h.storage.GetTopTracks(r.Context(), filters)
+	// 1. Try Cache
+	cacheKey := fmt.Sprintf("tracks:top:%s", hashFilters(filters))
+	var tracks []models.TopTrack
+	if err := cache.Get(ctx, cacheKey, &tracks); err == nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("X-Cache", "HIT")
+		json.NewEncoder(w).Encode(tracks)
+		return
+	}
+
+	// 2. Fetch
+	tracks, err := h.storage.GetTopTracks(ctx, filters)
 	if err != nil {
 		log.Printf("Error getting top tracks: %v", err)
 		http.Error(w, "Failed to get top tracks", http.StatusInternalServerError)
 		return
 	}
 
+	// 3. Cache
+	go func() {
+		cache.Set(context.Background(), cacheKey, tracks, 5*time.Minute)
+	}()
+
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("X-Cache", "MISS")
 	json.NewEncoder(w).Encode(tracks)
 }
 
 // GetPlatformStats returns platform statistics
 func (h *AnalyticsHandler) GetPlatformStats(w http.ResponseWriter, r *http.Request) {
 	filters := h.parseFilters(r)
+	ctx := r.Context()
 
-	stats, err := h.storage.GetPlatformStats(r.Context(), filters)
+	// 1. Try Cache
+	cacheKey := fmt.Sprintf("platform:stats:%s", hashFilters(filters))
+	var stats []models.PlatformStats
+	if err := cache.Get(ctx, cacheKey, &stats); err == nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("X-Cache", "HIT")
+		json.NewEncoder(w).Encode(stats)
+		return
+	}
+
+	// 2. Fetch
+	stats, err := h.storage.GetPlatformStats(ctx, filters)
 	if err != nil {
 		log.Printf("Error getting platform stats: %v", err)
 		http.Error(w, "Failed to get platform stats", http.StatusInternalServerError)
 		return
 	}
 
+	// 3. Cache
+	go func() {
+		cache.Set(context.Background(), cacheKey, stats, 10*time.Minute)
+	}()
+
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("X-Cache", "MISS")
 	json.NewEncoder(w).Encode(stats)
 }
 
 // GetListeningPatterns returns listening patterns
 func (h *AnalyticsHandler) GetListeningPatterns(w http.ResponseWriter, r *http.Request) {
-	// TODO: Implement listening pattern analysis
+	filters := h.parseFilters(r)
+	ctx := r.Context()
+
+	// 1. Try Cache
+	cacheKey := fmt.Sprintf("listening:patterns:%s", hashFilters(filters))
+	var patterns models.ListeningPattern
+	if err := cache.Get(ctx, cacheKey, &patterns); err == nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("X-Cache", "HIT")
+		json.NewEncoder(w).Encode(patterns)
+		return
+	}
+
+	// 2. Fetch
+	patterns, err := h.storage.GetListeningPatterns(ctx, filters)
+	if err != nil {
+		log.Printf("Error getting listening patterns: %v", err)
+		http.Error(w, "Failed to get patterns", http.StatusInternalServerError)
+		return
+	}
+
+	// 3. Cache
+	go func() {
+		cache.Set(context.Background(), cacheKey, patterns, 30*time.Minute)
+	}()
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(models.ListeningPattern{})
+	w.Header().Set("X-Cache", "MISS")
+	json.NewEncoder(w).Encode(patterns)
 }
 
 // GetArtistAnalytics returns analytics for a specific artist
@@ -363,31 +532,74 @@ func (h *AnalyticsHandler) handleSessionEvent(event *models.AnalyticsEvent) erro
 func (h *AnalyticsHandler) processEventForAggregation(event *models.AnalyticsEvent) {
 	ctx := context.Background()
 
-	// Process playback events for track statistics
-	if event.EventType == models.EventPlaybackComplete {
-		if trackID, ok := event.Data["trackId"].(string); ok {
-			// Update track statistics
-			h.storage.UpdateTrackStatistics(
-				ctx,
-				trackID,
-				1,     // play count
-				1,     // complete count
-				0,     // skip count
-				0,     // TODO: get duration from event data
-				100.0, // 100% completion
-			)
+	// 1. Process Playback Events
+	if strings.HasPrefix(string(event.EventType), "playback.") {
+		// Extract trackId from Data map
+		trackID, ok := event.Data["trackId"].(string)
+		if !ok || trackID == "" {
+			return
 		}
-	} else if event.EventType == models.EventPlaybackSkip {
-		if trackID, ok := event.Data["trackId"].(string); ok {
-			h.storage.UpdateTrackStatistics(
-				ctx,
-				trackID,
-				1,   // play count
-				0,   // complete count
-				1,   // skip count
-				0,   // TODO: get duration from event data
-				0.0, // 0% completion (skipped)
-			)
+
+		// Get additional track metadata (genre, etc.)
+		genre, _, _, _ := h.storage.GetTrackMetadata(ctx, trackID)
+
+		timestamp := time.Unix(0, event.Timestamp*int64(time.Millisecond))
+		hour := timestamp.Hour()
+
+		// User identity for streaks (fallback to session if no user)
+		identity := "anonymous"
+		if event.UserID != nil && *event.UserID != "" {
+			identity = *event.UserID
+		} else if event.SessionID != "" {
+			identity = event.SessionID
+		}
+
+		switch event.EventType {
+		case models.EventPlaybackStart:
+			// Increment play count in track stats
+			h.storage.UpdateTrackStatistics(ctx, trackID, 1, 0, 0, 0, 0)
+			// Update heatmap
+			h.storage.UpdateListeningHeatmap(ctx, timestamp, hour, 1, 1, 0)
+			// Update genre stats
+			h.storage.UpdateGenreStatistics(ctx, genre, 1, 0, 1)
+			// Update streak (track count)
+			h.storage.UpdateListeningStreak(ctx, identity, timestamp, 1, 0)
+
+		case models.EventPlaybackComplete:
+			duration := 0
+			if d, ok := event.Data["duration"].(float64); ok {
+				duration = int(d)
+			}
+			// Update track stats (complete count and play time)
+			h.storage.UpdateTrackStatistics(ctx, trackID, 0, 1, 0, duration, 100.0)
+			// Update heatmap (play time)
+			h.storage.UpdateListeningHeatmap(ctx, timestamp, hour, 0, 0, duration)
+			// Update genre stats (play time)
+			h.storage.UpdateGenreStatistics(ctx, genre, 0, duration, 0)
+			// Update streak (play time)
+			h.storage.UpdateListeningStreak(ctx, identity, timestamp, 0, duration)
+
+		case models.EventPlaybackSkip:
+			position := 0.0
+			duration := 0.0
+			if p, ok := event.Data["position"].(float64); ok {
+				position = p
+			}
+			if d, ok := event.Data["duration"].(float64); ok {
+				duration = d
+			}
+			completionPct := 0.0
+			if duration > 0 {
+				completionPct = (position / duration) * 100.0
+			}
+			// Update track stats (skip count and play time)
+			h.storage.UpdateTrackStatistics(ctx, trackID, 0, 0, 1, int(position), completionPct)
+			// Update heatmap (play time)
+			h.storage.UpdateListeningHeatmap(ctx, timestamp, hour, 0, 0, int(position))
+			// Update genre stats (play time)
+			h.storage.UpdateGenreStatistics(ctx, genre, 0, int(position), 0)
+			// Update streak (play time)
+			h.storage.UpdateListeningStreak(ctx, identity, timestamp, 0, int(position))
 		}
 	}
 }
@@ -466,6 +678,7 @@ func (h *AnalyticsHandler) RegisterRoutes(r chi.Router) {
 		r.Get("/tracks/top", h.GetTopTracks)
 		r.Get("/platform-stats", h.GetPlatformStats)
 		r.Get("/listening-patterns", h.GetListeningPatterns)
+		r.Get("/realtime", h.GetRealtimeStats)
 
 		// Artist and Album analytics
 		r.Get("/artists/{name}", h.GetArtistAnalytics)

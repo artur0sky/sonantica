@@ -3,7 +3,6 @@ package database
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -11,10 +10,9 @@ import (
 
 var DB *pgxpool.Pool
 
-func Connect() error {
-	dbURL := os.Getenv("POSTGRES_URL")
+func Connect(dbURL string) error {
 	if dbURL == "" {
-		return fmt.Errorf("POSTGRES_URL environment variable is not set")
+		return fmt.Errorf("database URL is empty")
 	}
 
 	config, err := pgxpool.ParseConfig(dbURL)
@@ -29,9 +27,10 @@ func Connect() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	DB, err = pgxpool.NewWithConfig(ctx, config)
-	if err != nil {
-		return fmt.Errorf("unable to create connection pool: %v", err)
+	var DB_err error
+	DB, DB_err = pgxpool.NewWithConfig(ctx, config)
+	if DB_err != nil {
+		return fmt.Errorf("unable to create connection pool: %v", DB_err)
 	}
 
 	if err := DB.Ping(ctx); err != nil {

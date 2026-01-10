@@ -19,48 +19,45 @@ export function buildStreamingUrl(serverId: string, filePath: string, trackId?: 
     if (trackId) {
       const offlineItem = useOfflineStore.getState().items[trackId];
       if (offlineItem?.status === OfflineStatus.COMPLETED) {
-        // Return the canonical offline URL pattern
-        // The Service Worker or Cache API will serve this
-        // Must match format in WebOfflineAdapter
         const encodedId = encodeURIComponent(trackId);
-        // Use query param format to match WebOfflineAdapter
         const offlineUrl = `/offline/track?id=${encodedId}`;
         console.log(`📦 Serving track ${trackId} from offline cache: ${offlineUrl}`);
         return offlineUrl;
       }
     }
 
-    // Get server configuration
-    const config = getServersConfig();
-    const server = config.servers.find(s => s.id === serverId);
-    
-    if (!server) {
-      console.error(`❌ Server not found for serverId: ${serverId}`);
-      console.error('Available servers:', config.servers.map(s => ({ id: s.id, name: s.name })));
-      // Fallback to relative URL (will fail but at least shows the error)
-      return `/api/stream/${serverId}/${encodeURIComponent(filePath)}`;
+    // If serverId is already a full URL (from RemoteLibraryAdapter), use it directly
+    let baseUrl: string;
+    if (serverId.startsWith('http://') || serverId.startsWith('https://')) {
+      baseUrl = serverId.replace(/\/$/, ''); // Remove trailing slash
+    } else {
+      // Legacy: Try to find server in configuration
+      const config = getServersConfig();
+      const server = config.servers.find(s => s.id === serverId);
+      
+      if (!server) {
+        console.error(`❌ Server not found for serverId: ${serverId}`);
+        console.error('Available servers:', config.servers.map(s => ({ id: s.id, name: s.name })));
+        return `/api/stream/${serverId}/${encodeURIComponent(filePath)}`;
+      }
+      
+      baseUrl = server.serverUrl.replace(/\/$/, '');
     }
     
-    // Construct absolute URL
-    const baseUrl = server.serverUrl.replace(/\/$/, ''); // Remove trailing slash
-    
-    // Use trackId for secure ID-based streaming (Sonantica Core v2)
+    // Use trackId for secure ID-based streaming
     if (trackId) {
       const streamUrl = `${baseUrl}/stream/${trackId}`;
       console.log(`🎵 Stream URL: ${streamUrl}`);
       return streamUrl;
     }
 
-    // Fallback: This will likely fail on v2 core, but kept for signature compatibility
+    // Fallback to path-based streaming (may fail on newer backends)
     console.warn("⚠️ trackId missing, falling back to legacy path streaming (may fail)");
     const encodedPath = encodeURIComponent(filePath);
-    const streamUrl = `${baseUrl}/stream/${encodedPath}`; // Note: Backend route changed to /stream/{id}
-    
-    return streamUrl;
+    return `${baseUrl}/stream/${encodedPath}`;
   } catch (error) {
     console.error('❌ Error constructing streaming URL:', error);
     console.error('serverId:', serverId, 'filePath:', filePath);
-    // Return a fallback URL
     return `/api/stream/${serverId}/${encodeURIComponent(filePath)}`;
   }
 }

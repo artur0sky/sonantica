@@ -8,6 +8,9 @@ export interface ExpandedPlayerProps {
   actionButtons?: React.ReactNode;
   /** Callback for long press on cover art */
   onLongPressArt?: () => void;
+  /** Active theme colors */
+  dominantColor?: string;
+  contrastColor?: string;
 }
 
 export interface CoverArtSectionProps {

@@ -2,9 +2,9 @@
  * Expanded Player - Mobile Layout (Template)
  * Traditional vertical layout with gesture interactions
  * Following Template pattern from Atomic Design
+ * No external animation library dependencies
  */
 
-import { motion } from "framer-motion";
 import { PlayerButton } from "../../atoms";
 import { TrackRating } from "../../molecules";
 import { IconChevronDown, IconDots } from "@tabler/icons-react";
@@ -64,11 +64,13 @@ export function ExpandedPlayerMobile({
   onToggleLyrics,
   onToggleQueue,
   onLongPressArt,
+  dominantColor,
+  contrastColor,
 }: MobileLayoutProps) {
   return (
-    <div className="lg:hidden flex flex-col h-full bg-black overflow-hidden overscroll-none select-none pt-[max(env(safe-area-inset-top),2rem)]">
-      {/* Mobile Sticky Header - Always on top */}
-      <header className="h-14 flex flex-none justify-between items-center px-6 md:px-12 border-b border-white/5 bg-black/40 backdrop-blur-xl z-30">
+    <div className="lg:hidden relative flex flex-col h-full bg-transparent overflow-hidden overscroll-none select-none pt-[max(env(safe-area-inset-top),2rem)] lg:pt-[env(safe-area-inset-top)]">
+      {/* Mobile Sticky Header - Transparent */}
+      <header className="h-14 flex flex-none justify-between items-center px-6 md:px-12 bg-transparent z-30">
         <PlayerButton
           icon={IconChevronDown}
           onClick={onClose}
@@ -94,7 +96,7 @@ export function ExpandedPlayerMobile({
       </header>
 
       {/* Parallax/Scroll Container */}
-      <div className="flex-1 overflow-y-auto scrollbar-none relative">
+      <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden relative">
         {/* STICKY BACK: Cover Art Section */}
         <div className="sticky top-0 h-[46dvh] flex items-start justify-center p-6 z-0">
           <CoverArtSection
@@ -110,22 +112,25 @@ export function ExpandedPlayerMobile({
         {/* SCROLLING OVER: Content Area */}
         <div className="relative z-10 flex flex-col">
           {/* Main Info & Controls Overlay (Initially reveals the cover art, then overlays it) */}
-          <div className="flex flex-col gap-8 px-6 md:px-16 lg:px-24 pb-12 bg-gradient-to-t from-black via-black/95 to-transparent pt-32 -mt-32">
+          <div
+            className="flex flex-col gap-8 px-6 md:px-16 lg:px-24 pb-12 pt-12 -mt-12"
+            style={{
+              background: `linear-gradient(to top, ${
+                dominantColor ?? "var(--dominant-color)"
+              } 0%, ${
+                dominantColor ?? "var(--dominant-color)"
+              } 60%, transparent 100%)`,
+            }}
+          >
             {/* Track Info */}
             <div className="flex flex-col gap-4">
               <div className="text-center w-full">
-                <motion.h1
-                  layoutId="player-title-mobile"
-                  className="text-2xl md:text-4xl font-black tracking-tight line-clamp-2"
-                >
+                <h1 className="text-2xl md:text-4xl font-black tracking-tight line-clamp-2">
                   {currentTrack.metadata?.title || "Unknown Title"}
-                </motion.h1>
-                <motion.p
-                  layoutId="player-artist-mobile"
-                  className="text-lg md:text-2xl text-text-muted font-bold mt-1"
-                >
+                </h1>
+                <p className="text-lg md:text-2xl text-text-muted font-bold mt-1">
                   {formatArtists(currentTrack.metadata?.artist)}
-                </motion.p>
+                </p>
               </div>
 
               <div className="flex items-center justify-between w-full px-4">
@@ -167,26 +172,29 @@ export function ExpandedPlayerMobile({
                   size="mobile"
                 />
               </div>
-
-              <NavigationFooter
-                recommendationsOpen={recommendationsOpen}
-                isQueueOpen={isQueueOpen}
-                onToggleRecommendations={onToggleRecommendations}
-                onToggleLyrics={onToggleLyrics}
-                onToggleQueue={onToggleQueue}
-              />
             </div>
           </div>
 
           {/* WIDGETS Section (Scrolling Over) */}
-          <div className="bg-black flex flex-col gap-12 px-6 md:px-16 lg:px-24 py-12 border-t border-white/5 shadow-[0_-20px_40px_rgba(0,0,0,0.5)]">
+          <div className="bg-[var(--dominant-color)] flex flex-col gap-12 px-6 md:px-16 lg:px-24 py-12">
             <ArtistPhotoSection />
             <WidgetsSection />
 
             {/* Extra spacer for scroll freedom */}
-            <div className="h-32" />
+            <div className="h-40" />
           </div>
         </div>
+      </div>
+
+      {/* Footer Navigation - Absolute at bottom to allow shadows to pass under */}
+      <div className="absolute bottom-0 left-0 right-0 px-6 md:px-12 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] pt-8 bg-[var(--dominant-color)]/80 backdrop-blur-xl z-40">
+        <NavigationFooter
+          recommendationsOpen={recommendationsOpen}
+          isQueueOpen={isQueueOpen}
+          onToggleRecommendations={onToggleRecommendations}
+          onToggleLyrics={onToggleLyrics}
+          onToggleQueue={onToggleQueue}
+        />
       </div>
     </div>
   );

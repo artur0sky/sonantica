@@ -4,6 +4,7 @@ import { useLibraryStore } from "@sonantica/media-library";
 import { usePlayerStore, useQueueStore } from "@sonantica/player-core";
 import { trackToMediaSource } from "../utils/streamingUrl";
 import { useAnalytics } from "@sonantica/analytics";
+import { usePlaylistSettingsStore } from "../stores/playlistSettingsStore";
 
 export function useHeaderLogic() {
   const { toggleLeftSidebar } = useUIStore();
@@ -11,6 +12,7 @@ export function useHeaderLogic() {
   const { loadTrack, play } = usePlayerStore();
   const { setQueue } = useQueueStore();
   const { albums } = useLibraryStore();
+  const trackAccess = usePlaylistSettingsStore((s) => s.trackAccess);
   const analytics = useAnalytics();
 
   const handleSearchResultSelect = async (result: any) => {
@@ -50,6 +52,11 @@ export function useHeaderLogic() {
 
       case "album":
         setLocation(`/album/${result.id}`);
+        break;
+
+      case "playlist":
+        trackAccess(result.id);
+        setLocation(`/playlist/${result.id}`);
         break;
 
       case "genre":

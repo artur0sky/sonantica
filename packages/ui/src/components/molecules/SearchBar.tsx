@@ -11,10 +11,10 @@ import { IconSearch, IconX } from "@tabler/icons-react";
 import { cn } from "../../utils";
 import { useLibraryStore } from "@sonantica/media-library";
 import { formatArtists } from "@sonantica/shared";
-import type { Track, Artist, Album } from "@sonantica/media-library";
+import type { Track, Artist, Album, Playlist } from "@sonantica/media-library";
 
 interface SearchResult {
-  type: "track" | "artist" | "album" | "genre" | "year";
+  type: "track" | "artist" | "album" | "genre" | "year" | "playlist";
   id: string;
   title: string;
   subtitle?: string;
@@ -35,7 +35,7 @@ export function SearchBar({ onResultSelect, className }: GlobalSearchBarProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const { tracks, albums, artists } = useLibraryStore();
+  const { tracks, albums, artists, playlists } = useLibraryStore();
 
   // Search logic
   useEffect(() => {
@@ -108,6 +108,20 @@ export function SearchBar({ onResultSelect, className }: GlobalSearchBarProps) {
       }
     });
 
+    // Search playlists
+    playlists.forEach((playlist: Playlist) => {
+      if (playlist.name.toLowerCase().includes(searchTerm)) {
+        foundResults.push({
+          type: "playlist",
+          id: playlist.id,
+          title: playlist.name,
+          subtitle: `${playlist.trackCount || 0} tracks`,
+          coverArt: playlist.coverArts?.[0],
+          data: playlist,
+        });
+      }
+    });
+
     // Limit results
     setResults(foundResults.slice(0, 20));
     setSelectedIndex(0);
@@ -146,10 +160,22 @@ export function SearchBar({ onResultSelect, className }: GlobalSearchBarProps) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, results, selectedIndex]);
 
-  // Click outside to close
+  // Click outside or scroll to close
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
+        setIsOpen(false);
+        setQuery("");
+      }
+    };
+
+    const handleScroll = (e: Event) => {
+      // Close dropdown on scroll if it's not scrolling inside the dropdown itself
+      if (
+        isOpen &&
         containerRef.current &&
         !containerRef.current.contains(e.target as Node)
       ) {
@@ -158,8 +184,13 @@ export function SearchBar({ onResultSelect, className }: GlobalSearchBarProps) {
     };
 
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+    window.addEventListener("scroll", handleScroll, true);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("scroll", handleScroll, true);
+    };
+  }, [isOpen]);
 
   const handleResultClick = (result: SearchResult) => {
     onResultSelect?.(result);
@@ -175,6 +206,7 @@ export function SearchBar({ onResultSelect, className }: GlobalSearchBarProps) {
       album: "💿",
       genre: "🎸",
       year: "📅",
+      playlist: "📂",
     };
     return icons[type] || "🔍";
   };

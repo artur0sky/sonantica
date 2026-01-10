@@ -4,10 +4,13 @@ import (
 	"context"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"path/filepath"
+	"sonantica-core/cache"
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -23,8 +26,14 @@ var (
 		".alac": true,
 		".aiff": true,
 	}
-	rdb *redis.Client
+	rdb        *redis.Client
+	isScanning bool
 )
+
+// IsScanning returns whether a scan is currently in progress
+func IsScanning() bool {
+	return isScanning
+}
 
 // InitRedis initializes the Redis client for the scanner
 func InitRedis(host, port, password string) {
@@ -36,14 +45,14 @@ func InitRedis(host, port, password string) {
 
 // TriggerScan manually triggers a directory scan
 func TriggerScan(mediaPath string) {
-	fmt.Printf("👆 Manual scan triggered for: %s\n", mediaPath)
+	slog.Info("Manual scan triggered", "path", mediaPath)
 	go scan(mediaPath)
 }
 
 // StartScanner starts a periodic scan of the media directory
 // It uses polling to ensure consistency and security across Docker volumes
 func StartScanner(mediaPath string, interval time.Duration) {
-	fmt.Printf("🔍 Scanner started. Watching: %s\n", mediaPath)
+	slog.Info("Scanner started", "path", mediaPath, "interval", interval.String())
 
 	ticker := time.NewTicker(interval)
 	go func() {
@@ -58,14 +67,21 @@ func StartScanner(mediaPath string, interval time.Duration) {
 
 // scan performs the actual directory traversal
 func scan(root string) {
-	fmt.Println("🔄 Starting library scan...")
+	isScanning = true
+	defer func() {
+		isScanning = false
+	}()
+
+	scanID := uuid.New().String()
+	slog.Info("Starting library scan", "scan_id", scanID, "root", root)
+
 	startTime := time.Now()
 	filesFound := 0
 	jobsDispatched := 0
 
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
-			fmt.Printf("⚠️ Error accessing path %q: %v\n", path, err)
+			slog.Warn("Error accessing path", "path", path, "error", err, "scan_id", scanID)
 			return nil // Continue walking
 		}
 
@@ -85,10 +101,6 @@ func scan(root string) {
 
 		filesFound++
 
-		// TODO: Check against DB cache to avoid re-processing existing files
-		// For now, we'll simplisticly push everything to a "discovery" queue
-		// The worker will be smart enough to skip if hash matches
-
 		// Normalize path relative to root for consistency
 		relPath, err := filepath.Rel(root, path)
 		if err != nil {
@@ -96,9 +108,9 @@ func scan(root string) {
 		}
 
 		// Dispatch Job to Redis
-		err = dispatchAnalysisJob(relPath, root)
+		err = dispatchAnalysisJob(relPath, root, scanID)
 		if err != nil {
-			fmt.Printf("❌ Failed to dispatch job for %s: %v\n", relPath, err)
+			slog.Error("Failed to dispatch job", "file", relPath, "error", err, "scan_id", scanID)
 		} else {
 			jobsDispatched++
 		}
@@ -107,22 +119,32 @@ func scan(root string) {
 	})
 
 	if err != nil {
-		fmt.Printf("❌ Scan failed: %v\n", err)
+		slog.Error("Scan failed", "error", err, "scan_id", scanID)
 	} else {
-		fmt.Printf("✅ Scan complete in %v. Found %d files, Dispatched %d jobs.\n",
-			time.Since(startTime), filesFound, jobsDispatched)
+		slog.Info("Scan complete",
+			"duration", time.Since(startTime).String(),
+			"files_found", filesFound,
+			"jobs_dispatched", jobsDispatched,
+			"scan_id", scanID,
+		)
+		// Invalidate cache when scan is complete
+		_ = cache.InvalidateLibraryCache(context.Background())
 	}
 }
 
-func dispatchAnalysisJob(relPath, root string) error {
-	if rdb == nil {
-		return fmt.Errorf("redis client not initialized")
+type JobPayload struct {
+	FilePath string `json:"file_path"`
+	Root     string `json:"root"`
+	TraceID  string `json:"trace_id"`
+}
+
+func dispatchAnalysisJob(relPath, root, traceID string) error {
+	payload := JobPayload{
+		FilePath: relPath,
+		Root:     root,
+		TraceID:  traceID,
 	}
 
-	// Payload match the Python worker expectation
-	jobPayload := fmt.Sprintf(`{"file_path": "%s", "root": "%s"}`, relPath, root)
-
-	// Security: Use a dedicated queue
-	// We use RPUSH to add to the tail of the queue
-	return rdb.RPush(context.Background(), "analysis_queue", jobPayload).Err()
+	// Security: Use Celery for scalability
+	return cache.EnqueueCeleryTask(context.Background(), "sonantica.analyze_audio", payload)
 }

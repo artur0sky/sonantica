@@ -26,7 +26,7 @@ interface PlaybackTrackingOptions {
 
 interface PlaybackState {
   isPlaying: boolean;
-  position: number;
+  getPosition: () => number;
   volume: number;
 }
 
@@ -42,7 +42,6 @@ export function usePlaybackTracking(
   const startPlaybackTracking = useAnalyticsStore(s => s.startPlaybackTracking);
   const updatePlaybackPosition = useAnalyticsStore(s => s.updatePlaybackPosition);
   const endPlaybackTracking = useAnalyticsStore(s => s.endPlaybackTracking);
-  const enabled = useAnalyticsStore(s => s.config.enabled);
   
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastProgressRef = useRef<number>(0);
@@ -51,24 +50,27 @@ export function usePlaybackTracking(
   const isCompletedRef = useRef<boolean>(false);
   
   // Common data for events
-  const getEventData = useCallback((action: string): PlaybackEventData => ({
-    type: 'playback',
-    action: action as any,
-    trackId: options.trackId,
-    albumId: options.albumId || 'unknown',
-    artistId: options.artistId || 'unknown',
-    position: state.position,
-    duration: options.duration,
-    volume: state.volume,
-    codec: options.codec || 'unknown',
-    bitrate: options.bitrate || 0,
-    sampleRate: options.sampleRate || 0,
-    source: options.source || 'library',
-    sourceId: options.sourceId,
-    eqEnabled: options.eqEnabled || false,
-    eqPreset: options.eqPreset,
-    dspEffects: options.dspEffects || [],
-  }), [options, state]);
+  const getEventData = useCallback((action: string): PlaybackEventData => {
+    const currentPosition = state.getPosition();
+    return {
+      type: 'playback',
+      action: action as any,
+      trackId: options.trackId,
+      albumId: options.albumId || 'unknown',
+      artistId: options.artistId || 'unknown',
+      position: currentPosition,
+      duration: options.duration,
+      volume: state.volume,
+      codec: options.codec || 'unknown',
+      bitrate: options.bitrate || 0,
+      sampleRate: options.sampleRate || 0,
+      source: options.source || 'library',
+      sourceId: options.sourceId,
+      eqEnabled: options.eqEnabled || false,
+      eqPreset: options.eqPreset,
+      dspEffects: options.dspEffects || [],
+    };
+  }, [options, state]);
 
   // Track playback start
   const trackPlaybackStart = useCallback(() => {
@@ -120,15 +122,16 @@ export function usePlaybackTracking(
   
   // Track progress (periodic updates)
   const trackProgress = useCallback(() => {
+    const currentPosition = state.getPosition();
     // Only track if position changed significantly (>15 seconds)
-    if (Math.abs(state.position - lastProgressRef.current) < 15) {
+    if (Math.abs(currentPosition - lastProgressRef.current) < 15) {
       return;
     }
     
-    lastProgressRef.current = state.position;
-    updatePlaybackPosition(state.position);
+    lastProgressRef.current = currentPosition;
+    updatePlaybackPosition(currentPosition);
     trackEvent('playback.progress', getEventData('progress'));
-  }, [state.position, getEventData, trackEvent, updatePlaybackPosition]);
+  }, [state, getEventData, trackEvent, updatePlaybackPosition]);
   
   // Auto-track state changes
   useEffect(() => {
@@ -148,14 +151,16 @@ export function usePlaybackTracking(
     // 2. Handle Play/Pause transitions
     if (state.isPlaying !== lastStateRef.current) {
       if (state.isPlaying) {
-        if (state.position < 1) {
+        const currentPos = state.getPosition();
+        if (currentPos < 1) {
           trackPlaybackStart();
         } else {
           trackPlaybackResume();
         }
       } else {
         // Check if actually finished or just paused
-        const isNearEnd = options.duration > 0 && state.position >= options.duration - 1;
+        const currentPos = state.getPosition();
+        const isNearEnd = options.duration > 0 && currentPos >= options.duration - 1;
         if (isNearEnd) {
           trackPlaybackComplete();
         } else {
@@ -168,7 +173,8 @@ export function usePlaybackTracking(
     state.isPlaying, 
     options.trackId, 
     options.duration,
-    state.position,
+    // Removed state.position dependency
+    state, // state itself (containing getPosition) might change, but likely stable if memoized
     trackPlaybackStart, 
     trackPlaybackResume, 
     trackPlaybackPause, 
@@ -178,7 +184,11 @@ export function usePlaybackTracking(
   // Set up progress tracking interval
   useEffect(() => {
     if (state.isPlaying) {
-      progressIntervalRef.current = setInterval(trackProgress, 30000);
+      // Clear any existing interval first
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+      }
+      progressIntervalRef.current = setInterval(trackProgress, 60000); // Every 60 seconds
     } else {
       if (progressIntervalRef.current) {
         clearInterval(progressIntervalRef.current);

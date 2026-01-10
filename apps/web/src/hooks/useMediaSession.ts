@@ -12,7 +12,7 @@ import { useEffect } from 'react';
 import { usePlayerStore, useQueueStore, mediaSessionService } from '@sonantica/player-core';
 import { PlaybackState } from '@sonantica/shared';
 import { Capacitor } from '@capacitor/core';
-import { usePermissions } from '@sonantica/mobile';
+import { usePermissions, useMediaPlayback } from '@sonantica/mobile';
 
 export function useMediaSession() {
   const { currentTrack, state, play, pause, stop, seek } = usePlayerStore();
@@ -20,6 +20,7 @@ export function useMediaSession() {
   const player = usePlayerStore((s) => s.player);
   
   const isNative = Capacitor.isNativePlatform();
+  const { startService, stopService } = useMediaPlayback();
 
   // Request notification permission on mobile when playing starts
   const { requestNotificationPermission } = usePermissions();
@@ -29,14 +30,20 @@ export function useMediaSession() {
       if (isNative && state === PlaybackState.PLAYING) {
         const granted = await requestNotificationPermission();
         if (granted) {
+            // Start native foreground service to keep app alive on Android
+            await startService();
+            
             // Force refresh of media session controls after permission is granted
             mediaSessionService.updateMetadata(currentTrack);
             mediaSessionService.updatePlaybackState('playing');
         }
+      } else if (isNative && state === PlaybackState.STOPPED) {
+        // Stop service if explicitly stopped
+        await stopService();
       }
     };
     checkPerms();
-  }, [isNative, state, requestNotificationPermission, currentTrack]);
+  }, [isNative, state, requestNotificationPermission, currentTrack, startService, stopService]);
 
   // Update metadata when track changes
   useEffect(() => {
@@ -56,10 +63,13 @@ export function useMediaSession() {
         break;
       default:
         sessionState = 'none';
+        
+        // Ensure service is stopped when not playing/paused
+        if (isNative) stopService();
     }
 
     mediaSessionService.updatePlaybackState(sessionState);
-  }, [state]);
+  }, [state, isNative, stopService]);
 
   // Update position state
   useEffect(() => {

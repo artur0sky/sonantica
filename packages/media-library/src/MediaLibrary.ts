@@ -11,7 +11,7 @@
  */
 
 import type { IMediaLibrary } from './contracts';
-import type { Track, Album, Artist, Genre, LibraryStats, ScanProgress, LibraryFilter } from './types';
+import type { Track, Album, Artist, Genre, LibraryStats, ScanProgress, LibraryFilter, Playlist, PlaylistType } from './types';
 import { MetadataFactory } from './services/MetadataFactory';
 import { QueryEngine } from './services/QueryEngine';
 import { LibraryScanner, ScannerCallbacks } from './services/LibraryScanner';
@@ -27,6 +27,9 @@ export const LIBRARY_EVENTS = {
   TRACK_ADDED: 'library:track-added',
   TRACK_REMOVED: 'library:track-removed',
   LIBRARY_UPDATED: 'library:updated',
+  PLAYLIST_CREATED: 'library:playlist-created',
+  PLAYLIST_UPDATED: 'library:playlist-updated',
+  PLAYLIST_DELETED: 'library:playlist-deleted',
 } as const;
 
 /**
@@ -34,6 +37,7 @@ export const LIBRARY_EVENTS = {
  */
 export class MediaLibrary implements IMediaLibrary {
   private tracks: Map<string, Track> = new Map();
+  private playlists: Map<string, Playlist> = new Map();
   private tracksByPath: Map<string, string> = new Map(); // path -> trackId mapping
   private scanProgress: ScanProgress = {
     status: 'idle',
@@ -394,5 +398,108 @@ export class MediaLibrary implements IMediaLibrary {
     };
     this.emit(LIBRARY_EVENTS.LIBRARY_UPDATED, {});
     console.log('🧹 Library cleared');
+  }
+
+  // --- Playlist Management Implementation ---
+
+  async createPlaylist(name: string, type: PlaylistType, trackIds: string[] = []): Promise<Playlist> {
+    const id = crypto.randomUUID();
+    const now = new Date();
+    
+    // Verify tracks exist? Not strictly necessary for loose coupling, but good for data integrity.
+    // We allow orphaned IDs in playlists (e.g. file removed but might come back),
+    // but maybe we should filter invalid ones if desired. For now, assume raw IDs are fine.
+    
+    const playlist: Playlist = {
+      id,
+      name,
+      type,
+      trackIds: [...trackIds],
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    if (type === 'HISTORY_SNAPSHOT') {
+      playlist.snapshotDate = now;
+    }
+
+    this.playlists.set(id, playlist);
+    this.emit(LIBRARY_EVENTS.PLAYLIST_CREATED, { playlist });
+    console.log(`📝 Playlist created: ${name} (${type})`);
+    
+    return playlist;
+  }
+
+  getPlaylists(filter?: { type?: PlaylistType }): Playlist[] {
+    const all = Array.from(this.playlists.values());
+    if (!filter) return all;
+    
+    return all.filter(p => {
+      if (filter.type && p.type !== filter.type) return false;
+      return true;
+    });
+  }
+
+  getPlaylist(id: string): Playlist | undefined {
+    return this.playlists.get(id);
+  }
+
+  async updatePlaylist(id: string, updates: Partial<Omit<Playlist, 'id' | 'type' | 'createdAt'>>): Promise<Playlist> {
+    const playlist = this.playlists.get(id);
+    if (!playlist) {
+      throw new Error(`Playlist ${id} not found`);
+    }
+
+    const updated = {
+      ...playlist,
+      ...updates,
+      updatedAt: new Date(),
+    };
+
+    this.playlists.set(id, updated);
+    this.emit(LIBRARY_EVENTS.PLAYLIST_UPDATED, { playlist: updated });
+    return updated;
+  }
+
+  async deletePlaylist(id: string): Promise<void> {
+    if (this.playlists.has(id)) {
+      const playlist = this.playlists.get(id);
+      this.playlists.delete(id);
+      this.emit(LIBRARY_EVENTS.PLAYLIST_DELETED, { id, playlist }); // Send playlist object for undo potential
+    }
+  }
+
+  async addTracksToPlaylist(playlistId: string, trackIds: string[]): Promise<Playlist> {
+    const playlist = this.playlists.get(playlistId);
+    if (!playlist) throw new Error(`Playlist ${playlistId} not found`);
+
+    const newTrackIds = [...playlist.trackIds, ...trackIds];
+    return this.updatePlaylist(playlistId, { trackIds: newTrackIds });
+  }
+
+  async removeTracksFromPlaylist(playlistId: string, trackIdsToRemove: string[]): Promise<Playlist> {
+     const playlist = this.playlists.get(playlistId);
+    if (!playlist) throw new Error(`Playlist ${playlistId} not found`);
+
+    // Remove ALL instances of the trackIds? Or just specific indices?
+    // Usually "remove from playlist" implies removing occurrences.
+    const toRemoveSet = new Set(trackIdsToRemove);
+    const newTrackIds = playlist.trackIds.filter(tid => !toRemoveSet.has(tid));
+    
+    return this.updatePlaylist(playlistId, { trackIds: newTrackIds });
+  }
+
+  async reorderPlaylist(playlistId: string, newTrackIds: string[]): Promise<Playlist> {
+     const playlist = this.playlists.get(playlistId);
+    if (!playlist) throw new Error(`Playlist ${playlistId} not found`);
+    
+    // We trust the caller to provide valid reordered IDs that match existing content usually,
+    // or we just replace the content.
+    return this.updatePlaylist(playlistId, { trackIds: newTrackIds });
+  }
+
+  async saveQueueSnapshot(trackIds: string[]): Promise<Playlist> {
+    const dateStr = new Date().toLocaleString();
+    return this.createPlaylist(`Queue ${dateStr}`, 'HISTORY_SNAPSHOT', trackIds);
   }
 }

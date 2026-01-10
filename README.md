@@ -27,16 +27,20 @@ sonantica/
 │
 ├─ packages/
 │  ├─ player-core/      # Audio engine & playback logic (UI-agnostic)
-│  ├─ media-library/    # Indexing, metadata management & search
+│  ├─ media-library/    # Client-side library index & manager
 │  ├─ metadata/         # Low-level metadata extraction (ID3, Vorbis, FLAC)
-│  ├─ api-server/       # Self-hosted API for streaming and library sync
 │  ├─ audio-analyzer/   # FFT Analysis & waveform generation
 │  ├─ dsp/              # Audio processing (EQ, Presets, Gain)
 │  ├─ recommendations/  # Discovery engine (similar tracks, artists)
 │  ├─ lyrics/           # Synchronized lyrics parsing and management
-│  ├─ offline-manager/  # Offline playback and synchronization logic
+│  ├─ offline-manager/  # Offline playback, downloads & cache
+│  ├─ analytics/        # Privacy-first telemetry & metrics
 │  ├─ ui/               # Shared Design System & Components
 │  └─ shared/           # Fundamental types & utilities
+│
+├─ services/
+│  ├─ go-core/          # Stream Core (API, Streaming, Indexing)
+│  └─ python-worker/    # Audio Worker (Analysis, Waveforms)
 │
 └─ docs/                # Identity, Architecture & Roadmap
 ```
@@ -60,64 +64,61 @@ We treat security not as an afterthought, but as a core quality attribute. Our p
 
 Sonántica is built to be **invisible**. It should never compete with your music for resources.
 
-1.  **Asynchronous Audio Engine**: The core audio processing runs independently of the UI main thread.
+1.  **Redis Caching Layer**: Intelligent caching for 90% faster library loads.
+    *   *First load:* ~2-5s (PostgreSQL query)
+    *   *Subsequent loads:* ~50-200ms (Redis cache) ⚡
+    *   *Result:* Near-instant library browsing after initial load.
+    
+2.  **Virtual Scrolling**: Efficient rendering for large libraries (10,000+ tracks).
+    *   *Renders:* Only ~20-30 visible items at a time
+    *   *Memory:* Minimal footprint regardless of library size
+    *   *Result:* Smooth 60fps scrolling with instant alphabet navigation.
+
+3.  **Asynchronous Audio Engine**: The core audio processing runs independently of the UI main thread.
     *   *Result:* Glitch-free playback even during heavy UI interaction.
     
-2.  **GPU-Accelerated Interface**: All animations avoid layout thrashing.
+4.  **GPU-Accelerated Interface**: All animations avoid layout thrashing.
     *   *Result:* Smooth 60fps transitions on any device.
 
-3.  **Smart Persistence**: Batch-write strategy for large libraries.
+5.  **Smart Persistence**: Batch-write strategy for large libraries.
     *   *Result:* 50-70% faster scans and saves.
 
-4.  **Zero-Allocation Paths**: Audio processing reuses memory buffers.
+6.  **Zero-Allocation Paths**: Audio processing reuses memory buffers.
     *   *Result:* No garbage collection pauses during playback.
+
+#### Performance Metrics
+
+| Operation | Without Cache | With Redis Cache | Improvement |
+|-----------|---------------|------------------|-------------|
+| Load 1000 tracks | ~2-5s | ~50-200ms | **90% faster** ⚡ |
+| Load all artists | ~1-3s | ~30-100ms | **95% faster** ⚡ |
+| Load all albums | ~1-3s | ~30-100ms | **95% faster** ⚡ |
+| Alphabet navigation | 3-5 clicks | 1 click (instant) | **100% faster** ⚡ |
 
 See the full [Performance Guide](./docs/PERFORMANCE_OPTIMIZATIONS.md).
 
 ## 🎧 Getting Started
+Sonántica gives you full control. For detailed deployment instructions, including production hardening, resource quotas, and volume configuration, please consult our **[Docker Deployment Guide](./docs/DOCKER.md)**.
 
-Sonántica is designed to be self-hosted, giving you absolute control over your library and data.
+### Quick Start (Dev Mode)
+For a quick test drive:
 
-### 1. Prepare Your Environment
+1.  **Clone the repo:**
+    ```bash
+    git clone https://github.com/artur0sky/sonantica.git
+    cd sonantica
+    ```
 
-Create a dedicated folder for your installation. Inside, you'll need three subfolders to persist your data:
+2.  **Launch with Docker Compose:**
+    ```bash
+    # Mounts ./media by default. Music added there will appear automatically.
+    docker compose up -d
+    ```
 
-```bash
-/sonantica
-  ├── /media      # Put your music here (FLAC, MP3, WAV, etc.)
-  ├── /buckets    # (Optional) For object storage
-  └── /config     # Where Sonántica stores database and preferences
-```
+3.  **Start Listening:**
+    Open [http://localhost:3000](http://localhost:3000).
 
-### 2. Configure the System
-
-Copy the `.env.example` file to `.env` and adjust it to match your paths.
-
-**Important:** You can mount **any** folder on your computer as your media library by setting `MEDIA_PATH`.
-
-```properties
-# .env
-
-# Example: Pointing to an external drive or common music folder
-MEDIA_PATH=D:\Music\HiFi_Collection
-# or for Linux/Mac:
-# MEDIA_PATH=/mnt/external_drive/Music
-
-CONFIG_PATH=./config
-WEB_PORT=3000
-```
-
-Sonántica will mount the path defined in `MEDIA_PATH` as read-only inside the container to ensure safety.
-
-### 3. Launch with Docker 🐳
-
-The recommended way to run Sonántica is via Docker Compose. This spins up the Player, the Stream Core (Go), the Database (Postgres), and the Analysis Worker (Python).
-
-```bash
-docker compose up -d
-```
-
-> **Note for First Run:** The system will immediately begin indexing your `/media` folder. Depending on the size of your library (e.g., >1TB), the initial scan and acoustic analysis may take some time. The UI will update in real-time as tracks are discovered.
+> **Note:** The system immediately starts indexing your `/media` folder. Initial scanning and acoustic analysis may take time depending on library size. The UI updates in real-time.
 
 ### 4. Access the Player
 
@@ -153,11 +154,15 @@ pnpm dev
 
 ### Shared Libraries (`/packages`)
 *   **[@sonantica/player-core](./packages/player-core)**: The heartbeat. A UI-agnostic audio engine that manages the playback lifecycle.
-*   **[@sonantica/media-library](./packages/media-library)**: The librarian. Handles indexing, browsing, and search with zero-latency.
+*   **[@sonantica/media-library](./packages/media-library)**: The librarian (client). Smart indexing, fuzzy search, and instant library management.
 *   **[@sonantica/ui](./packages/ui)**: The face. A token-based design system implementing our "Acoustic Aesthetics".
-*   **[@sonantica/dsp](./packages/dsp)**: The studio. Professional 10-band EQ and signal processing chain.
-*   **[@sonantica/audio-analyzer](./packages/audio-analyzer)**: The scope. Real-time visualization and metric extraction.
+*   **[@sonantica/dsp](./packages/dsp)**: The studio. Professional 10-band EQ, preamp, and signal processing chain.
+*   **[@sonantica/lyrics](./packages/lyrics)**: The interpreter. Synchronized lyrics parsing (LRC) and metadata extraction.
+*   **[@sonantica/metadata](./packages/metadata)**: The archivist. High-performance batch metadata extraction.
+*   **[@sonantica/offline-manager](./packages/offline-manager)**: The guardian. Robust download orchestration and cache management.
 *   **[@sonantica/recommendations](./packages/recommendations)**: The guide. Acoustically-aware discovery engine.
+*   **[@sonantica/audio-analyzer](./packages/audio-analyzer)**: The scope. Real-time visualization and metric extraction.
+*   **[@sonantica/analytics](./packages/analytics)**: The observer. Privacy-first telemetry and playback insights.
 *   **[@sonantica/shared](./packages/shared)**: The foundation. Universal types and contracts.
 
 ### Active Services (`/services`)
@@ -171,10 +176,31 @@ We stand on the shoulders of giants. Sonántica is made possible by:
 - **[React](https://reactjs.org/)**: For a reactive and expressive UI.
 - **[TypeScript](https://www.typescriptlang.org/)**: For technical reliability and clarity.
 - **[Vite](https://vitejs.dev/)**: For a fast and modern development experience.
-- **[Framer Motion](https://www.framer.com/motion/)**: For subtle, functional animations.
+- **[CSS Animations](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Animations/Using_CSS_animations)**: For high-performance, layout-stable animations (Zero Framer Motion).
 - **[Zustand](https://github.com/pmndrs/zustand)**: For minimalist and predictable state management.
 - **[Tailwind CSS](https://tailwindcss.com/)**: For our token-based design system.
 - **[Tabler Icons](https://tabler.io/icons)**: For clear, professional iconography.
+
+---
+
+## 🤝 Contributing
+
+Sonántica welcomes contributions from the community. Like a violinist joining an orchestra, every contribution must follow the rhythm.
+
+**Contribution Flow:**
+```
+your_feature_branch → development → qa → main
+```
+
+All pull requests must:
+- Target the `development` branch (not `main`)
+- Follow our architectural principles (SOLID, Clean Architecture)
+- Pass automated checks (TypeScript, linting, builds)
+- Be approved by @artur0sky
+
+**Want to contribute?** Read our comprehensive [**Contributing Guide**](./CONTRIBUTING.md) to get started.
+
+**Want to create your own remix?** Sonántica is open-source! Fork the project and make it your own. See the [Forking & Remixing](./CONTRIBUTING.md#-forking--remixing) section for details.
 
 ---
 

@@ -1,6 +1,7 @@
 import { useDSPStore, type IEQBand } from "@sonantica/dsp";
 import { useUIStore } from "@sonantica/ui";
 import { useAnalytics } from "@sonantica/analytics";
+import { useSettingsStore } from "../stores/settingsStore";
 
 export function useEQSidebarLogic() {
   const {
@@ -15,6 +16,7 @@ export function useEQSidebarLogic() {
   } = useDSPStore();
 
   const { eqOpen, toggleEQ, eqSidebarWidth } = useUIStore();
+  const { crossfadeDuration, fadeOutDuration, setNumber } = useSettingsStore();
   const analytics = useAnalytics();
 
   const setEnabled = (enabled: boolean) => {
@@ -75,6 +77,10 @@ export function useEQSidebarLogic() {
     handlePresetChange,
     handleBandChange,
     handlePreampChange,
+    crossfadeDuration,
+    setCrossfadeDuration: (value: number) => setNumber("crossfadeDuration", value),
+    fadeOutDuration,
+    setFadeOutDuration: (value: number) => setNumber("fadeOutDuration", value),
     handleBandReset: (bandId: string) => {
       // Logic: If on a preset, reset to that preset's original value.
       // If on 'custom' or otherwise, reset to 0.

@@ -9,6 +9,7 @@
  */
 
 import type { Track, Artist, Album } from '@sonantica/shared';
+import type { Playlist, PlaylistType } from '../types';
 
 export interface LibraryStats {
     totalTracks: number;
@@ -27,6 +28,8 @@ export interface ScanProgress {
 export interface ScanOptions {
     scanFileSizeLimit?: number;
     coverArtSizeLimit?: number;
+    watchFolders?: boolean;
+    parallelScanning?: boolean;
 }
 
 export interface ILibraryAdapter {
@@ -39,7 +42,7 @@ export interface ILibraryAdapter {
     /**
      * Get all tracks from the library
      */
-    getTracks(): Promise<Track[]>;
+    getTracks(options?: { limit?: number; offset?: number; sort?: string; order?: 'asc' | 'desc' }): Promise<Track[]>;
 
     /**
      * Get a single track by ID
@@ -49,7 +52,7 @@ export interface ILibraryAdapter {
     /**
      * Get all albums from the library
      */
-    getAlbums(): Promise<Album[]>;
+    getAlbums(options?: { limit?: number; offset?: number; sort?: string; order?: 'asc' | 'desc' }): Promise<Album[]>;
 
     /**
      * Get tracks for a specific album
@@ -59,7 +62,7 @@ export interface ILibraryAdapter {
     /**
      * Get all artists from the library
      */
-    getArtists(): Promise<Artist[]>;
+    getArtists(options?: { limit?: number; offset?: number; sort?: string; order?: 'asc' | 'desc' }): Promise<Artist[]>;
 
     /**
      * Get tracks for a specific artist
@@ -89,6 +92,11 @@ export interface ILibraryAdapter {
     getScanStatus(): Promise<ScanProgress>;
 
     /**
+     * Get alphabet index (mapping of Letter -> Offset)
+     */
+    getAlphabetIndex(type: 'tracks' | 'artists' | 'albums'): Promise<Record<string, number>>;
+
+    /**
      * Subscribe to real-time scan events (optional)
      * @returns Unsubscribe function
      */
@@ -97,4 +105,15 @@ export interface ILibraryAdapter {
         onScanComplete?: (stats: LibraryStats) => void;
         onScanStart?: () => void;
     }): () => void;
+
+    // --- Playlist Methods ---
+
+    createPlaylist(name: string, type: PlaylistType, trackIds?: string[]): Promise<Playlist>;
+    getPlaylists(filter?: { type?: PlaylistType }): Promise<Playlist[]>;
+    getPlaylist(id: string): Promise<Playlist>;
+    updatePlaylist(id: string, updates: Partial<Omit<Playlist, 'id' | 'type' | 'createdAt'>>): Promise<Playlist>;
+    deletePlaylist(id: string): Promise<void>;
+    addTracksToPlaylist(playlistId: string, trackIds: string[]): Promise<Playlist>;
+    removeTracksFromPlaylist(playlistId: string, trackIds: string[]): Promise<Playlist>;
+    saveQueueSnapshot(trackIds: string[]): Promise<Playlist>;
 }

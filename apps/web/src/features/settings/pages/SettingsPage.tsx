@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { useLocation } from "wouter";
-import { Tabs, type Tab, Button } from "@sonantica/ui";
+import { Tabs, type Tab } from "@sonantica/ui";
 import {
   IconMusic,
   IconBooks,
@@ -15,10 +14,11 @@ import { AudioSettings } from "../components/AudioSettings";
 import { LibrarySettings } from "../components/LibrarySettings";
 import { InterfaceSettings } from "../components/InterfaceSettings";
 import { OfflineSettings } from "../components/OfflineSettings";
+import { AnalyticsSettings } from "../components/AnalyticsSettings";
 import { ServersSection } from "../../library/components/ServersSection";
+import { IconChartBar } from "@tabler/icons-react";
 
 export function SettingsPage() {
-  const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState("general"); // Default to General/Interface
 
   const tabs: Tab[] = [
@@ -36,6 +36,11 @@ export function SettingsPage() {
       id: "library",
       label: "Library",
       icon: IconBooks,
+    },
+    {
+      id: "analytics",
+      label: "Analytics",
+      icon: IconChartBar,
     },
     {
       id: "offline",
@@ -66,13 +71,6 @@ export function SettingsPage() {
             Customize your listening experience.
           </p>
         </div>
-        <Button
-          variant="ghost"
-          onClick={() => setLocation("/")}
-          className="w-full sm:w-auto"
-        >
-          Back to Player
-        </Button>
       </div>
 
       {/* Tabs */}
@@ -91,6 +89,7 @@ export function SettingsPage() {
         {activeTab === "audio" && <AudioSettings />}
         {activeTab === "library" && <LibrarySettings />}
         {activeTab === "offline" && <OfflineSettings />}
+        {activeTab === "analytics" && <AnalyticsSettings />}
 
         {activeTab === "servers" && (
           <div className="bg-surface-elevated border border-border rounded-xl p-4 sm:p-6 animate-in fade-in duration-500">
@@ -105,7 +104,7 @@ export function SettingsPage() {
         )}
 
         {activeTab === "info" && (
-          <div className="bg-transparent sm:bg-surface-elevated sm:border border-border rounded-xl p-0 sm:p-6 space-y-8 animate-in fade-in duration-500">
+          <div className="bg-surface-elevated border border-border rounded-xl p-4 sm:p-6 space-y-8 animate-in fade-in duration-500">
             <div>
               <h2 className="text-xl font-semibold mb-4">About Sonántica</h2>
               <div className="prose prose-invert max-w-none text-text-muted">

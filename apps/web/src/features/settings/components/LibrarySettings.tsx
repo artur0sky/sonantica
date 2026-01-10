@@ -15,8 +15,6 @@ export function LibrarySettings() {
     autoScan,
     watchFolders,
     parallelScanning,
-    fetchMissingMetadata,
-    embeddedCoversPriority,
     scanFileSizeLimit,
     coverArtSizeLimit,
     toggle,
@@ -114,26 +112,6 @@ export function LibrarySettings() {
         title="Metadata"
         description="Configuration for tag reading and internet fetching."
       >
-        <SettingRow
-          label="Fetch Missing Metadata"
-          description="Download covers and tags from MusicBrainz/Discogs."
-        >
-          <Switch
-            checked={fetchMissingMetadata}
-            onChange={() => toggle("fetchMissingMetadata")}
-          />
-        </SettingRow>
-
-        <SettingRow
-          label="Embedded Covers Priority"
-          description="Prefer embedded art over folder.jpg."
-        >
-          <Switch
-            checked={embeddedCoversPriority}
-            onChange={() => toggle("embeddedCoversPriority")}
-          />
-        </SettingRow>
-
         <SettingRow
           label="Cover Art Max Size"
           description="Limit the size of extracted embedded artwork."

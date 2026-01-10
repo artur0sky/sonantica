@@ -5,10 +5,10 @@
  *
  * Displays synchronized or unsynchronized lyrics for the current track.
  * Follows the same design pattern as RightSidebar (Queue).
+ * No external animation library dependencies
  */
 
 import { IconX, IconMicrophone, IconClock } from "@tabler/icons-react";
-import { motion } from "framer-motion";
 import { Badge } from "@sonantica/ui";
 import { cn } from "@sonantica/shared";
 import { useLyricsLogic } from "../../hooks/useLyricsLogic";
@@ -34,13 +34,7 @@ export function LyricsSidebar({ isCollapsed }: LyricsSidebarProps) {
   if (!lyricsOpen) return null;
 
   return (
-    <motion.div
-      initial={{ x: 300, opacity: 0 }}
-      animate={{ x: 0, opacity: 1 }}
-      exit={{ x: 300, opacity: 0 }}
-      transition={{ type: "spring", damping: 20 }}
-      className="flex flex-col h-full overflow-hidden relative"
-    >
+    <div className="flex flex-col h-full overflow-hidden relative animate-in slide-in-from-right-4 fade-in duration-300">
       {/* Header */}
       <div
         className={cn(
@@ -96,15 +90,13 @@ export function LyricsSidebar({ isCollapsed }: LyricsSidebarProps) {
               </Badge>
             </button>
           )}
-          <motion.button
+          <button
             onClick={toggleLyrics}
-            whileHover={{ scale: 1.1, rotate: 90 }}
-            whileTap={{ scale: 0.9 }}
-            className="text-text-muted hover:text-text p-1 transition-fast"
+            className="text-text-muted hover:text-text p-1 transition-all hover:scale-110 hover:rotate-90 active:scale-90"
             aria-label="Close lyrics"
           >
             <IconX size={20} stroke={1.5} />
-          </motion.button>
+          </button>
         </div>
       </div>
 
@@ -166,6 +158,6 @@ export function LyricsSidebar({ isCollapsed }: LyricsSidebarProps) {
           </div>
         )}
       </div>
-    </motion.div>
+    </div>
   );
 }

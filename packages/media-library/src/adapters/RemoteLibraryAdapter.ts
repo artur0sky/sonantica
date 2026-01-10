@@ -9,6 +9,7 @@
 
 import type { Track, Artist, Album } from '@sonantica/shared';
 import type { ILibraryAdapter, LibraryStats, ScanProgress, ScanOptions } from '../contracts/ILibraryAdapter';
+import type { Playlist, PlaylistType } from '../types';
 
 export interface RemoteLibraryConfig {
   serverUrl: string;
@@ -48,6 +49,7 @@ export class RemoteLibraryAdapter implements ILibraryAdapter {
 
   /**
    * Normalize Track: prepend server URL to coverArt if path is relative
+   * AND add serverId for streaming
    */
   private normalizeTrack(track: any): Track {
     let coverArt = track.coverArt;
@@ -61,9 +63,14 @@ export class RemoteLibraryAdapter implements ILibraryAdapter {
       coverArt = `${this.serverUrl}/api/cover/${track.albumId}`;
     }
 
+    // Use serverUrl as serverId (it's unique per server)
+    // This allows buildStreamingUrl to find the correct server
+    const serverId = this.serverUrl;
+
     return {
       ...track,
-      coverArt
+      coverArt,
+      serverId, // Add serverId for streaming
     };
   }
 
@@ -95,8 +102,15 @@ export class RemoteLibraryAdapter implements ILibraryAdapter {
   /**
    * Get all tracks
    */
-  async getTracks(): Promise<Track[]> {
-    const response = await this.fetch('/api/library/tracks');
+  async getTracks(options?: { limit?: number; offset?: number; sort?: string; order?: 'asc' | 'desc' }): Promise<Track[]> {
+    const params = new URLSearchParams();
+    if (options?.limit) params.append('limit', options.limit.toString());
+    if (options?.offset) params.append('offset', options.offset.toString());
+    if (options?.sort) params.append('sort', options.sort);
+    if (options?.order) params.append('order', options.order);
+    
+    const queryString = params.toString() ? `?${params.toString()}` : '';
+    const response = await this.fetch(`/api/library/tracks${queryString}`);
     const data = await response.json();
     return (data.tracks || []).map((t: any) => this.normalizeTrack(t));
   }
@@ -113,8 +127,15 @@ export class RemoteLibraryAdapter implements ILibraryAdapter {
   /**
    * Get all artists
    */
-  async getArtists(): Promise<Artist[]> {
-    const response = await this.fetch('/api/library/artists');
+  async getArtists(options?: { limit?: number; offset?: number; sort?: string; order?: 'asc' | 'desc' }): Promise<Artist[]> {
+    const params = new URLSearchParams();
+    if (options?.limit) params.append('limit', options.limit.toString());
+    if (options?.offset) params.append('offset', options.offset.toString());
+    if (options?.sort) params.append('sort', options.sort);
+    if (options?.order) params.append('order', options.order);
+
+    const queryString = params.toString() ? `?${params.toString()}` : '';
+    const response = await this.fetch(`/api/library/artists${queryString}`);
     const data = await response.json();
     return data.artists;
   }
@@ -131,8 +152,15 @@ export class RemoteLibraryAdapter implements ILibraryAdapter {
   /**
    * Get all albums
    */
-  async getAlbums(): Promise<Album[]> {
-    const response = await this.fetch('/api/library/albums');
+  async getAlbums(options?: { limit?: number; offset?: number; sort?: string; order?: 'asc' | 'desc' }): Promise<Album[]> {
+    const params = new URLSearchParams();
+    if (options?.limit) params.append('limit', options.limit.toString());
+    if (options?.offset) params.append('offset', options.offset.toString());
+    if (options?.sort) params.append('sort', options.sort);
+    if (options?.order) params.append('order', options.order);
+
+    const queryString = params.toString() ? `?${params.toString()}` : '';
+    const response = await this.fetch(`/api/library/albums${queryString}`);
     const data = await response.json();
     return (data.albums || []).map((album: any) => this.normalizeAlbum(album));
   }
@@ -189,6 +217,14 @@ export class RemoteLibraryAdapter implements ILibraryAdapter {
   }
 
   /**
+   * Get alphabet index
+   */
+  async getAlphabetIndex(type: 'tracks' | 'artists' | 'albums'): Promise<Record<string, number>> {
+      const response = await this.fetch(`/api/library/alphabet-index?type=${type}`);
+      return response.json();
+  }
+
+  /**
    * Subscribe to real-time scan events
    */
   subscribeToScanEvents(callbacks: {
@@ -231,5 +267,69 @@ export class RemoteLibraryAdapter implements ILibraryAdapter {
     } catch {
       return false;
     }
+  }
+  
+  // --- Playlist Methods ---
+
+  async createPlaylist(name: string, type: PlaylistType, trackIds: string[] = []): Promise<Playlist> {
+    const payload = { name, type, trackIds };
+    console.log('[RemoteLibraryAdapter] POST /api/library/playlists', payload);
+    
+    const response = await this.fetch('/api/library/playlists', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    
+    const result = await response.json();
+    console.log('[RemoteLibraryAdapter] Playlist created response:', result);
+    return result;
+  }
+
+  async getPlaylists(filter?: { type?: PlaylistType }): Promise<Playlist[]> {
+    const params = new URLSearchParams();
+    if (filter?.type) params.append('type', filter.type);
+    
+    const response = await this.fetch(`/api/library/playlists?${params.toString()}`);
+    return response.json();
+  }
+
+  async getPlaylist(id: string): Promise<Playlist> {
+    const response = await this.fetch(`/api/library/playlists/${id}`);
+    return response.json();
+  }
+
+  async updatePlaylist(id: string, updates: Partial<Omit<Playlist, 'id' | 'type' | 'createdAt'>>): Promise<Playlist> {
+    const response = await this.fetch(`/api/library/playlists/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates)
+    });
+    return response.json();
+  }
+
+  async deletePlaylist(id: string): Promise<void> {
+    await this.fetch(`/api/library/playlists/${id}`, {
+      method: 'DELETE'
+    });
+  }
+
+  async addTracksToPlaylist(playlistId: string, trackIds: string[]): Promise<Playlist> {
+    const response = await this.fetch(`/api/library/playlists/${playlistId}/tracks`, {
+      method: 'POST',
+      body: JSON.stringify({ trackIds })
+    });
+    return response.json();
+  }
+
+  async removeTracksFromPlaylist(playlistId: string, trackIds: string[]): Promise<Playlist> {
+    const response = await this.fetch(`/api/library/playlists/${playlistId}/tracks`, {
+      method: 'DELETE',
+      body: JSON.stringify({ trackIds })
+    });
+    return response.json();
+  }
+
+  async saveQueueSnapshot(trackIds: string[]): Promise<Playlist> {
+    const dateStr = new Date().toLocaleString();
+    return this.createPlaylist(`Queue ${dateStr}`, 'HISTORY_SNAPSHOT', trackIds);
   }
 }

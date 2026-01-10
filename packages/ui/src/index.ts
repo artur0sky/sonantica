@@ -9,6 +9,11 @@ export * from './components/atoms';
 
 // Molecules - Composite components
 export * from './components/molecules';
+export * from './components/molecules/PlaylistCard';
+export { ConfirmDialog } from './components/molecules/ConfirmDialog';
+export type { ConfirmDialogProps } from './components/molecules/ConfirmDialog';
+export { PromptDialog } from './components/molecules/PromptDialog';
+export type { PromptDialogProps } from './components/molecules/PromptDialog';
 
 export * from "./components/organisms";
 

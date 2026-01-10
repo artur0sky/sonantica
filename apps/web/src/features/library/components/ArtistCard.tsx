@@ -1,47 +1,55 @@
-/**
- * Artist Card Component
- *
- * Grid item for artist view
- */
-
-import { IconMicrophone } from "@tabler/icons-react";
-import { motion } from "framer-motion";
+import { ArtistImage, MediaCard } from "@sonantica/ui";
+import { useLibraryStore } from "@sonantica/media-library";
+import { useMemo } from "react";
 
 interface ArtistCardProps {
   artist: any;
   onClick: () => void;
+  selected?: boolean;
+  isInSelectionMode?: boolean;
+  onSelectionToggle?: (id: string) => void;
 }
 
-export function ArtistCard({ artist, onClick }: ArtistCardProps) {
+export function ArtistCard({
+  artist,
+  onClick,
+  selected = false,
+  isInSelectionMode = false,
+  onSelectionToggle,
+}: ArtistCardProps) {
+  const albums = useLibraryStore((s) => s.albums);
+
+  // Calculate actual album count from library
+  const actualAlbumCount = useMemo(
+    () => albums.filter((a) => a.artist === artist.name).length,
+    [albums, artist.name]
+  );
+
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      whileHover={{ y: -8, scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
-      onClick={onClick}
-      className="group cursor-pointer p-4 bg-surface hover:bg-surface-elevated rounded-xl transition-colors border border-transparent hover:border-border text-center"
-    >
-      {/* Artist Avatar */}
-      <div className="aspect-square bg-surface-elevated rounded-full mb-4 flex items-center justify-center shadow-lg relative overflow-hidden mx-auto w-40 max-w-full">
-        <div className="text-text-muted/20 group-hover:text-accent/50 transition-colors">
-          <IconMicrophone size={48} stroke={1.5} />
-        </div>
-
-        {/* Hover Overlay */}
-        <div className="absolute inset-0 bg-accent/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-full" />
-      </div>
-
-      {/* Info */}
-      <div>
-        <h3 className="font-semibold text-lg truncate mb-1 group-hover:text-accent transition-colors">
-          {artist.name}
-        </h3>
-        <p className="text-sm text-text-muted truncate mb-2">
-          {artist.albumCount || 0} albums • {artist.trackCount || 0} tracks
-        </p>
-      </div>
-    </motion.div>
+    <MediaCard
+      title={artist.name}
+      subtitle={`${actualAlbumCount} album${actualAlbumCount !== 1 ? "s" : ""}`}
+      image={
+        <ArtistImage
+          src={undefined} // Artists don't have images yet
+          alt={artist.name}
+          className="w-full h-full"
+          iconSize={48}
+        />
+      }
+      imageShape="circle"
+      onClick={() => {
+        if (isInSelectionMode && onSelectionToggle) {
+          onSelectionToggle(artist.id);
+        } else {
+          onClick();
+        }
+      }}
+      selected={selected}
+      isSelectionMode={isInSelectionMode}
+      hoverOverlay={
+        <div className="text-white text-sm font-medium">View Artist</div>
+      }
+    />
   );
 }

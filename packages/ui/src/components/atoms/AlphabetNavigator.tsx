@@ -9,6 +9,11 @@ interface AlphabetNavigatorProps {
   vertical?: boolean;
   scrollContainerId?: string;
   forceScrollOnly?: boolean;
+  /**
+   * If 'remote', all letters are available and onLetterClick
+   * returns -1 for index. Used for server-side index navigation.
+   */
+  mode?: "local" | "remote";
 }
 
 const ALPHABET = "#ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
@@ -20,6 +25,7 @@ export function AlphabetNavigator({
   vertical = true,
   scrollContainerId,
   forceScrollOnly = false,
+  mode = "local",
 }: AlphabetNavigatorProps) {
   const [activeLetter, setActiveLetter] = useState<string | null>(null);
   const [isHovering, setIsHovering] = useState(false);
@@ -28,22 +34,39 @@ export function AlphabetNavigator({
   const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Map letters to their first index in the items list
+  // Optimized for large collections
   const letterIndices = useMemo(() => {
-    const indices: Record<string, number> = {};
-    items.forEach((item, index) => {
-      let firstChar = item.name?.charAt(0).toUpperCase();
-      if (!firstChar || !/[A-Z]/.test(firstChar)) firstChar = "#";
+    if (mode === "remote") return {}; // Not needed for remote
 
+    const indices: Record<string, number> = {};
+
+    // Early return for empty items
+    if (items.length === 0) return indices;
+
+    items.forEach((item, index) => {
+      // Handle missing or invalid names
+      if (!item?.name) return;
+
+      let firstChar = item.name.charAt(0).toUpperCase();
+
+      // Map non-alphabetic characters to #
+      if (!firstChar || !/[A-Z]/.test(firstChar)) {
+        firstChar = "#";
+      }
+
+      // Only store the first occurrence of each letter
       if (indices[firstChar] === undefined) {
         indices[firstChar] = index;
       }
     });
+
     return indices;
-  }, [items]);
+  }, [items, mode]);
 
   const availableLetters = useMemo(() => {
+    if (mode === "remote") return ALPHABET;
     return ALPHABET.filter((l) => letterIndices[l] !== undefined);
-  }, [letterIndices]);
+  }, [letterIndices, mode]);
 
   // Detect scroll for visibility
   useEffect(() => {
@@ -90,13 +113,23 @@ export function AlphabetNavigator({
   }, [scrollContainerId]);
 
   const handleLetterInteraction = (letter: string) => {
+    if (mode === "remote") {
+      setActiveLetter(letter);
+      onLetterClick(-1, letter);
+
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => setActiveLetter(null), 2000);
+      return;
+    }
+
     const index = letterIndices[letter];
     if (index !== undefined) {
       setActiveLetter(letter);
       onLetterClick(index, letter);
 
       if (timerRef.current) clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(() => setActiveLetter(null), 1000);
+      // Increased timeout for better visual feedback during navigation
+      timerRef.current = setTimeout(() => setActiveLetter(null), 2000);
     }
   };
 
@@ -121,7 +154,8 @@ export function AlphabetNavigator({
       onMouseLeave={() => setIsHovering(false)}
     >
       {ALPHABET.map((letter) => {
-        const isAvailable = letterIndices[letter] !== undefined;
+        const isAvailable =
+          mode === "remote" || letterIndices[letter] !== undefined;
         return (
           <button
             key={letter}
