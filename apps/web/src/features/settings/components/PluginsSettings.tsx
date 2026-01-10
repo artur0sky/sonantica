@@ -107,7 +107,7 @@ export function PluginsSettings() {
           onClose={() => setSelectedPlugin(null)}
           config={selectedPlugin.config}
           onSave={handleSaveConfig}
-          pluginName={selectedPlugin.name}
+          pluginName={selectedPlugin.manifest.name}
         />
       )}
     </div>

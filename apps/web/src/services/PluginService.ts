@@ -2,15 +2,15 @@ import { getServerConfig } from './LibraryService';
 
 export interface Plugin {
   id: string;
-  name: string;
-  capability: string;
-  url: string;
+  baseUrl: string;
   isEnabled: boolean;
   config: Record<string, any>;
   health?: { status: string; timestamp: string };
-  manifest?: {
+  manifest: {
+    name: string;
     description: string;
     version: string;
+    capability: string;
   };
 }
 

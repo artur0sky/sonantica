@@ -43,21 +43,21 @@ export function PluginCard({ plugin, onToggle, onConfigure }: PluginCardProps) {
           </div>
           <div>
             <h3 className="font-semibold text-lg leading-none">
-              {plugin.name}
+              {plugin.manifest.name}
             </h3>
             <div className="flex items-center gap-2 mt-1">
               <span className="text-xs font-mono text-text-muted bg-surface-highlight px-1.5 py-0.5 rounded">
-                v{plugin.manifest?.version || "0.0.0"}
+                v{plugin.manifest.version || "0.0.0"}
               </span>
               <span className="text-xs text-text-muted capitalize">
-                • {plugin.capability}
+                • {plugin.manifest.capability}
               </span>
             </div>
           </div>
         </div>
 
         <p className="text-sm text-text-muted leading-relaxed max-w-xl">
-          {plugin.manifest?.description || "No description provided."}
+          {plugin.manifest.description || "No description provided."}
         </p>
 
         <div className="flex items-center gap-3 pt-1">

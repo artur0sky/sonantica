@@ -23,10 +23,32 @@ export function PluginConfigModal({
 
   useEffect(() => {
     if (isOpen) {
-      setJsonString(JSON.stringify(config, null, 2));
+      if (config && Object.keys(config).length > 0) {
+        setJsonString(JSON.stringify(config, null, 2));
+      } else {
+        // Pre-fill defaults based on plugin name/type
+        let defaultConfig = {};
+        const nameLower = pluginName.toLowerCase();
+        if (nameLower.includes("demucs")) {
+          defaultConfig = {
+            model: "htdemucs",
+            segment: 10,
+            shifts: 1,
+            overlap: 0.25,
+            split: true, // Return all stems
+          };
+        } else if (nameLower.includes("brain")) {
+          defaultConfig = {
+            batch_size: 32,
+            threshold: 0.75,
+            index_type: "L2",
+          };
+        }
+        setJsonString(JSON.stringify(defaultConfig, null, 2));
+      }
       setError(null);
     }
-  }, [isOpen, config]);
+  }, [isOpen, config, pluginName]);
 
   const handleSave = async () => {
     try {
@@ -61,13 +83,24 @@ export function PluginConfigModal({
         </div>
 
         <div className="p-6 space-y-4">
-          <p className="text-sm text-text-muted">
-            Modify the internal configuration for this plugin.
-            <br />
-            <span className="text-warning text-xs">
-              Warning: Incorrect values may break plugin functionality.
-            </span>
-          </p>
+          <div className="text-sm text-text-muted space-y-2 bg-surface-base p-3 rounded-lg border border-border/50">
+            <p className="font-medium text-text-primary">How to configure:</p>
+            <ul className="list-disc list-inside space-y-1 ml-1">
+              <li>Use standard JSON format (keys in double quotes).</li>
+              <li>
+                Demucs: Adjust <code>segment</code> for memory usage,{" "}
+                <code>shifts</code> for quality.
+              </li>
+              <li>
+                Brain: Adjust <code>threshold</code> (0.0-1.0) to filter
+                recommendations.
+              </li>
+            </ul>
+            <p className="text-warning text-xs mt-2 pt-2 border-t border-border/50">
+              Warning: Incorrect values may break plugin functionality. Reset to
+              empty `{}` to restore server defaults.
+            </p>
+          </div>
 
           <div className="space-y-2">
             <textarea
