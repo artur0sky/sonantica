@@ -1,4 +1,4 @@
-CREATE USER ${POSTGRES_USER} WITH PASSWORD '${PSQL_PASSWORD}';
+CREATE USER ${POSTGRES_USER} WITH PASSWORD '${POSTGRES_PASSWORD}';
 CREATE DATABASE ${POSTGRES_DB} WITH OWNER = ${POSTGRES_USER} ENCODING = '${ENCODING}' TABLESPACE = pg_default CONNECTION LIMIT = -1;
 ALTER ROLE ${POSTGRES_USER} SET client_encoding TO '${ENCODING}';
 ALTER ROLE ${POSTGRES_USER} SET default_transaction_isolation TO 'read committed';
@@ -14,16 +14,11 @@ ALTER USER ${POSTGRES_USER} CREATEROLE;
 GRANT pg_monitor TO ${POSTGRES_USER};
 GRANT EXECUTE ON FUNCTION pg_ls_waldir() TO ${POSTGRES_USER};
 ALTER DATABASE ${POSTGRES_DB} OWNER TO ${POSTGRES_USER};
-CREATE EXTENSION IF NOT EXISTS vector;
-
--- Connect to the main database to create the schema
 \c ${POSTGRES_DB}
 
--- ============================================================================
--- SONANTICA UNIFIED INITIAL SCHEMA (via PSQL INIT)
--- ============================================================================
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+CREATE EXTENSION IF NOT EXISTS "vector";
 
 -- CORE LIBRARY TABLES
 CREATE TABLE IF NOT EXISTS artists (
@@ -70,6 +65,11 @@ CREATE TABLE IF NOT EXISTS tracks (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Ensure AI columns exist if table was already created in a previous version
+ALTER TABLE tracks ADD COLUMN IF NOT EXISTS ai_metadata JSONB DEFAULT '{}'::jsonb;
+ALTER TABLE tracks ADD COLUMN IF NOT EXISTS has_stems BOOLEAN DEFAULT FALSE;
+ALTER TABLE tracks ADD COLUMN IF NOT EXISTS has_embeddings BOOLEAN DEFAULT FALSE;
+
 -- PLAYLIST TABLES
 CREATE TABLE IF NOT EXISTS playlists (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -89,6 +89,17 @@ CREATE TABLE IF NOT EXISTS playlist_tracks (
     added_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     PRIMARY KEY (playlist_id, track_id)
 );
+
+-- AI INFRASTRUCTURE
+CREATE TABLE IF NOT EXISTS track_embeddings (
+    track_id UUID PRIMARY KEY REFERENCES tracks(id) ON DELETE CASCADE,
+    embedding vector(512),
+    model_name TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+COMMENT ON TABLE track_embeddings IS 'Stores audio embeddings for similarity-based features (Brain Plugin)';
 
 -- ANALYTICS TABLES
 CREATE TABLE IF NOT EXISTS analytics_sessions (
@@ -248,6 +259,11 @@ CREATE TRIGGER trigger_update_track_embeddings_timestamp
     BEFORE UPDATE ON track_embeddings
     FOR EACH ROW
     EXECUTE FUNCTION update_track_embeddings_timestamp();
+
+-- AI COMMENTARY
+COMMENT ON COLUMN tracks.ai_metadata IS 'Stores AI-generated metadata, tags, and processing history';
+COMMENT ON COLUMN tracks.has_stems IS 'Indicates if the track has been processed by Demucs and has available stems';
+COMMENT ON COLUMN tracks.has_embeddings IS 'Indicates if the track has audio embeddings stored in track_embeddings table';
 
 -- VIEWS
 CREATE OR REPLACE VIEW v_top_tracks AS

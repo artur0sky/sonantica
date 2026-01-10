@@ -73,6 +73,7 @@ func GetTracks(w http.ResponseWriter, r *http.Request) {
 				t.id, t.title, t.album_id, t.artist_id, t.file_path, t.duration_seconds, 
 				t.format, t.bitrate, t.sample_rate, t.channels, t.track_number, t.disc_number, 
 				t.genre, t.year, t.play_count, t.is_favorite, t.created_at, t.updated_at,
+				t.ai_metadata, t.has_stems, t.has_embeddings,
 				a.name as artist_name,
 				al.title as album_title,
 				al.cover_art as album_cover_art
@@ -150,6 +151,7 @@ func GetTracks(w http.ResponseWriter, r *http.Request) {
 			t.id, t.title, t.album_id, t.artist_id, t.file_path, t.duration_seconds, 
 			t.format, t.bitrate, t.sample_rate, t.channels, t.track_number, t.disc_number, 
 			t.genre, t.year, t.play_count, t.is_favorite, t.created_at, t.updated_at,
+			t.ai_metadata, t.has_stems, t.has_embeddings,
 			a.name as artist_name,
 			al.title as album_title,
 			al.cover_art as album_cover_art
@@ -565,6 +567,7 @@ func GetTracksByArtist(w http.ResponseWriter, r *http.Request) {
 			t.id, t.title, t.album_id, t.artist_id, t.file_path, t.duration_seconds, 
 			t.format, t.bitrate, t.sample_rate, t.channels, t.track_number, t.disc_number, 
 			t.genre, t.year, t.play_count, t.is_favorite, t.created_at, t.updated_at,
+			t.ai_metadata, t.has_stems, t.has_embeddings,
 			a.name as artist_name,
 			al.title as album_title,
 			al.cover_art as album_cover_art
@@ -607,6 +610,7 @@ func GetTracksByAlbum(w http.ResponseWriter, r *http.Request) {
 			t.id, t.title, t.album_id, t.artist_id, t.file_path, t.duration_seconds, 
 			t.format, t.bitrate, t.sample_rate, t.channels, t.track_number, t.disc_number, 
 			t.genre, t.year, t.play_count, t.is_favorite, t.created_at, t.updated_at,
+			t.ai_metadata, t.has_stems, t.has_embeddings,
 			a.name as artist_name,
 			al.title as album_title,
 			al.cover_art as album_cover_art

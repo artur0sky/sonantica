@@ -23,7 +23,7 @@ services:
     restart: always
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-sonantica}
-      PSQL_PASSWORD: ${PSQL_PASSWORD:-sonantica}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sonantica}
       POSTGRES_DB: ${POSTGRES_DB:-sonantica}
       ENCODING: UTF8
     volumes:

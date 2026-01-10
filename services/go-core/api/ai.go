@@ -89,7 +89,7 @@ func (h *AIHandler) GetJobStatus(w http.ResponseWriter, r *http.Request) {
 		capType = string(domain.CapabilityStemSeparation) // Default
 	}
 
-	p, err := h.manager.GetPluginByCapability(domain.PluginCapability(capType))
+	_, err := h.manager.GetPluginByCapability(domain.PluginCapability(capType))
 	if err != nil {
 		http.Error(w, "Plugin not found for this capability", http.StatusNotFound)
 		return
