@@ -6,18 +6,26 @@
  * Refactored to remove Framer Motion and use CSS animations.
  */
 
-import { useMemo, useEffect, useRef } from "react";
+import { Suspense, lazy, useMemo, useEffect, useRef } from "react";
 import { usePlayerStore } from "@sonantica/player-core";
-import {
-  useUIStore,
-  MetadataPanel,
-  MiniPlayer,
-  ExpandedPlayer,
-  SidebarResizer,
-} from "@sonantica/ui";
+import { useUIStore, MiniPlayer, SidebarResizer } from "@sonantica/ui";
+
+// Lazy load heavy UI components
+const MetadataPanel = lazy(() =>
+  import("@sonantica/ui").then((m) => ({ default: m.MetadataPanel }))
+);
+const ExpandedPlayer = lazy(() =>
+  import("@sonantica/ui").then((m) => ({ default: m.ExpandedPlayer }))
+);
+
+const ComponentLoader = () => (
+  <div className="flex items-center justify-center h-full text-text-muted">
+    <IconLoader className="animate-spin" size={24} />
+  </div>
+);
 import { Header } from "./Header";
 import { LeftSidebar } from "./LeftSidebar";
-import { IconPlaylistAdd } from "@tabler/icons-react";
+import { IconPlaylistAdd, IconLoader } from "@tabler/icons-react";
 import { DownloadButton } from "../DownloadButton";
 
 import { useWaveformLoader } from "../../features/player/hooks/useWaveformLoader";
@@ -176,39 +184,41 @@ export function MainLayout({ children }: MainLayoutProps) {
                 } as React.CSSProperties
               }
             >
-              <ExpandedPlayer
-                dominantColor={dominantColor}
-                contrastColor={contrastColor}
-                actionButtons={
-                  fullTrack && (
-                    <div className="flex items-center gap-2">
-                      <DownloadButton
-                        trackId={fullTrack.id}
-                        track={fullTrack}
-                        size={22}
-                        showLabel={!isMobile}
-                      />
-                      {!isMobile && (
-                        <button
-                          className="p-1.5 text-text-muted hover:text-text rounded-full transition-all duration-200 flex items-center gap-2 hover:scale-110 active:scale-90"
-                          title="Add to Playlist"
-                          onClick={() =>
-                            alert("Add to Playlist: " + fullTrack.title)
-                          }
-                        >
-                          <IconPlaylistAdd size={22} />
-                          <span className="text-sm font-medium">
-                            Add to Playlist
-                          </span>
-                        </button>
-                      )}
-                    </div>
-                  )
-                }
-                onLongPressArt={() => {
-                  if (fullTrack) alert("Add to Playlist: " + fullTrack.title);
-                }}
-              />
+              <Suspense fallback={<ComponentLoader />}>
+                <ExpandedPlayer
+                  dominantColor={dominantColor}
+                  contrastColor={contrastColor}
+                  actionButtons={
+                    fullTrack && (
+                      <div className="flex items-center gap-2">
+                        <DownloadButton
+                          trackId={fullTrack.id}
+                          track={fullTrack}
+                          size={22}
+                          showLabel={!isMobile}
+                        />
+                        {!isMobile && (
+                          <button
+                            className="p-1.5 text-text-muted hover:text-text rounded-full transition-all duration-200 flex items-center gap-2 hover:scale-110 active:scale-90"
+                            title="Add to Playlist"
+                            onClick={() =>
+                              alert("Add to Playlist: " + fullTrack.title)
+                            }
+                          >
+                            <IconPlaylistAdd size={22} />
+                            <span className="text-sm font-medium">
+                              Add to Playlist
+                            </span>
+                          </button>
+                        )}
+                      </div>
+                    )
+                  }
+                  onLongPressArt={() => {
+                    if (fullTrack) alert("Add to Playlist: " + fullTrack.title);
+                  }}
+                />
+              </Suspense>
             </div>
           ) : (
             <div
@@ -238,11 +248,13 @@ export function MainLayout({ children }: MainLayoutProps) {
               onClick={toggleMetadataPanel}
             />
             <div className="relative h-full flex justify-end">
-              <MetadataPanel
-                metadata={currentTrack.metadata}
-                onClose={toggleMetadataPanel}
-                className="animate-in slide-in-from-right-full duration-500"
-              />
+              <Suspense fallback={null}>
+                <MetadataPanel
+                  metadata={currentTrack.metadata}
+                  onClose={toggleMetadataPanel}
+                  className="animate-in slide-in-from-right-full duration-500"
+                />
+              </Suspense>
             </div>
           </div>
         )}

@@ -11,8 +11,30 @@
 
 import type { MediaMetadata } from '@sonantica/shared';
 import type { IMetadataParser } from './parsers/contracts';
-import { ID3v2Parser } from './parsers/ID3v2Parser';
-import { FLACParser } from './parsers/FLACParser';
+
+// Note: To optimize bundle size, we load parsers dynamically.
+// "Fidelity should not be imposed, it should be offered."
+
+/**
+ * Lazy-load registry for parsers
+ */
+let registeredParsers: IMetadataParser[] | null = null;
+
+async function getParsers(): Promise<IMetadataParser[]> {
+  if (registeredParsers) return registeredParsers;
+  
+  const [ID3v2, FLAC] = await Promise.all([
+    import('./parsers/ID3v2Parser').then(m => m.ID3v2Parser),
+    import('./parsers/FLACParser').then(m => m.FLACParser)
+  ]);
+  
+  registeredParsers = [
+    new ID3v2(),
+    new FLAC()
+  ];
+  
+  return registeredParsers;
+}
 
 /**
  * Security constants
@@ -94,11 +116,7 @@ class MetadataSecurityValidator {
   }
 }
 
-// Register parsers
-const parsers: IMetadataParser[] = [
-  new ID3v2Parser(),
-  new FLACParser(),
-];
+// (Registered parsers handled via getParsers())
 
 /**
  * Extract metadata from an audio file URL
@@ -174,7 +192,8 @@ export async function extractMetadata(url: string, options: MetadataOptions = {}
     console.log(`📊 Metadata extraction for ${filename}: ${buffer.byteLength} bytes`);
 
     // Detect format and extract metadata using strategies
-    for (const parser of parsers) {
+    const availableParsers = await getParsers();
+    for (const parser of availableParsers) {
       try {
         if (parser.canParse(view)) {
           console.log(`✅ Parser found: ${parser.constructor.name}`);

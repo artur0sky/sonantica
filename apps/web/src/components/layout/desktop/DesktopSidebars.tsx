@@ -9,10 +9,12 @@
 
 import { Suspense, lazy } from "react";
 import { useUIStore, SidebarResizer } from "@sonantica/ui";
-import { RightSidebar } from "../RightSidebar";
 import { IconLoader } from "@tabler/icons-react";
 
-// Lazy load heavy sidebars
+// Lazy load sidebars
+const RightSidebar = lazy(() =>
+  import("../RightSidebar").then((m) => ({ default: m.RightSidebar }))
+);
 const LyricsSidebar = lazy(() =>
   import("../LyricsSidebar").then((m) => ({ default: m.LyricsSidebar }))
 );
@@ -101,7 +103,9 @@ export function DesktopSidebars({
             onMouseDown={() => startResizing("right")}
             className="left-0 opacity-20 hover:opacity-50"
           />
-          <RightSidebar isCollapsed={rightSidebarWidth === 80} />
+          <Suspense fallback={<SidebarLoader />}>
+            <RightSidebar isCollapsed={rightSidebarWidth === 80} />
+          </Suspense>
         </aside>
       )}
 

@@ -10,13 +10,17 @@
 
 import { Suspense, lazy } from "react";
 import { useUIStore } from "@sonantica/ui";
-import { LeftSidebar } from "../LeftSidebar";
-import { RightSidebar } from "../RightSidebar";
 import { IconLoader } from "@tabler/icons-react";
 import { cn } from "@sonantica/shared";
 import { useAnimationSettings } from "../../../hooks/useAnimationSettings";
 
-// Lazy load heavy sidebars
+// Lazy load sidebars
+const LeftSidebar = lazy(() =>
+  import("../LeftSidebar").then((m) => ({ default: m.LeftSidebar }))
+);
+const RightSidebar = lazy(() =>
+  import("../RightSidebar").then((m) => ({ default: m.RightSidebar }))
+);
 const LyricsSidebar = lazy(() =>
   import("../LyricsSidebar").then((m) => ({ default: m.LyricsSidebar }))
 );
@@ -126,7 +130,9 @@ export function MobileOverlays({
           )}
           style={sidebarStyles}
         >
-          <LeftSidebar isCollapsed={false} />
+          <Suspense fallback={<SidebarLoader />}>
+            <LeftSidebar isCollapsed={false} />
+          </Suspense>
         </aside>
       )}
 
@@ -142,7 +148,9 @@ export function MobileOverlays({
           )}
           style={sidebarStyles}
         >
-          <RightSidebar isCollapsed={false} />
+          <Suspense fallback={<SidebarLoader />}>
+            <RightSidebar isCollapsed={false} />
+          </Suspense>
         </aside>
       )}
 
