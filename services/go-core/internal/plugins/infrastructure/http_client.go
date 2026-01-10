@@ -166,3 +166,27 @@ func (c *PluginClient) CancelJob(ctx context.Context, baseURL string, jobID stri
 
 	return nil
 }
+
+func (c *PluginClient) GetRecommendations(ctx context.Context, baseURL string, r domain.RecommendationRequest) ([]domain.Recommendation, error) {
+	req, err := c.newRequest(ctx, http.MethodPost, baseURL+"/recommendations", r)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("recommendations failed: %d", resp.StatusCode)
+	}
+
+	var recs []domain.Recommendation
+	if err := json.NewDecoder(resp.Body).Decode(&recs); err != nil {
+		return nil, err
+	}
+
+	return recs, nil
+}

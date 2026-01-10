@@ -15,6 +15,7 @@ import (
 	"sonantica-core/config"
 	"sonantica-core/database"
 	"sonantica-core/internal/plugins/application"
+	domain "sonantica-core/internal/plugins/domain"
 	"sonantica-core/internal/plugins/infrastructure"
 	"sonantica-core/scanner"
 	"sonantica-core/shared"
@@ -60,18 +61,43 @@ func main() {
 
 	// 6.1 Initialize AI Plugins
 	pluginClient := infrastructure.NewPluginClient(cfg.InternalAPISecret)
-	pluginManager := application.NewManager(pluginClient)
+	pluginManager := application.NewManager(pluginClient, database.DB)
 
 	// Register known internal plugins from config
 	ctx := context.Background()
 	if cfg.DemucsURL != "" {
-		_ = pluginManager.RegisterPlugin(ctx, cfg.DemucsURL)
+		demucsFallback := &domain.Manifest{
+			Name:        "Demucs Separation",
+			Capability:  domain.CapabilityStemSeparation,
+			Description: "AI Stem Separation (Offline Fallback)",
+			Version:     "1.0.0",
+		}
+		if err := pluginManager.EnsurePluginRegistered(ctx, cfg.DemucsURL, demucsFallback); err != nil {
+			slog.Error("Failed to register Demucs plugin", "error", err)
+		}
 	}
 	if cfg.BrainURL != "" {
-		_ = pluginManager.RegisterPlugin(ctx, cfg.BrainURL)
+		brainFallback := &domain.Manifest{
+			Name:       "Sonántica Brain",
+			Capability: domain.CapabilityRecommendations, // or domain.CapabilityEmbeddings? Brain does both but main capability regarding user-facing feature is recs?
+			// Actually brain usually does embeddings and recommendations. The capability string in domain: CapabilityRecommendations
+			Description: "AI Similarity & Recommendations (Offline Fallback)",
+			Version:     "1.0.0",
+		}
+		if err := pluginManager.EnsurePluginRegistered(ctx, cfg.BrainURL, brainFallback); err != nil {
+			slog.Error("Failed to register Brain plugin", "error", err)
+		}
 	}
 	if cfg.KnowledgeURL != "" {
-		_ = pluginManager.RegisterPlugin(ctx, cfg.KnowledgeURL)
+		knowledgeFallback := &domain.Manifest{
+			Name:        "Knowledge Engine",
+			Capability:  domain.CapabilityKnowledge,
+			Description: "Metadata Enrichment (Offline Fallback)",
+			Version:     "1.0.0",
+		}
+		if err := pluginManager.EnsurePluginRegistered(ctx, cfg.KnowledgeURL, knowledgeFallback); err != nil {
+			slog.Error("Failed to register Knowledge plugin", "error", err)
+		}
 	}
 
 	// Start health monitoring (every 5 minutes)
@@ -93,7 +119,7 @@ func main() {
 
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   cfg.AllowedOrigins,
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token", "Range", "Origin"},
 		ExposedHeaders:   []string{"Link", "Content-Length", "Content-Range", "Accept-Ranges"},
 		AllowCredentials: true,
@@ -113,6 +139,10 @@ func main() {
 	// AI Routes
 	aiHandler := api.NewAIHandler(pluginManager)
 	aiHandler.RegisterAIRoutes(r)
+
+	// Plugin Management Routes
+	pluginsHandler := api.NewPluginsHandler(pluginManager)
+	pluginsHandler.RegisterRoutes(r)
 
 	r.Route("/api/library", func(r chi.Router) {
 		r.Get("/tracks", api.GetTracks)

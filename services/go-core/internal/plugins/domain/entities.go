@@ -3,15 +3,18 @@ package domain
 import (
 	"context"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // PluginCapability representa el tipo de IA
 type PluginCapability string
 
 const (
-	CapabilityStemSeparation PluginCapability = "stem-separation"
-	CapabilityEmbeddings     PluginCapability = "embeddings"
-	CapabilityKnowledge      PluginCapability = "knowledge"
+	CapabilityStemSeparation  PluginCapability = "stem-separation"
+	CapabilityEmbeddings      PluginCapability = "embeddings"
+	CapabilityKnowledge       PluginCapability = "knowledge"
+	CapabilityRecommendations PluginCapability = "recommendations"
 )
 
 // JobStatus representa el estado de un trabajo en el plugin
@@ -27,12 +30,12 @@ const (
 
 // Manifest representa la identidad de un plugin
 type Manifest struct {
-	ID           string           `json:"id"`
-	Name         string           `json:"name"`
-	Version      string           `json:"version"`
-	Capability   PluginCapability `json:"capability"`
-	Description  string           `json:"description"`
-	Model        string           `json:"model"`
+	ID           string            `json:"id"`
+	Name         string            `json:"name"`
+	Version      string            `json:"version"`
+	Capability   PluginCapability  `json:"capability"`
+	Description  string            `json:"description"`
+	Model        string            `json:"model"`
 	Requirements map[string]string `json:"requirements"`
 }
 
@@ -59,9 +62,28 @@ type JobResponse struct {
 
 // AIPlugin representa un plugin registrado en el sistema
 type AIPlugin struct {
-	Manifest Manifest
-	BaseURL  string
-	Health   HealthStatus
+	ID        uuid.UUID              `json:"id"`
+	Manifest  Manifest               `json:"manifest"`
+	BaseURL   string                 `json:"baseUrl"`
+	Health    HealthStatus           `json:"health"`
+	IsEnabled bool                   `json:"isEnabled"`
+	Config    map[string]interface{} `json:"config"`
+}
+
+// RecommendationRequest represents a request for recommendations
+type RecommendationRequest struct {
+	TrackID  string   `json:"track_id,omitempty"`
+	ArtistID string   `json:"artist_id,omitempty"`
+	Limit    int      `json:"limit"`
+	Context  []string `json:"context,omitempty"` // e.g. "favorites", "recent"
+}
+
+// Recommendation represents a recommended item
+type Recommendation struct {
+	ID     string  `json:"id"`
+	Type   string  `json:"type"` // track, artist, album
+	Score  float64 `json:"score"`
+	Reason string  `json:"reason"`
 }
 
 // IPluginClient define la interfaz para comunicarse con cualquier plugin AI (Port)
@@ -71,4 +93,5 @@ type IPluginClient interface {
 	CreateJob(ctx context.Context, baseURL string, trackID, filePath string, stems []string) (*JobResponse, error)
 	GetJobStatus(ctx context.Context, baseURL string, jobID string) (*JobResponse, error)
 	CancelJob(ctx context.Context, baseURL string, jobID string) error
+	GetRecommendations(ctx context.Context, baseURL string, req RecommendationRequest) ([]Recommendation, error)
 }
