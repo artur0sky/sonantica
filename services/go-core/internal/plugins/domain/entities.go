@@ -49,11 +49,21 @@ type HealthStatus struct {
 	StorageUsage int64     `json:"storage_usage_bytes"` // New field
 }
 
+// JobPriority representa la prioridad de un trabajo
+type JobPriority int
+
+const (
+	PriorityStreaming JobPriority = 0
+	PriorityNormal    JobPriority = 10
+	PriorityLow       JobPriority = 20
+)
+
 // JobResponse representa la respuesta de un trabajo
 type JobResponse struct {
 	ID        string            `json:"id"`
 	TrackID   string            `json:"track_id"`
 	Status    JobStatus         `json:"status"`
+	Priority  JobPriority       `json:"priority"`
 	Progress  float64           `json:"progress"`
 	Result    map[string]string `json:"result,omitempty"`
 	Error     string            `json:"error,omitempty"`
@@ -91,7 +101,7 @@ type Recommendation struct {
 type IPluginClient interface {
 	GetManifest(ctx context.Context, baseURL string) (*Manifest, error)
 	GetHealth(ctx context.Context, baseURL string) (*HealthStatus, error)
-	CreateJob(ctx context.Context, baseURL string, trackID, filePath string, stems []string) (*JobResponse, error)
+	CreateJob(ctx context.Context, baseURL string, trackID, filePath string, priority JobPriority, stems []string) (*JobResponse, error)
 	GetJobStatus(ctx context.Context, baseURL string, jobID string) (*JobResponse, error)
 	CancelJob(ctx context.Context, baseURL string, jobID string) error
 	GetRecommendations(ctx context.Context, baseURL string, req RecommendationRequest) ([]Recommendation, error)

@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import Optional, List
 
-from ..domain.entities import EmbeddingJob, JobStatus, HealthStatus
+from ..domain.entities import EmbeddingJob, JobStatus, HealthStatus, JobPriority
 from ..domain.repositories import IJobRepository, IAudioEmbedder, IHealthProvider, IVectorRepository
 from ..infrastructure.logging.context import set_trace_id, get_trace_id
 
@@ -14,7 +14,7 @@ class CreateEmbeddingJob:
     def __init__(self, repository: IJobRepository):
         self.repository = repository
 
-    async def execute(self, track_id: str, file_path: str, max_concurrent: int = 0, cooldown: int = 30) -> EmbeddingJob:
+    async def execute(self, track_id: str, file_path: str, priority: JobPriority = JobPriority.NORMAL, max_concurrent: int = 0, cooldown: int = 30) -> EmbeddingJob:
         # 1. Business Rule: Deduplication/Caching
         existing_job = await self.repository.find_by_track_id(track_id)
         if existing_job and existing_job.status in [JobStatus.COMPLETED, JobStatus.PROCESSING, JobStatus.PENDING]:
@@ -25,7 +25,8 @@ class CreateEmbeddingJob:
             id=str(uuid.uuid4()),
             track_id=track_id,
             file_path=file_path,
-            status=JobStatus.PENDING
+            status=JobStatus.PENDING,
+            priority=priority
         )
         await self.repository.save(job)
         logger.info(f"Created embedding job {job.id} for track {track_id}")

@@ -15,10 +15,11 @@ from src.application.use_cases import (
     CancelJobUseCase,
     ProcessSeparationJobUseCase
 )
-from src.domain.entities import StemType
+from src.domain.entities import StemType, JobPriority
 from src.infrastructure.logging.context import set_trace_id
 from src.infrastructure.redis_job_repository import RedisJobRepository
 from src.infrastructure.demucs_separator import DemucsStemSeparator
+from src.application.priority_processor import job_manager
 from src.infrastructure.config import settings
 
 logger = logging.getLogger(__name__)
@@ -35,6 +36,7 @@ class CreateJobRequest(BaseModel):
     track_id: str = Field(..., description="Unique track identifier")
     file_path: str = Field(..., description="Relative path to audio file in /media")
     model: str = Field(default="htdemucs", description="Demucs model to use")
+    priority: JobPriority = Field(default=JobPriority.NORMAL, description="Job priority (0=Streaming, 10=Normal, 20=Low)")
     stems: list[StemType] = Field(
         default_factory=lambda: list(StemType),
         description="Stems to extract"
@@ -46,6 +48,7 @@ class JobResponse(BaseModel):
     id: str
     track_id: str
     status: str
+    priority: int = 10
     progress: float = 0.0
     result: dict[str, str] | None = None
     error: str | None = None
@@ -92,12 +95,13 @@ async def create_job(
             track_id=request.track_id,
             file_path=str(file_path),
             model=request.model,
+            priority=request.priority,
             stems=request.stems
         )
         
-        # Schedule background processing only if pending
+        # Enqueue via shared Priority Manager instead of random background task
         if get_value(job.status) == "pending":
-            background_tasks.add_task(process_job_background, job.id)
+            await job_manager.enqueue(job)
         else:
             logger.info(f"SKIP_QUEUE | Job {job.id} for track {request.track_id} status: {get_value(job.status)}")
         
@@ -105,6 +109,7 @@ async def create_job(
             id=job.id,
             track_id=job.track_id,
             status=get_value(job.status),
+            priority=int(job.priority),
             progress=job.progress,
             created_at=job.created_at.strftime('%Y-%m-%dT%H:%M:%SZ'),
             updated_at=job.updated_at.strftime('%Y-%m-%dT%H:%M:%SZ')

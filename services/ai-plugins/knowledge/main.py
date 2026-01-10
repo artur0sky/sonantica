@@ -1,18 +1,17 @@
-import uvicorn
-import logging
+import asyncio
+import json
+import httpx
 import time
 from datetime import datetime
-from typing import Optional, List
-from fastapi import FastAPI, Request, HTTPException, Header, BackgroundTasks, Depends
-from fastapi.responses import JSONResponse
-import httpx
-import json
-import asyncio
+from contextlib import asynccontextmanager
+from pydantic import BaseModel, Field
+from fastapi import FastAPI, Request, HTTPException, Header, Depends
 
 from src.infrastructure.config import settings
 from src.infrastructure.redis_client import RedisClient
 from src.infrastructure.redis_job_repository import RedisJobRepository
-from src.domain.entities import KnowledgeJob, JobStatus
+from src.domain.entities import KnowledgeJob, JobStatus, JobPriority
+from src.application.priority_processor import job_manager
 
 from src.infrastructure.logging.logger_config import setup_logger
 from src.infrastructure.logging.context import set_trace_id
@@ -20,16 +19,38 @@ from src.infrastructure.logging.context import set_trace_id
 # Configure logging
 logger = setup_logger("knowledge-plugin")
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifecycle manager for startup/shutdown"""
+    logger.info("🚀 Starting Knowledge Plugin...")
+    
+    # Initialize Redis
+    await RedisClient.get_instance()
+    
+    # Start Priority Manager (process_job is defined below)
+    await job_manager.start(process_job)
+    
+    yield
+    
+    logger.info("🛑 Shutting down Knowledge Plugin...")
+    await job_manager.stop()
+    await RedisClient.close()
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
-    description="AI Knowledge Enrichment Plugin (Ollama Client)"
+    description="AI Knowledge Enrichment Plugin (Ollama Client)",
+    lifespan=lifespan
 )
 
 # Global Semaphore to avoid overloading Ollama
-# supermarket box behavior: N slots, others wait in line
 limit = settings.MAX_CONCURRENT_JOBS if settings.MAX_CONCURRENT_JOBS > 0 else 2
 ollama_semaphore = asyncio.Semaphore(limit)
+
+# Request/Response Models
+class CreateJobRequest(BaseModel):
+    track_id: str = Field(..., description="Unique track identifier")
+    priority: JobPriority = Field(default=JobPriority.NORMAL, description="Job priority")
 
 # Helpers
 def get_value(x):
@@ -41,80 +62,48 @@ async def verify_internal_secret(x_internal_secret: str = Header(None)):
         raise HTTPException(status_code=401, detail="Unauthorized")
 
 # Routes
-@app.get("/manifest")
-async def manifest():
-    return {
-        "id": "sonantica-plugin-knowledge",
-        "name": "Knowledge (LLM)",
-        "version": settings.VERSION,
-        "capability": "knowledge",
-        "description": "Enriches library with metadata, lyrics, and facts using local LLM (Llama 3.1) via Ollama."
-    }
-
-@app.get("/health")
-async def health():
-    ollama_status = "unknown"
+@router_post := app.post("/jobs", dependencies=[Depends(verify_internal_secret)])
+async def create_job(request: CreateJobRequest):
     try:
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(f"{settings.OLLAMA_HOST}/api/tags", timeout=2.0)
-            if resp.status_code == 200:
-                ollama_status = "connected"
-            else:
-                ollama_status = "error"
-    except Exception:
-        ollama_status = "unreachable"
-
-    return {
-        "status": "healthy",
-        "service": "sonantica-plugin-knowledge",
-        "version": settings.VERSION,
-        "ollama": ollama_status
-    }
-
-@app.post("/jobs", dependencies=[Depends(verify_internal_secret)])
-async def create_job(request: Request, background_tasks: BackgroundTasks):
-    try:
-        body = await request.json()
-        track_id = body.get("track_id")
-        if not track_id:
-            raise HTTPException(status_code=400, detail="track_id is required")
-
         repo = RedisJobRepository()
         
         # 1. Deduplication
-        existing = await repo.find_by_track_id(track_id)
+        existing = await repo.find_by_track_id(request.track_id)
         if existing and existing.status in [JobStatus.COMPLETED, JobStatus.PROCESSING, JobStatus.PENDING]:
             return {
                 "id": existing.id,
                 "track_id": existing.track_id,
                 "status": get_value(existing.status),
+                "priority": int(existing.priority),
                 "created_at": existing.created_at.strftime('%Y-%m-%dT%H:%M:%SZ'),
                 "updated_at": existing.updated_at.strftime('%Y-%m-%dT%H:%M:%SZ')
             }
 
-        job_id = f"knw_{track_id}_{int(time.time())}"
+        job_id = f"knw_{request.track_id}_{int(time.time())}"
         now = datetime.utcnow()
         
         job = KnowledgeJob(
             id=job_id,
-            track_id=track_id,
+            track_id=request.track_id,
             status=JobStatus.PENDING,
+            priority=request.priority,
             created_at=now,
             updated_at=now
         )
         
         await repo.save(job)
         
-        # Schedule background processing only if pending
+        # Enqueue via shared Priority Manager
         if get_value(job.status) == "pending":
-            background_tasks.add_task(process_job, job_id)
+            await job_manager.enqueue(job)
         else:
-            logger.info(f"SKIP_QUEUE | Job {job.id} for track {track_id} status: {get_value(job.status)}")
+            logger.info(f"SKIP_QUEUE | Job {job.id} for track {request.track_id} status: {get_value(job.status)}")
         
         return {
             "id": job.id,
             "track_id": job.track_id,
             "status": get_value(job.status),
+            "priority": int(job.priority),
             "created_at": job.created_at.strftime('%Y-%m-%dT%H:%M:%SZ'),
             "updated_at": job.updated_at.strftime('%Y-%m-%dT%H:%M:%SZ')
         }

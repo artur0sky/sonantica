@@ -4,8 +4,11 @@ import time
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
+from contextlib import asynccontextmanager
 from src.infrastructure.config import settings
+from src.infrastructure.redis_client import get_redis_client, close_redis
 from src.presentation.routes import jobs, recommendations
+from src.application.priority_processor import job_manager
 
 from src.infrastructure.logging.logger_config import setup_logger
 from src.infrastructure.logging.context import set_trace_id
@@ -13,10 +16,28 @@ from src.infrastructure.logging.context import set_trace_id
 # Initialize standard logger
 logger = setup_logger("brain-plugin")
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifecycle manager for startup/shutdown"""
+    logger.info("🚀 Starting Brain Plugin...")
+    
+    # Initialize Redis
+    await get_redis_client()
+    
+    # Start Priority Manager
+    await job_manager.start()
+    
+    yield
+    
+    logger.info("🛑 Shutting down Brain Plugin...")
+    await job_manager.stop()
+    await close_redis()
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
-    description="AI Audio Similarity Plugin for Sonantica"
+    description="AI Audio Similarity Plugin for Sonantica",
+    lifespan=lifespan
 )
 
 # Routes

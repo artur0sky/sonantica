@@ -17,6 +17,12 @@ class JobStatus(str, Enum):
     FAILED = "failed"
     CANCELLED = "cancelled"
 
+class JobPriority(int, Enum):
+    """Job priority levels (Lower value = Higher priority)"""
+    STREAMING = 0   # Immediate priority for currently playing track
+    NORMAL = 10     # Standard user-triggered request
+    LOW = 20        # Background library scan
+
 
 class StemType(str, Enum):
     """Available stem types from Demucs"""
@@ -37,6 +43,7 @@ class SeparationJob(BaseModel):
     model: str = "htdemucs"
     stems: List[StemType] = Field(default_factory=lambda: list(StemType))
     status: JobStatus = JobStatus.PENDING
+    priority: JobPriority = JobPriority.NORMAL
     progress: float = 0.0
     result: Optional[Dict[str, str]] = None
     error: Optional[str] = None

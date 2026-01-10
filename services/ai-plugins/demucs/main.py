@@ -41,6 +41,10 @@ async def lifespan(app: FastAPI):
         settings.output_path.mkdir(parents=True, exist_ok=True)
         logger.info(f"✓ Output directory ready: {settings.output_path}")
         
+        # Start Priority Job Manager
+        from src.application.priority_processor import job_manager
+        await job_manager.start()
+        
         # Check GPU availability
         import torch
         if torch.cuda.is_available():
@@ -57,6 +61,8 @@ async def lifespan(app: FastAPI):
     
     # Shutdown
     logger.info("🛑 Shutting down Demucs Plugin...")
+    from src.application.priority_processor import job_manager
+    await job_manager.stop()
     await RedisClient.close()
     logger.info("✓ Cleanup complete")
 

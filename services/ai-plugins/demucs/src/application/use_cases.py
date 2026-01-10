@@ -8,7 +8,7 @@ import logging
 from datetime import datetime
 from typing import List, Optional
 
-from src.domain.entities import SeparationJob, JobStatus, StemType
+from src.domain.entities import SeparationJob, JobStatus, StemType, JobPriority
 from src.domain.repositories import IJobRepository, IStemSeparator
 from src.infrastructure.config import settings
 
@@ -34,6 +34,7 @@ class CreateSeparationJobUseCase:
         track_id: str,
         file_path: str,
         model: str = "htdemucs",
+        priority: JobPriority = JobPriority.NORMAL,
         stems: List[StemType] = None
     ) -> SeparationJob:
         """
@@ -54,6 +55,7 @@ class CreateSeparationJobUseCase:
             track_id=track_id,
             file_path=file_path,
             model=model,
+            priority=priority,
             stems=stems or list(StemType),
             status=JobStatus.PENDING,
             created_at=now,

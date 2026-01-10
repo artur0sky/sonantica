@@ -4,9 +4,10 @@ from pydantic import BaseModel
 from typing import List, Optional
 
 from ...infrastructure.config import settings
-from ...domain.entities import JobStatus
+from ...domain.entities import JobStatus, JobPriority
 from ...application.use_cases import CreateEmbeddingJob, GetJobStatus, ProcessEmbeddingJob
-from ...infrastructure.redis_client import get_redis_client # Need to create this
+from ...application.priority_processor import job_manager
+from ...infrastructure.redis_client import get_redis_client
 from ...infrastructure.redis_job_repository import RedisJobRepository
 from ...infrastructure.postgres_vector_repository import PostgresVectorRepository
 from ...infrastructure.audio_embedder import ClapEmbedder
@@ -36,6 +37,7 @@ async def get_vector_repo():
 class CreateJobRequest(BaseModel):
     track_id: str
     file_path: str
+    priority: JobPriority = JobPriority.NORMAL
 
 @router.post("")
 async def create_job(
@@ -54,17 +56,14 @@ async def create_job(
         job = await use_case.execute(
             request.track_id, 
             request.file_path, 
+            priority=request.priority,
             max_concurrent=settings.MAX_CONCURRENT_JOBS,
             cooldown=settings.CONCURRENCY_COOLDOWN_SECONDS
         )
         
-        # Process in background only if pending
+        # Process via shared Priority Manager
         if job.status == JobStatus.PENDING:
-            process_use_case = ProcessEmbeddingJob(
-                repo, embedder, vector_repo, 
-                max_parallel=settings.MAX_CONCURRENT_JOBS
-            )
-            background_tasks.add_task(process_use_case.execute, job.id)
+            await job_manager.enqueue(job)
         else:
             logger.info(f"SKIP_QUEUE | Job {job.id} for track {request.track_id} is already in state: {job.status}")
         

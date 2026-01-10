@@ -235,10 +235,15 @@ func (m *Manager) processScope(plugin *domain.AIPlugin, scope PluginScope, track
 		}
 
 		// Dispatch based on capability
+		priority := domain.PriorityNormal
+		if scope == ScopeAll {
+			priority = domain.PriorityLow
+		}
+
 		if plugin.Manifest.Capability == domain.CapabilityStemSeparation {
 			// Fire and forget (or rather, dont wait for completion)
 			// But createJob is sync HTTP call? usually it returns quickly with JobID.
-			_, err := m.client.CreateJob(ctx, plugin.BaseURL, idStr, path, []string{"vocals", "drums", "bass", "other"})
+			_, err := m.client.CreateJob(ctx, plugin.BaseURL, idStr, path, priority, []string{"vocals", "drums", "bass", "other"})
 			if err != nil {
 				slog.Error("Failed to dispatch job", "plugin", plugin.Manifest.Name, "track", idStr, "error", err)
 			} else {
@@ -247,7 +252,7 @@ func (m *Manager) processScope(plugin *domain.AIPlugin, scope PluginScope, track
 		} else {
 			// For other plugins (Embeddings), we might have a different endpoint or Job type
 			// Assuming CreateJob works for all for now
-			_, err := m.client.CreateJob(ctx, plugin.BaseURL, idStr, path, nil)
+			_, err := m.client.CreateJob(ctx, plugin.BaseURL, idStr, path, priority, nil)
 			if err != nil {
 				slog.Error("Failed to dispatch job", "plugin", plugin.Manifest.Name, "track", idStr, "error", err)
 			} else {
@@ -349,7 +354,8 @@ func (m *Manager) SeparateStems(ctx context.Context, trackID, filePath string) (
 	}
 
 	// Por defecto pedimos todos los stems
-	return m.client.CreateJob(ctx, p.BaseURL, trackID, filePath, []string{"vocals", "drums", "bass", "other"})
+	// Por defecto pedimos todos los stems
+	return m.client.CreateJob(ctx, p.BaseURL, trackID, filePath, domain.PriorityNormal, []string{"vocals", "drums", "bass", "other"})
 }
 
 // GetJobStatus consulta el estado de un trabajo en un plugin específico
@@ -461,9 +467,9 @@ func (m *Manager) AnalyzeTrack(ctx context.Context, trackID uuid.UUID, cap domai
 		return nil, err
 	}
 
-	// 3. Dispatch to plugin
+	// 3. Dispatch to plugin (Priority Streaming since it's a direct manual analysis)
 	if cap == domain.CapabilityStemSeparation {
-		return m.client.CreateJob(ctx, p.BaseURL, trackID.String(), filePath, []string{"vocals", "drums", "bass", "other"})
+		return m.client.CreateJob(ctx, p.BaseURL, trackID.String(), filePath, domain.PriorityStreaming, []string{"vocals", "drums", "bass", "other"})
 	}
-	return m.client.CreateJob(ctx, p.BaseURL, trackID.String(), filePath, nil)
+	return m.client.CreateJob(ctx, p.BaseURL, trackID.String(), filePath, domain.PriorityStreaming, nil)
 }

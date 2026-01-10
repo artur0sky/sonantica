@@ -561,7 +561,28 @@ These AI features are tools, not magic. They help you **interpret** your music, 
 - **Logic:**
   - `POST /jobs/enrich`: Takes Artist/Album -> Prompts Ollama ("Tell me about...") -> Returns JSON.
 
-## Verification Plan
+## 6. Strategic Evolution (Max-ROI Features)
+
+To maximize the Return on Investment (ROI) of heavy AI containers (GBs of RAM/GPU), the system will evolve beyond basic utility towards "Creative & Deep Listening":
+
+### 6.1 Plugin: Demucs (Active Listening)
+*   **Isolation Faders:** Transition from "Separation" to "Mixing". Real-time faders to lower vocals for ambient focus or karaoke without losing quality.
+*   **Multi-Stem EQ:** Apply independent equalization to stems (e.g., boost the "Bass" stem without muddying the vocal "Stem").
+*   **Constituent Waveforms:** Instead of a single waveform, display 4 synchronized layers (Vocals, Drums, Bass, Other) showing the "architecture" of the track.
+
+### 6.2 Plugin: Brain (Intentional Discovery)
+*   **Semantic Search:** Enable natural language queries like *"Música melancólica de piano para una mañana de lluvia"* using vector embeddings.
+*   **Sonic Map (2D/3D):** Interactive visual galaxy where tracks are positioned by sonic similarity, allowing physical "navigation" through the library.
+*   **Smart Transitions:** Use BPM and Key detection to perform automated, beat-matched crossfades between tracks.
+
+### 6.3 Plugin: Knowledge (The Digital Documentarist)
+*   **Lyric Explainer (Ollama):** Local LLM integration to explain metaphors or cultural context in lyrics (e.g., *"Explain the subtext of this verse"*).
+*   **Relationship Graph:** Visualize hidden connections (e.g., *"This drummer also played on these 5 other tracks in your library"*).
+*   **Fidelity Validator:** Technical audit comparing metadata vs audio spectrum (e.g., *"Warning: This FLAC appears to be an upscale from a lossy MP3"*).
+
+---
+
+## 7. Verification Plan
 
 ### Automated Tests
 - **Contract Tests:** Ensure each plugin image responds correctly to `GET /manifest` and `GET /health`.

@@ -17,3 +17,10 @@ async def get_redis_client() -> redis.Redis:
             decode_responses=True
         )
     return _redis_client
+
+async def close_redis() -> None:
+    global _redis_client
+    if _redis_client:
+        await _redis_client.close()
+        _redis_client = None
+        logger.info("Redis connection closed")

@@ -11,6 +11,12 @@ class JobStatus(str, Enum):
     FAILED = "failed"
     CANCELLED = "cancelled"
 
+class JobPriority(int, Enum):
+    """Job priority levels (Lower value = Higher priority)"""
+    STREAMING = 0   # Immediate priority
+    NORMAL = 10     # Standard
+    LOW = 20        # Background
+
 class CapabilityType(str, Enum):
     EMBEDDINGS = "embeddings"
 
@@ -27,6 +33,7 @@ class EmbeddingJob:
     track_id: str
     file_path: str
     status: JobStatus = JobStatus.PENDING
+    priority: JobPriority = JobPriority.NORMAL
     progress: float = 0.0
     embedding: Optional[List[float]] = None
     model_version: Optional[str] = None
@@ -65,6 +72,7 @@ class EmbeddingJob:
             "track_id": self.track_id,
             "file_path": self.file_path,
             "status": self.status.value,
+            "priority": int(self.priority),
             "progress": self.progress,
             "embedding": self.embedding,
             "model_version": self.model_version,

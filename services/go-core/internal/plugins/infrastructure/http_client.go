@@ -94,10 +94,11 @@ func (c *PluginClient) GetHealth(ctx context.Context, baseURL string) (*domain.H
 	return &health, nil
 }
 
-func (c *PluginClient) CreateJob(ctx context.Context, baseURL string, trackID, filePath string, stems []string) (*domain.JobResponse, error) {
+func (c *PluginClient) CreateJob(ctx context.Context, baseURL string, trackID, filePath string, priority domain.JobPriority, stems []string) (*domain.JobResponse, error) {
 	payload := map[string]interface{}{
 		"track_id":  trackID,
 		"file_path": filePath,
+		"priority":  int(priority),
 		"stems":     stems,
 	}
 
