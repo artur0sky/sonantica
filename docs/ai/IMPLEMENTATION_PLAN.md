@@ -515,12 +515,12 @@ These AI features are tools, not magic. They help you **interpret** your music, 
 
 ## Component Implementation
 
-### [A] sonantica-core (Go) - 🚧 PENDING
-- **[NEW]** `services/go-core/internal/plugins/`
-  - **Manager:** Handles registration and health checks.
-  - **Client:** Generic HTTP client for communicating with plugins.
-- **[MODIFY]** `services/go-core/api/`
-  - New endpoints for UI to query available AI features.
+### [A] sonantica-core (Go) - ✅ COMPLETED
+- **Status:** Integrated Plugin Manager, client, and API routes.
+- **Components:**
+  - `services/go-core/internal/plugins/`: Manager, Client, Domain entities.
+  - `services/go-core/api/ai.go`: API handlers for discovery and jobs.
+  - `services/go-core/models/models.go`: Updated with AI fields.
 
 ### [B] sonantica-plugin-demucs (Python) - ✅ COMPLETED
 - **Status:** Fully implemented with Clean Architecture
@@ -547,14 +547,16 @@ These AI features are tools, not magic. They help you **interpret** your music, 
 - **Output:** 4 stems (vocals, drums, bass, other) in `/stems/{job_id}/`
 - **Documentation:** See `services/ai-plugins/demucs/README.md`
 
-### [C] sonantica-plugin-brain (Python)
+### [C] sonantica-plugin-brain (Python) - ✅ COMPLETED
+- **Status:** Fully implemented with Clean Architecture.
 - **Base Image:** `pytorch/pytorch`.
 - **Libs:** `torchaudio`, `transformers` (Hugging Face), `pgvector`.
 - **Function:**
   - **Embeddings Model:** `laion/clap-htsat-unfused` (Music-Audio-Text).
-  - On `POST /jobs/analyze`: Generates embedding -> writes to DB.
+  - Handles `POST /jobs` and provides embeddings for pgvector.
 
-### [D] sonantica-plugin-knowledge (Go/Python)
+### [D] sonantica-plugin-knowledge (Go/Python) - ⏸️ ON HOLD
+- **Status:** Postponed until metadata APIs are integrated.
 - **Function:** Middleman to Ollama.
 - **Logic:**
   - `POST /jobs/enrich`: Takes Artist/Album -> Prompts Ollama ("Tell me about...") -> Returns JSON.
