@@ -15,8 +15,9 @@ import { LibrarySettings } from "../components/LibrarySettings";
 import { InterfaceSettings } from "../components/InterfaceSettings";
 import { OfflineSettings } from "../components/OfflineSettings";
 import { AnalyticsSettings } from "../components/AnalyticsSettings";
+import { PluginsSettings } from "../components/PluginsSettings";
 import { ServersSection } from "../../library/components/ServersSection";
-import { IconChartBar } from "@tabler/icons-react";
+import { IconChartBar, IconPlugConnected } from "@tabler/icons-react";
 
 export function SettingsPage() {
   const [activeTab, setActiveTab] = useState("general"); // Default to General/Interface
@@ -41,6 +42,11 @@ export function SettingsPage() {
       id: "analytics",
       label: "Analytics",
       icon: IconChartBar,
+    },
+    {
+      id: "plugins",
+      label: "Plugins",
+      icon: IconPlugConnected,
     },
     {
       id: "offline",
@@ -90,6 +96,7 @@ export function SettingsPage() {
         {activeTab === "library" && <LibrarySettings />}
         {activeTab === "offline" && <OfflineSettings />}
         {activeTab === "analytics" && <AnalyticsSettings />}
+        {activeTab === "plugins" && <PluginsSettings />}
 
         {activeTab === "servers" && (
           <div className="bg-surface-elevated border border-border rounded-xl p-4 sm:p-6 animate-in fade-in duration-500">

@@ -13,7 +13,7 @@ import {
   useUIStore,
   Button,
 } from "@sonantica/ui";
-import { useQueueRecommendations } from "@sonantica/recommendations";
+import { useSmartRecommendations } from "../../hooks/useSmartRecommendations";
 import { usePlaylistCRUD } from "../../hooks/usePlaylistCRUD";
 import { useDialog } from "../../hooks/useDialog";
 import { PromptDialog } from "@sonantica/ui";
@@ -30,16 +30,12 @@ import { trackToMediaSource } from "../../utils/streamingUrl";
 
 export function RecommendationsSidebar() {
   const toggleRecommendations = useUIStore((s) => s.toggleRecommendations);
-  const [diversity, setDiversity] = useState(0.2);
+  const [diversity, setDiversity] = useState(0.2); // Ignored by AI for now, but kept for client side fallback if we pass it
   const playNext = useQueueStore((s) => s.playNext);
 
-  // Get recommendations based on selected diversity
+  // Get recommendations (Smart AI or Client Fallback)
   const { trackRecommendations, albumRecommendations, artistRecommendations } =
-    useQueueRecommendations({
-      limit: 10,
-      minScore: 0.3,
-      diversity,
-    });
+    useSmartRecommendations();
 
   const diversityOptions = [
     { value: 0.0, label: "Similar" },
