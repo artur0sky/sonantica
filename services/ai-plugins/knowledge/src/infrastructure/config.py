@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings
 from typing import Optional
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "Sonantica Brain Plugin"
+    PROJECT_NAME: str = "Sonantica Knowledge Plugin"
     VERSION: str = "0.1.0"
     API_V1_STR: str = ""
     
@@ -15,16 +15,8 @@ class Settings(BaseSettings):
     REDIS_PORT: int = int(os.getenv("REDIS_PORT", 6379))
     REDIS_PASSWORD: Optional[str] = os.getenv("REDIS_PASSWORD", None)
     
-    # Postgres (for direct vector inserts if needed, though core handles it usually)
-    POSTGRES_URL: Optional[str] = os.getenv("POSTGRES_URL", None)
-    
-    # Model Config
-    # Default: laion/clap-htsat-unfused
-    AI_MODEL_NAME: str = os.getenv("AI_MODEL_NAME", "laion/clap-htsat-unfused")
-    AI_EMBEDDING_DIM: int = 512
-    # Cache
-    TORCH_HOME: str = os.getenv("TORCH_HOME", "/tmp/torch")
-    HF_HOME: str = os.getenv("HF_HOME", "/tmp/huggingface")
+    # Ollama
+    OLLAMA_HOST: str = os.getenv("OLLAMA_HOST", "http://host.docker.internal:11434")
 
     class Config:
         case_sensitive = True

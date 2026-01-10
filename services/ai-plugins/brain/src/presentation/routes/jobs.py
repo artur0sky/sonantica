@@ -20,8 +20,8 @@ async def get_embedder():
     return ClapEmbedder()
 
 class CreateJobRequest(BaseModel):
-    trackId: str
-    filePath: str
+    track_id: str
+    file_path: str
 
 @router.post("")
 async def create_job(
@@ -35,7 +35,7 @@ async def create_job(
         raise HTTPException(status_code=401, detail="Unauthorized")
 
     use_case = CreateEmbeddingJob(repo)
-    job = await use_case.execute(request.trackId, request.filePath)
+    job = await use_case.execute(request.track_id, request.file_path)
     
     # Process in background
     process_use_case = ProcessEmbeddingJob(repo, embedder)
