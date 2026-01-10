@@ -283,6 +283,164 @@ services:
       - "traefik.http.routers.flower.middlewares=flower-auth,security-headers"
 
   # ============================================
+  # AI PLUGINS (Optional - Opt-in via --profile ai)
+  # ============================================
+  plugin-demucs:
+    build:
+      context: ./services/ai-plugins/demucs
+      dockerfile: Dockerfile
+    container_name: sonantica-plugin-demucs
+    profiles: ["ai"] # Opt-in only - user must explicitly enable
+    restart: unless-stopped
+    environment:
+      - TORCH_HOME=/model_cache/torch
+      - HF_HOME=/model_cache/huggingface
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-sonantica}
+      - MEDIA_PATH=/media
+      - OUTPUT_PATH=/stems
+      - MAX_CONCURRENT_JOBS=${AI_MAX_CONCURRENT_JOBS:-2}
+      - JOB_TIMEOUT_SECONDS=${AI_JOB_TIMEOUT:-600}
+      - INTERNAL_API_SECRET=${INTERNAL_API_SECRET}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+      - LOG_ENABLED=${LOG_ENABLED:-true}
+    volumes:
+      - ${MEDIA_PATH:-./media}:/media:ro
+      - sonantica_stems:/stems
+      - sonantica_ai_cache:/model_cache
+      - ./logs/ai/demucs:/var/log/sonantica
+    networks:
+      - sonantica-net
+    depends_on:
+      redis:
+        condition: service_healthy
+    # No ports exposed in production - internal only
+    labels:
+      - "traefik.enable=true"
+      # Internal API (accessible only from within Docker network)
+      - "traefik.http.routers.plugin-demucs.rule=Host(`${DOMAIN_NAME:-localhost}`) && PathPrefix(`/api/v1/ai/demucs`)"
+      - "traefik.http.routers.plugin-demucs.entrypoints=websecure"
+      - "traefik.http.routers.plugin-demucs.tls.certresolver=myresolver"
+      - "traefik.http.middlewares.strip-demucs.stripprefix.prefixes=/api/v1/ai/demucs"
+      - "traefik.http.routers.plugin-demucs.middlewares=strip-demucs,rate-limit,security-headers"
+      - "traefik.http.services.plugin-demucs.loadbalancer.server.port=8080"
+      - "com.sonantica.description=AI Stem Separation Plugin (Demucs)"
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 8G
+        reservations:
+          cpus: '2.0'
+          memory: 4G
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  plugin-brain:
+    build:
+      context: ./services/ai-plugins/brain
+      dockerfile: Dockerfile
+    container_name: sonantica-plugin-brain
+    profiles: ["ai"]
+    restart: unless-stopped
+    environment:
+      - TORCH_HOME=/model_cache/torch
+      - HF_HOME=/model_cache/huggingface
+      - POSTGRES_URL=postgres://${POSTGRES_USER:-sonantica}:${PSQL_PASSWORD:-sonantica}@postgres:5432/${POSTGRES_DB:-sonantica}?sslmode=disable
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-sonantica}
+      - MEDIA_PATH=/media
+      - EMBEDDING_MODEL=${AI_EMBEDDING_MODEL:-laion/clap-htsat-unfused}
+      - EMBEDDING_DIMENSION=${AI_EMBEDDING_DIM:-512}
+      - MAX_CONCURRENT_JOBS=${AI_MAX_CONCURRENT_JOBS:-2}
+      - INTERNAL_API_SECRET=${INTERNAL_API_SECRET}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+      - LOG_ENABLED=${LOG_ENABLED:-true}
+    volumes:
+      - ${MEDIA_PATH:-./media}:/media:ro
+      - sonantica_ai_cache:/model_cache
+      - ./logs/ai/brain:/var/log/sonantica
+    networks:
+      - sonantica-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.plugin-brain.rule=Host(`${DOMAIN_NAME:-localhost}`) && PathPrefix(`/api/v1/ai/brain`)"
+      - "traefik.http.routers.plugin-brain.entrypoints=websecure"
+      - "traefik.http.routers.plugin-brain.tls.certresolver=myresolver"
+      - "traefik.http.middlewares.strip-brain.stripprefix.prefixes=/api/v1/ai/brain"
+      - "traefik.http.routers.plugin-brain.middlewares=strip-brain,rate-limit,security-headers"
+      - "traefik.http.services.plugin-brain.loadbalancer.server.port=8080"
+      - "com.sonantica.description=AI Audio Similarity Plugin (Brain)"
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 6G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  plugin-knowledge:
+    build:
+      context: ./services/ai-plugins/knowledge
+      dockerfile: Dockerfile
+    container_name: sonantica-plugin-knowledge
+    profiles: ["ai"]
+    restart: unless-stopped
+    environment:
+      - OLLAMA_HOST=${OLLAMA_HOST:-http://host.docker.internal:11434}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-sonantica}
+      - POSTGRES_URL=postgres://${POSTGRES_USER:-sonantica}:${PSQL_PASSWORD:-sonantica}@postgres:5432/${POSTGRES_DB:-sonantica}?sslmode=disable
+      - INTERNAL_API_SECRET=${INTERNAL_API_SECRET}
+      - CACHE_TTL_HOURS=${AI_KNOWLEDGE_CACHE_TTL:-168}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+      - LOG_ENABLED=${LOG_ENABLED:-true}
+    volumes:
+      - ./logs/ai/knowledge:/var/log/sonantica
+    networks:
+      - sonantica-net
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.plugin-knowledge.rule=Host(`${DOMAIN_NAME:-localhost}`) && PathPrefix(`/api/v1/ai/knowledge`)"
+      - "traefik.http.routers.plugin-knowledge.entrypoints=websecure"
+      - "traefik.http.routers.plugin-knowledge.tls.certresolver=myresolver"
+      - "traefik.http.middlewares.strip-knowledge.stripprefix.prefixes=/api/v1/ai/knowledge"
+      - "traefik.http.routers.plugin-knowledge.middlewares=strip-knowledge,rate-limit,security-headers"
+      - "traefik.http.services.plugin-knowledge.loadbalancer.server.port=8080"
+      - "com.sonantica.description=AI Knowledge Enrichment Plugin (Ollama Client)"
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+  # ============================================
   # FRONTEND (Web App)
   # ============================================
   web:
@@ -338,3 +496,11 @@ volumes:
     driver: local
   sonantica_cache:
     driver: local
+  # AI Plugin Volumes
+  sonantica_ai_cache:
+    driver: local
+    # Stores downloaded AI models (Torch, HuggingFace)
+    # Prevents re-downloading GBs on container restart
+  sonantica_stems:
+    driver: local
+    # Stores separated audio stems (vocals, drums, bass, other)

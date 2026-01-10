@@ -1,6 +1,11 @@
 # Sonántica - Docker Compose Configuration
 # Philosophy: "User autonomy" - flexible volume mounting
 #
+# Hardware Optimization Stack:
+# - CPU: AMD Ryzen 7 5700X (8 Cores / 16 Threads)
+# - RAM: 48GB DDR4 3200MHz
+# - GPU: NVIDIA GeForce GTX 1080 Turbo Asus (8GB GDDR5X, CUDA Support)
+# - OS: Windows 10 Pro 21H2
 # Usage:
 #   Production:  docker compose up -d
 #   Stop:        docker compose down
@@ -216,6 +221,153 @@ services:
     user: root
 
   # ============================================
+  # AI PLUGINS (Optional - Opt-in via --profile ai)
+  # ============================================
+  plugin-demucs:
+    build:
+      context: ./services/ai-plugins/demucs
+      dockerfile: Dockerfile
+    container_name: sonantica-plugin-demucs
+    profiles: ["ai"] # Opt-in only - user must explicitly enable
+    restart: unless-stopped
+    environment:
+      - TORCH_HOME=/model_cache/torch
+      - HF_HOME=/model_cache/huggingface
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-sonantica}
+      - MEDIA_PATH=/media
+      - OUTPUT_PATH=/stems
+      - MAX_CONCURRENT_JOBS=${AI_MAX_CONCURRENT_JOBS:-2}
+      - JOB_TIMEOUT_SECONDS=${AI_JOB_TIMEOUT:-600}
+      - INTERNAL_API_SECRET=${INTERNAL_API_SECRET:-generate-secure-token-here}
+      # Logging Configuration
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+      - LOG_ENABLED=${LOG_ENABLED:-true}
+    volumes:
+      - ${MEDIA_PATH:-./media}:/media:ro
+      - sonantica_stems:/stems
+      - sonantica_ai_cache:/model_cache # Critical for persistence
+      - ./logs/ai/demucs:/var/log/sonantica
+    networks:
+      - sonantica-net
+    depends_on:
+      redis:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8091:8080" # Internal API for debugging
+    labels:
+      com.sonantica.description: "AI Stem Separation Plugin (Demucs)"
+    user: root
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 8G
+        reservations:
+          cpus: '2.0'
+          memory: 4G
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  plugin-brain:
+    build:
+      context: ./services/ai-plugins/brain
+      dockerfile: Dockerfile
+    container_name: sonantica-plugin-brain
+    profiles: ["ai"]
+    restart: unless-stopped
+    environment:
+      - TORCH_HOME=/model_cache/torch
+      - HF_HOME=/model_cache/huggingface
+      - POSTGRES_URL=postgres://${POSTGRES_USER:-sonantica}:${PSQL_PASSWORD:-sonantica}@postgres:${PSQL_PORT:-5432}/${POSTGRES_DB:-sonantica}?sslmode=disable
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-sonantica}
+      - MEDIA_PATH=/media
+      - EMBEDDING_MODEL=${AI_EMBEDDING_MODEL:-laion/clap-htsat-unfused}
+      - EMBEDDING_DIMENSION=${AI_EMBEDDING_DIM:-512}
+      - MAX_CONCURRENT_JOBS=${AI_MAX_CONCURRENT_JOBS:-2}
+      - INTERNAL_API_SECRET=${INTERNAL_API_SECRET:-generate-secure-token-here}
+      # Logging Configuration
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+      - LOG_ENABLED=${LOG_ENABLED:-true}
+    volumes:
+      - ${MEDIA_PATH:-./media}:/media:ro
+      - sonantica_ai_cache:/model_cache
+      - ./logs/ai/brain:/var/log/sonantica
+    networks:
+      - sonantica-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8092:8080" # Internal API for debugging
+    labels:
+      com.sonantica.description: "AI Audio Similarity Plugin (Brain)"
+    user: root
+    deploy:
+      resources:
+        limits:
+          cpus: '4.0'
+          memory: 6G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  plugin-knowledge:
+    build:
+      context: ./services/ai-plugins/knowledge
+      dockerfile: Dockerfile
+    container_name: sonantica-plugin-knowledge
+    profiles: ["ai"]
+    restart: unless-stopped
+    environment:
+      - OLLAMA_HOST=${OLLAMA_HOST:-http://host.docker.internal:11434}
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-sonantica}
+      - POSTGRES_URL=postgres://${POSTGRES_USER:-sonantica}:${PSQL_PASSWORD:-sonantica}@postgres:${PSQL_PORT:-5432}/${POSTGRES_DB:-sonantica}?sslmode=disable
+      - INTERNAL_API_SECRET=${INTERNAL_API_SECRET:-generate-secure-token-here}
+      - CACHE_TTL_HOURS=${AI_KNOWLEDGE_CACHE_TTL:-168} # 7 days default
+      # Logging Configuration
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+      - LOG_ENABLED=${LOG_ENABLED:-true}
+    volumes:
+      - ./logs/ai/knowledge:/var/log/sonantica
+    networks:
+      - sonantica-net
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8093:8080" # Internal API for debugging
+    labels:
+      com.sonantica.description: "AI Knowledge Enrichment Plugin (Ollama Client)"
+    user: root
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+  # ============================================
   # FRONTEND & PROXY
   # ============================================
   web:
@@ -279,3 +431,11 @@ volumes:
     driver: local
   sonantica_cache:
     driver: local
+  # AI Plugin Volumes
+  sonantica_ai_cache:
+    driver: local
+    # Stores downloaded AI models (Torch, HuggingFace)
+    # Prevents re-downloading GBs on container restart
+  sonantica_stems:
+    driver: local
+    # Stores separated audio stems (vocals, drums, bass, other)
