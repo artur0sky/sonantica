@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -13,6 +14,8 @@ import (
 	"sonantica-core/cache"
 	"sonantica-core/config"
 	"sonantica-core/database"
+	"sonantica-core/internal/plugins/application"
+	"sonantica-core/internal/plugins/infrastructure"
 	"sonantica-core/scanner"
 	"sonantica-core/shared"
 	"sonantica-core/shared/logger"
@@ -55,6 +58,25 @@ func main() {
 	slog.Info("Starting Scanner Scheduler", "path", cfg.MediaPath, "interval", "1h")
 	scanner.StartScanner(cfg.MediaPath, 1*time.Hour)
 
+	// 6.1 Initialize AI Plugins
+	pluginClient := infrastructure.NewPluginClient(cfg.InternalAPISecret)
+	pluginManager := application.NewManager(pluginClient)
+
+	// Register known internal plugins from config
+	ctx := context.Background()
+	if cfg.DemucsURL != "" {
+		_ = pluginManager.RegisterPlugin(ctx, cfg.DemucsURL)
+	}
+	if cfg.BrainURL != "" {
+		_ = pluginManager.RegisterPlugin(ctx, cfg.BrainURL)
+	}
+	if cfg.KnowledgeURL != "" {
+		_ = pluginManager.RegisterPlugin(ctx, cfg.KnowledgeURL)
+	}
+
+	// Start health monitoring (every 5 minutes)
+	pluginManager.StartMonitoring(ctx, 5*time.Minute)
+
 	// 7. Initialize Router
 	r := chi.NewRouter()
 
@@ -84,6 +106,14 @@ func main() {
 	r.Get("/stream/{id}", api.StreamTrack)
 	r.Get("/api/cover/*", api.GetAlbumCover)
 
+	// Analytics Routes
+	analyticsHandler := handlers.NewAnalyticsHandler()
+	analyticsHandler.RegisterRoutes(r)
+
+	// AI Routes
+	aiHandler := api.NewAIHandler(pluginManager)
+	aiHandler.RegisterAIRoutes(r)
+
 	r.Route("/api/library", func(r chi.Router) {
 		r.Get("/tracks", api.GetTracks)
 		r.Get("/artists", api.GetArtists)
@@ -103,10 +133,6 @@ func main() {
 		r.Post("/start", api.ScanLibrary)
 		r.Get("/status", api.GetScanStatus)
 	})
-
-	// Analytics Routes
-	analyticsHandler := handlers.NewAnalyticsHandler()
-	analyticsHandler.RegisterRoutes(r)
 
 	// Static Assets
 	coverServer := http.FileServer(http.Dir(cfg.CoverPath))

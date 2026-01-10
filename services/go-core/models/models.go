@@ -25,6 +25,9 @@ type Track struct {
 	IsFavorite      bool       `json:"isFavorite" db:"is_favorite"`
 	CreatedAt       time.Time  `json:"createdAt" db:"created_at"`
 	UpdatedAt       time.Time  `json:"updatedAt" db:"updated_at"`
+	AIMetadata      any        `json:"aiMetadata,omitempty" db:"ai_metadata"`
+	HasStems        bool       `json:"hasStems" db:"has_stems"`
+	HasEmbeddings   bool       `json:"hasEmbeddings" db:"has_embeddings"`
 	// Joined fields for API response
 	ArtistName    *string `json:"artist,omitempty" db:"artist_name"`
 	AlbumTitle    *string `json:"album,omitempty" db:"album_title"`
