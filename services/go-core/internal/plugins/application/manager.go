@@ -175,21 +175,29 @@ func (m *Manager) DeleteData(ctx context.Context, pluginID string) error {
 }
 
 // processScope runs the plugin on a set of tracks based on scope
-func (m *Manager) processScope(plugin *domain.AIPlugin, scope PluginScope) {
+func (m *Manager) processScope(plugin *domain.AIPlugin, scope PluginScope, trackIDs []string) {
 	ctx := context.Background()
 	var query string
 	var limit int
+	var args []interface{}
 
 	switch scope {
 	case ScopeQueue:
-		// Mock: Get tracks from queue (needs QueueService, skipping for MVP, falling back to Recent)
-		query = "SELECT id, file_path FROM tracks ORDER BY created_at DESC LIMIT 20"
-		limit = 20
+		if len(trackIDs) > 0 {
+			query = "SELECT id, file_path FROM tracks WHERE id = ANY($1)"
+			args = append(args, trackIDs)
+			limit = len(trackIDs)
+		} else {
+			// Fallback if no IDs provided (e.g. legacy call)
+			query = "SELECT id, file_path FROM tracks ORDER BY created_at DESC LIMIT 20"
+			limit = 20
+		}
 	case ScopeRecent:
 		query = "SELECT id, file_path FROM tracks ORDER BY created_at DESC LIMIT 50"
 		limit = 50
 	case ScopeAll:
-		query = "SELECT id, file_path FROM tracks"
+		// USER DECISION: process shorter files first to get quick results
+		query = "SELECT id, file_path FROM tracks ORDER BY duration_seconds ASC NULLS LAST"
 		limit = 10000 // Safety cap
 	case ScopeNone:
 		return
@@ -197,7 +205,7 @@ func (m *Manager) processScope(plugin *domain.AIPlugin, scope PluginScope) {
 		return
 	}
 
-	rows, err := m.db.Query(ctx, query)
+	rows, err := m.db.Query(ctx, query, args...)
 	if err != nil {
 		slog.Error("Failed to fetch tracks for plugin processing", "error", err)
 		return
@@ -344,7 +352,7 @@ func (m *Manager) GetJobStatus(ctx context.Context, cap domain.PluginCapability,
 }
 
 // TogglePlugin permite activar/desactivar un plugin
-func (m *Manager) TogglePlugin(ctx context.Context, pluginID string, enabled bool, scope PluginScope) error {
+func (m *Manager) TogglePlugin(ctx context.Context, pluginID string, enabled bool, scope PluginScope, trackIDs []string) error {
 	m.mu.Lock()
 	p, exists := m.plugins[pluginID]
 	m.mu.Unlock() // Unlock early to avoid holding during db ops or async launch
@@ -365,8 +373,8 @@ func (m *Manager) TogglePlugin(ctx context.Context, pluginID string, enabled boo
 	if enabled {
 		// New Manual Scope Processing
 		if scope != "" && scope != ScopeNone {
-			slog.Info("Triggering manual scope processing", "plugin", p.Manifest.Name, "scope", scope)
-			go m.processScope(p, scope)
+			slog.Info("Triggering manual scope processing", "plugin", p.Manifest.Name, "scope", scope, "track_count", len(trackIDs))
+			go m.processScope(p, scope, trackIDs)
 		}
 
 		// Standard Background Trigger (Legacy/SmartScanner interaction)
@@ -421,4 +429,30 @@ func (m *Manager) GetRecommendations(ctx context.Context, req domain.Recommendat
 	}
 
 	return m.client.GetRecommendations(ctx, p.BaseURL, req)
+}
+
+// AnalyzeTrack triggers a high-priority analysis for a single track using a specific plugin
+func (m *Manager) AnalyzeTrack(ctx context.Context, trackID uuid.UUID, cap domain.PluginCapability) (*domain.JobResponse, error) {
+	p, err := m.GetPluginByCapability(cap)
+	if err != nil {
+		return nil, err
+	}
+
+	// 1. Prioritize in SmartScanner (to pause background noise)
+	if m.scanner != nil {
+		m.scanner.PrioritizeTrack(ctx, trackID)
+	}
+
+	// 2. Fetch track path
+	var filePath string
+	err = m.db.QueryRow(ctx, "SELECT file_path FROM tracks WHERE id = $1", trackID).Scan(&filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	// 3. Dispatch to plugin
+	if cap == domain.CapabilityStemSeparation {
+		return m.client.CreateJob(ctx, p.BaseURL, trackID.String(), filePath, []string{"vocals", "drums", "bass", "other"})
+	}
+	return m.client.CreateJob(ctx, p.BaseURL, trackID.String(), filePath, nil)
 }

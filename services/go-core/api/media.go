@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -26,7 +27,7 @@ func resolveMediaPath(path string) string {
 	return filepath.Join(mediaPath, path)
 }
 
-// StreamTrack serves the audio file
+// StreamTrack serves the audio file or specific stems if requested
 func StreamTrack(w http.ResponseWriter, r *http.Request) {
 	trackID := chi.URLParam(r, "id")
 	if trackID == "" {
@@ -34,12 +35,14 @@ func StreamTrack(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	slog.Info("Streaming request", "track_id", trackID)
+	stemType := r.URL.Query().Get("stem") // vocals, drums, bass, other, no_vocals
+	slog.Info("Streaming request", "track_id", trackID, "stem", stemType)
 
 	var filePath string
-	query := `SELECT file_path FROM tracks WHERE id = $1`
+	var aiMetadataStr *string
+	query := `SELECT file_path, ai_metadata FROM tracks WHERE id = $1`
 
-	err := database.DB.QueryRow(r.Context(), query, trackID).Scan(&filePath)
+	err := database.DB.QueryRow(r.Context(), query, trackID).Scan(&filePath, &aiMetadataStr)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			slog.Warn("Track not found in database", "track_id", trackID)
@@ -52,6 +55,45 @@ func StreamTrack(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fullPath := resolveMediaPath(filePath)
+
+	// If a stem is requested and results exist
+	if stemType != "" && aiMetadataStr != nil {
+		var metadata map[string]interface{}
+		if err := json.Unmarshal([]byte(*aiMetadataStr), &metadata); err == nil {
+			// Check if stems exist in metadata.
+			// Format usually: {"stems": {"vocals": "path/to/vocals.mp3", ...}}
+			// OR if it's the JobID from Demucs: {"demucs_job_id": "..."}
+			if jobID, ok := metadata["demucs_job_id"].(string); ok {
+				// We assume stems are in MEDIA_PATH/ai-stems/JOB_ID/
+				// Demucs default paths are usually output_dir/model/job_id/track_name/stem.wav
+				// For simplicity in our current setup, let's assume they are stored and we can find them.
+
+				// Logic for 'no_vocals' (mix of drums, bass, other)
+				// Note: Real 'no_vocals' might need a premixed file or 3-source mixing.
+				// For now, let's look for the specific stem file.
+
+				stemFile := stemType + ".mp3" // Or .wav depending on Demucs config
+				if stemType == "no_vocals" {
+					stemFile = "no_vocals.mp3"
+				}
+
+				// Search in the ai-stems bucket
+				stemPath := filepath.Join(os.Getenv("MEDIA_PATH"), "ai-stems", jobID, stemFile)
+				if _, err := os.Stat(stemPath); err == nil {
+					fullPath = stemPath
+					slog.Info("Serving AI Stem", "type", stemType, "path", fullPath)
+				} else {
+					// Fallback to wav if mp3 not found
+					stemPathWav := filepath.Join(os.Getenv("MEDIA_PATH"), "ai-stems", jobID, stemType+".wav")
+					if _, err := os.Stat(stemPathWav); err == nil {
+						fullPath = stemPathWav
+						slog.Info("Serving AI Stem (wav)", "type", stemType, "path", fullPath)
+					}
+				}
+			}
+		}
+	}
+
 	slog.Info("Serving file", "path", fullPath)
 	http.ServeFile(w, r, fullPath)
 }

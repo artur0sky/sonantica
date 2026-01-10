@@ -28,6 +28,7 @@ import { AddToPlaylistModal } from "../../../components/AddToPlaylistModal";
 import { useSelectionStore } from "../../../stores/selectionStore";
 import { StemSeparationModal } from "../../ai/components/StemSeparationModal";
 import { useAICapabilities } from "../../../hooks/useAICapabilities";
+import { PluginService } from "../../../services/PluginService";
 
 interface TrackItemProps {
   track: any;
@@ -103,6 +104,26 @@ export function TrackItem({
             label: "Separate Stems (AI)",
             icon: <IconWand size={18} stroke={1.5} />,
             onClick: () => setShowStemModal(true),
+          },
+        ]
+      : []),
+    ...(hasCapability("embeddings") || hasCapability("recommendations")
+      ? [
+          {
+            id: "prioritize-embeddings",
+            label: "Prioritize Similarity Analysis",
+            icon: <IconWand size={18} stroke={1.5} className="text-accent" />,
+            onClick: () => PluginService.analyzeTrack(track.id, "embeddings"),
+          },
+        ]
+      : []),
+    ...(hasCapability("knowledge")
+      ? [
+          {
+            id: "prioritize-knowledge",
+            label: "Enrich Metadata (AI)",
+            icon: <IconWand size={18} stroke={1.5} />,
+            onClick: () => PluginService.analyzeTrack(track.id, "knowledge"),
           },
         ]
       : []),

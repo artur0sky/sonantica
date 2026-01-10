@@ -82,9 +82,8 @@ func main() {
 	}
 	if cfg.BrainURL != "" {
 		brainFallback := &domain.Manifest{
-			Name:       "Sonántica Brain",
-			Capability: domain.CapabilityRecommendations, // or domain.CapabilityEmbeddings? Brain does both but main capability regarding user-facing feature is recs?
-			// Actually brain usually does embeddings and recommendations. The capability string in domain: CapabilityRecommendations
+			Name:        "Sonántica Brain",
+			Capability:  domain.CapabilityEmbeddings,
 			Description: "AI Similarity & Recommendations (Offline Fallback)",
 			Version:     "1.0.0",
 		}

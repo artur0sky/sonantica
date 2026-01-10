@@ -26,9 +26,14 @@ export function PluginsSettings() {
     fetchPlugins();
   }, []);
 
-  const handleToggle = async (id: string, enabled: boolean, scope?: string) => {
+  const handleToggle = async (
+    id: string,
+    enabled: boolean,
+    scope?: string,
+    trackIds?: string[]
+  ) => {
     try {
-      await PluginService.togglePlugin(id, enabled, scope);
+      await PluginService.togglePlugin(id, enabled, scope, trackIds);
       // Optimistic update or refetch
       setPlugins((prev) =>
         prev.map((p) => (p.id === id ? { ...p, isEnabled: enabled } : p))

@@ -55,14 +55,14 @@ export const PluginService = {
     if (!response.ok) throw new Error("Failed to register plugin");
   },
 
-  async togglePlugin(id: string, enabled: boolean, scope?: string): Promise<void> {
+  async togglePlugin(id: string, enabled: boolean, scope?: string, trackIds?: string[]): Promise<void> {
     const server = getServerConfig();
     if (!server) throw new Error("No server configured");
 
     const response = await fetch(`${server.serverUrl}/api/plugins/${id}/toggle`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ enabled, scope }),
+      body: JSON.stringify({ enabled, scope, track_ids: trackIds }),
     });
     if (!response.ok) throw new Error("Failed to toggle plugin");
   },
@@ -128,6 +128,17 @@ export const PluginService = {
 
     const response = await fetch(`${server.serverUrl}/api/v1/ai/capabilities`);
     if (!response.ok) throw new Error("Failed to fetch capabilities");
+    return response.json();
+  },
+
+  async analyzeTrack(trackId: string, capability: string): Promise<any> {
+    const server = getServerConfig();
+    if (!server) throw new Error("No server configured");
+
+    const response = await fetch(`${server.serverUrl}/api/v1/ai/analyze/${trackId}?capability=${capability}`, {
+      method: "POST",
+    });
+    if (!response.ok) throw new Error("Failed to start AI analysis");
     return response.json();
   }
 };

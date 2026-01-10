@@ -8,10 +8,16 @@ import {
   IconActivity,
 } from "@tabler/icons-react";
 import { PluginActivationModal } from "./PluginActivationModal";
+import { useQueueStore } from "@sonantica/player-core";
 
 interface PluginCardProps {
   plugin: Plugin;
-  onToggle: (id: string, enabled: boolean, scope?: string) => Promise<void>;
+  onToggle: (
+    id: string,
+    enabled: boolean,
+    scope?: string,
+    trackIds?: string[]
+  ) => Promise<void>;
   onConfigure: (plugin: Plugin) => void;
 }
 
@@ -39,7 +45,19 @@ export function PluginCard({ plugin, onToggle, onConfigure }: PluginCardProps) {
     setShowActivationModal(false);
     setLoading(true);
     try {
-      await onToggle(plugin.id, enabled, scope);
+      let trackIds: string[] | undefined;
+
+      // If scope is queue, extract track IDs from current player queue
+      if (scope === "queue") {
+        const queueState = useQueueStore.getState();
+        // Extract all track IDs from the queue
+        trackIds = queueState.queue.map((t) => t.id);
+        console.log(
+          `[PluginCard] Extracted ${trackIds.length} tracks from queue for plugin activation`
+        );
+      }
+
+      await onToggle(plugin.id, enabled, scope, trackIds);
     } finally {
       setLoading(false);
     }

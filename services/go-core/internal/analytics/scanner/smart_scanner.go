@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
+	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -14,6 +16,8 @@ import (
 type SmartScanner struct {
 	db          *pgxpool.Pool
 	redisClient *redis.Client
+	isPaused    bool
+	mu          sync.RWMutex
 }
 
 // NewSmartScanner creates a new SmartScanner
@@ -52,7 +56,7 @@ func (s *SmartScanner) TriggerScan(ctx context.Context, priority ScanPriority, s
 		switch priority {
 		case PriorityHigh:
 			if specificTrackID != nil {
-				s.analyzeTrack(bgCtx, *specificTrackID)
+				s.PrioritizeTrack(bgCtx, *specificTrackID)
 			}
 		case PriorityMedium:
 			s.scanQueueAndRecent(bgCtx)
@@ -62,8 +66,29 @@ func (s *SmartScanner) TriggerScan(ctx context.Context, priority ScanPriority, s
 	}()
 }
 
+// PrioritizeTrack interrupts background flow to process a specific track immediately
+func (s *SmartScanner) PrioritizeTrack(ctx context.Context, trackID uuid.UUID) {
+	slog.Info("🚨 Prioritizing track analysis", "track_id", trackID)
+
+	s.mu.Lock()
+	s.isPaused = true // Pause background dispatching if any
+	s.mu.Unlock()
+
+	// Analyze the track with priority (Head of queue)
+	s.analyzeTrack(ctx, trackID, true)
+
+	// Resume after a while or after specific logic
+	go func() {
+		time.Sleep(5 * time.Second) // Small buffer
+		s.mu.Lock()
+		s.isPaused = false
+		s.mu.Unlock()
+		slog.Info("🟢 Background scanning resumed", "track_id", trackID)
+	}()
+}
+
 // analyzeTrack sends a single track to Celery
-func (s *SmartScanner) analyzeTrack(ctx context.Context, trackID uuid.UUID) {
+func (s *SmartScanner) analyzeTrack(ctx context.Context, trackID uuid.UUID, priority bool) {
 	// 1. Check if already analyzed (optional check, currently we re-analyze if requested)
 	// TODO: Add check if ai_metadata is complete?
 
@@ -76,7 +101,7 @@ func (s *SmartScanner) analyzeTrack(ctx context.Context, trackID uuid.UUID) {
 	}
 
 	// 3. Send to Celery
-	s.dispatchToCelery(ctx, trackID, filePath)
+	s.dispatchToCelery(ctx, trackID, filePath, priority)
 }
 
 // scanQueueAndRecent scans items in playback queue and recently added
@@ -92,10 +117,18 @@ func (s *SmartScanner) scanQueueAndRecent(ctx context.Context) {
 	defer rows.Close()
 
 	for rows.Next() {
+		s.mu.RLock()
+		paused := s.isPaused
+		s.mu.RUnlock()
+		if paused {
+			slog.Debug("SmartScanner: Skipping recent scan item (Paused for priority)")
+			continue
+		}
+
 		var id uuid.UUID
 		var path string
 		if err := rows.Scan(&id, &path); err == nil {
-			s.dispatchToCelery(ctx, id, path)
+			s.dispatchToCelery(ctx, id, path, false)
 		}
 	}
 }
@@ -111,15 +144,26 @@ func (s *SmartScanner) scanLibrary(ctx context.Context) {
 	defer rows.Close()
 
 	for rows.Next() {
+		s.mu.RLock()
+		paused := s.isPaused
+		s.mu.RUnlock()
+		if paused {
+			slog.Debug("SmartScanner: Skipping library scan item (Paused for priority)")
+			time.Sleep(1 * time.Second) // Wait for priority to finish
+			continue
+		}
+
 		var id uuid.UUID
 		var path string
 		if err := rows.Scan(&id, &path); err == nil {
-			s.dispatchToCelery(ctx, id, path)
+			s.dispatchToCelery(ctx, id, path, false)
 		}
+		// Slow background scan
+		time.Sleep(500 * time.Millisecond)
 	}
 }
 
-func (s *SmartScanner) dispatchToCelery(ctx context.Context, trackID uuid.UUID, filePath string) {
+func (s *SmartScanner) dispatchToCelery(ctx context.Context, trackID uuid.UUID, filePath string, priority bool) {
 	taskID := uuid.New().String()
 
 	// Match python-worker/src/infrastructure/tasks/process_audio_tasks.py signature

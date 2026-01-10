@@ -33,6 +33,7 @@ func (h *AIHandler) RegisterAIRoutes(r chi.Router) {
 	r.Route("/api/v1/ai", func(r chi.Router) {
 		r.Get("/capabilities", h.GetCapabilities)
 		r.Post("/demucs/separate/{trackId}", h.SeparateStems)
+		r.Post("/analyze/{trackId}", h.AnalyzeTrack)
 		r.Get("/jobs/{id}", h.GetJobStatus)
 		r.Post("/recommendations", h.GetRecommendations)
 	})
@@ -45,7 +46,7 @@ func (h *AIHandler) GetCapabilities(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(caps)
 }
 
-// SeparateStems triggers a stem separation job for a track
+// SeparateStems triggers a stem separation job for a track (Legacy alias for AnalyzeTrack)
 func (h *AIHandler) SeparateStems(w http.ResponseWriter, r *http.Request) {
 	trackIDStr := chi.URLParam(r, "trackId")
 	trackID, err := uuid.Parse(trackIDStr)
@@ -54,29 +55,39 @@ func (h *AIHandler) SeparateStems(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 1. Get track info from database to get file path
-	var track models.Track
-	err = database.DB.QueryRow(r.Context(),
-		"SELECT id, file_path FROM tracks WHERE id = $1",
-		trackID,
-	).Scan(&track.ID, &track.FilePath)
-
-	if err != nil {
-		slog.Error("Track not found for AI job", "track_id", trackID, "error", err)
-		http.Error(w, "Track not found", http.StatusNotFound)
-		return
-	}
-
-	// 2. Dispatch job via Plugin Manager
-	jobResp, err := h.manager.SeparateStems(r.Context(), track.ID.String(), track.FilePath)
+	jobResp, err := h.manager.AnalyzeTrack(r.Context(), trackID, domain.CapabilityStemSeparation)
 	if err != nil {
 		slog.Error("Failed to dispatch Demucs job", "track_id", trackID, "error", err)
 		http.Error(w, fmt.Sprintf("AI Dispatch error: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	// 3. Update track metadata locally to indicate processing (optional)
-	// For now just return the job info
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusAccepted)
+	json.NewEncoder(w).Encode(jobResp)
+}
+
+// AnalyzeTrack triggers a high-priority analysis for a single track
+func (h *AIHandler) AnalyzeTrack(w http.ResponseWriter, r *http.Request) {
+	trackIDStr := chi.URLParam(r, "trackId")
+	trackID, err := uuid.Parse(trackIDStr)
+	if err != nil {
+		http.Error(w, "Invalid track ID", http.StatusBadRequest)
+		return
+	}
+
+	capType := r.URL.Query().Get("capability")
+	if capType == "" {
+		capType = string(domain.CapabilityStemSeparation)
+	}
+
+	jobResp, err := h.manager.AnalyzeTrack(r.Context(), trackID, domain.PluginCapability(capType))
+	if err != nil {
+		slog.Error("Failed to dispatch priority AI job", "track_id", trackID, "cap", capType, "error", err)
+		http.Error(w, fmt.Sprintf("AI Dispatch error: %v", err), http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusAccepted)
 	json.NewEncoder(w).Encode(jobResp)

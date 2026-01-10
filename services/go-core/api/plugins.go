@@ -71,8 +71,9 @@ func (h *PluginsHandler) TogglePlugin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var body struct {
-		Enabled bool   `json:"enabled"`
-		Scope   string `json:"scope,omitempty"` // queue, recent, all
+		Enabled  bool     `json:"enabled"`
+		Scope    string   `json:"scope,omitempty"` // queue, recent, all
+		TrackIDs []string `json:"track_ids,omitempty"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, "Invalid body", http.StatusBadRequest)
@@ -81,7 +82,7 @@ func (h *PluginsHandler) TogglePlugin(w http.ResponseWriter, r *http.Request) {
 
 	// Cast string to PluginScope (validation inside Manager or here?)
 	// Let's pass it as is, casting to PluginScope type
-	if err := h.manager.TogglePlugin(r.Context(), id, body.Enabled, application.PluginScope(body.Scope)); err != nil {
+	if err := h.manager.TogglePlugin(r.Context(), id, body.Enabled, application.PluginScope(body.Scope), body.TrackIDs); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
