@@ -190,3 +190,41 @@ func (c *PluginClient) GetRecommendations(ctx context.Context, baseURL string, r
 
 	return recs, nil
 }
+
+func (c *PluginClient) UpdateConfig(ctx context.Context, baseURL string, config map[string]interface{}) error {
+	req, err := c.newRequest(ctx, http.MethodPatch, baseURL+"/config", config)
+	if err != nil {
+		return err
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
+		return fmt.Errorf("config update failed: %d", resp.StatusCode)
+	}
+
+	return nil
+}
+
+func (c *PluginClient) DeleteData(ctx context.Context, baseURL string) error {
+	req, err := c.newRequest(ctx, http.MethodDelete, baseURL+"/data", nil)
+	if err != nil {
+		return err
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
+		return fmt.Errorf("data deletion failed: %d", resp.StatusCode)
+	}
+
+	return nil
+}

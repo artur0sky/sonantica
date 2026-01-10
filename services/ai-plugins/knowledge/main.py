@@ -27,7 +27,9 @@ app = FastAPI(
 )
 
 # Global Semaphore to avoid overloading Ollama
-ollama_semaphore = asyncio.Semaphore(2) 
+# supermarket box behavior: N slots, others wait in line
+limit = settings.MAX_CONCURRENT_JOBS if settings.MAX_CONCURRENT_JOBS > 0 else 2
+ollama_semaphore = asyncio.Semaphore(limit)
 
 # Helpers
 def get_value(x):
@@ -79,7 +81,7 @@ async def create_job(request: Request, background_tasks: BackgroundTasks):
 
         repo = RedisJobRepository()
         
-        # Deduplication
+        # 1. Deduplication
         existing = await repo.find_by_track_id(track_id)
         if existing and existing.status in [JobStatus.COMPLETED, JobStatus.PROCESSING, JobStatus.PENDING]:
             return {
@@ -102,7 +104,12 @@ async def create_job(request: Request, background_tasks: BackgroundTasks):
         )
         
         await repo.save(job)
-        background_tasks.add_task(process_job, job_id)
+        
+        # Schedule background processing only if pending
+        if get_value(job.status) == "pending":
+            background_tasks.add_task(process_job, job_id)
+        else:
+            logger.info(f"SKIP_QUEUE | Job {job.id} for track {track_id} status: {get_value(job.status)}")
         
         return {
             "id": job.id,

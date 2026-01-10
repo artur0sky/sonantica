@@ -24,6 +24,13 @@ class RedisJobRepository(IJobRepository):
         await self.redis.set(key, json.dumps(data), ex=86400 * 7) # 7 days TTL
         # Index by track_id
         await self.redis.set(f"brain:track:{job.track_id}", job.id, ex=86400 * 7)
+        
+        # Maintain active IDs set
+        active_key = f"{self.prefix}active_ids"
+        if not job.is_terminal:
+            await self.redis.sadd(active_key, job.id)
+        else:
+            await self.redis.srem(active_key, job.id)
 
     async def get_by_id(self, job_id: str) -> Optional[EmbeddingJob]:
         key = self._get_key(job_id)
@@ -46,9 +53,14 @@ class RedisJobRepository(IJobRepository):
         )
 
     async def get_active_count(self) -> int:
-        # This is a simplified version. In production we'd use a dedicated set for active jobs.
-        keys = await self.redis.keys(f"{self.prefix}*")
-        return len(keys)
+        active_key = f"{self.prefix}active_ids"
+        return await self.redis.scard(active_key)
+
+    async def set_cooldown(self, seconds: int) -> None:
+        await self.redis.set(f"{self.prefix}cooldown", "1", ex=seconds)
+
+    async def is_in_cooldown(self) -> bool:
+        return await self.redis.exists(f"{self.prefix}cooldown") > 0
 
     async def find_by_track_id(self, track_id: str) -> Optional[EmbeddingJob]:
         job_id = await self.redis.get(f"brain:track:{track_id}")

@@ -19,6 +19,14 @@ class IJobRepository(ABC):
     async def find_by_track_id(self, track_id: str) -> Optional[EmbeddingJob]:
         pass
 
+    @abstractmethod
+    async def set_cooldown(self, seconds: int) -> None:
+        pass
+
+    @abstractmethod
+    async def is_in_cooldown(self) -> bool:
+        pass
+
 class IAudioEmbedder(ABC):
     @abstractmethod
     async def list_models(self) -> List[str]:

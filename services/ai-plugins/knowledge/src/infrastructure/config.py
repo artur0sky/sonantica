@@ -18,6 +18,10 @@ class Settings(BaseSettings):
     # Ollama
     OLLAMA_HOST: str = os.getenv("OLLAMA_HOST", "http://host.docker.internal:11434")
     LLM_MODEL: str = os.getenv("LLM_MODEL", "llama3.1:latest")
+    
+    # Concurrency
+    MAX_CONCURRENT_JOBS: int = int(os.getenv("MAX_CONCURRENT_JOBS", 5)) # Default to 5 for Ollama
+    CONCURRENCY_COOLDOWN_SECONDS: int = int(os.getenv("CONCURRENCY_COOLDOWN_SECONDS", 60)) # LLMs take longer to cool down
 
     class Config:
         case_sensitive = True

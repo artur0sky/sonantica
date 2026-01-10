@@ -6,6 +6,7 @@ import {
   IconAlertTriangle,
   IconCheck,
   IconActivity,
+  IconRefresh,
 } from "@tabler/icons-react";
 import { PluginActivationModal } from "./PluginActivationModal";
 import { useQueueStore } from "@sonantica/player-core";
@@ -126,6 +127,22 @@ export function PluginCard({ plugin, onToggle, onConfigure }: PluginCardProps) {
         </div>
 
         <div className="flex items-center gap-4 w-full sm:w-auto justify-end">
+          {plugin.isEnabled && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => handleConfirmToggle(true, "all")}
+              disabled={loading}
+              title="Sync Missing Tracks"
+            >
+              <IconRefresh
+                size={18}
+                className={`mr-2 ${loading ? "animate-spin" : ""}`}
+              />
+              <span className="hidden md:inline">Sync</span>
+            </Button>
+          )}
+
           <Button variant="ghost" size="sm" onClick={() => onConfigure(plugin)}>
             <IconSettings size={18} className="mr-2" />
             Config

@@ -9,13 +9,14 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException, BackgroundTasks, Header, Depends
 from pydantic import BaseModel, Field
 
-from src.domain.entities import SeparationJob, StemType
 from src.application.use_cases import (
     CreateSeparationJobUseCase,
     GetJobStatusUseCase,
     CancelJobUseCase,
     ProcessSeparationJobUseCase
 )
+from src.domain.entities import StemType
+from src.infrastructure.logging.context import set_trace_id
 from src.infrastructure.redis_job_repository import RedisJobRepository
 from src.infrastructure.demucs_separator import DemucsStemSeparator
 from src.infrastructure.config import settings
@@ -94,8 +95,11 @@ async def create_job(
             stems=request.stems
         )
         
-        # Schedule background processing
-        background_tasks.add_task(process_job_background, job.id)
+        # Schedule background processing only if pending
+        if get_value(job.status) == "pending":
+            background_tasks.add_task(process_job_background, job.id)
+        else:
+            logger.info(f"SKIP_QUEUE | Job {job.id} for track {request.track_id} status: {get_value(job.status)}")
         
         return JobResponse(
             id=job.id,
@@ -180,19 +184,24 @@ async def process_job_background(job_id: str):
     Background task to process a separation job.
     Runs asynchronously after job creation.
     """
+    set_trace_id(job_id)
     try:
         # Initialize dependencies
         job_repository = RedisJobRepository()
         stem_separator = DemucsStemSeparator()
         
+        logger.info(f"START | Background job {job_id}")
+        
         # Execute use case
         use_case = ProcessSeparationJobUseCase(
             job_repository=job_repository,
             stem_separator=stem_separator,
-            output_base_path=str(settings.output_path)
+            output_base_path=str(settings.output_path),
+            max_parallel=settings.max_concurrent_jobs
         )
         
         await use_case.execute(job_id)
+        logger.info(f"DONE | Background job {job_id}")
         
     except Exception as e:
-        logger.error(f"Background job processing failed: {job_id} - {e}")
+        logger.exception(f"FAIL | Background job processing failed: {job_id} | Error: {str(e)}")

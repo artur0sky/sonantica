@@ -26,6 +26,14 @@ class RedisJobRepository:
         await redis.expire(f"{self.key_prefix}:{job.id}", self.ttl)
         # Index by track
         await redis.set(f"knowledge:track:{job.track_id}", job.id, ex=self.ttl)
+        
+        # Maintain active IDs set
+        active_key = "knowledge:active_ids"
+        is_terminal = job.status in ["completed", "failed", "cancelled"]
+        if not is_terminal:
+            await redis.sadd(active_key, job.id)
+        else:
+            await redis.srem(active_key, job.id)
 
     async def get_by_id(self, job_id: str) -> Optional[KnowledgeJob]:
         redis = await RedisClient.get_instance()
@@ -33,6 +41,18 @@ class RedisJobRepository:
         if not data:
             return None
         return KnowledgeJob(**data)
+
+    async def get_active_count(self) -> int:
+        redis = await RedisClient.get_instance()
+        return await redis.scard("knowledge:active_ids")
+
+    async def set_cooldown(self, seconds: int) -> None:
+        redis = await RedisClient.get_instance()
+        await redis.set("knowledge:cooldown", "1", ex=seconds)
+
+    async def is_in_cooldown(self) -> bool:
+        redis = await RedisClient.get_instance()
+        return await redis.exists("knowledge:cooldown") > 0
 
     async def find_by_track_id(self, track_id: str) -> Optional[KnowledgeJob]:
         redis = await RedisClient.get_instance()

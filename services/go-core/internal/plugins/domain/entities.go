@@ -95,4 +95,6 @@ type IPluginClient interface {
 	GetJobStatus(ctx context.Context, baseURL string, jobID string) (*JobResponse, error)
 	CancelJob(ctx context.Context, baseURL string, jobID string) error
 	GetRecommendations(ctx context.Context, baseURL string, req RecommendationRequest) ([]Recommendation, error)
+	UpdateConfig(ctx context.Context, baseURL string, config map[string]interface{}) error
+	DeleteData(ctx context.Context, baseURL string) error
 }

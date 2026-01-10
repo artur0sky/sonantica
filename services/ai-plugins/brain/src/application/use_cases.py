@@ -14,8 +14,8 @@ class CreateEmbeddingJob:
     def __init__(self, repository: IJobRepository):
         self.repository = repository
 
-    async def execute(self, track_id: str, file_path: str) -> EmbeddingJob:
-        # Business Rule: Deduplication/Caching
+    async def execute(self, track_id: str, file_path: str, max_concurrent: int = 0, cooldown: int = 30) -> EmbeddingJob:
+        # 1. Business Rule: Deduplication/Caching
         existing_job = await self.repository.find_by_track_id(track_id)
         if existing_job and existing_job.status in [JobStatus.COMPLETED, JobStatus.PROCESSING, JobStatus.PENDING]:
             logger.info(f"Using existing job {existing_job.id} for track {track_id}")
@@ -32,20 +32,32 @@ class CreateEmbeddingJob:
         return job
 
 class ProcessEmbeddingJob:
-    _semaphore = asyncio.Semaphore(4) # Limit parallel heavy processing
+    _semaphore: Optional[asyncio.Semaphore] = None
 
-    def __init__(self, repository: IJobRepository, embedder: IAudioEmbedder, vector_repo: IVectorRepository):
+    def __init__(self, repository: IJobRepository, embedder: IAudioEmbedder, vector_repo: IVectorRepository, max_parallel: int = 4):
         self.repository = repository
         self.embedder = embedder
         self.vector_repo = vector_repo
+        
+        # Initialize semaphore once with provided limit
+        if ProcessEmbeddingJob._semaphore is None:
+            limit = max_parallel if max_parallel > 0 else 4
+            ProcessEmbeddingJob._semaphore = asyncio.Semaphore(limit)
 
     async def execute(self, job_id: str) -> None:
         set_trace_id(job_id) # Use job_id as trace_id for consistency
+        
+        # Adding a tiny jitter/delay to avoid stampede on batch starts
+        await asyncio.sleep(0.1) 
+
         async with self._semaphore:
             job = await self.repository.get_by_id(job_id)
         
         if not job or job.status != JobStatus.PENDING:
-            logger.warning(f"SKIP | Job {job_id} not found or not pending (status: {job.status if job else 'N/A'})")
+            if job and job.status == JobStatus.COMPLETED:
+                logger.info(f"SKIP | Job {job_id} already completed for track {job.track_id}")
+            else:
+                logger.warning(f"SKIP | Job {job_id} not found or not pending (status: {job.status if job else 'N/A'})")
             return
 
         logger.info(f"START | Processing embedding for track {job.track_id} | Path: {job.file_path}")

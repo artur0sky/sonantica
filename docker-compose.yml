@@ -254,7 +254,8 @@ services:
       - REDIS_PASSWORD=${REDIS_PASSWORD:-sonantica}
       - MEDIA_PATH=/media
       - OUTPUT_PATH=/stems
-      - MAX_CONCURRENT_JOBS=${AI_MAX_CONCURRENT_JOBS:-2}
+      - MAX_CONCURRENT_JOBS=${DEMUCS_MAX_CONCURRENT_JOBS:-2}
+      - CONCURRENCY_COOLDOWN_SECONDS=${DEMUCS_COOLDOWN_SECONDS:-45}
       - JOB_TIMEOUT_SECONDS=${AI_JOB_TIMEOUT:-600}
       - INTERNAL_API_SECRET=${INTERNAL_API_SECRET:-generate-secure-token-here}
       # Logging Configuration
@@ -306,7 +307,8 @@ services:
       - MEDIA_PATH=/media
       - EMBEDDING_MODEL=${AI_EMBEDDING_MODEL:-laion/clap-htsat-unfused}
       - EMBEDDING_DIMENSION=${AI_EMBEDDING_DIM:-512}
-      - MAX_CONCURRENT_JOBS=${AI_MAX_CONCURRENT_JOBS:-2}
+      - MAX_CONCURRENT_JOBS=${BRAIN_MAX_CONCURRENT_JOBS:-2}
+      - CONCURRENCY_COOLDOWN_SECONDS=${BRAIN_COOLDOWN_SECONDS:-30}
       - INTERNAL_API_SECRET=${INTERNAL_API_SECRET:-generate-secure-token-here}
       # Logging Configuration
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
@@ -355,6 +357,8 @@ services:
       - REDIS_PASSWORD=${REDIS_PASSWORD:-sonantica}
       - POSTGRES_URL=postgres://${POSTGRES_USER:-sonantica}:${PSQL_PASSWORD:-sonantica}@postgres:${PSQL_PORT:-5432}/${POSTGRES_DB:-sonantica}?sslmode=disable
       - INTERNAL_API_SECRET=${INTERNAL_API_SECRET:-generate-secure-token-here}
+      - MAX_CONCURRENT_JOBS=${KNOWLEDGE_MAX_CONCURRENT_JOBS:-5}
+      - CONCURRENCY_COOLDOWN_SECONDS=${KNOWLEDGE_COOLDOWN_SECONDS:-60}
       - CACHE_TTL_HOURS=${AI_KNOWLEDGE_CACHE_TTL:-168} # 7 days default
       # Logging Configuration
       - LOG_LEVEL=${LOG_LEVEL:-INFO}

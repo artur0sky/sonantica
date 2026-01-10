@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Header
 from pydantic import BaseModel
 from typing import List, Optional
@@ -9,6 +10,8 @@ from ...infrastructure.redis_client import get_redis_client # Need to create thi
 from ...infrastructure.redis_job_repository import RedisJobRepository
 from ...infrastructure.postgres_vector_repository import PostgresVectorRepository
 from ...infrastructure.audio_embedder import ClapEmbedder
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/jobs", tags=["Jobs"])
 
@@ -46,14 +49,32 @@ async def create_job(
     if x_internal_secret != settings.INTERNAL_API_SECRET:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
-    use_case = CreateEmbeddingJob(repo)
-    job = await use_case.execute(request.track_id, request.file_path)
-    
-    # Process in background
-    process_use_case = ProcessEmbeddingJob(repo, embedder, vector_repo)
-    background_tasks.add_task(process_use_case.execute, job.id)
-    
-    return job.to_dict()
+    try:
+        use_case = CreateEmbeddingJob(repo)
+        job = await use_case.execute(
+            request.track_id, 
+            request.file_path, 
+            max_concurrent=settings.MAX_CONCURRENT_JOBS,
+            cooldown=settings.CONCURRENCY_COOLDOWN_SECONDS
+        )
+        
+        # Process in background only if pending
+        if job.status == JobStatus.PENDING:
+            process_use_case = ProcessEmbeddingJob(
+                repo, embedder, vector_repo, 
+                max_parallel=settings.MAX_CONCURRENT_JOBS
+            )
+            background_tasks.add_task(process_use_case.execute, job.id)
+        else:
+            logger.info(f"SKIP_QUEUE | Job {job.id} for track {request.track_id} is already in state: {job.status}")
+        
+        return job.to_dict()
+    except ValueError as e:
+        # 429 Too Many Requests for concurrency/cooldown limits
+        raise HTTPException(status_code=429, detail=str(e))
+    except Exception as e:
+        logger.exception(f"FAIL | Unexpected error creating job: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 @router.get("/{job_id}")
 async def get_status(

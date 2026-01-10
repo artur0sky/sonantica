@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     # Job Configuration
     max_concurrent_jobs: int = 2
     job_timeout_seconds: int = 600
+    concurrency_cooldown_seconds: int = 45 # Default for demucs as it is very heavy
     
     # Logging
     log_level: str = "INFO"
@@ -66,6 +67,7 @@ class Settings(BaseSettings):
         
         self.max_concurrent_jobs = int(os.getenv("MAX_CONCURRENT_JOBS", str(self.max_concurrent_jobs)))
         self.job_timeout_seconds = int(os.getenv("JOB_TIMEOUT_SECONDS", str(self.job_timeout_seconds)))
+        self.concurrency_cooldown_seconds = int(os.getenv("CONCURRENCY_COOLDOWN_SECONDS", str(self.concurrency_cooldown_seconds)))
         
         self.log_level = os.getenv("LOG_LEVEL", self.log_level)
         self.log_format = os.getenv("LOG_FORMAT", self.log_format)

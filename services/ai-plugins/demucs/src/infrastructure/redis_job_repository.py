@@ -55,6 +55,18 @@ class RedisJobRepository(IJobRepository):
         # Set expiration
         await redis.expire(f"{self.key_prefix}:{job.id}", self.ttl)
         
+        # Add index for track_id + model
+        await redis.set(f"demucs:track:{job.track_id}:model:{job.model}", job.id)
+        await redis.expire(f"demucs:track:{job.track_id}:model:{job.model}", self.ttl)
+
+        # Maintain active IDs set
+        active_key = "demucs:active_ids"
+        is_terminal = job.status in [JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED]
+        if not is_terminal:
+            await redis.sadd(active_key, job.id)
+        else:
+            await redis.srem(active_key, job.id)
+
         logger.debug(f"Saved job: {job.id}")
     
     async def get_by_id(self, job_id: str) -> Optional[SeparationJob]:
@@ -91,23 +103,35 @@ class RedisJobRepository(IJobRepository):
         
         await redis.delete(f"{self.key_prefix}:{job_id}")
         await redis.delete(f"{self.key_prefix}:{job_id}:status")
+        await redis.srem("demucs:active_ids", job_id)
         
         logger.debug(f"Deleted job: {job_id}")
     
     async def count_by_status(self, statuses: List[JobStatus]) -> int:
-        """Count jobs with specific statuses"""
+        """Count jobs with specific statuses using active set as filter"""
         redis = await RedisClient.get_instance()
         
-        # Get all status keys
-        status_keys = await redis.keys(f"{self.key_prefix}:*:status")
-        
+        # Use active_ids set instead of scanning ALL keys
+        active_ids = await redis.smembers("demucs:active_ids")
+        if not active_ids:
+            return 0
+            
         count = 0
-        for key in status_keys:
-            status = await redis.get(key)
-            if status in [s.value for s in statuses]:
+        for job_id in active_ids:
+            # redis stores bytes or strings depending on client, we need string for status check
+            status_val = await redis.get(f"{self.key_prefix}:{job_id}:status")
+            if status_val in [s.value for s in statuses]:
                 count += 1
         
         return count
+    
+    async def set_cooldown(self, seconds: int) -> None:
+        redis = await RedisClient.get_instance()
+        await redis.set("demucs:cooldown", "1", ex=seconds)
+
+    async def is_in_cooldown(self) -> bool:
+        redis = await RedisClient.get_instance()
+        return await redis.exists("demucs:cooldown") > 0
     
     async def enqueue(self, job_id: str) -> None:
         """Add job to processing queue"""
@@ -116,3 +140,11 @@ class RedisJobRepository(IJobRepository):
         await redis.lpush(self.queue_key, job_id)
         
         logger.debug(f"Enqueued job: {job_id}")
+
+    async def find_by_track_id(self, track_id: str, model: str) -> Optional[SeparationJob]:
+        """Find the latest job for a specific track and model"""
+        redis = await RedisClient.get_instance()
+        job_id = await redis.get(f"demucs:track:{track_id}:model:{model}")
+        if not job_id:
+            return None
+        return await self.get_by_id(job_id)

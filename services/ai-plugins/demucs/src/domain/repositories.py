@@ -44,6 +44,19 @@ class IJobRepository(ABC):
         """Add job to processing queue"""
         pass
 
+    @abstractmethod
+    async def find_by_track_id(self, track_id: str, model: str) -> Optional[SeparationJob]:
+        """Find the latest job for a specific track and model"""
+        pass
+
+    @abstractmethod
+    async def set_cooldown(self, seconds: int) -> None:
+        pass
+
+    @abstractmethod
+    async def is_in_cooldown(self) -> bool:
+        pass
+
 
 class IStemSeparator(ABC):
     """

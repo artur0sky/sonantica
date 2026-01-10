@@ -196,8 +196,19 @@ func (m *Manager) processScope(plugin *domain.AIPlugin, scope PluginScope, track
 		query = "SELECT id, file_path FROM tracks ORDER BY created_at DESC LIMIT 50"
 		limit = 50
 	case ScopeAll:
+		// Smart-filtering by capability to avoid processing already analyzed tracks (Optimization for "Scan Missing")
+		whereClause := ""
+		switch plugin.Manifest.Capability {
+		case domain.CapabilityStemSeparation:
+			whereClause = "WHERE has_stems = false"
+		case domain.CapabilityEmbeddings:
+			whereClause = "WHERE has_embeddings = false"
+		case domain.CapabilityKnowledge:
+			whereClause = "WHERE ai_metadata IS NULL"
+		}
+
 		// USER DECISION: process shorter files first to get quick results
-		query = "SELECT id, file_path FROM tracks ORDER BY duration_seconds ASC NULLS LAST"
+		query = fmt.Sprintf("SELECT id, file_path FROM tracks %s ORDER BY duration_seconds ASC NULLS LAST", whereClause)
 		limit = 10000 // Safety cap
 	case ScopeNone:
 		return

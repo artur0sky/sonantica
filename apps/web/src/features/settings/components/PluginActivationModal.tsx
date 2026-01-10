@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Modal, Button } from "@sonantica/ui";
-import { IconRocket, IconAlertTriangle } from "@tabler/icons-react";
+import { IconRocket } from "@tabler/icons-react";
 
 interface PluginActivationModalProps {
   isOpen: boolean;
@@ -49,9 +49,9 @@ export function PluginActivationModal({
     },
     {
       value: "all",
-      label: "Entire Library",
+      label: "Sync Missing Tracks",
       description:
-        "Warning: This may take a significant amount of time and resources.",
+        "Smart Scan: Only processes tracks that are missing analysis. Efficient and safe.",
     },
     {
       value: "none",
@@ -118,10 +118,11 @@ export function PluginActivationModal({
         </div>
 
         {scope === "all" && (
-          <div className="flex gap-2 text-warning text-xs bg-warning/10 p-2 rounded">
-            <IconAlertTriangle size={16} />
+          <div className="flex gap-2 text-accent text-xs bg-accent/10 p-2 rounded">
+            <IconRocket size={16} />
             <span>
-              Processing the entire library requires high CPU/GPU usage.
+              Optimized scan: Tracks already processed will be skipped
+              automatically.
             </span>
           </div>
         )}

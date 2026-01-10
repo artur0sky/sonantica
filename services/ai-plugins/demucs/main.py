@@ -9,19 +9,18 @@ Follows Clean Architecture principles with clear separation of concerns.
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from src.infrastructure.config import settings
 from src.infrastructure.redis_client import RedisClient
 from src.presentation.routes import health, jobs, manifest
 
-# Configure logging
-logging.basicConfig(
-    level=settings.log_level,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger("sonantica.plugin.demucs")
+from src.infrastructure.logging.logger_config import setup_logger
+from src.infrastructure.logging.context import set_trace_id
+
+# Initialize standard logger
+logger = setup_logger("demucs-plugin")
 
 
 @asynccontextmanager
@@ -78,11 +77,28 @@ app.include_router(jobs.router, prefix="/jobs", tags=["Jobs"])
 # Global exception handler
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
-    logger.error(f"Unhandled exception: {exc}", exc_info=True)
+    logger.exception(f"Unhandled exception: {str(exc)}")
     return JSONResponse(
         status_code=500,
         content={"detail": "Internal server error"}
     )
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    import time
+    start_time = time.time()
+    # Generate and set trace_id for this request
+    trace_id = set_trace_id()
+    
+    try:
+        response = await call_next(request)
+        process_time = (time.time() - start_time) * 1000
+        logger.info(f"DONE | {request.method} {request.url.path} | {response.status_code} | {process_time:.2f}ms")
+        return response
+    except Exception as e:
+        process_time = (time.time() - start_time) * 1000
+        logger.exception(f"FAIL | {request.method} {request.url.path} | {process_time:.2f}ms | Error: {str(e)}")
+        return JSONResponse(status_code=500, content={"detail": "Internal Server Error"})
 
 
 if __name__ == "__main__":

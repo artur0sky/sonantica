@@ -3,12 +3,14 @@ Application Layer: Use Cases (Business Logic)
 Following Single Responsibility Principle - Each use case does one thing
 """
 
+import asyncio
 import logging
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 from src.domain.entities import SeparationJob, JobStatus, StemType
 from src.domain.repositories import IJobRepository, IStemSeparator
+from src.infrastructure.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -36,21 +38,13 @@ class CreateSeparationJobUseCase:
     ) -> SeparationJob:
         """
         Create and enqueue a separation job.
-        
-        Raises:
-            ValueError: If concurrent job limit is reached
         """
-        # Business Rule: Check concurrent job limit
-        active_count = await self.job_repository.count_by_status([
-            JobStatus.PENDING,
-            JobStatus.PROCESSING
-        ])
-        
-        if active_count >= self.max_concurrent_jobs:
-            raise ValueError(
-                f"Max concurrent jobs ({self.max_concurrent_jobs}) reached"
-            )
-        
+        # Business Rule: Check if a job already exists (Caching/Deduplication)
+        existing_job = await self.job_repository.find_by_track_id(track_id, model)
+        if existing_job and existing_job.status in [JobStatus.COMPLETED, JobStatus.PROCESSING, JobStatus.PENDING]:
+            logger.info(f"Using existing job {existing_job.id} for track {track_id}")
+            return existing_job
+
         # Create job entity
         job_id = f"{track_id}_{datetime.utcnow().timestamp()}"
         now = datetime.utcnow()
@@ -143,68 +137,82 @@ class ProcessSeparationJobUseCase:
     Single Responsibility: Orchestrate the separation workflow.
     """
     
+    _semaphore: Optional[asyncio.Semaphore] = None
+
     def __init__(
         self,
         job_repository: IJobRepository,
         stem_separator: IStemSeparator,
-        output_base_path: str
+        output_base_path: str,
+        max_parallel: int = 1
     ):
         self.job_repository = job_repository
         self.stem_separator = stem_separator
         self.output_base_path = output_base_path
+        
+        if ProcessSeparationJobUseCase._semaphore is None:
+            ProcessSeparationJobUseCase._semaphore = asyncio.Semaphore(max_parallel)
     
     async def execute(self, job_id: str) -> None:
         """
         Process a separation job end-to-end.
         Handles state transitions and error recovery.
         """
-        try:
-            # Retrieve job
-            job = await self.job_repository.get_by_id(job_id)
-            if not job:
-                logger.error(f"Job not found: {job_id}")
-                return
-            
-            # Transition to processing
-            job = job.mark_processing()
-            await self.job_repository.update(job)
-            
-            logger.info(f"🎵 Processing job {job_id}: {job.file_path}")
-            
-            # Prepare output directory
-            import os
-            output_dir = os.path.join(self.output_base_path, job_id)
-            os.makedirs(output_dir, exist_ok=True)
-            
-            # Update progress
-            job = job.update_progress(0.5)
-            await self.job_repository.update(job)
-            
-            # Execute separation
-            def get_value(x):
-                return x.value if hasattr(x, 'value') else str(x)
+        async with self._semaphore:
+            try:
+                # Retrieve job
+                job = await self.job_repository.get_by_id(job_id)
+                if not job:
+                    logger.error(f"Job not found: {job_id}")
+                    return
                 
-            result = await self.stem_separator.separate(
-                audio_path=job.file_path,
-                output_dir=output_dir,
-                model=job.model,
-                stems=[get_value(stem) for stem in job.stems]
-            )
-            
-            # Transition to completed
-            job = job.mark_completed(result)
-            await self.job_repository.update(job)
-            
-            logger.info(f"✓ Job completed: {job_id}")
-            
-        except Exception as e:
-            logger.error(f"✗ Job failed: {job_id} - {e}")
-            
-            # Transition to failed
-            job = await self.job_repository.get_by_id(job_id)
-            if job:
-                job = job.mark_failed(str(e))
+                # Deduplication check: if it was already processed while waiting in semaphore
+                # We check string value to be safe across different enum implementations
+                status_val = job.status.value if hasattr(job.status, 'value') else str(job.status)
+                if status_val in ["completed", "processing"]:
+                     logger.info(f"SKIP | Job {job_id} already in {status_val} state")
+                     return
+
+                # Transition to processing
+                job = job.mark_processing()
                 await self.job_repository.update(job)
+                
+                logger.info(f"🎵 Processing job {job_id}: {job.file_path}")
+                
+                # Prepare output directory
+                import os
+                output_dir = os.path.join(self.output_base_path, job_id)
+                os.makedirs(output_dir, exist_ok=True)
+                
+                # Update progress
+                job = job.update_progress(0.1)
+                await self.job_repository.update(job)
+                
+                # Execute separation
+                def get_val(x):
+                    return x.value if hasattr(x, 'value') else str(x)
+                    
+                result = await self.stem_separator.separate(
+                    audio_path=job.file_path,
+                    output_dir=output_dir,
+                    model=job.model,
+                    stems=[get_val(stem) for stem in job.stems]
+                )
+                
+                # Transition to completed
+                job = job.mark_completed(result)
+                await self.job_repository.update(job)
+                
+                logger.info(f"✓ Job completed: {job_id}")
+                
+            except Exception as e:
+                logger.error(f"✗ Job failed: {job_id} - {e}")
+                
+                # Transition to failed
+                job = await self.job_repository.get_by_id(job_id)
+                if job:
+                    job = job.mark_failed(str(e))
+                    await self.job_repository.update(job)
 
 
 class GetSystemHealthUseCase:

@@ -18,6 +18,10 @@ class Settings(BaseSettings):
     # Postgres (for direct vector inserts if needed, though core handles it usually)
     POSTGRES_URL: Optional[str] = os.getenv("POSTGRES_URL", None)
     
+    # Job Config
+    MAX_CONCURRENT_JOBS: int = int(os.getenv("MAX_CONCURRENT_JOBS", 0)) # 0 = unlimited
+    CONCURRENCY_COOLDOWN_SECONDS: int = int(os.getenv("CONCURRENCY_COOLDOWN_SECONDS", 30)) # Wait before allowing more if limit hit
+    
     # Model Config
     # Default: laion/clap-htsat-unfused
     AI_MODEL_NAME: str = os.getenv("AI_MODEL_NAME", "laion/clap-htsat-unfused")
