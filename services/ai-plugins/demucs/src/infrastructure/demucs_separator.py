@@ -47,10 +47,26 @@ class DemucsStemSeparator(IStemSeparator):
         stems: List[str]
     ) -> Dict[str, str]:
         """
-        Separate audio into stems using Demucs.
-        
-        Returns:
-            Dictionary mapping stem names to relative output paths
+        Separate audio into stems using Demucs (Aynchronous wrapper).
+        """
+        import asyncio
+        return await asyncio.to_thread(
+            self.separate_sync,
+            audio_path,
+            output_dir,
+            model,
+            stems
+        )
+
+    def separate_sync(
+        self,
+        audio_path: str,
+        output_dir: str,
+        model: str,
+        stems: List[str]
+    ) -> Dict[str, str]:
+        """
+        Separate audio into stems using Demucs (Synchronous).
         """
         self._lazy_import()
         

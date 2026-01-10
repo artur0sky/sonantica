@@ -15,9 +15,14 @@ router = APIRouter(prefix="/jobs", tags=["Jobs"])
 async def get_repository():
     return RedisJobRepository(await get_redis_client())
 
+# Global singleton
+_embedder = None
+
 async def get_embedder():
-    # In a real singleton pattern, we'd share this
-    return ClapEmbedder()
+    global _embedder
+    if _embedder is None:
+        _embedder = ClapEmbedder()
+    return _embedder
 
 class CreateJobRequest(BaseModel):
     track_id: str

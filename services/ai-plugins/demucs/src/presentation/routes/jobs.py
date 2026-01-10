@@ -23,6 +23,10 @@ from src.infrastructure.config import settings
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
+def get_value(x):
+    """Safely get value from Enum or string"""
+    return x.value if hasattr(x, 'value') else str(x)
+
 
 # Request/Response Models
 class CreateJobRequest(BaseModel):
@@ -96,10 +100,10 @@ async def create_job(
         return JobResponse(
             id=job.id,
             track_id=job.track_id,
-            status=job.status.value,
+            status=get_value(job.status),
             progress=job.progress,
-            created_at=job.created_at.isoformat(),
-            updated_at=job.updated_at.isoformat()
+            created_at=job.created_at.strftime('%Y-%m-%dT%H:%M:%SZ'),
+            updated_at=job.updated_at.strftime('%Y-%m-%dT%H:%M:%SZ')
         )
         
     except ValueError as e:
@@ -128,12 +132,12 @@ async def get_job_status(job_id: str):
         return JobResponse(
             id=job.id,
             track_id=job.track_id,
-            status=job.status.value,
+            status=get_value(job.status),
             progress=job.progress,
             result=job.result,
             error=job.error,
-            created_at=job.created_at.isoformat(),
-            updated_at=job.updated_at.isoformat()
+            created_at=job.created_at.strftime('%Y-%m-%dT%H:%M:%SZ'),
+            updated_at=job.updated_at.strftime('%Y-%m-%dT%H:%M:%SZ')
         )
         
     except ValueError as e:
@@ -158,7 +162,7 @@ async def cancel_job(job_id: str):
         
         return {
             "message": f"Job {job_id} cancelled successfully",
-            "status": job.status.value
+            "status": get_value(job.status)
         }
         
     except ValueError as e:

@@ -32,15 +32,15 @@ class RedisJobRepository(IJobRepository):
         d = json.loads(data)
         return EmbeddingJob(
             id=d["id"],
-            track_id=d["trackId"],
-            file_path=d.get("filePath", ""), # Note: we might need to store filePath in to_dict if needed
+            track_id=d["track_id"],
+            file_path=d.get("file_path", ""),
             status=JobStatus(d["status"]),
             progress=d["progress"],
             embedding=d.get("embedding"),
-            model_version=d.get("modelVersion"),
+            model_version=d.get("model_version"),
             error=d.get("error"),
-            created_at=datetime.fromisoformat(d["createdAt"]),
-            updated_at=datetime.fromisoformat(d["updatedAt"])
+            created_at=datetime.strptime(d["created_at"], '%Y-%m-%dT%H:%M:%SZ'),
+            updated_at=datetime.strptime(d["updated_at"], '%Y-%m-%dT%H:%M:%SZ')
         )
 
     async def get_active_count(self) -> int:

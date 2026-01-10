@@ -2,7 +2,7 @@ import asyncio
 import logging
 import torch
 import torchaudio
-from transformers import AutoProcessor, ClapAudioModel
+from transformers import AutoProcessor, ClapModel
 from typing import List
 import os
 
@@ -28,7 +28,7 @@ class ClapEmbedder(IAudioEmbedder):
             os.makedirs(settings.HF_HOME, exist_ok=True)
             
             self._processor = AutoProcessor.from_pretrained(self.model_name)
-            self._model = ClapAudioModel.from_pretrained(self.model_name).to(self.device)
+            self._model = ClapModel.from_pretrained(self.model_name).to(self.device)
             self._model.eval()
             logger.info("CLAP model loaded successfully")
 
@@ -39,17 +39,44 @@ class ClapEmbedder(IAudioEmbedder):
                 await asyncio.to_thread(self._load_model)
 
             try:
-                # Load audio
-                waveform, sample_rate = await asyncio.to_thread(torchaudio.load, file_path)
+                # Resolve full path
+                full_path = file_path
+                if not os.path.isabs(file_path):
+                    full_path = os.path.join(settings.MEDIA_PATH, file_path)
                 
-                # CLAP expects 48kHz usually, processor handles it but let's be safe
+                if not os.path.exists(full_path):
+                    logger.error(f"❌ File does not exist: {full_path}")
+                    raise FileNotFoundError(f"Audio file not found: {full_path}")
+
+                # Load audio
+                logger.info(f"🔊 Loading audio for embedding (max 60s): {full_path}")
+                try:
+                    # CLAP doesn't need the whole song to get the "vibe"
+                    # Loading first 60 seconds is enough for similarity and prevents OOM
+                    # 48000 * 60 = 2,880,000 frames
+                    waveform, sample_rate = await asyncio.to_thread(torchaudio.load, full_path, frame_offset=0, num_frames=48000*60)
+                    logger.info(f"✅ Loaded audio sample: {waveform.shape}, sr={sample_rate}")
+                except Exception as load_err:
+                    logger.error(f"❌ Torchaudio failed to load {full_path}: {load_err}")
+                    raise load_err
+                
                 # If stereo, average to mono
                 if waveform.shape[0] > 1:
+                    logger.debug("Mixing down to mono")
                     waveform = torch.mean(waveform, dim=0, keepdim=True)
                 
+                # Resample to 48kHz if needed (CLAP requirement)
+                if sample_rate != 48000:
+                    logger.debug(f"Resampling from {sample_rate} to 48000")
+                    resampler = torchaudio.transforms.Resample(sample_rate, 48000).to(waveform.device)
+                    waveform = resampler(waveform)
+                    sample_rate = 48000
+
                 # Encode
-                inputs = self._processor(audios=waveform.squeeze().numpy(), sampling_rate=sample_rate, return_tensors="pt")
-                inputs = {k: v.to(self.device) for k, v in inputs.items()}
+                # Waveform is [1, T], CLAP processor expects [T] or list
+                audio_np = waveform.squeeze().numpy()
+                inputs = self._processor(audios=audio_np, sampling_rate=sample_rate, return_tensors="pt")
+                inputs = {k: v.to(self.device).to(self._model.dtype) for k, v in inputs.items()}
                 
                 with torch.no_grad():
                     outputs = self._model.get_audio_features(**inputs)

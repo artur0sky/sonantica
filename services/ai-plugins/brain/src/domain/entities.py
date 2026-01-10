@@ -37,14 +37,15 @@ class EmbeddingJob:
     def to_dict(self) -> Dict[str, Any]:
         return {
             "id": self.id,
-            "trackId": self.track_id,
+            "track_id": self.track_id,
+            "file_path": self.file_path,
             "status": self.status.value,
             "progress": self.progress,
             "embedding": self.embedding,
-            "modelVersion": self.model_version,
+            "model_version": self.model_version,
             "error": self.error,
-            "createdAt": self.created_at.isoformat(),
-            "updatedAt": self.updated_at.isoformat()
+            "created_at": self.created_at.strftime('%Y-%m-%dT%H:%M:%SZ'),
+            "updated_at": self.updated_at.strftime('%Y-%m-%dT%H:%M:%SZ')
         }
 
 @dataclass(frozen=True)

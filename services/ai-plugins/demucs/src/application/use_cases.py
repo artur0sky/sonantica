@@ -181,11 +181,14 @@ class ProcessSeparationJobUseCase:
             await self.job_repository.update(job)
             
             # Execute separation
+            def get_value(x):
+                return x.value if hasattr(x, 'value') else str(x)
+                
             result = await self.stem_separator.separate(
                 audio_path=job.file_path,
                 output_dir=output_dir,
                 model=job.model,
-                stems=[stem.value for stem in job.stems]
+                stems=[get_value(stem) for stem in job.stems]
             )
             
             # Transition to completed

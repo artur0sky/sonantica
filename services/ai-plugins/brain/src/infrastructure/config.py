@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     # Cache
     TORCH_HOME: str = os.getenv("TORCH_HOME", "/tmp/torch")
     HF_HOME: str = os.getenv("HF_HOME", "/tmp/huggingface")
+    MEDIA_PATH: str = os.getenv("MEDIA_PATH", "/media")
 
     class Config:
         case_sensitive = True

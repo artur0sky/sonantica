@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     
     # Ollama
     OLLAMA_HOST: str = os.getenv("OLLAMA_HOST", "http://host.docker.internal:11434")
+    LLM_MODEL: str = os.getenv("LLM_MODEL", "llama3.1:latest")
 
     class Config:
         case_sensitive = True

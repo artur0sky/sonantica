@@ -33,18 +33,24 @@ class RedisJobRepository(IJobRepository):
         # Serialize job to dict
         job_data = job.model_dump(mode='json')
         
-        # Convert datetime objects to ISO strings
-        job_data['created_at'] = job.created_at.isoformat()
-        job_data['updated_at'] = job.updated_at.isoformat()
+        # Ensure ISO strings have the Z suffix for UTC (Go core requirement)
+        job_data['created_at'] = job.created_at.strftime('%Y-%m-%dT%H:%M:%SZ')
+        job_data['updated_at'] = job.updated_at.strftime('%Y-%m-%dT%H:%M:%SZ')
         
-        # Convert stems list to JSON string
-        job_data['stems'] = json.dumps([stem.value for stem in job.stems])
+        # Convert stems list to JSON string safely
+        def get_value(x):
+            return x.value if hasattr(x, 'value') else str(x)
+            
+        job_data['stems'] = json.dumps([get_value(stem) for stem in job.stems])
+        
+        # Filter out None values for Redis hash
+        job_data = {k: v for k, v in job_data.items() if v is not None}
         
         # Store in Redis hash
         await redis.hset(f"{self.key_prefix}:{job.id}", mapping=job_data)
         
         # Set status key for quick filtering
-        await redis.set(f"{self.key_prefix}:{job.id}:status", job.status.value)
+        await redis.set(f"{self.key_prefix}:{job.id}:status", get_value(job.status))
         
         # Set expiration
         await redis.expire(f"{self.key_prefix}:{job.id}", self.ttl)
