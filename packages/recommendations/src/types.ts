@@ -31,7 +31,7 @@ export interface Recommendation<T = Track | Album | Artist> {
  * Why this item was recommended
  */
 export interface RecommendationReason {
-  type: 'artist' | 'album' | 'genre' | 'year' | 'tempo' | 'key' | 'mood';
+  type: 'artist' | 'album' | 'genre' | 'year' | 'tempo' | 'key' | 'mood' | 'ai';
   weight: number; // Contribution to final score
   description: string;
 }

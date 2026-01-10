@@ -52,7 +52,7 @@ class IVectorRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_similar_tracks(self, track_id: str, limit: int = 10) -> List[Dict[str, Any]]:
+    async def get_similar_tracks(self, track_id: str, limit: int = 10, diversity: float = 0.2) -> List[Dict[str, Any]]:
         pass
 
     @abstractmethod

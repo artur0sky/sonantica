@@ -17,7 +17,12 @@ import type {
   IRecommendationStrategy,
   AlbumRecommendation,
   ArtistRecommendation,
+  RecommendationReason,
 } from './types';
+import type { 
+    ExternalFetcher, 
+    ExternalRecommendationRequest 
+} from './external';
 import {
   calculateTrackSimilarity,
   getSimilarityReasons,
@@ -543,6 +548,179 @@ export class RecommendationEngine {
   setStrategy(strategy: IRecommendationStrategy): void {
     if (!strategy) throw new Error('Invalid strategy');
     this.strategy = strategy;
+  }
+  /**
+   * Get hybrid recommendations (AI + Local Fallback)
+   * 
+   * Attempts to fetch from external source (AI). If that fails or returns empty,
+   * falls back to the local strategy.
+   * 
+   * "Do not break it when it involves not having it active"
+   */
+  async getHybridRecommendations(
+    context: RecommendationContext,
+    library: Track[],
+    fetcher: ExternalFetcher,
+    options: RecommendationOptions = {}
+  ): Promise<Recommendation<Track>[]> {
+      const { limit = 10, diversity = 0.2 } = options;
+      
+      try {
+          // 1. Prepare Request
+          const req: ExternalRecommendationRequest = {
+              limit,
+              diversity
+          };
+
+          if (context.type === 'track') {
+              req.track_id = context.track.id;
+          } else if (context.type === 'artist') {
+             // If we had artist ID in shared Track/Artist types we'd use it.
+             // For now, we might skipping generic context mapping if ID is missing or pass context text
+             req.context = [`artist:${context.artist.name}`];
+          }
+
+          // 2. Fetch from External AI
+          const results = await fetcher(req);
+          
+          if (results && results.length > 0) {
+              // 3. Map Results
+              const mapped: Recommendation<Track>[] = [];
+              
+              for (const res of results) {
+                  if (res.type === 'track' && res.track) {
+                      mapped.push({
+                          item: res.track, // AI returned hydrated track
+                          score: res.score,
+                          reasons: [{
+                              type: 'ai',
+                              weight: 1.0,
+                              description: res.reason || 'AI Recommendation'
+                          }]
+                      });
+                  } else if (res.type === 'track' && res.id) {
+                      // Try to hydrate from local library if AI didn't return full object
+                      const localTrack = library.find(t => t.id === res.id);
+                      if (localTrack) {
+                          mapped.push({
+                              item: localTrack,
+                              score: res.score,
+                              reasons: [{
+                                  type: 'ai',
+                                  weight: 1.0,
+                                  description: res.reason || 'AI Recommendation'
+                              }]
+                          });
+                      }
+                  }
+              }
+
+              if (mapped.length > 0) {
+                   return mapped;
+              }
+          }
+      } catch (error) {
+          // AI failed or disabled, proceed to fallback transparently
+          console.debug('Hybrid strategy fallback (AI likely inactive):', error);
+      }
+
+      // 4. Fallback to Local Strategy
+      return this.getTrackRecommendationsAsync(context, library, options);
+  }
+
+  /**
+   * Get comprehensive smart recommendations (Tracks + Albums + Artists)
+   * 
+   * Unified method that tries AI first for all types, then falls back to local algorithms.
+   */
+  async getSmartRecommendations(
+    context: RecommendationContext,
+    libraries: { tracks: Track[], albums: Album[], artists: Artist[] },
+    fetcher: ExternalFetcher,
+    options: RecommendationOptions = {}
+  ): Promise<{
+      tracks: Recommendation<Track>[],
+      albums: AlbumRecommendation[],
+      artists: ArtistRecommendation[]
+  }> {
+      const { limit = 10, diversity = 0.2 } = options;
+      
+      // 1. Prepare Request (Same as hybrid)
+      const req: ExternalRecommendationRequest = {
+          limit,
+          diversity
+      };
+
+      if (context.type === 'track') {
+          req.track_id = context.track.id;
+      } else if (context.type === 'artist') {
+         req.context = [`artist:${context.artist.name}`];
+      }
+
+      try {
+           // 2. Fetch from External AI
+          const results = await fetcher(req);
+
+          if (results && results.length > 0) {
+              const tracks: Recommendation<Track>[] = [];
+              const albums: AlbumRecommendation[] = [];
+              const artists: ArtistRecommendation[] = [];
+
+              for (const res of results) {
+                  const score = res.score || 0.8;
+                  const reasonObj: RecommendationReason = {
+                      type: 'ai',
+                      weight: 1.0,
+                      description: res.reason || 'AI Insight'
+                  };
+
+                  if (res.type === 'track') {
+                       if (res.track) {
+                           tracks.push({ item: res.track, score, reasons: [reasonObj] });
+                       } else if (res.id) {
+                           const local = libraries.tracks.find(t => t.id === res.id);
+                           if (local) tracks.push({ item: local, score, reasons: [reasonObj] });
+                       }
+                  } 
+                  else if (res.type === 'album') {
+                      if (res.album) {
+                           albums.push({ item: res.album, score, reasons: [reasonObj] });
+                      } else if (res.id) {
+                           const local = libraries.albums.find(a => a.id === res.id);
+                           if (local) albums.push({ item: local, score, reasons: [reasonObj] });
+                      }
+                  }
+                  else if (res.type === 'artist') {
+                      if (res.artist) {
+                           artists.push({ item: res.artist, score, reasons: [reasonObj] });
+                      } else if (res.id) {
+                           const local = libraries.artists.find(a => a.id === res.id);
+                           if (local) artists.push({ item: local, score, reasons: [reasonObj] });
+                      }
+                  }
+              }
+
+              // Return if we found anything meaningful
+              if (tracks.length > 0 || albums.length > 0 || artists.length > 0) {
+                  return { tracks, albums, artists };
+              }
+          }
+
+      } catch (error) {
+          console.debug('Smart recommendations fallback (AI inactive):', error);
+      }
+
+      // 3. Fallback: Calculate locally
+      // We run these in parallel for speed
+      const [tracks, albums, artists] = await Promise.all([
+          this.getTrackRecommendationsAsync(context, libraries.tracks, options),
+          // For albums/artists, we only support 'track' context fallback properly in the current engine
+          // If context is track, use it.
+          context.type === 'track' ? Promise.resolve(this.getAlbumRecommendations(context.track, libraries.albums, libraries.tracks, options)) : Promise.resolve([]),
+          context.type === 'track' ? Promise.resolve(this.getArtistRecommendations(context.track, libraries.artists, libraries.tracks, options)) : Promise.resolve([])
+      ]);
+
+      return { tracks, albums, artists };
   }
 }
 

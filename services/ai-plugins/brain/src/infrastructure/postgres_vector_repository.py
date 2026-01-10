@@ -1,6 +1,7 @@
 import asyncpg
 import logging
 import json
+import random
 from typing import List, Optional, Dict, Any
 from ..domain.entities import Recommendation
 from .database import get_db_pool
@@ -43,7 +44,7 @@ class PostgresVectorRepository:
                     logger.error(f"Failed to save embedding in Postgres: {e}")
                     raise e
 
-    async def get_similar_tracks(self, track_id: str, limit: int = 10) -> List[Dict[str, Any]]:
+    async def get_similar_tracks(self, track_id: str, limit: int = 10, diversity: float = 0.2) -> List[Dict[str, Any]]:
         pool = await self._get_pool()
         async with pool.acquire() as conn:
             # Get the embedding for the given track
@@ -55,19 +56,51 @@ class PostgresVectorRepository:
                 logger.warning(f"No embedding found for track {track_id}")
                 return []
 
+            # Calculate pool size based on diversity
+            # 0.0 -> Pool = Limit (Exact match)
+            # 1.0 -> Pool = 5x Limit (Broader search)
+            pool_factor = 1 + (diversity * 4) 
+            pool_limit = int(limit * pool_factor)
+            if pool_limit < limit: pool_limit = limit
+
             # Find similar using cosine distance (<=>)
-            # Result score converted from distance to similarity (1 - distance)
             rows = await conn.fetch(
                 """
-                SELECT track_id, (1 - (embedding <=> $2::vector)) as score
-                FROM track_embeddings
-                WHERE track_id != $1
-                ORDER BY embedding <=> $2::vector
+                SELECT te.track_id, (1 - (te.embedding <=> $2::vector)) as score, t.artist_id, t.album_id
+                FROM track_embeddings te
+                JOIN tracks t ON te.track_id = t.id
+                WHERE te.track_id != $1
+                ORDER BY te.embedding <=> $2::vector
                 LIMIT $3
                 """,
-                track_id, embedding_str, limit
+                track_id, embedding_str, pool_limit
             )
-            return [{"id": str(r["track_id"]), "score": float(r["score"]), "type": "track", "reason": "Sonic similarity (AI Brain)"} for r in rows]
+            
+            # Map to list
+            results = [{
+                "id": str(r["track_id"]),
+                "score": float(r["score"]),
+                "type": "track",
+                "reason": "Sonic similarity (AI Brain)",
+                "artist_id": str(r["artist_id"]) if r["artist_id"] else None,
+                "album_id": str(r["album_id"]) if r["album_id"] else None
+            } for r in rows]
+
+            # Apply Diversity Shuffling
+            if diversity > 0.1 and len(results) > limit:
+                # Weighted shuffle could be better, but simple shuffle of top-K is the 'Diversity' request
+                random.shuffle(results)
+                results = results[:limit]
+            else:
+                # Just take top K
+                results = results[:limit]
+            
+            # Sort by score again? No, if we shuffled we want to keep the random mix. 
+            # But the user might expect them ordered by relevance? 
+            # "Diverse" usually implies we sacrifice some relevance order for variety.
+            # But let's re-sort if diversity is low? No, if diversity > 0.1 we explicitly want the shuffle.
+
+            return results
 
     async def get_discovery_tracks(self, limit: int = 10) -> List[Dict[str, Any]]:
         pool = await self._get_pool()

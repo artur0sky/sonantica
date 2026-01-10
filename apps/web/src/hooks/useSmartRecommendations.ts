@@ -1,80 +1,90 @@
 import { useState, useEffect } from "react";
 import { useQueueStore } from "@sonantica/player-core";
 import { useLibraryStore } from "@sonantica/media-library";
-import { useQueueRecommendations } from "@sonantica/recommendations";
+import { RecommendationEngine } from "@sonantica/recommendations";
+import type { Recommendation, AlbumRecommendation, ArtistRecommendation } from "@sonantica/recommendations";
 import { PluginService } from "../services/PluginService";
 import type { Track } from "@sonantica/shared";
 
 interface SmartRecommendationsResult {
-  trackRecommendations: { item: Track; reasons: string[]; score?: number }[];
-  albumRecommendations: any[];
-  artistRecommendations: any[];
+  trackRecommendations: Recommendation<Track>[];
+  albumRecommendations: AlbumRecommendation[];
+  artistRecommendations: ArtistRecommendation[];
   isAI: boolean;
+  isLoading: boolean;
 }
 
-export function useSmartRecommendations(): SmartRecommendationsResult {
-  // Client-side fallback
-  const { trackRecommendations: clientTracksRaw, albumRecommendations, artistRecommendations } = useQueueRecommendations({
-    limit: 10,
-    minScore: 0.3,
-    diversity: 0.2, // Default diversity
-  });
+export function useSmartRecommendations({ diversity = 0.2 }: { diversity?: number } = {}): SmartRecommendationsResult {
+  const [results, setResults] = useState<{
+      tracks: Recommendation<Track>[];
+      albums: AlbumRecommendation[];
+      artists: ArtistRecommendation[];
+  }>({ tracks: [], albums: [], artists: [] });
 
-  // Map client tracks to match our interface
-  const clientTracks = clientTracksRaw.map(rec => ({
-    item: rec.item,
-    reasons: rec.reasons.map(r => String(r)), // Convert reasons to strings
-    score: rec.score
-  }));
+  const [isLoading, setIsLoading] = useState(false);
+  const [isAI, setIsAI] = useState(false);
 
-  const [aiTracks, setAiTracks] = useState<{ item: Track; reasons: string[]; score?: number }[] | null>(null);
+  // Store selections
   const currentMediaSource = useQueueStore((s) => s.queue[s.currentIndex]);
   const tracks = useLibraryStore((s) => s.tracks);
+  const albums = useLibraryStore((s) => s.albums);
+  const artists = useLibraryStore((s) => s.artists);
 
   useEffect(() => {
     let isMounted = true;
 
-    const fetchAI = async () => {
-      if (!currentMediaSource) return;
+    const fetchSmart = async () => {
+      if (!currentMediaSource) {
+          if(isMounted) {
+             setResults({ tracks: [], albums: [], artists: [] });
+             setIsAI(false);
+          }
+          return;
+      }
       
+      // Find current track object
+      const currentTrack = tracks.find(t => t.id === currentMediaSource.id);
+      if (!currentTrack) return;
+
+      setIsLoading(true);
+
       try {
-        // Check local track ID
-        const currentTrack = tracks.find(t => t.id === currentMediaSource.id);
-        if (!currentTrack) return;
+        const engine = new RecommendationEngine();
+        
+        // Use the engine's smart method which handles AI + Fallback internally
+        const smartResults = await engine.getSmartRecommendations(
+            { type: 'track', track: currentTrack },
+            { tracks, albums, artists },
+            (req: any) => PluginService.getRecommendations(req), // Fetcher adapter
+            { diversity, limit: 10 }
+        );
 
-        // Try to fetch from AI
-        const recs = await PluginService.getRecommendations({
-          track_id: currentTrack.id,
-          limit: 10
-        });
-
-        if (isMounted && recs && recs.length > 0) {
-            const mapped = recs
-                .filter(r => r.track) // Ensure hydrated
-                .map(r => ({
-                    item: r.track,
-                    reasons: [r.reason || "AI Logic"],
-                    score: r.score
-                }));
-            setAiTracks(mapped);
-        } else {
-            setAiTracks(null);
+        if (isMounted) {
+            setResults(smartResults);
+            
+            // Check if we got AI results by looking at reasons
+            const hasAI = smartResults.tracks.some((t: Recommendation<Track>) => t.reasons.some((r: any) => r.type === 'ai'));
+            setIsAI(hasAI);
         }
       } catch (err) {
-        // Fallback silently
-        if (isMounted) setAiTracks(null);
+          console.error("Smart recommendations failed completely:", err);
+          // Should not happen as engine handles fallback, but safety net
+          if (isMounted) setResults({ tracks: [], albums: [], artists: [] });
+      } finally {
+          if (isMounted) setIsLoading(false);
       }
     };
 
-    fetchAI();
+    fetchSmart();
 
     return () => { isMounted = false; };
-  }, [currentMediaSource, tracks]);
+  }, [currentMediaSource, tracks, albums, artists, diversity]);
 
   return {
-    trackRecommendations: aiTracks || clientTracks,
-    albumRecommendations, // For now keep client side as AI endpoint only hydrates tracks currently
-    artistRecommendations,
-    isAI: !!aiTracks
+    trackRecommendations: results.tracks,
+    albumRecommendations: results.albums,
+    artistRecommendations: results.artists,
+    isAI,
+    isLoading
   };
 }

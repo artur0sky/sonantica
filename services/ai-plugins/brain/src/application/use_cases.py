@@ -112,10 +112,57 @@ class GetRecommendations:
     def __init__(self, vector_repo: IVectorRepository):
         self.vector_repo = vector_repo
 
-    async def execute(self, track_id: Optional[str] = None, limit: int = 10) -> List[dict]:
+    async def execute(self, track_id: Optional[str] = None, limit: int = 10, diversity: float = 0.2) -> List[dict]:
         if track_id:
-            # Get similar tracks
-            return await self.vector_repo.get_similar_tracks(track_id, limit)
+            # 1. Fetch a larger pool of tracks to infer artists/albums
+            # We fetch 3x the limit or at least 30 to get good statistics
+            fetch_limit = max(limit * 3, 30)
+            
+            tracks = await self.vector_repo.get_similar_tracks(track_id, fetch_limit, diversity)
+            
+            # 2. Aggregate scores for Artists and Albums
+            artist_scores = {}
+            album_scores = {}
+            
+            for t in tracks:
+                score = t.get("score", 0)
+                aid = t.get("artist_id")
+                alid = t.get("album_id")
+                
+                if aid:
+                    artist_scores[aid] = artist_scores.get(aid, 0) + score
+                if alid:
+                    album_scores[alid] = album_scores.get(alid, 0) + score
+
+            # 3. Create Recommendations for Top Artists/Albums
+            # Sort by total score
+            top_artists = sorted(artist_scores.items(), key=lambda x: x[1], reverse=True)[:3]
+            top_albums = sorted(album_scores.items(), key=lambda x: x[1], reverse=True)[:3]
+            
+            recommendations = []
+            
+            # Add Tracks (trunk to original limit)
+            recommendations.extend(tracks[:limit])
+            
+            # Add Artists (if score is significant)
+            for aid, total_score in top_artists:
+                 recommendations.append({
+                     "id": aid,
+                     "type": "artist",
+                     "score": total_score / fetch_limit, # Normalize roughly
+                     "reason": "Inferred from similar tracks"
+                 })
+
+            # Add Albums
+            for alid, total_score in top_albums:
+                 recommendations.append({
+                     "id": alid,
+                     "type": "album",
+                     "score": total_score / fetch_limit,
+                     "reason": "Inferred from similar tracks"
+                 })
+                 
+            return recommendations
         else:
             # Discovery mode
             return await self.vector_repo.get_discovery_tracks(limit)

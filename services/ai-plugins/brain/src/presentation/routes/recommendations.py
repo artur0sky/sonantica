@@ -17,6 +17,7 @@ class RecommendationRequest(BaseModel):
     track_id: Optional[str] = None
     limit: int = 10
     context: Optional[List[str]] = None
+    diversity: float = 0.2
 
 @router.post("")
 async def get_recommendations(
@@ -28,5 +29,5 @@ async def get_recommendations(
         raise HTTPException(status_code=401, detail="Unauthorized")
 
     use_case = GetRecommendations(vector_repo)
-    recs = await use_case.execute(request.track_id, request.limit)
+    recs = await use_case.execute(request.track_id, request.limit, request.diversity)
     return recs

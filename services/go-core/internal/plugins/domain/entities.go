@@ -83,10 +83,11 @@ type AIPlugin struct {
 
 // RecommendationRequest represents a request for recommendations
 type RecommendationRequest struct {
-	TrackID  string   `json:"track_id,omitempty"`
-	ArtistID string   `json:"artist_id,omitempty"`
-	Limit    int      `json:"limit"`
-	Context  []string `json:"context,omitempty"` // e.g. "favorites", "recent"
+	TrackID   string   `json:"track_id,omitempty"`
+	ArtistID  string   `json:"artist_id,omitempty"`
+	Limit     int      `json:"limit"`
+	Context   []string `json:"context,omitempty"` // e.g. "favorites", "recent"
+	Diversity float64  `json:"diversity"`         // 0.0 (Similar) - 1.0 (Diverse)
 }
 
 // Recommendation represents a recommended item

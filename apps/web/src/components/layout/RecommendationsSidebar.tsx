@@ -12,6 +12,7 @@ import {
   SidebarSection,
   useUIStore,
   Button,
+  cn,
 } from "@sonantica/ui";
 import { useSmartRecommendations } from "../../hooks/useSmartRecommendations";
 import { usePlaylistCRUD } from "../../hooks/usePlaylistCRUD";
@@ -34,8 +35,13 @@ export function RecommendationsSidebar() {
   const playNext = useQueueStore((s) => s.playNext);
 
   // Get recommendations (Smart AI or Client Fallback)
-  const { trackRecommendations, albumRecommendations, artistRecommendations } =
-    useSmartRecommendations();
+  const {
+    trackRecommendations,
+    albumRecommendations,
+    artistRecommendations,
+    isAI,
+    isLoading,
+  } = useSmartRecommendations({ diversity });
 
   const diversityOptions = [
     { value: 0.0, label: "Similar" },
@@ -90,7 +96,17 @@ export function RecommendationsSidebar() {
       title="Discovery"
       onClose={toggleRecommendations}
       headerActions={
-        <div className="flex gap-1">
+        <div className="flex gap-1 items-center">
+          {isAI && (
+            <div
+              className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-[9px] text-primary border border-primary/20 mr-1"
+              title="Powered by Sonántica Brain"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+              Brain
+            </div>
+          )}
+
           {trackRecommendations.length > 0 && (
             <Button
               variant="ghost"
@@ -117,7 +133,12 @@ export function RecommendationsSidebar() {
         </div>
       }
     >
-      <div className="flex flex-col h-full overflow-y-auto px-1 pb-20">
+      <div
+        className={cn(
+          "flex flex-col h-full overflow-y-auto px-1 pb-20 transition-opacity duration-200",
+          isLoading ? "opacity-50 pointer-events-none" : "opacity-100"
+        )}
+      >
         {/* Intro */}
         <div className="mb-6 px-1">
           <p className="text-xs text-text-muted italic opacity-70">
