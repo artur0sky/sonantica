@@ -123,10 +123,7 @@ export function MainLayout({ children }: MainLayoutProps) {
     useLayoutTheme();
 
   return (
-    <LayoutThemeManager
-      totalRightOffset={totalRightOffset}
-      isPlayerExpanded={isPlayerExpanded}
-    >
+    <LayoutThemeManager totalRightOffset={totalRightOffset}>
       <PlaybackPersistence />
       <Header />
 
