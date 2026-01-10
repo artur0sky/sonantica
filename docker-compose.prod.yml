@@ -145,7 +145,7 @@ services:
       - MEDIA_PATH=/media
       - ANALYTICS_ENABLED=${ANALYTICS_ENABLED:-true}
       - ANALYTICS_RETENTION_DAYS=${ANALYTICS_RETENTION_DAYS:-90}
-      - ALLOWED_ORIGINS=https://${DOMAIN_NAME:-localhost}
+      - ALLOWED_ORIGINS=https://${DOMAIN_NAME:-localhost},http://localhost,http://localhost:3000,http://localhost:5173,capacitor://localhost,http://192.168.100.6:3000,http://192.168.100.6:5173
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - LOG_FORMAT=${LOG_FORMAT:-json}
       - LOG_ENABLED=${LOG_ENABLED:-true}
