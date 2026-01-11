@@ -648,7 +648,13 @@ export class RecommendationEngine {
       // 1. Prepare Request (Same as hybrid)
       const req: ExternalRecommendationRequest = {
           limit,
-          diversity
+          diversity,
+          weights: options.weights ? {
+              audio: options.weights.audio || 1.0,
+              lyrics: options.weights.lyrics || 0.0,
+              visual: options.weights.visual || 0.0,
+              stems: options.weights.stems || 0.0,
+          } : undefined
       };
 
       if (context.type === 'track') {

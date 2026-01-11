@@ -33,6 +33,10 @@ class Settings(BaseSettings):
     HF_HOME: str = os.getenv("HF_HOME", "/tmp/huggingface")
     MEDIA_PATH: str = os.getenv("MEDIA_PATH", "/media")
 
+    # Neighbor Plugins
+    KNOWLEDGE_PLUGIN_URL: Optional[str] = os.getenv("KNOWLEDGE_PLUGIN_URL", "http://knowledge:8080")
+    DEMUCS_PLUGIN_URL: Optional[str] = os.getenv("DEMUCS_PLUGIN_URL", "http://demucs:8080")
+
     class Config:
         case_sensitive = True
 

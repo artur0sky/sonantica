@@ -66,6 +66,11 @@ export interface SimilarityWeights {
   year?: number;        // Default: 0.10
   tempo?: number;       // Default: 0.05 (if available)
   key?: number;         // Default: 0.05 (if available)
+  // Multi-modal (AI)
+  audio?: number;
+  lyrics?: number;
+  visual?: number;
+  stems?: number;
 }
 
 /**

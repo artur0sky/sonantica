@@ -2,11 +2,11 @@ import { useState, useEffect } from "react";
 import { useQueueStore } from "@sonantica/player-core";
 import { useLibraryStore } from "@sonantica/media-library";
 import { RecommendationEngine } from "@sonantica/recommendations";
-import type { Recommendation, AlbumRecommendation, ArtistRecommendation } from "@sonantica/recommendations";
+import type { Recommendation, AlbumRecommendation, ArtistRecommendation, SimilarityWeights } from "@sonantica/recommendations";
 import { PluginService } from "../services/PluginService";
 import type { Track } from "@sonantica/shared";
 
-interface SmartRecommendationsResult {
+export interface SmartRecommendationsResult {
   trackRecommendations: Recommendation<Track>[];
   albumRecommendations: AlbumRecommendation[];
   artistRecommendations: ArtistRecommendation[];
@@ -14,7 +14,12 @@ interface SmartRecommendationsResult {
   isLoading: boolean;
 }
 
-export function useSmartRecommendations({ diversity = 0.2 }: { diversity?: number } = {}): SmartRecommendationsResult {
+export interface SmartRecommendationsOptions {
+  diversity?: number;
+  weights?: SimilarityWeights;
+}
+
+export function useSmartRecommendations({ diversity = 0.2, weights }: SmartRecommendationsOptions = {}): SmartRecommendationsResult {
   const [results, setResults] = useState<{
       tracks: Recommendation<Track>[];
       albums: AlbumRecommendation[];
@@ -29,6 +34,9 @@ export function useSmartRecommendations({ diversity = 0.2 }: { diversity?: numbe
   const tracks = useLibraryStore((s) => s.tracks);
   const albums = useLibraryStore((s) => s.albums);
   const artists = useLibraryStore((s) => s.artists);
+
+  // Memoize weights string to prevent infinite loops if object reference changes
+  const weightsJson = JSON.stringify(weights);
 
   useEffect(() => {
     let isMounted = true;
@@ -56,7 +64,7 @@ export function useSmartRecommendations({ diversity = 0.2 }: { diversity?: numbe
             { type: 'track', track: currentTrack },
             { tracks, albums, artists },
             (req: any) => PluginService.getRecommendations(req), // Fetcher adapter
-            { diversity, limit: 10 }
+            { diversity, limit: 10, weights }
         );
 
         if (isMounted) {
@@ -78,7 +86,7 @@ export function useSmartRecommendations({ diversity = 0.2 }: { diversity?: numbe
     fetchSmart();
 
     return () => { isMounted = false; };
-  }, [currentMediaSource, tracks, albums, artists, diversity]);
+  }, [currentMediaSource, tracks, albums, artists, diversity, weightsJson]); // Use stringified weights
 
   return {
     trackRecommendations: results.tracks,

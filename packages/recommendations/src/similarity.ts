@@ -22,6 +22,10 @@ export const DEFAULT_WEIGHTS: Required<SimilarityWeights> = {
   year: 0.10,
   tempo: 0.05,
   key: 0.05,
+  audio: 1.0,
+  lyrics: 0.0,
+  visual: 0.0,
+  stems: 0.0,
 };
 
 // Security Constants

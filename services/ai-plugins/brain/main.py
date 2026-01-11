@@ -24,6 +24,10 @@ async def lifespan(app: FastAPI):
     # Initialize Redis
     await get_redis_client()
     
+    # Initialize Plugin Registry
+    from src.infrastructure.plugin_registry import PluginRegistry
+    await PluginRegistry.get_instance().initialize()
+
     # Start Priority Manager
     await job_manager.start()
     

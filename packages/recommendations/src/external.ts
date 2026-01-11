@@ -8,6 +8,12 @@ export interface ExternalRecommendationRequest {
   limit: number;
   diversity?: number;
   context?: string[];
+  weights?: {
+      audio: number;
+      lyrics: number;
+      visual: number;
+      stems: number;
+  };
 }
 
 export interface ExternalRecommendationResponse {

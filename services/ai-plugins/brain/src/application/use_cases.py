@@ -62,21 +62,21 @@ class ProcessEmbeddingJob:
             return
 
         logger.info(f"START | Processing embedding for track {job.track_id} | Path: {job.file_path}")
+        
+        # IMPORT REGISTRY HERE TO AVOID CIRCULAR IMPORTS
+        from ..infrastructure.plugin_registry import PluginRegistry
+        registry = PluginRegistry.get_instance()
 
         try:
             # Update to processing
             job = job.mark_processing()
             await self.repository.save(job)
 
-            # Generate Embeddings (Heavy Task)
+            # 1. Generate Audio Spectral Embeddings (Brain Core)
             embedding = await self.embedder.generate_embedding(job.file_path)
             model_version = self.embedder.get_model_version()
 
-            # Complete Job
-            job = job.mark_completed(embedding, model_version)
-            await self.repository.save(job)
-            
-            # Persist to Vector Search Engine (Postgres)
+            # 2. Persist Audio Embeddings to Postgres (Audio Spectral)
             try:
                 await self.vector_repo.save_embedding(
                     track_id=job.track_id,
@@ -85,7 +85,41 @@ class ProcessEmbeddingJob:
                 )
             except Exception as ve:
                 logger.error(f"FAIL | Vector storage | track={job.track_id} | Error: {ve}")
-                # We don't fail the job if vector repo is down, but we log it
+
+            # 3. Orchestrate: Demucs (Stems)
+            if registry.is_enabled("demucs"):
+                demucs_url = registry.get_url("demucs")
+                logger.info(f"ORCHESTRATION | Triggering Stems separation via Demucs at {demucs_url}")
+                try:
+                    async with httpx.AsyncClient(timeout=5.0) as client:
+                        # Map priority enum to string if needed
+                        payload = {
+                            "track_id": job.track_id,
+                            "file_path": job.file_path,
+                            "priority": job.priority.value if hasattr(job.priority, 'value') else job.priority
+                        }
+                        await client.post(f"{demucs_url}/jobs", json=payload)
+                except Exception as dex:
+                    logger.warning(f"FAIL | Orchestration Demucs | Error: {dex}")
+
+            # 4. Orchestrate: Knowledge (Lyrics)
+            if registry.is_enabled("knowledge"):
+                knowledge_url = registry.get_url("knowledge")
+                logger.info(f"ORCHESTRATION | Triggering Lyrics analysis via Knowledge at {knowledge_url}")
+                try:
+                    async with httpx.AsyncClient(timeout=5.0) as client:
+                        payload = {
+                            "track_id": job.track_id,
+                            "file_path": job.file_path,
+                            "priority": job.priority.value if hasattr(job.priority, 'value') else job.priority
+                        }
+                        await client.post(f"{knowledge_url}/jobs", json=payload)
+                except Exception as kex:
+                     logger.warning(f"FAIL | Orchestration Knowledge | Error: {kex}")
+
+            # Complete Job
+            job = job.mark_completed(embedding, model_version)
+            await self.repository.save(job)
             
             logger.info(f"DONE | Successfully processed embedding for track {job.track_id}")
 
@@ -112,13 +146,14 @@ class GetRecommendations:
     def __init__(self, vector_repo: IVectorRepository):
         self.vector_repo = vector_repo
 
-    async def execute(self, track_id: Optional[str] = None, limit: int = 10, diversity: float = 0.2) -> List[dict]:
+    async def execute(self, track_id: Optional[str] = None, limit: int = 10, diversity: float = 0.2, weights: dict = None) -> List[dict]:
+        weights = weights or {"audio": 1.0, "lyrics": 0.0, "visual": 0.0, "stems": 0.0}
         if track_id:
             # 1. Fetch a larger pool of tracks to infer artists/albums
             # We fetch 3x the limit or at least 30 to get good statistics
             fetch_limit = max(limit * 3, 30)
             
-            tracks = await self.vector_repo.get_similar_tracks(track_id, fetch_limit, diversity)
+            tracks = await self.vector_repo.get_similar_tracks(track_id, fetch_limit, diversity, weights)
             
             # 2. Aggregate scores for Artists and Albums
             artist_scores = {}

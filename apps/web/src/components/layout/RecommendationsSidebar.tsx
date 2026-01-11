@@ -34,6 +34,14 @@ export function RecommendationsSidebar() {
   const [diversity, setDiversity] = useState(0.2); // Ignored by AI for now, but kept for client side fallback if we pass it
   const playNext = useQueueStore((s) => s.playNext);
 
+  const [weights, setWeights] = useState({
+    audio: 1.0,
+    lyrics: 0.0,
+    visual: 0.0,
+    stems: 0.0,
+  });
+  const [activeMode, setActiveMode] = useState("balanced");
+
   // Get recommendations (Smart AI or Client Fallback)
   const {
     trackRecommendations,
@@ -41,13 +49,44 @@ export function RecommendationsSidebar() {
     artistRecommendations,
     isAI,
     isLoading,
-  } = useSmartRecommendations({ diversity });
+  } = useSmartRecommendations({ diversity, weights });
 
   const diversityOptions = [
     { value: 0.0, label: "Similar" },
     { value: 0.5, label: "Balanced" },
     { value: 1.0, label: "Diverse" },
   ];
+
+  const discoveryModes = [
+    {
+      id: "balanced",
+      label: "Balanced",
+      weights: { audio: 1.0, lyrics: 0.0, visual: 0.0, stems: 0.0 },
+    }, // Default
+    {
+      id: "lyrics",
+      label: "Lyrical",
+      weights: { audio: 0.3, lyrics: 1.0, visual: 0.1, stems: 0.0 },
+    },
+    {
+      id: "vibe",
+      label: "Vibe",
+      weights: { audio: 0.4, lyrics: 0.0, visual: 1.0, stems: 0.0 },
+    },
+    {
+      id: "groove",
+      label: "Groove",
+      weights: { audio: 0.5, lyrics: 0.0, visual: 0.0, stems: 1.0 },
+    },
+  ];
+
+  const handleModeChange = (modeId: string) => {
+    const mode = discoveryModes.find((m) => m.id === modeId);
+    if (mode) {
+      setActiveMode(modeId);
+      setWeights(mode.weights);
+    }
+  };
 
   const { createPlaylist } = usePlaylistCRUD();
   const { dialogState, showPrompt, handleConfirm, handleCancel } = useDialog();
@@ -140,10 +179,25 @@ export function RecommendationsSidebar() {
         )}
       >
         {/* Intro */}
-        <div className="mb-6 px-1">
+        <div className="mb-4 px-1">
           <p className="text-xs text-text-muted italic opacity-70">
             "We don't predict. We interpret."
           </p>
+        </div>
+
+        {/* Discovery Modes */}
+        <div className="px-1 mb-6 flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+          {discoveryModes.map((mode) => (
+            <Button
+              key={mode.id}
+              variant={activeMode === mode.id ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => handleModeChange(mode.id)}
+              className="text-[10px] px-3 h-7 whitespace-nowrap border border-transparent hover:border-border-hover"
+            >
+              {mode.label}
+            </Button>
+          ))}
         </div>
 
         {/* Tracks Section */}

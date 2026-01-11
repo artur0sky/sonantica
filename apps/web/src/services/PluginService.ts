@@ -24,6 +24,12 @@ export interface RecommendationRequest {
   limit: number;
   context?: string[];
   diversity?: number; // 0.0 - 1.0
+  weights?: {
+      audio: number;
+      lyrics: number;
+      visual: number;
+      stems: number;
+  };
 }
 
 export interface RecommendationResponse {
