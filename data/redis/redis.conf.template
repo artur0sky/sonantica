@@ -1,0 +1,58 @@
+# Sonántica Optimized Redis Configuration Template
+# Philosophy: Professional, Reliable, Transparent
+# This file is processed by envsubst at container startup.
+
+# --- Networking ---
+bind 0.0.0.0
+protected-mode yes
+tcp-keepalive 300
+port ${REDIS_PORT}
+
+# --- Security ---
+# Set the password if provided
+requirepass ${REDIS_PASSWORD}
+
+# --- General ---
+daemonize no
+databases 16
+loglevel notice
+# Log to both stdout (via docker) and file (via volume)
+logfile /var/log/redis/redis.log
+
+# --- Persistence (RDB) ---
+save 900 1
+save 300 10
+save 60 10000
+
+stop-writes-on-bgsave-error yes
+rdbcompression yes
+dbfilename dump.rdb
+dir /data
+
+# --- Persistence (AOF) ---
+appendonly yes
+appendfilename "appendonly.aof"
+appendfsync everysec
+no-appendfsync-on-rewrite no
+auto-aof-rewrite-percentage 100
+auto-aof-rewrite-min-size 64mb
+
+# --- Memory Management ---
+maxmemory ${REDIS_MAX_MEMORY}
+maxmemory-policy ${REDIS_MAX_MEMORY_POLICY}
+
+# --- Performance Tuning ---
+maxclients 10000
+slowlog-log-slower-than 10000
+slowlog-max-len 128
+latency-monitor-threshold 0
+
+# --- Advanced ---
+hash-max-ziplist-entries 512
+hash-max-ziplist-value 64
+list-max-ziplist-size -2
+zset-max-ziplist-entries 128
+zset-max-ziplist-value 64
+hll-sparse-max-bytes 3000
+stream-node-max-bytes 4096
+stream-node-max-entries 100
