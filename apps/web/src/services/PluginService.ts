@@ -23,6 +23,13 @@ export interface RecommendationRequest {
   artist_id?: string;
   limit: number;
   context?: string[];
+  diversity?: number; // 0.0 - 1.0
+  weights?: {
+      audio: number;
+      lyrics: number;
+      visual: number;
+      stems: number;
+  };
 }
 
 export interface RecommendationResponse {
@@ -31,6 +38,8 @@ export interface RecommendationResponse {
   score: number;
   reason: string;
   track?: any; // Hydrated Track
+  album?: any; // Hydrated Album
+  artist?: any; // Hydrated Artist
 }
 
 export const PluginService = {

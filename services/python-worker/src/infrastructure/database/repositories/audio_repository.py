@@ -86,6 +86,13 @@ class AudioRepository:
                     track.format = meta["format"]
                     track.bitrate = meta["bitrate"]
                     track.updated_at = datetime.now(timezone.utc)
+                    
+                    # Merge Technical Metadata
+                    ai_meta = (track.ai_metadata or {}).copy()
+                    if "tech" in meta:
+                        ai_meta.update(meta["tech"])
+                    track.ai_metadata = ai_meta
+
                     action = "Updated"
                 else:
                     track = Track(
@@ -100,7 +107,8 @@ class AudioRepository:
                         channels=meta["channels"],
                         track_number=meta["track_number"],
                         genre=meta["genre"],
-                        year=meta.get("year", 0)
+                        year=meta.get("year", 0),
+                        ai_metadata=meta.get("tech", {})
                     )
                     session.add(track)
                     action = "Created"

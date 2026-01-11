@@ -102,19 +102,19 @@ services:
     container_name: sonantica-redis
     restart: always
     environment:
-      TZ: ${TZ:-UTC}
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-sonantica}
+      - TZ=${TZ:-UTC}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-sonantica}
+      - REDIS_MAX_MEMORY=${REDIS_MAX_MEMORY:-512mb}
+      - REDIS_MAX_MEMORY_POLICY=${REDIS_MAX_MEMORY_POLICY:-volatile-lru}
     volumes:
       - redis_data:/data
       - ./data/redis/dump:/dump
-      - ./data/redis/logs:/var/log/redis
+      - ./data/redis/logs:/var/log/redis:rw
     networks:
       - sonantica-net
-    command: [ "redis-server", "/usr/local/etc/redis/redis.conf", "--requirepass", "${REDIS_PASSWORD:-sonantica}" ]
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
     healthcheck:
-      test: [ "CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-sonantica}", "ping" ]
+      test: ["CMD", "redis-cli", "-h", "localhost", "-a", "${REDIS_PASSWORD:-sonantica}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -127,6 +127,8 @@ services:
         reservations:
           cpus: '0.25'
           memory: 128M
+    labels:
+      - "com.sonantica.description=Optimized Cache & Message Broker (Redis 7.4)"
 
   # ============================================
   # CORE SERVICES

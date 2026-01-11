@@ -24,6 +24,10 @@ async def lifespan(app: FastAPI):
     # Initialize Redis
     await get_redis_client()
     
+    # Initialize Plugin Registry
+    from src.infrastructure.plugin_registry import PluginRegistry
+    await PluginRegistry.get_instance().initialize()
+
     # Start Priority Manager
     await job_manager.start()
     
@@ -48,10 +52,10 @@ app.include_router(recommendations.router, prefix=settings.API_V1_STR)
 async def manifest():
     return {
         "id": "sonantica-plugin-brain",
-        "name": "Audio Brain (Embeddings)",
+        "name": "Audio Brain (AI)",
         "version": settings.VERSION,
-        "capability": "embeddings",
-        "description": "Calculates high-dimensional audio vectors for similarity search using CLAP models."
+        "capability": "recommendations",
+        "description": "Intelligent multi-modal recommendations and audio embeddings using CLAP models."
     }
 
 @app.get("/health")

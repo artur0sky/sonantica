@@ -52,7 +52,11 @@ class IVectorRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_similar_tracks(self, track_id: str, limit: int = 10) -> List[Dict[str, Any]]:
+    async def save_stem_embedding(self, track_id: str, embedding: List[float], stem_type: str, model_name: str) -> None:
+        pass
+
+    @abstractmethod
+    async def get_similar_tracks(self, track_id: str, limit: int = 10, diversity: float = 0.2) -> List[Dict[str, Any]]:
         pass
 
     @abstractmethod

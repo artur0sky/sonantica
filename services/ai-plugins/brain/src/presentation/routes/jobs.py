@@ -1,11 +1,11 @@
 import logging
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Header
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 from ...infrastructure.config import settings
 from ...domain.entities import JobStatus, JobPriority
-from ...application.use_cases import CreateEmbeddingJob, GetJobStatus, ProcessEmbeddingJob
+from ...application.use_cases import CreateEmbeddingJob, GetJobStatus, ProcessEmbeddingJob, IngestStems
 from ...application.priority_processor import job_manager
 from ...infrastructure.redis_client import get_redis_client
 from ...infrastructure.redis_job_repository import RedisJobRepository
@@ -90,3 +90,26 @@ async def get_status(
         raise HTTPException(status_code=404, detail="Job not found")
     
     return job.to_dict()
+
+class IngestStemsRequest(BaseModel):
+    track_id: str
+    stems: Dict[str, str]
+
+@router.post("/stems")
+async def ingest_stems(
+    request: IngestStemsRequest,
+    background_tasks: BackgroundTasks,
+    x_internal_secret: Optional[str] = Header(None),
+    embedder: ClapEmbedder = Depends(get_embedder),
+    vector_repo: PostgresVectorRepository = Depends(get_vector_repo)
+):
+    if x_internal_secret != settings.INTERNAL_API_SECRET:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    try:
+        use_case = IngestStems(embedder, vector_repo)
+        background_tasks.add_task(use_case.execute, request.track_id, request.stems)
+        return {"status": "accepted", "message": "Stems analysis queued"}
+    except Exception as e:
+        logger.exception(f"FAIL | Error queuing stems ingestion: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")

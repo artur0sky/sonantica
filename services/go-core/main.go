@@ -83,7 +83,7 @@ func main() {
 	if cfg.BrainURL != "" {
 		brainFallback := &domain.Manifest{
 			Name:        "Sonántica Brain",
-			Capability:  domain.CapabilityEmbeddings,
+			Capability:  domain.CapabilityRecommendations,
 			Description: "AI Similarity & Recommendations (Offline Fallback)",
 			Version:     "1.0.0",
 		}

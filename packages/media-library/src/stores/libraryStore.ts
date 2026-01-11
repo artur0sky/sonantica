@@ -25,6 +25,7 @@ interface LibraryState {
   artists: Artist[];
   albums: Album[];
   playlists: Playlist[];
+  pinnedPlaylistIds: string[];
   stats: LibraryStats;
   loading: boolean;
   error: string | null;
@@ -43,6 +44,7 @@ interface LibraryState {
   addPlaylist: (playlist: Playlist) => void;
   updatePlaylist: (id: string, updates: Partial<Playlist>) => void;
   deletePlaylist: (id: string) => void;
+  togglePin: (id: string) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   clearLibrary: () => void;
@@ -81,6 +83,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   artists: [],
   albums: [],
   playlists: [],
+  pinnedPlaylistIds: [],
   stats: {
     totalTracks: 0,
     totalArtists: 0,
@@ -213,7 +216,14 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   })),
 
   deletePlaylist: (id) => set((state) => ({
-    playlists: state.playlists.filter(p => p.id !== id)
+    playlists: state.playlists.filter(p => p.id !== id),
+    pinnedPlaylistIds: state.pinnedPlaylistIds.filter(pid => pid !== id)
+  })),
+
+  togglePin: (id) => set((state) => ({
+    pinnedPlaylistIds: state.pinnedPlaylistIds.includes(id)
+      ? state.pinnedPlaylistIds.filter(pid => pid !== id)
+      : [...state.pinnedPlaylistIds, id]
   })),
 
   setLoading: (loading) => set({ loading }),
@@ -232,6 +242,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
         totalGenres: 0,
         totalSize: 0,
       },
+      pinnedPlaylistIds: [],
       selectedArtist: null,
       selectedAlbum: null,
       searchQuery: '',

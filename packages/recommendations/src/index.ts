@@ -44,3 +44,9 @@ export type {
   AlbumRecommendation,
   ArtistRecommendation,
 } from './types';
+
+export type {
+    ExternalFetcher,
+    ExternalRecommendationRequest,
+    ExternalRecommendationResponse
+} from './external';

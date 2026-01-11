@@ -201,11 +201,26 @@ class ProcessSeparationJobUseCase:
                     stems=[get_val(stem) for stem in job.stems]
                 )
                 
-                # Transition to completed
                 job = job.mark_completed(result)
                 await self.job_repository.update(job)
                 
                 logger.info(f"✓ Job completed: {job_id}")
+
+                # NOTIFY BRAIN (Pipeline Stage 2: Stems Vectorization)
+                try:
+                    import httpx
+                    brain_url = settings.brain_plugin_url
+                    logger.info(f"NOTIFYING BRAIN | Sending stems metadata to {brain_url}")
+                    async with httpx.AsyncClient(timeout=10.0) as client:
+                        payload = {
+                            "track_id": job.track_id,
+                            "stems": result # Dict[stem_type, rel_path]
+                        }
+                        headers = {"X-Internal-Secret": settings.internal_api_secret}
+                        await client.post(f"{brain_url}/jobs/stems", json=payload, headers=headers)
+                        logger.info(f"✓ Brain notification successful for track {job.track_id}")
+                except Exception as ex:
+                    logger.warning(f"⚠ Could not notify Brain for stems: {ex}")
                 
             except Exception as e:
                 logger.error(f"✗ Job failed: {job_id} - {e}")

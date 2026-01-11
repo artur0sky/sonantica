@@ -53,29 +53,28 @@ services:
       com.sonantica.description: "Primary Data Store"
 
   redis:
-    # Use custom build context from data/redis (contains redis.conf)
     build:
       context: ./data/redis
       dockerfile: Dockerfile
-    environment:
-      TZ: ${TZ:-UTC}
-      REDIS_HOST: redis
-      REDIS_PORT: ${REDIS_PORT:-6379}
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-sonantica}
     container_name: sonantica-redis
     restart: always
+    environment:
+      - TZ=${TZ:-UTC}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-sonantica}
+      - REDIS_MAX_MEMORY=${REDIS_MAX_MEMORY:-512mb}
+      - REDIS_MAX_MEMORY_POLICY=${REDIS_MAX_MEMORY_POLICY:-volatile-lru}
     volumes:
-      # Data persistence - Uses named volume for safety
       - redis_data:/data
       - ./data/redis/dump:/dump
-      - ./data/redis/logs:/var/log/redis
+      - ./data/redis/logs:/var/log/redis:rw
     networks:
       - sonantica-net
     ports:
       - "127.0.0.1:${REDIS_PORT:-6379}:${REDIS_PORT:-6379}"
-    command: [ "redis-server", "/usr/local/etc/redis/redis.conf", "--port", "${REDIS_PORT:-6379}", "--requirepass", "${REDIS_PASSWORD:-sonantica}" ]
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
     healthcheck:
-      test: [ "CMD", "redis-cli", "-p", "${REDIS_PORT:-6379}", "-a", "${REDIS_PASSWORD:-sonantica}", "ping" ]
+      test: ["CMD", "redis-cli", "-h", "localhost", "-p", "${REDIS_PORT:-6379}", "-a", "${REDIS_PASSWORD:-sonantica}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -88,7 +87,7 @@ services:
           cpus: '0.25'
           memory: 128M
     labels:
-      com.sonantica.description: "Cache & Message Broker"
+      com.sonantica.description: "Optimized Cache & Message Broker (Redis 7.4)"
 
   # ============================================
   # CORE SERVICES (High Performance)
@@ -116,7 +115,6 @@ services:
     volumes:
       - ${MEDIA_PATH:-./media}:/media:ro
       - ${BUCKETS_PATH:-./buckets}:/buckets:ro
-      - ${MEDIA_PATH:-./media}:/media:ro
       - ./config:/config:ro
       - ./logs/core:/var/log/sonantica
       - sonantica_cache:/covers
@@ -159,7 +157,6 @@ services:
     volumes:
       - ${MEDIA_PATH:-./media}:/media:ro
       - ${BUCKETS_PATH:-./buckets}:/buckets:ro
-      - ${MEDIA_PATH:-./media}:/media:ro
       - ./logs/worker:/var/log/sonantica
       - sonantica_cache:/covers
     depends_on:
@@ -316,6 +313,7 @@ services:
       - LOG_ENABLED=${LOG_ENABLED:-true}
     volumes:
       - ${MEDIA_PATH:-./media}:/media:ro
+      - sonantica_stems:/stems:ro
       - sonantica_ai_cache:/model_cache
       - ./logs/ai/brain:/var/log/sonantica
     networks:
