@@ -44,6 +44,26 @@ class PostgresVectorRepository:
                     logger.error(f"Failed to save embedding in Postgres: {e}")
                     raise e
 
+    async def save_stem_embedding(self, track_id: str, embedding: List[float], stem_type: str, model_name: str):
+        pool = await self._get_pool()
+        async with pool.acquire() as conn:
+            async with conn.transaction():
+                try:
+                    vector_str = "[" + ",".join(map(str, embedding)) + "]"
+                    await conn.execute(
+                        """
+                        INSERT INTO embeddings_audio_stems (track_id, embedding, stem_type, model_name)
+                        VALUES ($1, $2, $3, $4)
+                        ON CONFLICT (track_id, stem_type) DO UPDATE 
+                        SET embedding = $2, model_name = $4, updated_at = NOW()
+                        """,
+                        track_id, vector_str, stem_type, model_name
+                    )
+                    logger.info(f"✓ Stem embedding saved for track {track_id} type {stem_type}")
+                except Exception as e:
+                    logger.error(f"Failed to save stem embedding: {e}")
+                    raise e
+
     async def get_similar_tracks(self, track_id: str, limit: int = 10, diversity: float = 0.2, weights: dict = None) -> List[Dict[str, Any]]:
         # Prepare weights
         w_audio = weights.get("audio", 0.0)

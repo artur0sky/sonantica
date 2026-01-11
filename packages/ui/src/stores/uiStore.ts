@@ -15,6 +15,7 @@ export interface UIState {
   eqOpen: boolean;
   recommendationsOpen: boolean;
   isVisualizationEnabled: boolean;
+  scientificMode: boolean;
   
   // Sidebar state
   isLeftSidebarOpen: boolean;
@@ -37,6 +38,7 @@ export interface UIState {
   toggleEQ: () => void;
   toggleRecommendations: () => void;
   toggleVisualization: () => void;
+  toggleScientificMode: () => void;
   toggleLeftSidebar: () => void;
   toggleRightSidebar: () => void;
   toggleMetadataPanel: () => void;
@@ -69,6 +71,7 @@ export const useUIStore = create<UIState>((set) => ({
   eqOpen: false,
   recommendationsOpen: false,
   isVisualizationEnabled: false,
+  scientificMode: false,
   isLeftSidebarOpen: true,
   isRightSidebarOpen: false,
   isMetadataPanelOpen: false,
@@ -128,6 +131,10 @@ export const useUIStore = create<UIState>((set) => ({
 
   toggleVisualization: () => {
     set((state) => ({ isVisualizationEnabled: !state.isVisualizationEnabled }));
+  },
+  
+  toggleScientificMode: () => {
+    set((state) => ({ scientificMode: !state.scientificMode }));
   },
 
   toggleLeftSidebar: () => {

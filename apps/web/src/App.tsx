@@ -72,6 +72,21 @@ const PlaylistDetailPage = lazy(() =>
     default: m.PlaylistDetailPage,
   }))
 );
+const LibraryPage = lazy(() =>
+  import("./features/library/pages/LibraryPage").then((m) => ({
+    default: m.LibraryPage,
+  }))
+);
+const DSPPage = lazy(() =>
+  import("./features/player/pages/DSPPage").then((m) => ({
+    default: m.DSPPage,
+  }))
+);
+const RecommendationsPage = lazy(() =>
+  import("./features/recommendations/pages/RecommendationsPage").then((m) => ({
+    default: m.RecommendationsPage,
+  }))
+);
 
 const PageLoader = () => (
   <div className="flex items-center justify-center min-h-[50vh] text-text-muted">
@@ -141,6 +156,14 @@ function App() {
                       <Route
                         path="/playlist/:id"
                         component={PlaylistDetailPage}
+                      />
+
+                      {/* Hubs */}
+                      <Route path="/library" component={LibraryPage} />
+                      <Route path="/dsp" component={DSPPage} />
+                      <Route
+                        path="/recommendations"
+                        component={RecommendationsPage}
                       />
 
                       {/* 404 */}

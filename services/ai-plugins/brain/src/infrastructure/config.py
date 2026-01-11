@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     TORCH_HOME: str = os.getenv("TORCH_HOME", "/tmp/torch")
     HF_HOME: str = os.getenv("HF_HOME", "/tmp/huggingface")
     MEDIA_PATH: str = os.getenv("MEDIA_PATH", "/media")
+    STEMS_PATH: str = os.getenv("OUTPUT_PATH", "/stems")
 
     # Neighbor Plugins
     KNOWLEDGE_PLUGIN_URL: Optional[str] = os.getenv("KNOWLEDGE_PLUGIN_URL", "http://knowledge:8080")

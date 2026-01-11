@@ -40,6 +40,7 @@ class Settings(BaseSettings):
     
     # Model Configuration
     default_model: str = "htdemucs"
+    brain_plugin_url: str = os.getenv("BRAIN_PLUGIN_URL", "http://brain:8080")
     
     class Config:
         env_file = ".env"

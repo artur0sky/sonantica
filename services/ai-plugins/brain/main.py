@@ -52,10 +52,10 @@ app.include_router(recommendations.router, prefix=settings.API_V1_STR)
 async def manifest():
     return {
         "id": "sonantica-plugin-brain",
-        "name": "Audio Brain (Embeddings)",
+        "name": "Audio Brain (AI)",
         "version": settings.VERSION,
-        "capability": "embeddings",
-        "description": "Calculates high-dimensional audio vectors for similarity search using CLAP models."
+        "capability": "recommendations",
+        "description": "Intelligent multi-modal recommendations and audio embeddings using CLAP models."
     }
 
 @app.get("/health")

@@ -1,24 +1,17 @@
-/**
- * Left Sidebar - Navigation
- *
- * Main navigation for the application.
- * Refactored to remove Framer Motion and use CSS animations.
- */
-import { useMemo } from "react";
-import { Link } from "wouter";
+import React from "react";
+import { Link, useLocation } from "wouter";
 import {
   IconMusic,
-  IconDisc,
-  IconMicrophone,
   IconPlaylist,
   IconChartBar,
+  IconSparkles,
+  IconWaveSquare,
   IconPin,
   IconPinnedOff,
 } from "@tabler/icons-react";
 import { cn } from "@sonantica/shared";
+import type { Playlist } from "@sonantica/media-library";
 import { useLeftSidebarLogic } from "../../hooks/useLeftSidebarLogic";
-import { useLibraryStore } from "@sonantica/media-library";
-import { usePlaylistSettingsStore } from "../../stores/playlistSettingsStore";
 
 interface NavItem {
   path: string;
@@ -31,10 +24,9 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { path: "/", label: "Tracks", Icon: IconMusic },
-  { path: "/albums", label: "Albums", Icon: IconDisc },
-  { path: "/artists", label: "Artists", Icon: IconMicrophone },
-  { path: "/playlists", label: "Playlists", Icon: IconPlaylist },
+  { path: "/library", label: "Library", Icon: IconMusic },
+  { path: "/recommendations", label: "Discovery", Icon: IconSparkles },
+  { path: "/dsp", label: "DSP Engine", Icon: IconWaveSquare },
   { path: "/analytics", label: "Analytics", Icon: IconChartBar },
 ];
 
@@ -42,168 +34,201 @@ interface LeftSidebarProps {
   isCollapsed?: boolean;
 }
 
-export function LeftSidebar({ isCollapsed }: LeftSidebarProps) {
-  const { location } = useLeftSidebarLogic();
-  const { playlists } = useLibraryStore();
-  const { pinnedIds, lastAccessed, togglePin, trackAccess } =
-    usePlaylistSettingsStore();
+export const LeftSidebar: React.FC<LeftSidebarProps> = ({
+  isCollapsed = false,
+}) => {
+  const [location] = useLocation();
+  const { playlists, pinnedPlaylistIds, togglePin, isPlaylistActive } =
+    useLeftSidebarLogic();
 
-  // Filter and sort playlists for sidebar
-  const sidebarPlaylists = useMemo(() => {
-    const manualPlaylists = playlists.filter(
-      (p) => p.type !== "HISTORY_SNAPSHOT"
-    );
-
-    return manualPlaylists
-      .sort((a, b) => {
-        const aPinned = pinnedIds.includes(a.id);
-        const bPinned = pinnedIds.includes(b.id);
-        if (aPinned && !bPinned) return -1;
-        if (!aPinned && bPinned) return 1;
-        const aTime = lastAccessed[a.id] || 0;
-        const bTime = lastAccessed[b.id] || 0;
-        return bTime - aTime;
-      })
-      .slice(0, 15);
-  }, [playlists, pinnedIds, lastAccessed]);
+  const pinnedPlaylists = playlists.filter((p: Playlist) =>
+    pinnedPlaylistIds.includes(p.id)
+  );
+  const otherPlaylists = playlists.filter(
+    (p: Playlist) => !pinnedPlaylistIds.includes(p.id)
+  );
 
   return (
-    <nav className={cn("p-4 flex flex-col h-full", isCollapsed && "p-2")}>
-      {/* Header */}
-      {!isCollapsed && (
-        <div className="mb-8 px-2 animate-in fade-in slide-in-from-left-4 duration-500">
-          <h2 className="text-xl font-bold text-text tracking-tight">
-            Library
-          </h2>
-          <p className="text-[10px] text-text-muted mt-1 uppercase tracking-widest font-bold opacity-60">
-            "Every file has an intention."
-          </p>
-        </div>
+    <aside
+      className={cn(
+        "flex flex-col h-full bg-surface-base border-r border-border/40 overflow-hidden transition-all duration-300",
+        isCollapsed ? "w-full" : "w-full" // Width is controlled by parent aside in MainLayout
       )}
-
-      {/* Navigation Items */}
-      <ul className="space-y-1">
-        {navItems.map((item, index) => {
-          const isActive = location === item.path;
-          const { Icon } = item;
-
-          return (
-            <li
-              key={item.path}
-              className="animate-in fade-in slide-in-from-left-2 fill-mode-both"
-              style={{ animationDelay: `${index * 50}ms` }}
-            >
-              <Link href={item.path}>
-                <a
-                  className={cn(
-                    "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 cursor-pointer overflow-hidden group",
-                    isCollapsed && "justify-center px-0 w-12 h-12 mx-auto",
-                    isActive
-                      ? "bg-accent text-white shadow-lg shadow-accent/20"
-                      : "text-text-muted hover:text-text hover:bg-surface-elevated/50"
-                  )}
-                  title={isCollapsed ? item.label : undefined}
-                >
-                  <Icon
-                    size={isCollapsed ? 30 : 22}
-                    stroke={2}
-                    className={cn(
-                      "transition-transform",
-                      !isActive && "group-hover:scale-110"
-                    )}
-                  />
-                  {!isCollapsed && (
-                    <span className="font-semibold text-sm whitespace-nowrap">
-                      {item.label}
-                    </span>
-                  )}
-                </a>
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-
-      {/* Playlists Section */}
-      {!isCollapsed && sidebarPlaylists.length > 0 && (
-        <div className="mt-10 animate-in fade-in duration-700 delay-300">
-          <div className="px-4 mb-3 flex items-center justify-between">
-            <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-text-muted opacity-50">
-              Collections
-            </h3>
+    >
+      {/* Brand */}
+      <div className={cn("p-6", isCollapsed && "flex justify-center px-0")}>
+        <h2 className="text-xl font-bold text-accent tracking-tight flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center text-white flex-shrink-0">
+            S
           </div>
-          <ul className="space-y-0.5">
-            {sidebarPlaylists.map((playlist: any, index) => {
-              const isActive = location === `/playlist/${playlist.id}`;
-              const isPinned = pinnedIds.includes(playlist.id);
+          {!isCollapsed && <span>Sonántica</span>}
+        </h2>
+        {!isCollapsed && (
+          <p className="text-[10px] text-text-muted mt-1 uppercase tracking-widest opacity-50">
+            Audio Interpreter
+          </p>
+        )}
+      </div>
 
-              return (
-                <li
-                  key={playlist.id}
-                  className="animate-in fade-in slide-in-from-left-1 fill-mode-both"
-                  style={{ animationDelay: `${400 + index * 30}ms` }}
-                >
-                  <div className="group relative">
-                    <Link href={`/playlist/${playlist.id}`}>
-                      <a
-                        onClick={() => trackAccess(playlist.id)}
-                        className={cn(
-                          "flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 cursor-pointer overflow-hidden",
-                          isActive
-                            ? "bg-accent/10 text-accent font-bold"
-                            : "text-text-muted/80 hover:text-text hover:bg-surface-elevated/30"
-                        )}
-                      >
-                        <IconPlaylist
-                          size={16}
-                          stroke={2}
-                          className={cn(
-                            isActive ? "text-accent" : "text-text-muted/40"
-                          )}
-                        />
-                        <span className="text-sm truncate pr-6">
-                          {playlist.name}
-                        </span>
-                      </a>
-                    </Link>
+      {/* Primary Navigation */}
+      <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-1 custom-scrollbar">
+        {!isCollapsed && (
+          <div className="text-[10px] font-bold text-text-muted uppercase tracking-widest px-3 mb-2 opacity-50">
+            Main
+          </div>
+        )}
+        {navItems.map((item) => (
+          <Link key={item.path} href={item.path}>
+            <a
+              title={isCollapsed ? item.label : undefined}
+              className={cn(
+                "flex items-center gap-3 px-3 py-2 rounded-xl transition-all group",
+                isCollapsed && "justify-center",
+                location === item.path
+                  ? "bg-accent/10 text-accent font-semibold"
+                  : "text-text-muted hover:text-text hover:bg-surface-elevated"
+              )}
+            >
+              <item.Icon
+                size={20}
+                stroke={1.5}
+                className={cn(
+                  "transition-transform group-hover:scale-110 flex-shrink-0",
+                  location === item.path ? "text-accent" : "text-text-muted"
+                )}
+              />
+              {!isCollapsed && <span className="text-sm">{item.label}</span>}
+              {!isCollapsed && location === item.path && (
+                <div className="ml-auto w-1.5 h-1.5 rounded-full bg-accent" />
+              )}
+            </a>
+          </Link>
+        ))}
 
-                    {/* Pin Toggle */}
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        togglePin(playlist.id);
-                      }}
-                      className={cn(
-                        "absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-all hover:bg-white/10 text-text-muted",
-                        isPinned && "opacity-100 text-accent"
-                      )}
-                      title={isPinned ? "Unpin" : "Pin"}
-                    >
-                      {isPinned ? (
-                        <IconPinnedOff size={14} stroke={2.5} />
-                      ) : (
-                        <IconPin size={14} stroke={2.5} />
-                      )}
-                    </button>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      )}
+        {/* Pinned Playlists */}
+        {pinnedPlaylists.length > 0 && (
+          <div className="pt-6 space-y-1">
+            {!isCollapsed && (
+              <div className="text-[10px] font-bold text-text-muted uppercase tracking-widest px-3 mb-2 opacity-50">
+                Pinned
+              </div>
+            )}
+            {pinnedPlaylists.map((playlist) => (
+              <PlaylistNavItem
+                key={playlist.id}
+                playlist={playlist}
+                isActive={isPlaylistActive(playlist.id)}
+                isPinned={true}
+                onTogglePin={() => togglePin(playlist.id)}
+                isCollapsed={isCollapsed}
+              />
+            ))}
+          </div>
+        )}
 
-      {/* Footer Quote */}
+        {/* Library / Collection */}
+        {!isCollapsed && (
+          <div className="pt-6 space-y-1">
+            <div className="text-[10px] font-bold text-text-muted uppercase tracking-widest px-3 mb-2 opacity-50">
+              Collection
+            </div>
+            <Link href="/playlists">
+              <a
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2 rounded-xl text-text-muted hover:text-text hover:bg-surface-elevated transition-all",
+                  location === "/playlists" && "bg-surface-elevated text-text"
+                )}
+              >
+                <IconPlaylist size={20} stroke={1.5} />
+                <span className="text-sm">Manage Playlists</span>
+              </a>
+            </Link>
+            {otherPlaylists.slice(0, 8).map((playlist) => (
+              <PlaylistNavItem
+                key={playlist.id}
+                playlist={playlist}
+                isActive={isPlaylistActive(playlist.id)}
+                isPinned={false}
+                onTogglePin={() => togglePin(playlist.id)}
+                isCollapsed={isCollapsed}
+              />
+            ))}
+          </div>
+        )}
+      </nav>
+
+      {/* Philosophical Footer */}
       {!isCollapsed && (
-        <div className="mt-auto pt-8 px-4 opacity-30 hover:opacity-100 transition-opacity animate-in fade-in duration-1000 delay-700">
-          <div className="w-8 h-0.5 bg-border mb-4" />
-          <p className="text-[10px] text-text-muted italic leading-relaxed">
+        <div className="p-6 mt-auto border-t border-border/20 bg-surface-elevated/20">
+          <p className="text-[10px] text-text-muted italic leading-relaxed text-center">
             "Respect the intention of the sound and the freedom of the
             listener."
           </p>
         </div>
       )}
-    </nav>
+    </aside>
   );
+};
+
+interface PlaylistNavItemProps {
+  playlist: Playlist;
+  isActive: boolean;
+  isPinned: boolean;
+  onTogglePin: () => void;
+  isCollapsed?: boolean;
 }
+
+const PlaylistNavItem: React.FC<PlaylistNavItemProps> = ({
+  playlist,
+  isActive,
+  isPinned,
+  onTogglePin,
+  isCollapsed = false,
+}) => {
+  return (
+    <div
+      title={isCollapsed ? playlist.name : undefined}
+      className={cn(
+        "group flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all cursor-pointer",
+        isCollapsed && "justify-center",
+        isActive
+          ? "bg-surface-elevated text-text"
+          : "text-text-muted hover:text-text hover:bg-surface-elevated/50"
+      )}
+    >
+      <Link
+        href={`/playlists/${playlist.id}`}
+        className={cn(
+          "flex-1 flex items-center gap-3 min-w-0",
+          isCollapsed && "justify-center"
+        )}
+      >
+        <div className="w-8 h-8 rounded bg-surface-elevated flex-shrink-0 flex items-center justify-center border border-border/20">
+          <IconPlaylist size={16} className="text-text-muted" />
+        </div>
+        {!isCollapsed && (
+          <span className="text-sm truncate">{playlist.name}</span>
+        )}
+      </Link>
+      {!isCollapsed && (
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onTogglePin();
+          }}
+          className={cn(
+            "p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all hover:bg-surface-elevated",
+            isPinned ? "text-accent opacity-100" : "text-text-muted"
+          )}
+        >
+          {isPinned ? (
+            <IconPin size={14} fill="currentColor" />
+          ) : (
+            <IconPinnedOff size={14} />
+          )}
+        </button>
+      )}
+    </div>
+  );
+};

@@ -1,11 +1,3 @@
-/**
- * Recommendations Sidebar
- *
- * Displays intelligent music suggestions based on current playback.
- * "Sound is a form of language" - recommendations help discover connections.
- * No external animation library dependencies
- */
-
 import { useState } from "react";
 import {
   SidebarContainer,
@@ -26,15 +18,15 @@ import {
   IconPlaylistAdd,
 } from "@tabler/icons-react";
 import { useQueueStore } from "@sonantica/player-core";
-
+import { type SimilarityWeights } from "@sonantica/recommendations";
 import { trackToMediaSource } from "../../utils/streamingUrl";
 
 export function RecommendationsSidebar() {
   const toggleRecommendations = useUIStore((s) => s.toggleRecommendations);
-  const [diversity, setDiversity] = useState(0.2); // Ignored by AI for now, but kept for client side fallback if we pass it
+  const [diversity, setDiversity] = useState(0.2);
   const playNext = useQueueStore((s) => s.playNext);
 
-  const [weights, setWeights] = useState({
+  const [weights, setWeights] = useState<SimilarityWeights>({
     audio: 1.0,
     lyrics: 0.0,
     visual: 0.0,
@@ -61,22 +53,42 @@ export function RecommendationsSidebar() {
     {
       id: "balanced",
       label: "Balanced",
-      weights: { audio: 1.0, lyrics: 0.0, visual: 0.0, stems: 0.0 },
-    }, // Default
+      weights: {
+        audio: 1.0,
+        lyrics: 0.0,
+        visual: 0.0,
+        stems: 0.0,
+      } as SimilarityWeights,
+    },
     {
       id: "lyrics",
       label: "Lyrical",
-      weights: { audio: 0.3, lyrics: 1.0, visual: 0.1, stems: 0.0 },
+      weights: {
+        audio: 0.3,
+        lyrics: 1.0,
+        visual: 0.1,
+        stems: 0.0,
+      } as SimilarityWeights,
     },
     {
       id: "vibe",
       label: "Vibe",
-      weights: { audio: 0.4, lyrics: 0.0, visual: 1.0, stems: 0.0 },
+      weights: {
+        audio: 0.4,
+        lyrics: 0.0,
+        visual: 1.0,
+        stems: 0.0,
+      } as SimilarityWeights,
     },
     {
       id: "groove",
       label: "Groove",
-      weights: { audio: 0.5, lyrics: 0.0, visual: 0.0, stems: 1.0 },
+      weights: {
+        audio: 0.5,
+        lyrics: 0.0,
+        visual: 0.0,
+        stems: 1.0,
+      } as SimilarityWeights,
     },
   ];
 
@@ -91,9 +103,7 @@ export function RecommendationsSidebar() {
   const { createPlaylist } = usePlaylistCRUD();
   const { dialogState, showPrompt, handleConfirm, handleCancel } = useDialog();
 
-  // Save recommendations as playlist
   const handleSaveAsPlaylist = async () => {
-    // Get current diversity label
     const diversityLabel =
       diversityOptions.find((opt) => opt.value === diversity)?.label ||
       "Balanced";
@@ -108,23 +118,7 @@ export function RecommendationsSidebar() {
 
     try {
       const trackIds = trackRecommendations.map((rec: any) => rec.item.id);
-      console.log("[RecommendationsSidebar] Creating playlist:", {
-        name: playlistName,
-        diversity: diversityLabel,
-        diversityValue: diversity,
-        trackCount: trackIds.length,
-        trackIds,
-      });
-
-      const createdPlaylist = await createPlaylist(
-        playlistName,
-        "GENERATED",
-        trackIds
-      );
-      console.log(
-        "[RecommendationsSidebar] Playlist created:",
-        createdPlaylist
-      );
+      await createPlaylist(playlistName, "GENERATED", trackIds);
     } catch (error) {
       console.error("Failed to save playlist:", error);
     }
@@ -178,14 +172,12 @@ export function RecommendationsSidebar() {
           isLoading ? "opacity-50 pointer-events-none" : "opacity-100"
         )}
       >
-        {/* Intro */}
         <div className="mb-4 px-1">
           <p className="text-xs text-text-muted italic opacity-70">
             "We don't predict. We interpret."
           </p>
         </div>
 
-        {/* Discovery Modes */}
         <div className="px-1 mb-6 flex gap-2 overflow-x-auto pb-1 no-scrollbar">
           {discoveryModes.map((mode) => (
             <Button
@@ -200,7 +192,6 @@ export function RecommendationsSidebar() {
           ))}
         </div>
 
-        {/* Tracks Section */}
         <SidebarSection title="Suggested Tracks" icon={<IconMusic size={12} />}>
           <div className="space-y-1">
             {trackRecommendations.map((rec: any, index: number) => (
@@ -225,7 +216,6 @@ export function RecommendationsSidebar() {
           </div>
         </SidebarSection>
 
-        {/* Albums Section */}
         {albumRecommendations.length > 0 && (
           <SidebarSection title="Related Albums" icon={<IconDisc size={12} />}>
             <div className="grid grid-cols-2 gap-3">
@@ -240,7 +230,6 @@ export function RecommendationsSidebar() {
           </SidebarSection>
         )}
 
-        {/* Artists Section */}
         {artistRecommendations.length > 0 && (
           <SidebarSection
             title="Similar Artists"
@@ -260,7 +249,6 @@ export function RecommendationsSidebar() {
         )}
       </div>
 
-      {/* Prompt Dialog for saving recommendations as playlist */}
       <PromptDialog
         isOpen={dialogState.isOpen && dialogState.type === "prompt"}
         onClose={handleCancel}

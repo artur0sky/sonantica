@@ -201,7 +201,7 @@ func (m *Manager) processScope(plugin *domain.AIPlugin, scope PluginScope, track
 		switch plugin.Manifest.Capability {
 		case domain.CapabilityStemSeparation:
 			whereClause = "WHERE has_stems = false"
-		case domain.CapabilityEmbeddings:
+		case domain.CapabilityEmbeddings, domain.CapabilityRecommendations:
 			whereClause = "WHERE has_embeddings = false"
 		case domain.CapabilityKnowledge:
 			whereClause = "WHERE ai_metadata IS NULL"

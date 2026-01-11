@@ -1,11 +1,4 @@
-/**
- * Right Sidebar - Queue
- *
- * Playback queue management.
- * Shows current track and upcoming tracks.
- * No external animation library dependencies
- */
-
+import React from "react";
 import {
   IconTrash,
   IconChevronDown,
@@ -30,7 +23,9 @@ interface RightSidebarProps {
   isCollapsed?: boolean;
 }
 
-export function RightSidebar({ isCollapsed }: RightSidebarProps) {
+export const RightSidebar: React.FC<RightSidebarProps> = ({
+  isCollapsed = false,
+}) => {
   const {
     currentTrack,
     toggleQueue,
@@ -67,21 +62,7 @@ export function RightSidebar({ isCollapsed }: RightSidebarProps) {
 
     try {
       const trackIds = fullQueue.map((t) => t.id);
-      console.log("[RightSidebar] Creating playlist from queue:", {
-        name: playlistName,
-        trackCount: trackIds.length,
-        trackIds: trackIds,
-      });
-
-      const createdPlaylist = await createPlaylist(
-        playlistName,
-        "MANUAL",
-        trackIds
-      );
-      console.log(
-        "[RightSidebar] Playlist created successfully:",
-        createdPlaylist
-      );
+      await createPlaylist(playlistName, "MANUAL", trackIds);
     } catch (error) {
       console.error("Failed to save playlist:", error);
     }
@@ -217,4 +198,4 @@ export function RightSidebar({ isCollapsed }: RightSidebarProps) {
       />
     </SidebarContainer>
   );
-}
+};

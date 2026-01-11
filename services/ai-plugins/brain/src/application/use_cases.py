@@ -1,8 +1,9 @@
 import asyncio
+import os
 import logging
 import uuid
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Dict
 
 from ..domain.entities import EmbeddingJob, JobStatus, HealthStatus, JobPriority
 from ..domain.repositories import IJobRepository, IAudioEmbedder, IHealthProvider, IVectorRepository
@@ -127,6 +128,32 @@ class ProcessEmbeddingJob:
             logger.exception(f"FAIL | Processing job {job_id} | Error: {str(e)}")
             job = job.mark_failed(str(e))
             await self.repository.save(job)
+
+class IngestStems:
+    def __init__(self, embedder: IAudioEmbedder, vector_repo: IVectorRepository):
+        self.embedder = embedder
+        self.vector_repo = vector_repo
+
+    async def execute(self, track_id: str, stems: Dict[str, str]) -> None:
+        logger.info(f"START | Ingesting stems for track {track_id}")
+        model_version = self.embedder.get_model_version()
+        
+        for stem_type, rel_path in stems.items():
+            try:
+                # Resolve full path from stems volume
+                file_path = os.path.join(settings.STEMS_PATH, rel_path)
+                logger.info(f"Processing stem {stem_type} for track {track_id} | Path: {file_path}")
+                embedding = await self.embedder.generate_embedding(file_path)
+                await self.vector_repo.save_stem_embedding(
+                    track_id=track_id, 
+                    embedding=embedding, 
+                    stem_type=stem_type, 
+                    model_name=model_version
+                )
+            except Exception as e:
+                logger.error(f"FAIL | Stem embedding type={stem_type} track={track_id} | Error: {e}")
+        
+        logger.info(f"DONE | All stems ingested for track {track_id}")
 
 class GetJobStatus:
     def __init__(self, repository: IJobRepository):
