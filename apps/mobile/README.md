@@ -96,7 +96,7 @@ function PlayButton() {
 
 ## 🏗️ Technical Stack
 
-- **Capacitor 6**: Web-to-native bridge
+- **Capacitor 8**: Web-to-native bridge
 - **Web Build**: Complete `apps/web` distribution
 - **Native Plugins**: Minimal, focused integrations
 - **Zero Native Code**: No Swift, Kotlin, or Java required
