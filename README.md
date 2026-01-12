@@ -112,10 +112,10 @@ We treat security not as an afterthought, but as a core quality attribute. Our p
 
 ## ⚡ Technical Performance
 
-1.  **Redis Caching**: 90% faster library loads (50-200ms) for high-concurrency browsing.
-2.  **Virtual Scrolling**: Smooth 60fps interaction with libraries of 10,000+ items.
-3.  **Isomeric Workers**: Decoupled audio processing that continues even during heavy UI rendering.
-4.  **GPU Animations**: Layout-stable transitions using the "Acoustic Aesthetics" design tokens.
+1.  **High-Speed Caching**: Redis-backed architecture for near-instant library browsing and metadata retrieval.
+2.  **Virtual Scrolling**: Efficient rendering optimized for massive collections (10,000+ items).
+3.  **Isolated Processing**: Decoupled background workers ensure audio playback remains glitch-free during heavy system load.
+4.  **GPU-Accelerated UI**: Layout-stable transitions and animations following the "Acoustic Aesthetics" design tokens.
 
 ---
 
