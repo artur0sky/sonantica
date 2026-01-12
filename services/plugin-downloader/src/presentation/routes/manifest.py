@@ -3,6 +3,7 @@ Presentation Layer: Manifest Route
 """
 from fastapi import APIRouter
 from src.domain.entities import PluginCapability
+from src.infrastructure.config import settings
 
 router = APIRouter()
 

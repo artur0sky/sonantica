@@ -14,6 +14,8 @@ import { cn } from "@sonantica/shared";
 import type { Playlist } from "@sonantica/media-library";
 import { useLeftSidebarLogic } from "../../hooks/useLeftSidebarLogic";
 
+import { usePluginStore } from "../../stores/pluginStore";
+
 interface NavItem {
   path: string;
   label: string;
@@ -22,6 +24,7 @@ interface NavItem {
     stroke?: number;
     className?: string;
   }>;
+  pluginId?: string;
 }
 
 const navItems: NavItem[] = [
@@ -29,7 +32,12 @@ const navItems: NavItem[] = [
   { path: "/recommendations", label: "Discovery", Icon: IconSparkles },
   { path: "/dsp", label: "DSP Engine", Icon: IconWaveSquare },
   { path: "/analytics", label: "Analytics", Icon: IconChartBar },
-  { path: "/workshop", label: "Workshop", Icon: IconHammer },
+  {
+    path: "/workshop",
+    label: "Workshop",
+    Icon: IconHammer,
+    pluginId: "sonantica-downloader",
+  },
 ];
 
 interface LeftSidebarProps {
@@ -42,6 +50,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   const [location] = useLocation();
   const { playlists, pinnedPlaylistIds, togglePin, isPlaylistActive } =
     useLeftSidebarLogic();
+  const isPluginEnabled = usePluginStore((s) => s.isPluginEnabled);
 
   const pinnedPlaylists = playlists.filter((p: Playlist) =>
     pinnedPlaylistIds.includes(p.id)
@@ -49,6 +58,11 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   const otherPlaylists = playlists.filter(
     (p: Playlist) => !pinnedPlaylistIds.includes(p.id)
   );
+
+  const filteredNavItems = navItems.filter((item) => {
+    if (!item.pluginId) return true;
+    return isPluginEnabled(item.pluginId);
+  });
 
   return (
     <aside
@@ -79,7 +93,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
             Main
           </div>
         )}
-        {navItems.map((item) => (
+        {filteredNavItems.map((item) => (
           <Link key={item.path} href={item.path}>
             <a
               title={isCollapsed ? item.label : undefined}

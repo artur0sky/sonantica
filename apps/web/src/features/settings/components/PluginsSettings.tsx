@@ -5,26 +5,20 @@ import { PluginConfigModal } from "./PluginConfigModal";
 import { IconPlugConnected, IconPlus } from "@tabler/icons-react";
 import { Button } from "@sonantica/ui";
 
-export function PluginsSettings() {
-  const [plugins, setPlugins] = useState<Plugin[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedPlugin, setSelectedPlugin] = useState<Plugin | null>(null);
+import { usePluginStore } from "../../../stores/pluginStore";
 
-  const fetchPlugins = async () => {
-    try {
-      setLoading(true);
-      const data = await PluginService.getAllPlugins();
-      setPlugins(data);
-    } catch (error) {
-      console.error("Failed to fetch plugins", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+export function PluginsSettings() {
+  const {
+    plugins,
+    isLoading: loading,
+    fetchPlugins,
+    togglePlugin,
+  } = usePluginStore();
+  const [selectedPlugin, setSelectedPlugin] = useState<Plugin | null>(null);
 
   useEffect(() => {
     fetchPlugins();
-  }, []);
+  }, [fetchPlugins]);
 
   const handleToggle = async (
     id: string,
@@ -32,24 +26,15 @@ export function PluginsSettings() {
     scope?: string,
     trackIds?: string[]
   ) => {
-    try {
-      await PluginService.togglePlugin(id, enabled, scope, trackIds);
-      // Optimistic update or refetch
-      setPlugins((prev) =>
-        prev.map((p) => (p.id === id ? { ...p, isEnabled: enabled } : p))
-      );
-    } catch (error) {
-      console.error("Failed to toggle plugin", error);
-    }
+    await togglePlugin(id, enabled, scope, trackIds);
   };
 
   const handleSaveConfig = async (config: Record<string, any>) => {
     if (!selectedPlugin) return;
     try {
       await PluginService.updateConfig(selectedPlugin.id, config);
-      setPlugins((prev) =>
-        prev.map((p) => (p.id === selectedPlugin.id ? { ...p, config } : p))
-      );
+      // We might want to refetch or update the specific plugin config in store
+      fetchPlugins();
     } catch (error) {
       console.error("Failed to update config", error);
       throw error;

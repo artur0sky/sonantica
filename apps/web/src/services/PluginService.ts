@@ -161,7 +161,11 @@ export const PluginService = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ url, format }),
     });
-    if (!response.ok) throw new Error("Failed to start preservation");
+    if (!response.ok) {
+        let msg = "Failed to start preservation";
+        try { const err = await response.json(); msg = err.detail || msg; } catch {}
+        throw new Error(msg);
+    }
     return response.json();
   },
 
@@ -174,13 +178,53 @@ export const PluginService = {
     return response.json();
   },
 
-  async identify(query: string): Promise<any[]> {
+    async identify(query: string): Promise<any[]> {
     const server = getServerConfig();
     if (!server) throw new Error("No server configured");
 
     const response = await fetch(`${server.serverUrl}/api/v1/preserve/identify?q=${encodeURIComponent(query)}`);
-    if (!response.ok) throw new Error("Failed to identify source");
+    if (!response.ok) {
+        let msg = "Failed to identify source";
+        try { const err = await response.json(); msg = err.detail || msg; } catch {}
+        throw new Error(msg);
+    }
     return response.json();
+  },
+
+  async getDownloads(status?: string, limit: number = 50): Promise<any[]> {
+    const server = getServerConfig();
+    if (!server) throw new Error("No server configured");
+
+    const qs = new URLSearchParams({ limit: limit.toString() });
+    if (status) qs.append("status", status);
+
+    const response = await fetch(`${server.serverUrl}/api/v1/preserve/downloads?${qs}`);
+    if (!response.ok) throw new Error("Failed to fetch downloads");
+    return response.json();
+  },
+
+  async cancelDownload(jobId: string): Promise<void> {
+    const server = getServerConfig();
+    if (!server) throw new Error("No server configured");
+    await fetch(`${server.serverUrl}/api/v1/preserve/downloads/${jobId}/cancel`, { method: "POST" });
+  },
+
+  async pauseDownload(jobId: string): Promise<void> {
+    const server = getServerConfig();
+    if (!server) throw new Error("No server configured");
+    await fetch(`${server.serverUrl}/api/v1/preserve/downloads/${jobId}/pause`, { method: "POST" });
+  },
+
+  async resumeDownload(jobId: string): Promise<void> {
+    const server = getServerConfig();
+    if (!server) throw new Error("No server configured");
+    await fetch(`${server.serverUrl}/api/v1/preserve/downloads/${jobId}/resume`, { method: "POST" });
+  },
+
+  async deleteDownload(jobId: string): Promise<void> {
+    const server = getServerConfig();
+    if (!server) throw new Error("No server configured");
+    await fetch(`${server.serverUrl}/api/v1/preserve/downloads/${jobId}`, { method: "DELETE" });
   }
 };
 

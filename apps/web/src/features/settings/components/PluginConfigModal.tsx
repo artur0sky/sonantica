@@ -49,7 +49,10 @@ export function PluginConfigModal({
         threshold: 0.75,
         index_type: "L2",
       };
-    } else if (nameLower.includes("workshop") || nameLower.includes("downloader")) {
+    } else if (
+      nameLower.includes("workshop") ||
+      nameLower.includes("downloader")
+    ) {
       defaultConfig = {
         output_format: "flac",
         naming_format: "{artist}/{album}/{title}",
@@ -59,8 +62,6 @@ export function PluginConfigModal({
         create_album_folder: true,
         quality: "best",
         threads: 4,
-        spotify_client_id: "",
-        spotify_client_secret: ""
       };
     }
     return defaultConfig;
@@ -142,8 +143,15 @@ export function PluginConfigModal({
             <p className="font-medium text-text-primary">How to configure:</p>
             <ul className="list-disc list-inside space-y-1 ml-1">
               <li>Use standard JSON format.</li>
-              <li>Workshop: Use <code>{"{artist}"}</code>, <code>{"{album}"}</code>, <code>{"{title}"}</code> in <code>naming_format</code>.</li>
-              <li>Spotify: Provide API keys to enable identification of playlists/albums.</li>
+              <li>
+                Workshop: Use <code>{"{artist}"}</code>,{" "}
+                <code>{"{album}"}</code>, <code>{"{title}"}</code> in{" "}
+                <code>naming_format</code>.
+              </li>
+              <li>
+                Spotify: Provide API keys to enable identification of
+                playlists/albums.
+              </li>
             </ul>
           </div>
 

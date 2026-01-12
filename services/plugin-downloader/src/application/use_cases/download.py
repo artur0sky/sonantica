@@ -3,90 +3,103 @@ Application Layer: Download Use Case
 """
 import asyncio
 import logging
-import os
-import subprocess
 import uuid
-from datetime import datetime
 from typing import Optional, Dict
-import httpx
 
-from src.domain.entities import DownloadJob, JobStatus, JobPriority
+from src.domain.entities import DownloadJob, JobStatus
 from src.infrastructure.config import settings
+from src.infrastructure.storage import Storage
 
-logger = logging.getLogger(__name__)
+from src.infrastructure.logging.logger_config import setup_logger
 
-# In-memory store for now, in a real scenario use Redis as in Demucs
-jobs: Dict[str, DownloadJob] = {}
+logger = setup_logger(__name__)
 
 class DownloadUseCase:
     async def create_job(self, url: str, format_override: Optional[str] = None) -> DownloadJob:
         from src.application.tasks import download_source_task
         
-        # Dispatch to Celery
-        task = download_source_task.delay(url, format_override)
+        job_id = str(uuid.uuid4())
         
-        job_id = task.id
-        now = datetime.utcnow()
-        job = DownloadJob(
-            id=job_id,
-            url=url,
-            status=JobStatus.PENDING,
-            message="Dispatching to sonic hunter...",
-            created_at=now,
-            updated_at=now
-        )
-        # Note: We don't necessarily need to store it in 'jobs' dict anymore 
-        # as Celery backend (Redis) has the state, but we'll keeper it for fast lookup 
-        # or remove it if we rely purely on Celery result.
-        jobs[job_id] = job
-        return job
-
-    async def process(self, *args, **kwargs):
-        # Deprecated: processing now happens in Celery worker
-        pass
+        # Save Initial State
+        job_data = {
+            "id": job_id,
+            "url": url,
+            "status": "pending",
+            "format": format_override or "flac",
+            "progress": 0.0,
+            "message": "Queued"
+        }
+        Storage.save_job(job_id, job_data)
+        Storage.increment_quota("download")
+        
+        try:
+            # Dispatch Celery
+            celery_task = download_source_task.apply_async(args=[url, format_override, job_id], task_id=job_id)
+            
+            # Update Task ID
+            job_data["celery_task_id"] = celery_task.id
+            Storage.save_job(job_id, job_data)
+            
+            return self._map_to_entity(job_data)
+        except Exception as e:
+            Storage.update_job_status(job_id, "failed", error=str(e))
+            logger.error(f"Failed to create job: {e}")
+            raise e
 
     def get_status(self, job_id: str) -> Optional[DownloadJob]:
-        from src.infrastructure.celery_app import celery_app
-        task = celery_app.AsyncResult(job_id)
-        
-        # Priority: Map Celery states to our JobStatus
+        job_data = Storage.get_job(job_id)
+        if not job_data:
+            return None
+        return self._map_to_entity(job_data)
+
+    def _map_to_entity(self, data: Dict) -> DownloadJob:
+        # Convert string status to Enum if needed, or just pass string if Entity supports it.
+        # Entity uses JobStatus enum.
         status_map = {
-            "PENDING": JobStatus.PENDING,
-            "RECEIVED": JobStatus.PENDING,
-            "STARTED": JobStatus.PROCESSING,
-            "PROCESSING": JobStatus.PROCESSING,
-            "SUCCESS": JobStatus.COMPLETED,
-            "FAILURE": JobStatus.FAILED,
-            "REVOKED": JobStatus.CANCELLED
+            "pending": JobStatus.PENDING,
+            "processing": JobStatus.PROCESSING,
+            "completed": JobStatus.COMPLETED,
+            "failed": JobStatus.FAILED,
+            "cancelled": JobStatus.CANCELLED,
+            "paused": JobStatus.PENDING 
         }
-
-        # If we have it in the local jobs dict, update it from Celery
-        job = jobs.get(job_id)
-        if not job:
-            # Reconstruct if missing (e.g. after restart)
-            job = DownloadJob(
-                id=job_id,
-                url="untracked", # We don't store the URL in Celery result by default
-                status=JobStatus.PENDING,
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow()
-            )
-            jobs[job_id] = job
-
-        job.status = status_map.get(task.state, JobStatus.PROCESSING)
         
-        if task.state == "PROCESSING":
-            meta = task.info or {}
-            job.progress = meta.get("progress", 0.0)
-            job.message = meta.get("message", "Synthesizing...")
-        elif task.state == "SUCCESS":
-            result = task.result or {}
-            job.progress = 1.0
-            job.message = result.get("message", "Done.")
-        elif task.state == "FAILURE":
-            job.status = JobStatus.FAILED
-            job.message = str(task.result)
-            job.error = str(task.result)
+        return DownloadJob(
+            id=data.get("id"),
+            url=data.get("url"),
+            status=status_map.get(data.get("status"), JobStatus.PENDING),
+            progress=data.get("progress", 0.0),
+            message=data.get("message", ""),
+            created_at=data.get("created_at"), # String ISO
+            updated_at=data.get("updated_at"),
+            error=data.get("error_message")
+        )
 
-        job.updated_at = datetime.utcnow()
-        return job
+    def cancel_job(self, job_id: str):
+        from src.infrastructure.celery_app import celery_app
+        job = Storage.get_job(job_id)
+        if job:
+            Storage.update_job_status(job_id, "cancelled", message="Cancelled by user")
+            tid = job.get("celery_task_id")
+            if tid:
+                celery_app.control.revoke(tid, terminate=True)
+
+    def pause_job(self, job_id: str):
+        job = Storage.get_job(job_id)
+        if job and job.get("status") in ["processing", "pending"]:
+            Storage.update_job_status(job_id, "paused", message="Paused")
+
+    def resume_job(self, job_id: str):
+        job = Storage.get_job(job_id)
+        if job and job.get("status") == "paused":
+            Storage.update_job_status(job_id, "pending", message="Resuming...")
+            # Ideally retry task if it was killed? 
+            # Or assume worker logic handles it. 
+            # If we killed the task in pause, we MUST re-dispatch it.
+            # SpotDL doesn't "pause" natively in process. We terminated it.
+            # So we must re-create the task.
+            from src.application.tasks import download_source_task
+            url = job.get("url")
+            fmt = job.get("format", "flac")
+            download_source_task.apply_async(args=[url, fmt, job_id], task_id=job_id)
+

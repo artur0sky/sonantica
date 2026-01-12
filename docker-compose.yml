@@ -301,7 +301,7 @@ services:
     environment:
       - TORCH_HOME=/model_cache/torch
       - HF_HOME=/model_cache/huggingface
-      - POSTGRES_URL=postgres://${POSTGRES_USER:-sonantica}:${PSQL_PASSWORD:-sonantica}@postgres:${PSQL_PORT:-5432}/${POSTGRES_DB:-sonantica}?sslmode=disable
+      - POSTGRES_URL=postgresql://${POSTGRES_USER:-sonantica}:${PSQL_PASSWORD:-sonantica}@postgres:${PSQL_PORT:-5432}/${POSTGRES_DB:-sonantica}?sslmode=disable
       - REDIS_HOST=${REDIS_HOST:-redis}
       - REDIS_PORT=${REDIS_PORT:-6379}
       - REDIS_PASSWORD=${REDIS_PASSWORD:-sonantica}
@@ -396,15 +396,18 @@ services:
     container_name: sonantica-plugin-downloader
     restart: unless-stopped
     environment:
+      - POSTGRES_URL=postgres://${POSTGRES_USER:-sonantica}:${PSQL_PASSWORD:-sonantica}@postgres:${PSQL_PORT:-5432}/${POSTGRES_DB:-sonantica}?sslmode=disable
       - REDIS_HOST=${REDIS_HOST:-redis}
       - REDIS_PORT=${REDIS_PORT:-6379}
       - REDIS_PASSWORD=${REDIS_PASSWORD:-sonantica}
       - CORE_INTERNAL_URL=http://stream-core:8080
       - MEDIA_PATH=/media
+      - DOWNLOADS_PATH=${DOWNLOADS_PATH:-/media/Downloads}
       - INTERNAL_API_SECRET=${INTERNAL_API_SECRET:-generate-secure-token-here}
       - PYTHONPATH=/app
       - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID:-}
       - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET:-}
+    user: root
     volumes:
       - ${MEDIA_PATH:-./media}:/media:rw
       - ./logs/downloader:/var/log/sonantica
@@ -429,9 +432,11 @@ services:
       - REDIS_PASSWORD=${REDIS_PASSWORD:-sonantica}
       - CORE_INTERNAL_URL=http://stream-core:8080
       - MEDIA_PATH=/media
+      - DOWNLOADS_PATH=${DOWNLOADS_PATH:-/media/Downloads}
       - PYTHONPATH=/app
       - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID:-}
       - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET:-}
+    user: root
     volumes:
       - ${MEDIA_PATH:-./media}:/media:rw
       - ./logs/downloader-worker:/var/log/sonantica

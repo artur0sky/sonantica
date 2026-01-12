@@ -72,6 +72,7 @@ func (h *PreserveHandler) Proxy(w http.ResponseWriter, r *http.Request) {
 	segments := strings.Split(strings.Trim(newPath, "/"), "/")
 	if len(segments) == 1 && segments[0] != "" &&
 		segments[0] != "identify" && segments[0] != "download" &&
+		segments[0] != "downloads" && segments[0] != "jobs" &&
 		segments[0] != "config" && segments[0] != "manifest" &&
 		segments[0] != "status" {
 		r.URL.Path = fmt.Sprintf("/status/%s", segments[0])

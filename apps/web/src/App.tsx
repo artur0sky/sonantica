@@ -107,11 +107,16 @@ import {
   useAnimationSettings,
 } from "./hooks/useAnimationSettings";
 
+import { usePluginStore } from "./stores/pluginStore";
+
 function App() {
+  const fetchPlugins = usePluginStore((s) => s.fetchPlugins);
+
   // Initialize browser compatibility features (polyfills, detection, etc.)
   useEffect(() => {
     initBrowserCompatibility();
-  }, []);
+    fetchPlugins();
+  }, [fetchPlugins]);
 
   useVersionManager(); // Checks version and wipes data if needed
   useDSPIntegration();
