@@ -11,6 +11,7 @@ export interface Plugin {
     storage_usage_bytes?: number; 
   };
   manifest: {
+    id: string;
     name: string;
     description: string;
     version: string;
@@ -148,6 +149,37 @@ export const PluginService = {
       method: "POST",
     });
     if (!response.ok) throw new Error("Failed to start AI analysis");
+    return response.json();
+  },
+
+  async startDownload(url: string, format: string = "flac"): Promise<{ id: string, job_id?: string }> {
+    const server = getServerConfig();
+    if (!server) throw new Error("No server configured");
+
+    const response = await fetch(`${server.serverUrl}/api/v1/preserve`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url, format }),
+    });
+    if (!response.ok) throw new Error("Failed to start preservation");
+    return response.json();
+  },
+
+  async getDownloadJobStatus(jobId: string): Promise<any> {
+    const server = getServerConfig();
+    if (!server) throw new Error("No server configured");
+
+    const response = await fetch(`${server.serverUrl}/api/v1/preserve/${jobId}`);
+    if (!response.ok) throw new Error("Failed to check preservation status");
+    return response.json();
+  },
+
+  async identify(query: string): Promise<any[]> {
+    const server = getServerConfig();
+    if (!server) throw new Error("No server configured");
+
+    const response = await fetch(`${server.serverUrl}/api/v1/preserve/identify?q=${encodeURIComponent(query)}`);
+    if (!response.ok) throw new Error("Failed to identify source");
     return response.json();
   }
 };

@@ -280,3 +280,7 @@ Apache-2.0
 ---
 
 **Sonántica** - *Respect the intention of the sound and the freedom of the listener.*
+
+---
+
+Made with ❤ and **Math Rock**.

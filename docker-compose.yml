@@ -72,9 +72,9 @@ services:
       - sonantica-net
     ports:
       - "127.0.0.1:${REDIS_PORT:-6379}:${REDIS_PORT:-6379}"
-    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+    command: [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
     healthcheck:
-      test: ["CMD", "redis-cli", "-h", "localhost", "-p", "${REDIS_PORT:-6379}", "-a", "${REDIS_PASSWORD:-sonantica}", "ping"]
+      test: [ "CMD", "redis-cli", "-h", "localhost", "-p", "${REDIS_PORT:-6379}", "-a", "${REDIS_PASSWORD:-sonantica}", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -108,6 +108,10 @@ services:
       - ANALYTICS_ENABLED=${ANALYTICS_ENABLED:-true}
       - ANALYTICS_RETENTION_DAYS=${ANALYTICS_RETENTION_DAYS:-90}
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost,http://localhost:3000,http://localhost:5173,capacitor://localhost,http://192.168.100.6:3000,http://192.168.100.6:5173,http://192.168.100.6}
+      - DEMUCS_URL=${DEMUCS_URL:-http://sonantica-plugin-demucs:8080}
+      - BRAIN_URL=${BRAIN_URL:-http://sonantica-plugin-brain:8080}
+      - KNOWLEDGE_URL=${KNOWLEDGE_URL:-http://sonantica-plugin-knowledge:8080}
+      - DOWNLOADER_URL=${DOWNLOADER_URL:-http://sonantica-plugin-downloader:8080}
       # Logging Configuration
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - LOG_FORMAT=${LOG_FORMAT:-json}
@@ -166,7 +170,7 @@ services:
         condition: service_healthy
     networks:
       - sonantica-net
-    command: ["celery", "-A", "worker.app", "worker", "--loglevel=info", "-Q", "celery", "-c", "2", "-E"]
+    command: [ "celery", "-A", "worker.app", "worker", "--loglevel=info", "-Q", "celery", "-c", "2", "-E" ]
     labels:
       com.sonantica.description: "Audio Analysis & Analytics Worker (Celery)"
     user: root
@@ -200,7 +204,7 @@ services:
         condition: service_healthy
     networks:
       - sonantica-net
-    command: ["celery", "-A", "worker.app", "beat", "--loglevel=info"]
+    command: [ "celery", "-A", "worker.app", "beat", "--loglevel=info" ]
     labels:
       com.sonantica.description: "Periodic Task Scheduler (Celery Beat)"
     user: root
@@ -228,7 +232,7 @@ services:
         condition: service_healthy
     networks:
       - sonantica-net
-    command: ["celery", "-A", "worker.app", "flower", "--port=5555", "--inspect-timeout=3000"]
+    command: [ "celery", "-A", "worker.app", "flower", "--port=5555", "--inspect-timeout=3000" ]
     labels:
       com.sonantica.description: "Celery Task Monitor"
     user: root
@@ -241,7 +245,7 @@ services:
       context: ./services/ai-plugins/demucs
       dockerfile: Dockerfile
     container_name: sonantica-plugin-demucs
-    profiles: ["ai"] # Opt-in only - user must explicitly enable
+    profiles: [ "ai" ] # Opt-in only - user must explicitly enable
     restart: unless-stopped
     environment:
       - TORCH_HOME=/model_cache/torch
@@ -285,14 +289,14 @@ services:
           devices:
             - driver: nvidia
               count: 1
-              capabilities: [gpu]
+              capabilities: [ gpu ]
 
   plugin-brain:
     build:
       context: ./services/ai-plugins/brain
       dockerfile: Dockerfile
     container_name: sonantica-plugin-brain
-    profiles: ["ai"]
+    profiles: [ "ai" ]
     restart: unless-stopped
     environment:
       - TORCH_HOME=/model_cache/torch
@@ -339,14 +343,14 @@ services:
           devices:
             - driver: nvidia
               count: 1
-              capabilities: [gpu]
+              capabilities: [ gpu ]
 
   plugin-knowledge:
     build:
       context: ./services/ai-plugins/knowledge
       dockerfile: Dockerfile
     container_name: sonantica-plugin-knowledge
-    profiles: ["ai"]
+    profiles: [ "ai" ]
     restart: unless-stopped
     environment:
       - OLLAMA_HOST=${OLLAMA_HOST:-http://host.docker.internal:11434}
@@ -384,6 +388,65 @@ services:
         reservations:
           cpus: '0.25'
           memory: 128M
+
+  plugin-downloader:
+    build:
+      context: ./services/plugin-downloader
+      dockerfile: Dockerfile
+    container_name: sonantica-plugin-downloader
+    restart: unless-stopped
+    environment:
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-sonantica}
+      - CORE_INTERNAL_URL=http://stream-core:8080
+      - MEDIA_PATH=/media
+      - INTERNAL_API_SECRET=${INTERNAL_API_SECRET:-generate-secure-token-here}
+      - PYTHONPATH=/app
+      - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID:-}
+      - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET:-}
+      - SPOTIPY_CLIENT_ID=${SPOTIFY_CLIENT_ID:-}
+      - SPOTIPY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET:-}
+    volumes:
+      - ${MEDIA_PATH:-./media}:/media:rw
+      - ./logs/downloader:/var/log/sonantica
+    networks:
+      - sonantica-net
+    depends_on:
+      - stream-core
+    ports:
+      - "127.0.0.1:8094:8080"
+    labels:
+      com.sonantica.description: "Sound Hunter Downloader Plugin API (The Workshop)"
+
+  plugin-downloader-worker:
+    build:
+      context: ./services/plugin-downloader
+      dockerfile: Dockerfile
+    container_name: sonantica-plugin-downloader-worker
+    restart: unless-stopped
+    environment:
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-sonantica}
+      - CORE_INTERNAL_URL=http://stream-core:8080
+      - MEDIA_PATH=/media
+      - PYTHONPATH=/app
+      - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID:-}
+      - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET:-}
+      - SPOTIPY_CLIENT_ID=${SPOTIFY_CLIENT_ID:-}
+      - SPOTIPY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET:-}
+    volumes:
+      - ${MEDIA_PATH:-./media}:/media:rw
+      - ./logs/downloader-worker:/var/log/sonantica
+    networks:
+      - sonantica-net
+    command: [ "celery", "-A", "src.infrastructure.celery_app", "worker", "--loglevel=info", "-Q", "downloader" ]
+    depends_on:
+      - redis
+      - plugin-downloader
+    labels:
+      com.sonantica.description: "Sound Hunter Downloader Celery Worker"
 
   # ============================================
   # FRONTEND & PROXY

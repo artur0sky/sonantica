@@ -24,6 +24,7 @@ type Config struct {
 	DemucsURL         string   `mapstructure:"DEMUCS_URL"`
 	BrainURL          string   `mapstructure:"BRAIN_URL"`
 	KnowledgeURL      string   `mapstructure:"KNOWLEDGE_URL"`
+	DownloaderURL     string   `mapstructure:"DOWNLOADER_URL"`
 }
 
 func Load() *Config {
@@ -45,6 +46,7 @@ func Load() *Config {
 	v.SetDefault("DEMUCS_URL", "http://sonantica-plugin-demucs:8080")
 	v.SetDefault("BRAIN_URL", "http://sonantica-plugin-brain:8080")
 	v.SetDefault("KNOWLEDGE_URL", "http://sonantica-plugin-knowledge:8080")
+	v.SetDefault("DOWNLOADER_URL", "http://sonantica-plugin-downloader:8080")
 
 	// 2. Read from Environment
 	v.AutomaticEnv()
@@ -67,6 +69,7 @@ func Load() *Config {
 	_ = v.BindEnv("DEMUCS_URL")
 	_ = v.BindEnv("BRAIN_URL")
 	_ = v.BindEnv("KNOWLEDGE_URL")
+	_ = v.BindEnv("DOWNLOADER_URL")
 
 	// 3. Read from Config File (Optional)
 	v.SetConfigName("config")

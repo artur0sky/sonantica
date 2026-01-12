@@ -87,6 +87,11 @@ const RecommendationsPage = lazy(() =>
     default: m.RecommendationsPage,
   }))
 );
+const WorkshopPage = lazy(() =>
+  import("./features/downloader/pages/WorkshopPage").then((m) => ({
+    default: m.WorkshopPage,
+  }))
+);
 
 const PageLoader = () => (
   <div className="flex items-center justify-center min-h-[50vh] text-text-muted">
@@ -165,6 +170,8 @@ function App() {
                         path="/recommendations"
                         component={RecommendationsPage}
                       />
+                      {/* Workshop (Downloader) */}
+                      <Route path="/workshop" component={WorkshopPage} />
 
                       {/* 404 */}
                       <Route>

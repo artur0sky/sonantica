@@ -63,4 +63,4 @@ Licensed under the **Apache License, Version 2.0**.
 
 ---
 
-Made with ❤ and **Ambient**.
+Made with ❤ and **Noise Rock**.

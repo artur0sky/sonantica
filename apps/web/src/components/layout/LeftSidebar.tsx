@@ -8,6 +8,7 @@ import {
   IconWaveSquare,
   IconPin,
   IconPinnedOff,
+  IconHammer,
 } from "@tabler/icons-react";
 import { cn } from "@sonantica/shared";
 import type { Playlist } from "@sonantica/media-library";
@@ -28,6 +29,7 @@ const navItems: NavItem[] = [
   { path: "/recommendations", label: "Discovery", Icon: IconSparkles },
   { path: "/dsp", label: "DSP Engine", Icon: IconWaveSquare },
   { path: "/analytics", label: "Analytics", Icon: IconChartBar },
+  { path: "/workshop", label: "Workshop", Icon: IconHammer },
 ];
 
 interface LeftSidebarProps {

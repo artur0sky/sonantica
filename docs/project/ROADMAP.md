@@ -84,7 +84,7 @@ Must:
 | Audio Decoding | ✅ | 🔴 | HTML5 Audio + Web Audio API |
 | Buffer Management | ✅ | 🔴 | Implemented in PlayerEngine |
 | State Control | ✅ | 🔴 | Play/Pause/Stop/Seek all working |
-| EQ and DSP Processing | 📋 | 🟠 | Phase 3 feature |
+| EQ and DSP Processing | ✅ | 🟠 | 10-band parametric engine implemented |
 | Playback Metrics | ✅ | 🟡 | Time, duration, buffered tracking |
 | **Gapless Playback** | 📋 | 🟠 | Needs implementation |
 | **Exclusive Mode / Bit-perfect** | 📋 | 🟡 | Browser limitations |
@@ -121,14 +121,14 @@ Must:
 
 | Feature | Status | Priority | Notes |
 | :--- | :---: | :---: | :--- |
-| Parametric EQ (10+ bands) | 📋 | 🟠 | Phase 3 |
-| Preset: Flat | 📋 | 🟠 | Default |
-| Preset: Bass Boost | 📋 | 🟡 | Popular preset |
-| Preset: V-Shape | 📋 | 🟡 | Popular preset |
-| Preset: Vocal | 📋 | 🟡 | Specialized |
-| Custom Presets | 📋 | 🟡 | User-defined |
-| Preamp | 📋 | 🟡 | Volume normalization |
-| Gain per track/album | 📋 | 🟡 | Advanced feature |
+| Parametric EQ (10+ bands) | ✅ | 🟠 | Fully implemented in @sonantica/dsp |
+| Preset: Flat | ✅ | 🟠 | Default available |
+| Preset: Bass Boost | ✅ | 🟡 | Available |
+| Preset: V-Shape | ✅ | 🟡 | Available |
+| Preset: Vocal | ✅ | 🟡 | Available |
+| Custom Presets | ✅ | 🟡 | Supported |
+| Preamp | ✅ | 🟡 | Implemented |
+| Gain per track/album | 📋 | 🟡 | Planned extension |
 
 ### 5.2 Future (non-MVP)
 
@@ -196,10 +196,10 @@ Must:
 | :--- | :---: | :---: | :--- |
 | **Lyrics** (Synced) | ✅ | 🟡 | LRC parser + synchronizer |
 | **Lyrics** (Unsynced) | ✅ | 🟡 | Static lyrics display |
-| **Artist Biographies** | 📋 | ⚪ | Context enrichment |
-| **Match Validation** (MusicBrainz) | 📋 | 🟡 | Metadata accuracy |
+| **Artist Biographies** | ✅ | ⚪ | Context enrichment via Knowledge AI |
+| **Match Validation** (MusicBrainz) | � | 🟡 | Integration in progress |
 | **Match Validation** (Discogs) | 📋 | ⚪ | Alternative source |
-| User API Keys | 📋 | 🟡 | Heavy usage support |
+| User API Keys | ✅ | 🟡 | Supported via environment variables |
 
 ---
 
@@ -438,7 +438,7 @@ Must:
 | Smart playlists | 📋 | 🟡 | - | Rule-based |
 | Personalization | 🚧 | 🟡 | - | User preferences |
 | **Theme Engine** | ✅ | 🟠 | - | CSS Variables implemented |
-| **Plugin System Beta** | 📋 | 🟠 | - | DSP & UI Widgets |
+| **Plugin System Beta** | ✅ | 🟠 | - | Structured via /services/plugin-* |
 | Lyrics integration | ✅ | 🟡 | - | Synced/unsynced working |
 
 ### Phase 5 – Competitive Polishing

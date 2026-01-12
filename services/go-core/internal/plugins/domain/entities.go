@@ -15,6 +15,7 @@ const (
 	CapabilityEmbeddings      PluginCapability = "embeddings"
 	CapabilityKnowledge       PluginCapability = "knowledge"
 	CapabilityRecommendations PluginCapability = "recommendations"
+	CapabilityDownload        PluginCapability = "download"
 )
 
 // JobStatus representa el estado de un trabajo en el plugin
