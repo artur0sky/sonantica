@@ -74,4 +74,4 @@ Licensed under the **Apache License, Version 2.0**.
 
 ---
 
-Made with ❤ and **Progressive Rock**.
+Made with ❤ and **Bossa Nova**.
