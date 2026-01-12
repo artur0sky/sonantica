@@ -9,6 +9,7 @@ import {
   IconSparkles,
   IconMicrophone,
   IconPlaylist,
+  IconActivity,
 } from "@tabler/icons-react";
 import type { NavigationFooterProps } from "../types";
 
@@ -18,6 +19,8 @@ export function NavigationFooter({
   onToggleRecommendations,
   onToggleLyrics,
   onToggleQueue,
+  scientificMode,
+  onToggleScientificMode,
 }: NavigationFooterProps) {
   return (
     <footer className="flex items-center justify-between">
@@ -32,6 +35,13 @@ export function NavigationFooter({
         icon={IconMicrophone}
         onClick={onToggleLyrics}
         title="Lyrics"
+        size="md"
+      />
+      <ActionIconButton
+        icon={IconActivity}
+        onClick={() => onToggleScientificMode?.()}
+        isActive={scientificMode}
+        title="Scientific Mode"
         size="md"
       />
       <ActionIconButton

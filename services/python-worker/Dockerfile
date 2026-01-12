@@ -2,8 +2,8 @@ FROM python:3.12-alpine
 
 WORKDIR /app
 
-# Install system dependencies (ffmpeg required for audio processing)
-RUN apk add --no-cache ffmpeg build-base
+# Install system dependencies (ffmpeg and libsndfile required for audio processing)
+RUN apk add --no-cache ffmpeg libsndfile libsndfile-dev build-base
 
 # Install dependencies
 COPY requirements.txt .

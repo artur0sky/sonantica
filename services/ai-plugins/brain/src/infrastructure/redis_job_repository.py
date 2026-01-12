@@ -1,0 +1,69 @@
+import json
+import logging
+from typing import Optional, List
+import redis.asyncio as redis
+from datetime import datetime
+
+from ..domain.entities import EmbeddingJob, JobStatus
+from ..domain.repositories import IJobRepository
+
+logger = logging.getLogger(__name__)
+
+class RedisJobRepository(IJobRepository):
+    def __init__(self, redis_client: redis.Redis, prefix: str = "brain:jobs:"):
+        self.redis = redis_client
+        self.prefix = prefix
+
+    def _get_key(self, job_id: str) -> str:
+        return f"{self.prefix}{job_id}"
+
+    async def save(self, job: EmbeddingJob) -> None:
+        key = self._get_key(job.id)
+        # Store as JSON string
+        data = job.to_dict()
+        await self.redis.set(key, json.dumps(data), ex=86400 * 7) # 7 days TTL
+        # Index by track_id
+        await self.redis.set(f"brain:track:{job.track_id}", job.id, ex=86400 * 7)
+        
+        # Maintain active IDs set
+        active_key = f"{self.prefix}active_ids"
+        if not job.is_terminal:
+            await self.redis.sadd(active_key, job.id)
+        else:
+            await self.redis.srem(active_key, job.id)
+
+    async def get_by_id(self, job_id: str) -> Optional[EmbeddingJob]:
+        key = self._get_key(job_id)
+        data = await self.redis.get(key)
+        if not data:
+            return None
+        
+        d = json.loads(data)
+        return EmbeddingJob(
+            id=d["id"],
+            track_id=d["track_id"],
+            file_path=d.get("file_path", ""),
+            status=JobStatus(d["status"]),
+            progress=d["progress"],
+            embedding=d.get("embedding"),
+            model_version=d.get("model_version"),
+            error=d.get("error"),
+            created_at=datetime.strptime(d["created_at"], '%Y-%m-%dT%H:%M:%SZ'),
+            updated_at=datetime.strptime(d["updated_at"], '%Y-%m-%dT%H:%M:%SZ')
+        )
+
+    async def get_active_count(self) -> int:
+        active_key = f"{self.prefix}active_ids"
+        return await self.redis.scard(active_key)
+
+    async def set_cooldown(self, seconds: int) -> None:
+        await self.redis.set(f"{self.prefix}cooldown", "1", ex=seconds)
+
+    async def is_in_cooldown(self) -> bool:
+        return await self.redis.exists(f"{self.prefix}cooldown") > 0
+
+    async def find_by_track_id(self, track_id: str) -> Optional[EmbeddingJob]:
+        job_id = await self.redis.get(f"brain:track:{track_id}")
+        if not job_id:
+            return None
+        return await self.get_by_id(job_id)

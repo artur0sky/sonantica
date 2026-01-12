@@ -30,3 +30,8 @@ class Track(Base):
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    # AI Metadata
+    ai_metadata = Column(postgresql.JSONB, default={})
+    has_stems = Column(Boolean, default=False)
+    has_embeddings = Column(Boolean, default=False)

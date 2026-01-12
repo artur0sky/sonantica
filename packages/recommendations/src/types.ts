@@ -31,7 +31,7 @@ export interface Recommendation<T = Track | Album | Artist> {
  * Why this item was recommended
  */
 export interface RecommendationReason {
-  type: 'artist' | 'album' | 'genre' | 'year' | 'tempo' | 'key' | 'mood';
+  type: 'artist' | 'album' | 'genre' | 'year' | 'tempo' | 'key' | 'mood' | 'ai';
   weight: number; // Contribution to final score
   description: string;
 }
@@ -66,6 +66,11 @@ export interface SimilarityWeights {
   year?: number;        // Default: 0.10
   tempo?: number;       // Default: 0.05 (if available)
   key?: number;         // Default: 0.05 (if available)
+  // Multi-modal (AI)
+  audio?: number;
+  lyrics?: number;
+  visual?: number;
+  stems?: number;
 }
 
 /**

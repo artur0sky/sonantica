@@ -60,33 +60,50 @@ export function DesktopSidebars({
     lyricsSidebarWidth,
     eqSidebarWidth,
     recommendationsSidebarWidth,
+    isPlayerExpanded,
   } = useUIStore();
 
   // Don't render anything on mobile
   if (isMobile) return null;
 
-  const sidebarStyles = (width: number) =>
-    ({
+  const sidebarStyles = (width: number) => {
+    if (isPlayerExpanded) {
+      return {
+        width,
+        backgroundColor: dominantColor,
+        color: contrastColor,
+        "--color-text": contrastColor,
+        "--color-text-muted": mutedColor,
+        "--color-border":
+          contrastColor === "#ffffff"
+            ? "rgba(255,255,255,0.1)"
+            : "rgba(0,0,0,0.1)",
+        "--color-surface": "transparent",
+        "--color-surface-elevated":
+          contrastColor === "#ffffff"
+            ? "rgba(255,255,255,0.1)"
+            : "rgba(0,0,0,0.1)",
+        "--color-accent": contrastColor,
+        "--color-accent-hover": contrastColor,
+      } as React.CSSProperties;
+    }
+
+    return {
       width,
-      backgroundColor: dominantColor,
-      color: contrastColor,
-      "--color-text": contrastColor,
-      "--color-text-muted": mutedColor,
-      "--color-border":
-        contrastColor === "#ffffff"
-          ? "rgba(255,255,255,0.1)"
-          : "rgba(0,0,0,0.1)",
-      "--color-surface": "transparent",
-      "--color-surface-elevated":
-        contrastColor === "#ffffff"
-          ? "rgba(255,255,255,0.1)"
-          : "rgba(0,0,0,0.1)",
+      backgroundColor: "#000000",
+      color: "#e0e0e0",
+      "--color-text": "#e0e0e0",
+      "--color-text-muted": "#999999",
+      "--color-border": "rgba(255,255,255,0.1)",
+      "--color-surface": "#000000",
+      "--color-surface-elevated": "#0a0a0a",
       "--color-accent": contrastColor,
       "--color-accent-hover": contrastColor,
-    } as React.CSSProperties);
+    } as React.CSSProperties;
+  };
 
   const sidebarClasses =
-    "border-l border-white/10 h-full flex-shrink-0 z-20 relative shadow-[-10px_0_30px_rgba(0,0,0,0.2)]";
+    "border-l border-white/10 h-full flex-shrink-0 z-20 relative";
 
   return (
     <>

@@ -123,10 +123,7 @@ export function MainLayout({ children }: MainLayoutProps) {
     useLayoutTheme();
 
   return (
-    <LayoutThemeManager
-      totalRightOffset={totalRightOffset}
-      isPlayerExpanded={isPlayerExpanded}
-    >
+    <LayoutThemeManager totalRightOffset={totalRightOffset}>
       <PlaybackPersistence />
       <Header />
 
@@ -259,8 +256,22 @@ export function MainLayout({ children }: MainLayoutProps) {
 
       {/* Bottom Mini Player - Sticky */}
       {currentTrack && !isPlayerExpanded && (
-        <div className="sticky bottom-0 z-50 border-t border-border bg-bg/95 backdrop-blur-xl pb-[env(safe-area-inset-bottom)] shadow-[0_-10px_30px_rgba(0,0,0,0.5)] animate-in slide-in-from-bottom duration-500">
+        <div
+          className="sticky bottom-0 z-50 border-t border-border backdrop-blur-xl pb-[env(safe-area-inset-bottom)] shadow-[0_-10px_30px_rgba(0,0,0,0.5)] animate-in slide-in-from-bottom duration-500"
+          style={
+            {
+              backgroundColor: dominantColor,
+              color: contrastColor,
+              "--color-text": contrastColor,
+              "--color-text-muted": mutedColor,
+              "--color-accent": contrastColor,
+              "--color-accent-hover": contrastColor,
+              "--color-border": "rgba(255,255,255,0.1)",
+            } as React.CSSProperties
+          }
+        >
           <MiniPlayer
+            className="bg-transparent border-none shadow-none"
             actionButtons={
               fullTrack && (
                 <>

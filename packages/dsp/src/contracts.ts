@@ -62,6 +62,8 @@ export enum VocalMode {
   NORMAL = 'normal',
   KARAOKE = 'karaoke',   // Remove vocals (Side channel only)
   MUSICIAN = 'musician', // Isolate vocals (Center channel + Bandpass)
+  AI_KARAOKE = 'ai_karaoke', // Remove vocals using Demucs stems
+  AI_VOCALS = 'ai_vocals',   // Isolate vocals using Demucs stems
 }
 
 /**

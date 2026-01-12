@@ -9,7 +9,7 @@ handle_error() {
 # Verificar que las variables de entorno necesarias estén definidas
 [ -z "$POSTGRES_DB" ] && handle_error "La variable de entorno POSTGRES_DB no está definida."
 [ -z "$POSTGRES_USER" ] && handle_error "La variable de entorno POSTGRES_USER no está definida."
-[ -z "$PSQL_PASSWORD" ] && handle_error "La variable de entorno PSQL_PASSWORD no está definida."
+[ -z "$POSTGRES_PASSWORD" ] && handle_error "La variable de entorno POSTGRES_PASSWORD no está definida."
 [ -z "$ENCODING" ] && handle_error "La variable de entorno ENCODING no está definida."
 
 # Crear el directorio si no existe
@@ -29,7 +29,7 @@ if [ ! -f /config/init.conf.template ]; then
 fi
 
 # Reemplazar las variables de entorno en el archivo template y guardar el resultado en init.sql
-envsubst '${POSTGRES_DB} ${POSTGRES_USER} ${PSQL_PASSWORD} ${ENCODING}' < /config/init.conf.template > /docker-entrypoint-initdb.d/init.sql || handle_error "No se pudo crear el archivo init.sql."
+envsubst '${POSTGRES_DB} ${POSTGRES_USER} ${POSTGRES_PASSWORD} ${ENCODING}' < /config/init.conf.template > /docker-entrypoint-initdb.d/init.sql || handle_error "No se pudo crear el archivo init.sql."
 
 # Verificar si el archivo init.sql se creó correctamente
 if [ -f /docker-entrypoint-initdb.d/init.sql ]; then

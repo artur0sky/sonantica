@@ -21,14 +21,12 @@ interface LayoutThemeManagerProps {
   children: ReactNode;
   className?: string;
   totalRightOffset: number;
-  isPlayerExpanded: boolean;
 }
 
 export function LayoutThemeManager({
   children,
   className,
   totalRightOffset,
-  isPlayerExpanded,
 }: LayoutThemeManagerProps) {
   const { currentTrack } = usePlayerStore();
   const { tracks } = useLibraryStore();
@@ -51,10 +49,7 @@ export function LayoutThemeManager({
   return (
     <div
       className={cn(
-        "h-[100dvh] transition-all duration-300 flex flex-col bg-bg text-text overflow-hidden relative",
-        isPlayerExpanded
-          ? "pt-0"
-          : "pt-[max(env(safe-area-inset-top),2rem)] lg:pt-[env(safe-area-inset-top)]",
+        "h-[100dvh] transition-all duration-300 flex flex-col bg-bg text-text overflow-hidden relative pt-0",
         className
       )}
       style={

@@ -98,4 +98,4 @@ Licensed under the **Apache License, Version 2.0**.
 
 ---
 
-Made with ❤ and **Jazz**.
+Made with ❤ and **Lo-Fi**.
