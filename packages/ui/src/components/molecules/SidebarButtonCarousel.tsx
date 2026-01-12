@@ -16,7 +16,7 @@ import {
   type MouseEvent,
 } from "react";
 import { ActionIconButton } from "../atoms";
-import { cn } from "../../utils";
+import { cn, isDesktop } from "../../utils";
 
 export interface SidebarButton {
   /** Unique button identifier */
@@ -51,8 +51,9 @@ export function SidebarButtonCarousel({
   size = "xs",
   className,
 }: SidebarButtonCarouselProps) {
+  const desktop = isDesktop();
   const [featuredIndex, setFeaturedIndex] = useState(defaultFeaturedIndex);
-  const [showAll, setShowAll] = useState(false);
+  const [showAll, setShowAll] = useState(desktop); // Default to true on desktop
   const [dragOffset, setDragOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -71,7 +72,7 @@ export function SidebarButtonCarousel({
 
   // Touch start handler
   const handleTouchStart = (e: TouchEvent) => {
-    if (!enableSwipe || showAll) return;
+    if (!enableSwipe || showAll || desktop) return;
     startX.current = e.touches[0].clientX;
     setIsDragging(true);
 
@@ -83,7 +84,7 @@ export function SidebarButtonCarousel({
 
   // Touch move handler
   const handleTouchMove = (e: TouchEvent) => {
-    if (!enableSwipe || showAll || !isDragging) return;
+    if (!enableSwipe || showAll || desktop || !isDragging) return;
     const currentX = e.touches[0].clientX;
     const offset = currentX - startX.current;
     setDragOffset(offset);
@@ -91,7 +92,7 @@ export function SidebarButtonCarousel({
 
   // Touch end handler
   const handleTouchEnd = () => {
-    if (!enableSwipe || showAll) return;
+    if (!enableSwipe || showAll || desktop) return;
 
     // Clear long press timer
     if (longPressTimer.current) {
@@ -113,19 +114,19 @@ export function SidebarButtonCarousel({
 
   // Mouse handlers for desktop
   const handleMouseDown = (e: MouseEvent) => {
-    if (!enableSwipe || showAll) return;
+    if (!enableSwipe || showAll || desktop) return;
     startX.current = e.clientX;
     setIsDragging(true);
   };
 
   const handleMouseMove = (e: MouseEvent) => {
-    if (!enableSwipe || showAll || !isDragging) return;
+    if (!enableSwipe || showAll || desktop || !isDragging) return;
     const offset = e.clientX - startX.current;
     setDragOffset(offset);
   };
 
   const handleMouseUp = () => {
-    if (!enableSwipe || showAll || !isDragging) return;
+    if (!enableSwipe || showAll || desktop || !isDragging) return;
 
     const threshold = 30;
     if (dragOffset > threshold) {
@@ -140,6 +141,7 @@ export function SidebarButtonCarousel({
 
   // Context menu to show all
   const handleContextMenu = (e: React.MouseEvent) => {
+    if (desktop) return;
     e.preventDefault();
     setShowAll(true);
   };
@@ -154,11 +156,13 @@ export function SidebarButtonCarousel({
   }, []);
 
   return (
-    <div className={cn("flex items-center gap-1 relative", className)}>
+    <div className={cn("flex items-center gap-1 relative min-w-0", className)}>
       <div
         className={cn(
           "flex items-center gap-1 transition-all duration-300",
-          showAll && "bg-white/5 rounded-full p-1 border border-white/10 pr-2"
+          (showAll || desktop) &&
+            "bg-[var(--color-surface-elevated)] rounded-full p-1 border border-[var(--color-border)] pr-2 overflow-x-auto overflow-y-hidden scrollbar-none",
+          desktop && "max-w-full"
         )}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
@@ -170,15 +174,17 @@ export function SidebarButtonCarousel({
         onContextMenu={handleContextMenu}
         style={{
           transform:
-            enableSwipe && !showAll && isDragging
+            enableSwipe && !showAll && !desktop && isDragging
               ? `translateX(${dragOffset}px)`
               : undefined,
           transition: isDragging ? "none" : "transform 0.2s ease-out",
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
         }}
       >
         {buttons.map((btn, idx) => {
           const isFeatured = idx === featuredIndex;
-          const shouldShow = showAll || isFeatured;
+          const shouldShow = showAll || desktop || isFeatured;
 
           if (!shouldShow) return null;
 
@@ -186,8 +192,8 @@ export function SidebarButtonCarousel({
             <div
               key={btn.id}
               className={cn(
-                "transition-all duration-200",
-                isFeatured && !showAll && "scale-110"
+                "transition-all duration-200 flex-shrink-0",
+                isFeatured && !showAll && !desktop && "scale-110"
               )}
               style={{
                 opacity: shouldShow ? 1 : 0,
@@ -198,15 +204,15 @@ export function SidebarButtonCarousel({
                 icon={btn.icon}
                 onClick={() => {
                   btn.action();
-                  if (showAll) setShowAll(false);
+                  if (showAll && !desktop) setShowAll(false);
                 }}
                 isActive={btn.isActive}
                 size={size}
                 title={btn.label}
                 className={cn(
                   "transition-all",
-                  isFeatured && !showAll
-                    ? "bg-white/10"
+                  isFeatured && !showAll && !desktop
+                    ? "bg-[var(--color-surface-elevated)]"
                     : "opacity-60 hover:opacity-100"
                 )}
               />
@@ -215,8 +221,8 @@ export function SidebarButtonCarousel({
         })}
       </div>
 
-      {/* Backdrop to close expanded view */}
-      {showAll && (
+      {/* Backdrop to close expanded view (Mobile only) */}
+      {showAll && !desktop && (
         <div
           className="fixed inset-0 z-[-1]"
           onClick={() => setShowAll(false)}

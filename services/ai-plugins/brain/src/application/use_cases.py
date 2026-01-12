@@ -1,0 +1,230 @@
+import asyncio
+import os
+import logging
+import uuid
+from datetime import datetime
+from typing import Optional, List, Dict
+
+from ..domain.entities import EmbeddingJob, JobStatus, HealthStatus, JobPriority
+from ..domain.repositories import IJobRepository, IAudioEmbedder, IHealthProvider, IVectorRepository
+from ..infrastructure.logging.context import set_trace_id, get_trace_id
+
+logger = logging.getLogger(__name__)
+
+class CreateEmbeddingJob:
+    def __init__(self, repository: IJobRepository):
+        self.repository = repository
+
+    async def execute(self, track_id: str, file_path: str, priority: JobPriority = JobPriority.NORMAL, max_concurrent: int = 0, cooldown: int = 30) -> EmbeddingJob:
+        # 1. Business Rule: Deduplication/Caching
+        existing_job = await self.repository.find_by_track_id(track_id)
+        if existing_job and existing_job.status in [JobStatus.COMPLETED, JobStatus.PROCESSING, JobStatus.PENDING]:
+            logger.info(f"Using existing job {existing_job.id} for track {track_id}")
+            return existing_job
+
+        job = EmbeddingJob(
+            id=str(uuid.uuid4()),
+            track_id=track_id,
+            file_path=file_path,
+            status=JobStatus.PENDING,
+            priority=priority
+        )
+        await self.repository.save(job)
+        logger.info(f"Created embedding job {job.id} for track {track_id}")
+        return job
+
+class ProcessEmbeddingJob:
+    _semaphore: Optional[asyncio.Semaphore] = None
+
+    def __init__(self, repository: IJobRepository, embedder: IAudioEmbedder, vector_repo: IVectorRepository, max_parallel: int = 4):
+        self.repository = repository
+        self.embedder = embedder
+        self.vector_repo = vector_repo
+        
+        # Initialize semaphore once with provided limit
+        if ProcessEmbeddingJob._semaphore is None:
+            limit = max_parallel if max_parallel > 0 else 4
+            ProcessEmbeddingJob._semaphore = asyncio.Semaphore(limit)
+
+    async def execute(self, job_id: str) -> None:
+        set_trace_id(job_id) # Use job_id as trace_id for consistency
+        
+        # Adding a tiny jitter/delay to avoid stampede on batch starts
+        await asyncio.sleep(0.1) 
+
+        async with self._semaphore:
+            job = await self.repository.get_by_id(job_id)
+        
+        if not job or job.status != JobStatus.PENDING:
+            if job and job.status == JobStatus.COMPLETED:
+                logger.info(f"SKIP | Job {job_id} already completed for track {job.track_id}")
+            else:
+                logger.warning(f"SKIP | Job {job_id} not found or not pending (status: {job.status if job else 'N/A'})")
+            return
+
+        logger.info(f"START | Processing embedding for track {job.track_id} | Path: {job.file_path}")
+        
+        # IMPORT REGISTRY HERE TO AVOID CIRCULAR IMPORTS
+        from ..infrastructure.plugin_registry import PluginRegistry
+        registry = PluginRegistry.get_instance()
+
+        try:
+            # Update to processing
+            job = job.mark_processing()
+            await self.repository.save(job)
+
+            # 1. Generate Audio Spectral Embeddings (Brain Core)
+            embedding = await self.embedder.generate_embedding(job.file_path)
+            model_version = self.embedder.get_model_version()
+
+            # 2. Persist Audio Embeddings to Postgres (Audio Spectral)
+            try:
+                await self.vector_repo.save_embedding(
+                    track_id=job.track_id,
+                    embedding=embedding,
+                    model_name=model_version
+                )
+            except Exception as ve:
+                logger.error(f"FAIL | Vector storage | track={job.track_id} | Error: {ve}")
+
+            # 3. Orchestrate: Demucs (Stems)
+            if registry.is_enabled("demucs"):
+                demucs_url = registry.get_url("demucs")
+                logger.info(f"ORCHESTRATION | Triggering Stems separation via Demucs at {demucs_url}")
+                try:
+                    async with httpx.AsyncClient(timeout=5.0) as client:
+                        # Map priority enum to string if needed
+                        payload = {
+                            "track_id": job.track_id,
+                            "file_path": job.file_path,
+                            "priority": job.priority.value if hasattr(job.priority, 'value') else job.priority
+                        }
+                        await client.post(f"{demucs_url}/jobs", json=payload)
+                except Exception as dex:
+                    logger.warning(f"FAIL | Orchestration Demucs | Error: {dex}")
+
+            # 4. Orchestrate: Knowledge (Lyrics)
+            if registry.is_enabled("knowledge"):
+                knowledge_url = registry.get_url("knowledge")
+                logger.info(f"ORCHESTRATION | Triggering Lyrics analysis via Knowledge at {knowledge_url}")
+                try:
+                    async with httpx.AsyncClient(timeout=5.0) as client:
+                        payload = {
+                            "track_id": job.track_id,
+                            "file_path": job.file_path,
+                            "priority": job.priority.value if hasattr(job.priority, 'value') else job.priority
+                        }
+                        await client.post(f"{knowledge_url}/jobs", json=payload)
+                except Exception as kex:
+                     logger.warning(f"FAIL | Orchestration Knowledge | Error: {kex}")
+
+            # Complete Job
+            job = job.mark_completed(embedding, model_version)
+            await self.repository.save(job)
+            
+            logger.info(f"DONE | Successfully processed embedding for track {job.track_id}")
+
+        except Exception as e:
+            logger.exception(f"FAIL | Processing job {job_id} | Error: {str(e)}")
+            job = job.mark_failed(str(e))
+            await self.repository.save(job)
+
+class IngestStems:
+    def __init__(self, embedder: IAudioEmbedder, vector_repo: IVectorRepository):
+        self.embedder = embedder
+        self.vector_repo = vector_repo
+
+    async def execute(self, track_id: str, stems: Dict[str, str]) -> None:
+        logger.info(f"START | Ingesting stems for track {track_id}")
+        model_version = self.embedder.get_model_version()
+        
+        for stem_type, rel_path in stems.items():
+            try:
+                # Resolve full path from stems volume
+                file_path = os.path.join(settings.STEMS_PATH, rel_path)
+                logger.info(f"Processing stem {stem_type} for track {track_id} | Path: {file_path}")
+                embedding = await self.embedder.generate_embedding(file_path)
+                await self.vector_repo.save_stem_embedding(
+                    track_id=track_id, 
+                    embedding=embedding, 
+                    stem_type=stem_type, 
+                    model_name=model_version
+                )
+            except Exception as e:
+                logger.error(f"FAIL | Stem embedding type={stem_type} track={track_id} | Error: {e}")
+        
+        logger.info(f"DONE | All stems ingested for track {track_id}")
+
+class GetJobStatus:
+    def __init__(self, repository: IJobRepository):
+        self.repository = repository
+
+    async def execute(self, job_id: str) -> Optional[EmbeddingJob]:
+        return await self.repository.get_by_id(job_id)
+
+class GetHealth:
+    def __init__(self, provider: IHealthProvider):
+        self.provider = provider
+
+    async def execute(self) -> HealthStatus:
+        return await self.provider.get_status()
+
+class GetRecommendations:
+    def __init__(self, vector_repo: IVectorRepository):
+        self.vector_repo = vector_repo
+
+    async def execute(self, track_id: Optional[str] = None, limit: int = 10, diversity: float = 0.2, weights: dict = None) -> List[dict]:
+        weights = weights or {"audio": 1.0, "lyrics": 0.0, "visual": 0.0, "stems": 0.0}
+        if track_id:
+            # 1. Fetch a larger pool of tracks to infer artists/albums
+            # We fetch 3x the limit or at least 30 to get good statistics
+            fetch_limit = max(limit * 3, 30)
+            
+            tracks = await self.vector_repo.get_similar_tracks(track_id, fetch_limit, diversity, weights)
+            
+            # 2. Aggregate scores for Artists and Albums
+            artist_scores = {}
+            album_scores = {}
+            
+            for t in tracks:
+                score = t.get("score", 0)
+                aid = t.get("artist_id")
+                alid = t.get("album_id")
+                
+                if aid:
+                    artist_scores[aid] = artist_scores.get(aid, 0) + score
+                if alid:
+                    album_scores[alid] = album_scores.get(alid, 0) + score
+
+            # 3. Create Recommendations for Top Artists/Albums
+            # Sort by total score
+            top_artists = sorted(artist_scores.items(), key=lambda x: x[1], reverse=True)[:3]
+            top_albums = sorted(album_scores.items(), key=lambda x: x[1], reverse=True)[:3]
+            
+            recommendations = []
+            
+            # Add Tracks (trunk to original limit)
+            recommendations.extend(tracks[:limit])
+            
+            # Add Artists (if score is significant)
+            for aid, total_score in top_artists:
+                 recommendations.append({
+                     "id": aid,
+                     "type": "artist",
+                     "score": total_score / fetch_limit, # Normalize roughly
+                     "reason": "Inferred from similar tracks"
+                 })
+
+            # Add Albums
+            for alid, total_score in top_albums:
+                 recommendations.append({
+                     "id": alid,
+                     "type": "album",
+                     "score": total_score / fetch_limit,
+                     "reason": "Inferred from similar tracks"
+                 })
+                 
+            return recommendations
+        else:
+            # Discovery mode
+            return await self.vector_repo.get_discovery_tracks(limit)

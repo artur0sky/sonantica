@@ -1,6 +1,11 @@
 # Sonántica - Docker Compose Configuration
 # Philosophy: "User autonomy" - flexible volume mounting
 #
+# Hardware Optimization Stack:
+# - CPU: AMD Ryzen 7 5700X (8 Cores / 16 Threads)
+# - RAM: 48GB DDR4 3200MHz
+# - GPU: NVIDIA GeForce GTX 1080 Turbo Asus (8GB GDDR5X, CUDA Support)
+# - OS: Windows 10 Pro 21H2
 # Usage:
 #   Production:  docker compose up -d
 #   Stop:        docker compose down
@@ -18,7 +23,7 @@ services:
     restart: always
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-sonantica}
-      PSQL_PASSWORD: ${PSQL_PASSWORD:-sonantica}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sonantica}
       POSTGRES_DB: ${POSTGRES_DB:-sonantica}
       ENCODING: UTF8
     volumes:
@@ -36,38 +41,53 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
     labels:
       com.sonantica.description: "Primary Data Store"
 
   redis:
-    # Use custom build context from data/redis (contains redis.conf)
     build:
       context: ./data/redis
       dockerfile: Dockerfile
-    environment:
-      TZ: ${TZ:-UTC}
-      REDIS_HOST: redis
-      REDIS_PORT: ${REDIS_PORT:-6379}
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-sonantica}
     container_name: sonantica-redis
     restart: always
+    environment:
+      - TZ=${TZ:-UTC}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-sonantica}
+      - REDIS_MAX_MEMORY=${REDIS_MAX_MEMORY:-512mb}
+      - REDIS_MAX_MEMORY_POLICY=${REDIS_MAX_MEMORY_POLICY:-volatile-lru}
     volumes:
-      # Data persistence - Uses named volume for safety
       - redis_data:/data
       - ./data/redis/dump:/dump
-      - ./data/redis/logs:/var/log/redis
+      - ./data/redis/logs:/var/log/redis:rw
     networks:
       - sonantica-net
     ports:
       - "127.0.0.1:${REDIS_PORT:-6379}:${REDIS_PORT:-6379}"
-    command: [ "redis-server", "/usr/local/etc/redis/redis.conf", "--port", "${REDIS_PORT:-6379}", "--requirepass", "${REDIS_PASSWORD:-sonantica}" ]
+    command: [ "redis-server", "/usr/local/etc/redis/redis.conf" ]
     healthcheck:
-      test: [ "CMD", "redis-cli", "-p", "${REDIS_PORT:-6379}", "-a", "${REDIS_PASSWORD:-sonantica}", "ping" ]
+      test: [ "CMD", "redis-cli", "-h", "localhost", "-p", "${REDIS_PORT:-6379}", "-a", "${REDIS_PASSWORD:-sonantica}", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
     labels:
-      com.sonantica.description: "Cache & Message Broker"
+      com.sonantica.description: "Optimized Cache & Message Broker (Redis 7.4)"
 
   # ============================================
   # CORE SERVICES (High Performance)
@@ -88,6 +108,10 @@ services:
       - ANALYTICS_ENABLED=${ANALYTICS_ENABLED:-true}
       - ANALYTICS_RETENTION_DAYS=${ANALYTICS_RETENTION_DAYS:-90}
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost,http://localhost:3000,http://localhost:5173,capacitor://localhost,http://192.168.100.6:3000,http://192.168.100.6:5173,http://192.168.100.6}
+      - DEMUCS_URL=${DEMUCS_URL:-http://sonantica-plugin-demucs:8080}
+      - BRAIN_URL=${BRAIN_URL:-http://sonantica-plugin-brain:8080}
+      - KNOWLEDGE_URL=${KNOWLEDGE_URL:-http://sonantica-plugin-knowledge:8080}
+      - DOWNLOADER_URL=${DOWNLOADER_URL:-http://sonantica-plugin-downloader:8080}
       # Logging Configuration
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - LOG_FORMAT=${LOG_FORMAT:-json}
@@ -95,7 +119,6 @@ services:
     volumes:
       - ${MEDIA_PATH:-./media}:/media:ro
       - ${BUCKETS_PATH:-./buckets}:/buckets:ro
-      - ${MEDIA_PATH:-./media}:/media:ro
       - ./config:/config:ro
       - ./logs/core:/var/log/sonantica
       - sonantica_cache:/covers
@@ -138,7 +161,6 @@ services:
     volumes:
       - ${MEDIA_PATH:-./media}:/media:ro
       - ${BUCKETS_PATH:-./buckets}:/buckets:ro
-      - ${MEDIA_PATH:-./media}:/media:ro
       - ./logs/worker:/var/log/sonantica
       - sonantica_cache:/covers
     depends_on:
@@ -148,7 +170,7 @@ services:
         condition: service_healthy
     networks:
       - sonantica-net
-    command: ["celery", "-A", "worker.app", "worker", "--loglevel=info", "-Q", "celery", "-c", "2", "-E"]
+    command: [ "celery", "-A", "worker.app", "worker", "--loglevel=info", "-Q", "celery", "-c", "2", "-E" ]
     labels:
       com.sonantica.description: "Audio Analysis & Analytics Worker (Celery)"
     user: root
@@ -182,7 +204,7 @@ services:
         condition: service_healthy
     networks:
       - sonantica-net
-    command: ["celery", "-A", "worker.app", "beat", "--loglevel=info"]
+    command: [ "celery", "-A", "worker.app", "beat", "--loglevel=info" ]
     labels:
       com.sonantica.description: "Periodic Task Scheduler (Celery Beat)"
     user: root
@@ -210,10 +232,221 @@ services:
         condition: service_healthy
     networks:
       - sonantica-net
-    command: ["celery", "-A", "worker.app", "flower", "--port=5555", "--inspect-timeout=3000"]
+    command: [ "celery", "-A", "worker.app", "flower", "--port=5555", "--inspect-timeout=3000" ]
     labels:
       com.sonantica.description: "Celery Task Monitor"
     user: root
+
+  # ============================================
+  # AI PLUGINS (Optional - Opt-in via --profile ai)
+  # ============================================
+  plugin-demucs:
+    build:
+      context: ./services/ai-plugins/demucs
+      dockerfile: Dockerfile
+    container_name: sonantica-plugin-demucs
+    profiles: [ "ai" ] # Opt-in only - user must explicitly enable
+    restart: unless-stopped
+    environment:
+      - TORCH_HOME=/model_cache/torch
+      - HF_HOME=/model_cache/huggingface
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-sonantica}
+      - MEDIA_PATH=/media
+      - OUTPUT_PATH=/stems
+      - MAX_CONCURRENT_JOBS=${DEMUCS_MAX_CONCURRENT_JOBS:-2}
+      - CONCURRENCY_COOLDOWN_SECONDS=${DEMUCS_COOLDOWN_SECONDS:-45}
+      - JOB_TIMEOUT_SECONDS=${AI_JOB_TIMEOUT:-600}
+      - INTERNAL_API_SECRET=${INTERNAL_API_SECRET:-generate-secure-token-here}
+      # Logging Configuration
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+      - LOG_ENABLED=${LOG_ENABLED:-true}
+    volumes:
+      - ${MEDIA_PATH:-./media}:/media:ro
+      - sonantica_stems:/stems
+      - sonantica_ai_cache:/model_cache # Critical for persistence
+      - ./logs/ai/demucs:/var/log/sonantica
+    networks:
+      - sonantica-net
+    depends_on:
+      redis:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8091:8080" # Internal API for debugging
+    labels:
+      com.sonantica.description: "AI Stem Separation Plugin (Demucs)"
+    user: root
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 3G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [ gpu ]
+
+  plugin-brain:
+    build:
+      context: ./services/ai-plugins/brain
+      dockerfile: Dockerfile
+    container_name: sonantica-plugin-brain
+    profiles: [ "ai" ]
+    restart: unless-stopped
+    environment:
+      - TORCH_HOME=/model_cache/torch
+      - HF_HOME=/model_cache/huggingface
+      - POSTGRES_URL=postgres://${POSTGRES_USER:-sonantica}:${PSQL_PASSWORD:-sonantica}@postgres:${PSQL_PORT:-5432}/${POSTGRES_DB:-sonantica}?sslmode=disable
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-sonantica}
+      - MEDIA_PATH=/media
+      - EMBEDDING_MODEL=${AI_EMBEDDING_MODEL:-laion/clap-htsat-unfused}
+      - EMBEDDING_DIMENSION=${AI_EMBEDDING_DIM:-512}
+      - MAX_CONCURRENT_JOBS=${BRAIN_MAX_CONCURRENT_JOBS:-2}
+      - CONCURRENCY_COOLDOWN_SECONDS=${BRAIN_COOLDOWN_SECONDS:-30}
+      - INTERNAL_API_SECRET=${INTERNAL_API_SECRET:-generate-secure-token-here}
+      # Logging Configuration
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+      - LOG_ENABLED=${LOG_ENABLED:-true}
+    volumes:
+      - ${MEDIA_PATH:-./media}:/media:ro
+      - sonantica_stems:/stems:ro
+      - sonantica_ai_cache:/model_cache
+      - ./logs/ai/brain:/var/log/sonantica
+    networks:
+      - sonantica-net
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8092:8080" # Internal API for debugging
+    labels:
+      com.sonantica.description: "AI Audio Similarity Plugin (Brain)"
+    user: root
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 1G
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [ gpu ]
+
+  plugin-knowledge:
+    build:
+      context: ./services/ai-plugins/knowledge
+      dockerfile: Dockerfile
+    container_name: sonantica-plugin-knowledge
+    profiles: [ "ai" ]
+    restart: unless-stopped
+    environment:
+      - OLLAMA_HOST=${OLLAMA_HOST:-http://host.docker.internal:11434}
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-sonantica}
+      - POSTGRES_URL=postgres://${POSTGRES_USER:-sonantica}:${PSQL_PASSWORD:-sonantica}@postgres:${PSQL_PORT:-5432}/${POSTGRES_DB:-sonantica}?sslmode=disable
+      - INTERNAL_API_SECRET=${INTERNAL_API_SECRET:-generate-secure-token-here}
+      - MAX_CONCURRENT_JOBS=${KNOWLEDGE_MAX_CONCURRENT_JOBS:-5}
+      - CONCURRENCY_COOLDOWN_SECONDS=${KNOWLEDGE_COOLDOWN_SECONDS:-60}
+      - CACHE_TTL_HOURS=${AI_KNOWLEDGE_CACHE_TTL:-168} # 7 days default
+      # Logging Configuration
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+      - LOG_ENABLED=${LOG_ENABLED:-true}
+    volumes:
+      - ./logs/ai/knowledge:/var/log/sonantica
+    networks:
+      - sonantica-net
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8093:8080" # Internal API for debugging
+    labels:
+      com.sonantica.description: "AI Knowledge Enrichment Plugin (Ollama Client)"
+    user: root
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+  plugin-downloader:
+    build:
+      context: ./services/plugin-downloader
+      dockerfile: Dockerfile
+    container_name: sonantica-plugin-downloader
+    restart: unless-stopped
+    environment:
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-sonantica}
+      - CORE_INTERNAL_URL=http://stream-core:8080
+      - MEDIA_PATH=/media
+      - INTERNAL_API_SECRET=${INTERNAL_API_SECRET:-generate-secure-token-here}
+      - PYTHONPATH=/app
+      - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID:-}
+      - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET:-}
+      - SPOTIPY_CLIENT_ID=${SPOTIFY_CLIENT_ID:-}
+      - SPOTIPY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET:-}
+    volumes:
+      - ${MEDIA_PATH:-./media}:/media:rw
+      - ./logs/downloader:/var/log/sonantica
+    networks:
+      - sonantica-net
+    depends_on:
+      - stream-core
+    ports:
+      - "127.0.0.1:8094:8080"
+    labels:
+      com.sonantica.description: "Sound Hunter Downloader Plugin API (The Workshop)"
+
+  plugin-downloader-worker:
+    build:
+      context: ./services/plugin-downloader
+      dockerfile: Dockerfile
+    container_name: sonantica-plugin-downloader-worker
+    restart: unless-stopped
+    environment:
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-sonantica}
+      - CORE_INTERNAL_URL=http://stream-core:8080
+      - MEDIA_PATH=/media
+      - PYTHONPATH=/app
+      - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID:-}
+      - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET:-}
+      - SPOTIPY_CLIENT_ID=${SPOTIFY_CLIENT_ID:-}
+      - SPOTIPY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET:-}
+    volumes:
+      - ${MEDIA_PATH:-./media}:/media:rw
+      - ./logs/downloader-worker:/var/log/sonantica
+    networks:
+      - sonantica-net
+    command: [ "celery", "-A", "src.infrastructure.celery_app", "worker", "--loglevel=info", "-Q", "downloader" ]
+    depends_on:
+      - redis
+      - plugin-downloader
+    labels:
+      com.sonantica.description: "Sound Hunter Downloader Celery Worker"
 
   # ============================================
   # FRONTEND & PROXY
@@ -279,3 +512,11 @@ volumes:
     driver: local
   sonantica_cache:
     driver: local
+  # AI Plugin Volumes
+  sonantica_ai_cache:
+    driver: local
+    # Stores downloaded AI models (Torch, HuggingFace)
+    # Prevents re-downloading GBs on container restart
+  sonantica_stems:
+    driver: local
+    # Stores separated audio stems (vocals, drums, bass, other)

@@ -5,10 +5,12 @@
  * Automatically tracks all playback events.
  */
 
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { usePlaybackTracking } from '@sonantica/analytics';
 import { usePlayerStore } from '@sonantica/player-core';
 import { PlaybackState } from '@sonantica/shared';
+import { PluginService } from '../services/PluginService';
+import { useAICapabilities } from './useAICapabilities';
 
 /**
  * Hook to integrate playback analytics with the player
@@ -21,6 +23,7 @@ export function usePlaybackAnalytics() {
   const state = usePlayerStore((state) => state.state);
   const duration = usePlayerStore((state) => state.duration);
   const volume = usePlayerStore((state) => state.volume);
+  const { hasCapability } = useAICapabilities();
   
   const playerState = useMemo(() => ({
     isPlaying: state === PlaybackState.PLAYING,
@@ -42,6 +45,18 @@ export function usePlaybackAnalytics() {
     eqEnabled: false,
     dspEffects: [],
   }), [currentTrack, duration]);
+
+  // Auto-prioritize AI analysis on track change
+  useEffect(() => {
+    if (currentTrack?.id && state === PlaybackState.PLAYING) {
+      if (hasCapability('embeddings') || hasCapability('recommendations')) {
+        PluginService.analyzeTrack(currentTrack.id, 'embeddings').catch(() => {});
+      }
+      if (hasCapability('knowledge')) {
+        PluginService.analyzeTrack(currentTrack.id, 'knowledge').catch(() => {});
+      }
+    }
+  }, [currentTrack?.id, state, hasCapability]);
 
   // The hook handles progress and auto-start/pause tracking automatically
   usePlaybackTracking(trackOptions, playerState);

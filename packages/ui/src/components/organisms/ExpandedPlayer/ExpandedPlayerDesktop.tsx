@@ -15,6 +15,7 @@ import {
   TimelineSection,
   ControlsSection,
   NavigationFooter,
+  ScientificModeSection,
 } from "./sections";
 import type { ExpandedPlayerProps } from "./types";
 
@@ -27,6 +28,7 @@ interface DesktopLayoutProps extends ExpandedPlayerProps {
   duration: number;
   recommendationsOpen: boolean;
   isQueueOpen: boolean;
+  scientificMode?: boolean;
   onClose: () => void;
   onPlay: () => void;
   onPause: () => void;
@@ -38,6 +40,7 @@ interface DesktopLayoutProps extends ExpandedPlayerProps {
   onToggleRecommendations: () => void;
   onToggleLyrics: () => void;
   onToggleQueue: () => void;
+  onToggleScientificMode?: () => void;
 }
 
 export function ExpandedPlayerDesktop({
@@ -61,15 +64,21 @@ export function ExpandedPlayerDesktop({
   onToggleRecommendations,
   onToggleLyrics,
   onToggleQueue,
+  onToggleScientificMode,
+  scientificMode,
 }: DesktopLayoutProps) {
   return (
     <div className="hidden lg:grid lg:grid-cols-[1.618fr_1fr] lg:gap-12 xl:gap-20 h-full p-8 xl:p-12 2xl:p-16 max-w-screen-2xl mx-auto items-stretch overflow-hidden">
-      {/* LEFT: Pure Cover Art - Fibonacci's Largest Square (φ²) */}
-      <CoverArtSection
-        coverArt={currentTrack.metadata?.coverArt}
-        trackTitle={currentTrack.metadata?.title || "Unknown"}
-        enableGestures={false}
-      />
+      {/* LEFT: Pure Cover Art OR Scientific Mode */}
+      {scientificMode ? (
+        <ScientificModeSection />
+      ) : (
+        <CoverArtSection
+          coverArt={currentTrack.metadata?.coverArt}
+          trackTitle={currentTrack.metadata?.title || "Unknown"}
+          enableGestures={false}
+        />
+      )}
 
       {/* RIGHT: Content Column */}
       <div className="grid grid-rows-[auto_1fr] gap-8 min-h-0 overflow-hidden">
@@ -143,6 +152,8 @@ export function ExpandedPlayerDesktop({
             onToggleRecommendations={onToggleRecommendations}
             onToggleLyrics={onToggleLyrics}
             onToggleQueue={onToggleQueue}
+            scientificMode={scientificMode}
+            onToggleScientificMode={onToggleScientificMode}
           />
         </div>
       </div>

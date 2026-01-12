@@ -9,4 +9,5 @@ export { ArtistPhotoSection } from "./ArtistPhotoSection";
 export { WidgetsSection } from "./WidgetsSection";
 export { TimelineSection } from "./TimelineSection";
 export { ControlsSection } from "./ControlsSection";
-export { NavigationFooter } from "./NavigationFooter";
+export * from './NavigationFooter';
+export * from './ScientificModeSection';

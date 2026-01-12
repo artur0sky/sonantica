@@ -11,6 +11,8 @@ export interface ExpandedPlayerProps {
   /** Active theme colors */
   dominantColor?: string;
   contrastColor?: string;
+  scientificMode?: boolean;
+  onToggleScientificMode?: () => void;
 }
 
 export interface CoverArtSectionProps {
@@ -54,6 +56,8 @@ export interface NavigationFooterProps {
   onToggleRecommendations: () => void;
   onToggleLyrics: () => void;
   onToggleQueue: () => void;
+  scientificMode?: boolean;
+  onToggleScientificMode?: () => void;
 }
 
 export type DragDirection = "left" | "right" | null;

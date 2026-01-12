@@ -8,18 +8,23 @@ import (
 )
 
 type Config struct {
-	Port             string   `mapstructure:"PORT"`
-	PostgresURL      string   `mapstructure:"POSTGRES_URL"`
-	RedisHost        string   `mapstructure:"REDIS_HOST"`
-	RedisPort        string   `mapstructure:"REDIS_PORT"`
-	RedisPassword    string   `mapstructure:"REDIS_PASSWORD"`
-	MediaPath        string   `mapstructure:"MEDIA_PATH"`
-	AllowedOrigins   []string `mapstructure:"ALLOWED_ORIGINS"`
-	LogLevel         string   `mapstructure:"LOG_LEVEL"`
-	LogFormat        string   `mapstructure:"LOG_FORMAT"`
-	LogEnabled       bool     `mapstructure:"LOG_ENABLED"`
-	AnalyticsEnabled bool     `mapstructure:"ANALYTICS_ENABLED"`
-	CoverPath        string   `mapstructure:"COVER_PATH"`
+	Port              string   `mapstructure:"PORT"`
+	PostgresURL       string   `mapstructure:"POSTGRES_URL"`
+	RedisHost         string   `mapstructure:"REDIS_HOST"`
+	RedisPort         string   `mapstructure:"REDIS_PORT"`
+	RedisPassword     string   `mapstructure:"REDIS_PASSWORD"`
+	MediaPath         string   `mapstructure:"MEDIA_PATH"`
+	AllowedOrigins    []string `mapstructure:"ALLOWED_ORIGINS"`
+	LogLevel          string   `mapstructure:"LOG_LEVEL"`
+	LogFormat         string   `mapstructure:"LOG_FORMAT"`
+	LogEnabled        bool     `mapstructure:"LOG_ENABLED"`
+	AnalyticsEnabled  bool     `mapstructure:"ANALYTICS_ENABLED"`
+	CoverPath         string   `mapstructure:"COVER_PATH"`
+	InternalAPISecret string   `mapstructure:"INTERNAL_API_SECRET"`
+	DemucsURL         string   `mapstructure:"DEMUCS_URL"`
+	BrainURL          string   `mapstructure:"BRAIN_URL"`
+	KnowledgeURL      string   `mapstructure:"KNOWLEDGE_URL"`
+	DownloaderURL     string   `mapstructure:"DOWNLOADER_URL"`
 }
 
 func Load() *Config {
@@ -37,6 +42,11 @@ func Load() *Config {
 	v.SetDefault("ANALYTICS_ENABLED", true)
 	v.SetDefault("COVER_PATH", "/covers")
 	v.SetDefault("ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:3000,http://localhost,capacitor://localhost")
+	v.SetDefault("INTERNAL_API_SECRET", "generate-secure-token-here")
+	v.SetDefault("DEMUCS_URL", "http://sonantica-plugin-demucs:8080")
+	v.SetDefault("BRAIN_URL", "http://sonantica-plugin-brain:8080")
+	v.SetDefault("KNOWLEDGE_URL", "http://sonantica-plugin-knowledge:8080")
+	v.SetDefault("DOWNLOADER_URL", "http://sonantica-plugin-downloader:8080")
 
 	// 2. Read from Environment
 	v.AutomaticEnv()
@@ -55,6 +65,11 @@ func Load() *Config {
 	_ = v.BindEnv("LOG_ENABLED")
 	_ = v.BindEnv("ANALYTICS_ENABLED")
 	_ = v.BindEnv("COVER_PATH")
+	_ = v.BindEnv("INTERNAL_API_SECRET")
+	_ = v.BindEnv("DEMUCS_URL")
+	_ = v.BindEnv("BRAIN_URL")
+	_ = v.BindEnv("KNOWLEDGE_URL")
+	_ = v.BindEnv("DOWNLOADER_URL")
 
 	// 3. Read from Config File (Optional)
 	v.SetConfigName("config")

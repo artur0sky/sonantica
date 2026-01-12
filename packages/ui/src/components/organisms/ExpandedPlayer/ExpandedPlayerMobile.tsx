@@ -5,10 +5,11 @@
  * No external animation library dependencies
  */
 
-import { PlayerButton } from "../../atoms";
+import { ActionIconButton, PlayerButton } from "../../atoms";
 import { TrackRating } from "../../molecules";
 import { IconChevronDown, IconDots } from "@tabler/icons-react";
 import { formatArtists } from "@sonantica/shared";
+import { isCapacitor, cn } from "../../../utils";
 import {
   CoverArtSection,
   TimelineSection,
@@ -68,7 +69,14 @@ export function ExpandedPlayerMobile({
   contrastColor,
 }: MobileLayoutProps) {
   return (
-    <div className="lg:hidden relative flex flex-col h-full bg-transparent overflow-hidden overscroll-none select-none pt-[max(env(safe-area-inset-top),2rem)] lg:pt-[env(safe-area-inset-top)]">
+    <div
+      className={cn(
+        "lg:hidden relative flex flex-col h-full bg-transparent overflow-hidden overscroll-none select-none",
+        isCapacitor()
+          ? "pt-[max(env(safe-area-inset-top),2rem)] lg:pt-[env(safe-area-inset-top)]"
+          : "pt-0"
+      )}
+    >
       {/* Mobile Sticky Header - Transparent */}
       <header className="h-14 flex flex-none justify-between items-center px-6 md:px-12 bg-transparent z-30">
         <PlayerButton

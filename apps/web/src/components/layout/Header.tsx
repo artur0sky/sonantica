@@ -13,6 +13,7 @@ import {
   ContextMenu,
   useContextMenu,
   useUIStore,
+  isCapacitor,
   type ContextMenuItem,
 } from "@sonantica/ui";
 import { useHeaderLogic } from "../../hooks/useHeaderLogic";
@@ -56,9 +57,11 @@ export function Header() {
       <header
         className={cn(
           "flex items-center px-3 sm:px-4 md:px-6 gap-2 sm:gap-4 select-none transition-all duration-500 ease-in-out",
-          "h-14 sm:h-16 border-b border-border bg-surface z-30",
-          isPlayerExpanded &&
-            "opacity-0 -translate-y-full h-0 min-h-0 pointer-events-none z-0 border-none"
+          "border-b border-border bg-surface z-30 flex-none overflow-hidden",
+          isCapacitor() && "pt-[env(safe-area-inset-top)]",
+          isPlayerExpanded
+            ? "h-0 opacity-0 -translate-y-full pointer-events-none border-none"
+            : "h-14 sm:h-16 opacity-100 translate-y-0"
         )}
       >
         {/* Left: Logo (Toggles Sidebar) */}

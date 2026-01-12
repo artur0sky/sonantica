@@ -1,12 +1,4 @@
-/**
- * EQ Sidebar
- *
- * "If a function alters the sound, it must be optional, explainable, and reversible."
- *
- * Professional equalizer interface for Sonántica.
- * Refactored using Atomic Design (Organisms) and CSS animations.
- */
-
+import React from "react";
 import { IconWaveSquare } from "@tabler/icons-react";
 import {
   Badge,
@@ -21,7 +13,9 @@ interface EQSidebarProps {
   isCollapsed?: boolean;
 }
 
-export function EQSidebar({ isCollapsed }: EQSidebarProps) {
+export const EQSidebar: React.FC<EQSidebarProps> = ({
+  isCollapsed = false,
+}) => {
   const {
     config,
     presets,
@@ -104,4 +98,4 @@ export function EQSidebar({ isCollapsed }: EQSidebarProps) {
       )}
     </SidebarContainer>
   );
-}
+};

@@ -119,7 +119,7 @@ export function MobileOverlays({
         <aside
           className={cn(
             "fixed inset-y-0 left-0 w-[280px] z-[70]",
-            "shadow-2xl border-r border-white/10 overflow-y-auto",
+            "border-r border-white/10 overflow-y-auto",
             "pt-[max(env(safe-area-inset-top),2rem)]",
             "gpu-accelerated transition-transform",
             transitionEnabled && "animate-in slide-in-from-left"
@@ -135,7 +135,7 @@ export function MobileOverlays({
         <aside
           className={cn(
             "fixed inset-y-0 right-0 w-[320px] z-[70]",
-            "shadow-2xl border-l border-white/10 overflow-y-auto",
+            "border-l border-white/10 overflow-y-auto",
             "pt-[max(env(safe-area-inset-top),2rem)]",
             "gpu-accelerated transition-transform",
             transitionEnabled && "animate-in slide-in-from-right"
@@ -151,7 +151,7 @@ export function MobileOverlays({
         <aside
           className={cn(
             "fixed inset-y-0 right-0 w-[320px] z-[70]",
-            "shadow-2xl border-l border-white/10 overflow-y-auto",
+            "border-l border-white/10 overflow-y-auto",
             "pt-[max(env(safe-area-inset-top),2rem)]",
             "gpu-accelerated transition-transform",
             transitionEnabled && "animate-in slide-in-from-right"
@@ -169,7 +169,7 @@ export function MobileOverlays({
         <aside
           className={cn(
             "fixed inset-y-0 right-0 w-[320px] z-[70]",
-            "shadow-2xl border-l border-white/10 overflow-y-auto",
+            "border-l border-white/10 overflow-y-auto",
             "pt-[max(env(safe-area-inset-top),2rem)]",
             "gpu-accelerated transition-transform",
             transitionEnabled && "animate-in slide-in-from-right"
@@ -187,7 +187,7 @@ export function MobileOverlays({
         <aside
           className={cn(
             "fixed inset-y-0 right-0 w-[320px] z-[70]",
-            "shadow-2xl border-l border-white/10 overflow-y-auto",
+            "border-l border-white/10 overflow-y-auto",
             "pt-[max(env(safe-area-inset-top),2rem)]",
             "gpu-accelerated transition-transform",
             transitionEnabled && "animate-in slide-in-from-right"

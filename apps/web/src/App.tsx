@@ -72,6 +72,26 @@ const PlaylistDetailPage = lazy(() =>
     default: m.PlaylistDetailPage,
   }))
 );
+const LibraryPage = lazy(() =>
+  import("./features/library/pages/LibraryPage").then((m) => ({
+    default: m.LibraryPage,
+  }))
+);
+const DSPPage = lazy(() =>
+  import("./features/player/pages/DSPPage").then((m) => ({
+    default: m.DSPPage,
+  }))
+);
+const RecommendationsPage = lazy(() =>
+  import("./features/recommendations/pages/RecommendationsPage").then((m) => ({
+    default: m.RecommendationsPage,
+  }))
+);
+const WorkshopPage = lazy(() =>
+  import("./features/downloader/pages/WorkshopPage").then((m) => ({
+    default: m.WorkshopPage,
+  }))
+);
 
 const PageLoader = () => (
   <div className="flex items-center justify-center min-h-[50vh] text-text-muted">
@@ -142,6 +162,16 @@ function App() {
                         path="/playlist/:id"
                         component={PlaylistDetailPage}
                       />
+
+                      {/* Hubs */}
+                      <Route path="/library" component={LibraryPage} />
+                      <Route path="/dsp" component={DSPPage} />
+                      <Route
+                        path="/recommendations"
+                        component={RecommendationsPage}
+                      />
+                      {/* Workshop (Downloader) */}
+                      <Route path="/workshop" component={WorkshopPage} />
 
                       {/* 404 */}
                       <Route>

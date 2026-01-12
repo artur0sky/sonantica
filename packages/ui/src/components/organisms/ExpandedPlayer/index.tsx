@@ -41,6 +41,8 @@ export function ExpandedPlayer({
     toggleRecommendations,
     isQueueOpen,
     toggleQueue,
+    scientificMode,
+    toggleScientificMode,
   } = useUIStore();
 
   // Queue state
@@ -78,6 +80,8 @@ export function ExpandedPlayer({
     onToggleRecommendations: toggleRecommendations,
     onToggleLyrics: toggleLyrics,
     onToggleQueue: toggleQueue,
+    scientificMode,
+    onToggleScientificMode: toggleScientificMode,
     onLongPressArt,
     dominantColor,
     contrastColor,

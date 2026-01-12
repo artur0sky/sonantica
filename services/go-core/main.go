@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -13,6 +14,10 @@ import (
 	"sonantica-core/cache"
 	"sonantica-core/config"
 	"sonantica-core/database"
+	smart_scanner "sonantica-core/internal/analytics/scanner"
+	"sonantica-core/internal/plugins/application"
+	domain "sonantica-core/internal/plugins/domain"
+	"sonantica-core/internal/plugins/infrastructure"
 	"sonantica-core/scanner"
 	"sonantica-core/shared"
 	"sonantica-core/shared/logger"
@@ -55,6 +60,67 @@ func main() {
 	slog.Info("Starting Scanner Scheduler", "path", cfg.MediaPath, "interval", "1h")
 	scanner.StartScanner(cfg.MediaPath, 1*time.Hour)
 
+	// 6.0 Initialize Smart Scanner
+	smartScanner := smart_scanner.NewSmartScanner(database.DB, cache.GetClient())
+
+	// 6.1 Initialize AI Plugins
+	pluginClient := infrastructure.NewPluginClient(cfg.InternalAPISecret)
+	pluginManager := application.NewManager(pluginClient, database.DB, smartScanner)
+
+	// Register known internal plugins from config
+	ctx := context.Background()
+	if cfg.DemucsURL != "" {
+		demucsFallback := &domain.Manifest{
+			ID:          "demucs",
+			Name:        "Demucs Separation",
+			Capability:  domain.CapabilityStemSeparation,
+			Description: "AI Stem Separation (Offline Fallback)",
+			Version:     "1.0.0",
+		}
+		if err := pluginManager.EnsurePluginRegistered(ctx, cfg.DemucsURL, demucsFallback); err != nil {
+			slog.Error("Failed to register Demucs plugin", "error", err)
+		}
+	}
+	if cfg.BrainURL != "" {
+		brainFallback := &domain.Manifest{
+			ID:          "brain",
+			Name:        "Sonántica Brain",
+			Capability:  domain.CapabilityRecommendations,
+			Description: "AI Similarity & Recommendations (Offline Fallback)",
+			Version:     "1.0.0",
+		}
+		if err := pluginManager.EnsurePluginRegistered(ctx, cfg.BrainURL, brainFallback); err != nil {
+			slog.Error("Failed to register Brain plugin", "error", err)
+		}
+	}
+	if cfg.KnowledgeURL != "" {
+		knowledgeFallback := &domain.Manifest{
+			ID:          "knowledge",
+			Name:        "Knowledge Engine",
+			Capability:  domain.CapabilityKnowledge,
+			Description: "Metadata Enrichment (Offline Fallback)",
+			Version:     "1.0.0",
+		}
+		if err := pluginManager.EnsurePluginRegistered(ctx, cfg.KnowledgeURL, knowledgeFallback); err != nil {
+			slog.Error("Failed to register Knowledge plugin", "error", err)
+		}
+	}
+	if cfg.DownloaderURL != "" {
+		downloaderFallback := &domain.Manifest{
+			ID:          "sonantica-downloader",
+			Name:        "The Workshop",
+			Capability:  domain.CapabilityDownload,
+			Description: "High-Fidelity Preservation Plugin",
+			Version:     "0.2.0",
+		}
+		if err := pluginManager.EnsurePluginRegistered(ctx, cfg.DownloaderURL, downloaderFallback); err != nil {
+			slog.Error("Failed to register Downloader plugin", "error", err)
+		}
+	}
+
+	// Start health monitoring (every 5 minutes)
+	pluginManager.StartMonitoring(ctx, 5*time.Minute)
+
 	// 7. Initialize Router
 	r := chi.NewRouter()
 
@@ -65,24 +131,41 @@ func main() {
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
-	r.Use(httprate.LimitByIP(100, 1*time.Minute)) // Rate Limit: 100 req/min per IP
-	r.Use(shared.ErrorMiddleware)                 // Global error handling and panic recovery
-	r.Use(middleware.Compress(5))
 
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   cfg.AllowedOrigins,
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token", "Range", "Origin"},
 		ExposedHeaders:   []string{"Link", "Content-Length", "Content-Range", "Accept-Ranges"},
 		AllowCredentials: true,
 		MaxAge:           300,
 	}))
 
+	r.Use(httprate.LimitByIP(1000, 1*time.Minute)) // Rate Limit: 1000 req/min per IP (Increased for streaming/queuing)
+	r.Use(shared.ErrorMiddleware)                  // Global error handling and panic recovery
+	r.Use(middleware.Compress(5))
+
 	// 9. Routes
 	r.HandleFunc("/metrics", promhttp.Handler().ServeHTTP)
 	r.Get("/health", healthCheck)
 	r.Get("/stream/{id}", api.StreamTrack)
 	r.Get("/api/cover/*", api.GetAlbumCover)
+
+	// Analytics Routes
+	analyticsHandler := handlers.NewAnalyticsHandler()
+	analyticsHandler.RegisterRoutes(r)
+
+	// AI Routes
+	aiHandler := api.NewAIHandler(pluginManager)
+	aiHandler.RegisterAIRoutes(r)
+
+	// Plugin Management Routes
+	pluginsHandler := api.NewPluginsHandler(pluginManager)
+	pluginsHandler.RegisterRoutes(r)
+
+	// Preserve / Downloader Routes
+	preserveHandler := api.NewPreserveHandler(pluginManager, cfg.InternalAPISecret)
+	preserveHandler.RegisterRoutes(r)
 
 	r.Route("/api/library", func(r chi.Router) {
 		r.Get("/tracks", api.GetTracks)
@@ -103,10 +186,6 @@ func main() {
 		r.Post("/start", api.ScanLibrary)
 		r.Get("/status", api.GetScanStatus)
 	})
-
-	// Analytics Routes
-	analyticsHandler := handlers.NewAnalyticsHandler()
-	analyticsHandler.RegisterRoutes(r)
 
 	// Static Assets
 	coverServer := http.FileServer(http.Dir(cfg.CoverPath))

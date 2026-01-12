@@ -18,7 +18,7 @@ import {
   PlaybackControls,
   SidebarButtonCarousel,
 } from "../molecules";
-import { formatTime, PlaybackState } from "@sonantica/shared";
+import { formatTime, PlaybackState, cn } from "@sonantica/shared";
 import {
   IconActivityHeartbeat,
   IconMicrophone,
@@ -30,9 +30,15 @@ import {
 interface MiniPlayerProps {
   /** Optional action buttons to render next to track info */
   actionButtons?: React.ReactNode;
+  style?: React.CSSProperties;
+  className?: string;
 }
 
-export function MiniPlayer({ actionButtons }: MiniPlayerProps = {}) {
+export function MiniPlayer({
+  actionButtons,
+  style,
+  className,
+}: MiniPlayerProps = {}) {
   const {
     currentTrack,
     state,
@@ -108,7 +114,13 @@ export function MiniPlayer({ actionButtons }: MiniPlayerProps = {}) {
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   return (
-    <div className="bg-black/95 backdrop-blur-xl border-t border-white/5 animate-in slide-in-from-bottom-4 duration-300">
+    <div
+      className={cn(
+        "bg-black/95 backdrop-blur-xl border-t border-white/5 animate-in slide-in-from-bottom-4 duration-300 relative",
+        className
+      )}
+      style={style}
+    >
       {/* Progress Bar with Waveform */}
       <WaveformScrubber
         trackId={currentTrack.id}
@@ -116,7 +128,7 @@ export function MiniPlayer({ actionButtons }: MiniPlayerProps = {}) {
         duration={duration}
         waveform={getWaveform(currentTrack.id) ?? undefined}
         onSeek={seek}
-        className="absolute -top-1.5 left-0 right-0 z-10 h-1 hover:h-6 transition-all duration-300"
+        className="absolute bottom-full left-0 right-0 z-10 h-1.5 hover:h-12 transition-all duration-300"
       />
 
       {/* Real-time Visualization Background */}

@@ -20,10 +20,10 @@
   --breakpoint-2xl: 1536px; /* 2X large devices */
 
   /* ===== Color Palette - Neutral and calm ===== */
-  --color-bg: #0a0a0a;
-  --color-surface: #1a1a1a;
-  --color-surface-elevated: #2a2a2a;
-  --color-border: #333333;
+  --color-bg: #000000;
+  --color-surface: #000000;
+  --color-surface-elevated: #0a0a0a;
+  --color-border: #1a1a1a;
   --color-text: #e0e0e0;
   --color-text-muted: #999999;
   --color-accent: #6366f1;
@@ -117,6 +117,15 @@ body {
   text-wrap: balance;
 }
 
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
 /* Scrollbar Styling */
 ::-webkit-scrollbar {
   width: 8px;
@@ -170,8 +179,10 @@ body {
 /* Smooth interactions - optimized for 60Hz+ displays */
 .smooth-interaction {
   transition: transform var(--transition-fast), opacity var(--transition-fast);
-  -webkit-transition: transform var(--transition-fast), opacity var(--transition-fast); /* Safari */
-  -moz-transition: transform var(--transition-fast), opacity var(--transition-fast); /* Firefox */
+  -webkit-transition: transform var(--transition-fast),
+    opacity var(--transition-fast); /* Safari */
+  -moz-transition: transform var(--transition-fast),
+    opacity var(--transition-fast); /* Firefox */
   will-change: transform, opacity;
 }
 

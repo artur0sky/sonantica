@@ -1,13 +1,4 @@
-/**
- * Lyrics Sidebar
- *
- * "Sound is a form of language."
- *
- * Displays synchronized or unsynchronized lyrics for the current track.
- * Follows the same design pattern as RightSidebar (Queue).
- * No external animation library dependencies
- */
-
+import React from "react";
 import { IconX, IconMicrophone, IconClock } from "@tabler/icons-react";
 import { Badge } from "@sonantica/ui";
 import { cn } from "@sonantica/shared";
@@ -17,7 +8,9 @@ interface LyricsSidebarProps {
   isCollapsed?: boolean;
 }
 
-export function LyricsSidebar({ isCollapsed }: LyricsSidebarProps) {
+export const LyricsSidebar: React.FC<LyricsSidebarProps> = ({
+  isCollapsed = false,
+}) => {
   const {
     lyricsOpen,
     toggleLyrics,
@@ -160,4 +153,4 @@ export function LyricsSidebar({ isCollapsed }: LyricsSidebarProps) {
       </div>
     </div>
   );
-}
+};
