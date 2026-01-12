@@ -19,7 +19,7 @@ This application is built as a thin layer of orchestration over our core package
 - **Framework**: `React 19`
 - **Build Tool**: `Vite` & `TypeScript`
 - **State**: `Zustand` (connected to cross-package stores)
-- **Styling**: `Tailwind CSS 4.0` (Acoustic Design System)
+- **Styling**: `Tailwind CSS 4.1` (Acoustic Design System)
 - **Animations**: `Framer Motion`
 - **Icons**: `Tabler Icons`
 - **Routing**: `Wouter` (Minimalist router)
