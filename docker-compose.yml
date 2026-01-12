@@ -405,6 +405,8 @@ services:
       - PYTHONPATH=/app
       - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID:-}
       - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET:-}
+      - SPOTIPY_CLIENT_ID=${SPOTIFY_CLIENT_ID:-}
+      - SPOTIPY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET:-}
     volumes:
       - ${MEDIA_PATH:-./media}:/media:rw
       - ./logs/downloader:/var/log/sonantica
@@ -432,6 +434,8 @@ services:
       - PYTHONPATH=/app
       - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID:-}
       - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET:-}
+      - SPOTIPY_CLIENT_ID=${SPOTIFY_CLIENT_ID:-}
+      - SPOTIPY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET:-}
     volumes:
       - ${MEDIA_PATH:-./media}:/media:rw
       - ./logs/downloader-worker:/var/log/sonantica

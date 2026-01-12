@@ -25,8 +25,9 @@ async def _process_download(task, url: str, output_format: str, output_dir: str)
     args = [
         "spotdl", "download", url,
         "--format", output_format,
-        "--output", str(output_dir / "{artist}/{album}/{title}"),
+        "--output", str(output_dir / "{artist}/{album}/{title}.{ext}"),
         "--threads", str(settings.threads),
+        "--no-cache",
     ]
 
     logger.info(f"Task {task.request.id} starting spotdl: {' '.join(args)}")
