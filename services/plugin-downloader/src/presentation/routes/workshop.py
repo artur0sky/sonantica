@@ -22,6 +22,9 @@ router = APIRouter()
 class DownloadRequest(BaseModel):
     url: str
     format: Optional[str] = None
+    title: Optional[str] = None
+    artist: Optional[str] = None
+    cover_art: Optional[str] = None
 
 class SearchResult(BaseModel):
     id: str
@@ -187,12 +190,19 @@ async def identify(q: str = Query(...)):
 
 @router.post("/jobs", dependencies=[Depends(verify_internal_secret)])
 async def create_job(req: DownloadRequest):
+    logger.info(f"Creating job for {req.url} (Metadata: {req.title} - {req.artist})")
+    
     # Check Quota
     if not Storage.check_quota("download", settings.daily_download_limit):
         raise HTTPException(status_code=429, detail=f"Daily download limit of {settings.daily_download_limit} exceeded")
 
     uc = DownloadUseCase()
-    job = await uc.create_job(req.url, req.format)
+    metadata = {
+        "title": req.title,
+        "artist": req.artist,
+        "cover_art": req.cover_art
+    }
+    job = await uc.create_job(req.url, req.format, metadata=metadata)
     return {
         "id": job.id,
         "status": job.status,
@@ -229,6 +239,12 @@ async def resume_download(job_id: str):
     uc = DownloadUseCase()
     uc.resume_job(job_id)
     return {"status": "resumed"}
+
+@router.post("/downloads/{job_id}/retry", dependencies=[Depends(verify_internal_secret)])
+async def retry_download(job_id: str):
+    uc = DownloadUseCase()
+    uc.retry_job(job_id)
+    return {"status": "retrying"}
     
 @router.delete("/downloads/{job_id}", dependencies=[Depends(verify_internal_secret)])
 async def delete_download(job_id: str):

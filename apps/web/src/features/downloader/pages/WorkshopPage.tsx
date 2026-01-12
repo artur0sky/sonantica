@@ -12,12 +12,15 @@ import {
   IconSettings,
   IconPlaylist,
   IconDisc,
+  IconRefresh,
   IconArrowLeft,
   IconUser,
   IconPlayerPause,
   IconPlayerPlay,
   IconTrash,
   IconX,
+  IconBolt,
+  IconHourglassLow,
 } from "@tabler/icons-react";
 import {
   Button,
@@ -48,6 +51,8 @@ interface SearchResult {
 interface PreservationJob {
   id: string;
   title: string;
+  artist?: string;
+  coverArt?: string;
   url?: string;
   type: string;
   status:
@@ -59,9 +64,14 @@ interface PreservationJob {
     | "paused";
   progress: number;
   message: string;
+  speed?: string;
+  eta?: string;
   trackId?: string;
   created_at?: string;
 }
+
+import { useLibraryStore } from "@sonantica/media-library";
+import { TrackItem } from "../../library/components/TrackItem";
 
 import { usePluginStore } from "../../../stores/pluginStore";
 
@@ -87,28 +97,41 @@ export function WorkshopPage() {
   const [plugin, setPlugin] = useState<Plugin | null>(null);
   const [showSettings, setShowSettings] = useState(false);
 
+  // Error handling and Polling optimization
+  const [fetchErrorCount, setFetchErrorCount] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
   const fetchDownloads = useCallback(async () => {
+    setIsRefreshing(true);
     try {
       const downloads = await PluginService.getDownloads(undefined, 20);
       setJobs(
         downloads.map((d: any) => ({
           id: d.id,
           title: d.title || d.url,
+          artist: d.artist,
+          coverArt: d.cover_art,
           url: d.url,
-          type: "track", // DB might not save type, assume track or infer
+          type: "track",
           status: d.status,
           progress: d.progress,
           message: d.message || d.error_message || "",
+          speed: d.speed,
+          eta: d.eta,
           created_at: d.created_at,
         }))
       );
-    } catch (e) {
+      setFetchErrorCount(0);
+    } catch (e: any) {
       console.error("Failed to fetch downloads history", e);
+      setFetchErrorCount((prev) => prev + 1);
+    } finally {
+      setIsRefreshing(false);
     }
   }, []);
 
   useEffect(() => {
-    // Already fetching in App.tsx, but we can specifically get the config here if needed
     PluginService.getAllPlugins().then((plugins) => {
       const downloader = plugins.find(
         (p) => p.manifest.id === "sonantica-downloader"
@@ -116,13 +139,10 @@ export function WorkshopPage() {
       if (downloader) setPlugin(downloader);
     });
 
-    if (isEnabled) {
+    if (isEnabled && fetchErrorCount < 5) {
       fetchDownloads();
-      // Poll for updates
-      const interval = setInterval(fetchDownloads, 2000);
-      return () => clearInterval(interval);
     }
-  }, [isEnabled, fetchDownloads]);
+  }, [isEnabled, fetchDownloads, fetchErrorCount]);
 
   if (!isEnabled && !isLoading) {
     return (
@@ -133,7 +153,8 @@ export function WorkshopPage() {
         <div className="space-y-2">
           <h2 className="text-2xl font-bold">Workshop Inactive</h2>
           <p className="text-text-muted max-w-sm mx-auto">
-            The Downloader plugin is currently disabled. Enable it in{" "}
+            The Downloader plugin is currently disabled or unreachable. Enable
+            it in{" "}
             <Link href="/settings" className="text-accent hover:underline">
               Settings
             </Link>{" "}
@@ -144,8 +165,7 @@ export function WorkshopPage() {
     );
   }
 
-  // Error handling
-  const [error, setError] = useState<string | null>(null);
+  // Identification logic state moved to the top for better polling/error management
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -175,7 +195,12 @@ export function WorkshopPage() {
     try {
       await PluginService.startDownload(
         result.url,
-        plugin?.config?.output_format || "flac"
+        plugin?.config?.output_format || "flac",
+        {
+          title: result.title,
+          artist: result.subtitle,
+          cover_art: result.cover_art,
+        }
       );
       // Optimistic update
       fetchDownloads();
@@ -255,6 +280,10 @@ export function WorkshopPage() {
   };
   const handleResume = async (id: string) => {
     await PluginService.resumeDownload(id);
+    fetchDownloads();
+  };
+  const handleRetry = async (id: string) => {
+    await PluginService.retryDownload(id);
     fetchDownloads();
   };
   const handleCancel = async (id: string) => {
@@ -625,15 +654,42 @@ export function WorkshopPage() {
                   animate={{ opacity: 1 }}
                   className="flex flex-col items-center justify-center py-24 text-center space-y-6"
                 >
-                  {/* Empty state content */}
                   <div className="w-24 h-24 rounded-full bg-surface-elevated flex items-center justify-center border border-border">
                     <IconSearch size={48} className="text-text-disabled/20" />
                   </div>
-                  <p className="text-xl font-medium text-text-muted">
-                    {hasSearched
-                      ? "The signal is silent"
-                      : "The workshop is ready"}
-                  </p>
+                  <div className="space-y-4">
+                    <p className="text-xl font-medium text-text-muted">
+                      {hasSearched
+                        ? "The signal is silent"
+                        : "The workshop is ready"}
+                    </p>
+
+                    {hasSearched && searchQuery && (
+                      <div className="animate-in fade-in slide-in-from-top-4 duration-500 delay-200">
+                        <p className="text-sm text-text-muted/60 mb-4">
+                          No direct match found. You can try to force the
+                          preservation of this identifier:
+                        </p>
+                        <Button
+                          variant="secondary"
+                          className="bg-accent/10 hover:bg-accent/20 border-accent/20 text-accent"
+                          onClick={() =>
+                            handlePreserve({
+                              id: "manual-" + Date.now(),
+                              type: "track",
+                              title: searchQuery,
+                              subtitle: "Manual Retrieval",
+                              cover_art: "",
+                              url: searchQuery,
+                            })
+                          }
+                        >
+                          <IconDownload size={18} className="mr-2" />
+                          Force Preservation
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -642,10 +698,24 @@ export function WorkshopPage() {
 
         {/* Right: Active preservation (Queue & History) */}
         <div className="lg:col-span-4 space-y-6">
-          <h2 className="text-lg font-semibold flex items-center gap-2">
-            <IconDownload size={20} className="text-accent" />
-            Preservation Queue
-          </h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <IconDownload size={20} className="text-accent" />
+              Preservation Queue
+            </h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={fetchDownloads}
+              className={cn(
+                "h-8 w-8 p-0 rounded-full hover:bg-white/5",
+                isRefreshing && "animate-spin text-accent"
+              )}
+              title="Refresh queue"
+            >
+              <IconRefresh size={18} />
+            </Button>
+          </div>
 
           <div className="space-y-3 max-h-[80vh] overflow-y-auto pr-2 custom-scrollbar">
             {jobs.length === 0 ? (
@@ -654,109 +724,202 @@ export function WorkshopPage() {
               </div>
             ) : (
               <AnimatePresence>
-                {jobs.map((job) => (
-                  <motion.div
-                    key={job.id}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="bg-surface-elevated border border-border p-4 rounded-xl space-y-3 shadow-md"
-                  >
-                    <div className="flex justify-between items-start gap-2">
-                      <div className="min-w-0">
-                        <h4
-                          className="text-sm font-medium truncate"
-                          title={job.title}
-                        >
-                          {job.title}
-                        </h4>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span
-                            className={cn(
-                              "text-[10px] uppercase tracking-wider font-bold",
-                              job.status === "completed"
-                                ? "text-green-500"
-                                : job.status === "failed"
-                                ? "text-red-500"
-                                : job.status === "processing"
-                                ? "text-accent"
-                                : "text-text-muted"
-                            )}
-                          >
-                            {job.status}
-                          </span>
-                          <span className="text-[10px] text-text-muted">
-                            {job.created_at &&
-                              new Date(job.created_at).toLocaleTimeString()}
-                          </span>
+                {jobs.map((job) => {
+                  const libraryTracks = useLibraryStore.getState().tracks;
+                  const matchingTrack =
+                    job.status === "completed"
+                      ? libraryTracks.find(
+                          (t) =>
+                            t.title?.toLowerCase() ===
+                              job.title?.toLowerCase() ||
+                            t.filename
+                              ?.toLowerCase()
+                              .includes(job.title?.toLowerCase() || "")
+                        )
+                      : null;
+
+                  return (
+                    <motion.div
+                      key={job.id}
+                      layout
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className="bg-surface-elevated border border-border p-4 rounded-xl space-y-3 shadow-md group border-l-4"
+                      style={{
+                        borderLeftColor:
+                          job.status === "completed"
+                            ? "var(--accent)"
+                            : "transparent",
+                      }}
+                    >
+                      {matchingTrack ? (
+                        <div className="bg-accent/5 rounded-lg p-1 border border-accent/10">
+                          <TrackItem
+                            track={matchingTrack}
+                            onClick={() => {}}
+                            compact
+                          />
+                          <div className="px-3 pb-2 flex items-center justify-between mt-1">
+                            <span className="text-[10px] text-accent font-bold uppercase tracking-tighter">
+                              Ready in Library
+                            </span>
+                            <button
+                              onClick={() => handleDelete(job.id)}
+                              className="p-1 text-text-muted hover:text-error transition-colors"
+                            >
+                              <IconTrash size={12} />
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-1">
-                      <div className="h-1 w-full bg-surface rounded-full overflow-hidden">
-                        <motion.div
-                          className="h-full bg-accent"
-                          initial={{ width: 0 }}
-                          animate={{ width: `${job.progress}%` }}
-                        />
-                      </div>
-                      <p className="text-[10px] text-text-muted text-right italic truncate">
-                        {job.message}
-                      </p>
-                    </div>
-
-                    {/* Controls */}
-                    <div className="flex justify-end gap-2 pt-2 border-t border-white/5">
-                      {job.status === "processing" && (
+                      ) : (
                         <>
-                          <button
-                            onClick={() => handlePause(job.id)}
-                            className="p-1.5 hover:bg-surface rounded text-text-muted hover:text-white"
-                            title="Pause"
-                          >
-                            <IconPlayerPause size={14} />
-                          </button>
-                          <button
-                            onClick={() => handleCancel(job.id)}
-                            className="p-1.5 hover:bg-surface rounded text-text-muted hover:text-error"
-                            title="Cancel"
-                          >
-                            <IconX size={14} />
-                          </button>
+                          <div className="flex justify-between items-start gap-2">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="w-10 h-10 rounded-lg bg-surface flex-shrink-0 overflow-hidden border border-white/5">
+                                <CoverArt src={job.coverArt} iconSize={16} />
+                              </div>
+                              <div className="min-w-0">
+                                <h4
+                                  className="text-sm font-medium truncate"
+                                  title={job.title}
+                                >
+                                  {job.title}
+                                </h4>
+                                <div className="flex flex-col gap-0.5 mt-0.5">
+                                  <p className="text-[10px] text-text-muted truncate uppercase tracking-tighter font-semibold opacity-70">
+                                    {job.artist || "Unknown Source"}
+                                  </p>
+                                  <div className="flex items-center gap-2">
+                                    <span
+                                      className={cn(
+                                        "text-[10px] uppercase tracking-wider font-bold",
+                                        job.status === "completed"
+                                          ? "text-green-500"
+                                          : job.status === "failed"
+                                          ? "text-red-500"
+                                          : job.status === "processing"
+                                          ? "text-accent"
+                                          : "text-text-muted"
+                                      )}
+                                    >
+                                      {job.status}
+                                    </span>
+                                    <span className="text-[10px] text-text-muted">
+                                      {job.created_at &&
+                                        new Date(
+                                          job.created_at
+                                        ).toLocaleTimeString([], {
+                                          hour: "2-digit",
+                                          minute: "2-digit",
+                                        })}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between text-[10px] mb-1">
+                              <div className="flex items-center gap-2">
+                                {job.speed && (
+                                  <span className="flex items-center gap-1 text-accent font-bold">
+                                    <IconBolt size={10} />
+                                    {job.speed}
+                                  </span>
+                                )}
+                                {job.eta && (
+                                  <span className="flex items-center gap-1 text-text-muted">
+                                    <IconHourglassLow size={10} />
+                                    ETA: {job.eta}
+                                  </span>
+                                )}
+                              </div>
+                              <span className="font-mono text-accent">
+                                {Math.round(job.progress)}%
+                              </span>
+                            </div>
+                            <div className="h-1.5 w-full bg-surface rounded-full overflow-hidden">
+                              <motion.div
+                                className="h-full bg-accent shadow-[0_0_8px_rgba(var(--accent-rgb),0.4)]"
+                                initial={{ width: 0 }}
+                                animate={{ width: `${job.progress}%` }}
+                              />
+                            </div>
+                            <p className="text-[10px] text-text-muted text-right mt-1 font-medium italic opacity-80">
+                              {job.message ||
+                                (job.status === "processing"
+                                  ? "Preserving..."
+                                  : "")}
+                            </p>
+                          </div>
+
+                          {/* Controls */}
+                          <div className="flex justify-end gap-2 pt-2 border-t border-white/5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            {job.status === "processing" && (
+                              <>
+                                <button
+                                  onClick={() => handlePause(job.id)}
+                                  className="p-1.5 hover:bg-surface rounded text-text-muted hover:text-white"
+                                  title="Pause"
+                                >
+                                  <IconPlayerPause size={14} />
+                                </button>
+                                <button
+                                  onClick={() => handleCancel(job.id)}
+                                  className="p-1.5 hover:bg-surface rounded text-text-muted hover:text-error"
+                                  title="Cancel"
+                                >
+                                  <IconX size={14} />
+                                </button>
+                              </>
+                            )}
+                            {job.status === "paused" && (
+                              <button
+                                onClick={() => handleResume(job.id)}
+                                className="p-1.5 hover:bg-surface rounded text-text-muted hover:text-white"
+                                title="Resume"
+                              >
+                                <IconPlayerPlay size={14} />
+                              </button>
+                            )}
+                            {job.status === "pending" && (
+                              <button
+                                onClick={() => handleCancel(job.id)}
+                                className="p-1.5 hover:bg-surface rounded text-text-muted hover:text-error"
+                                title="Cancel"
+                              >
+                                <IconX size={14} />
+                              </button>
+                            )}
+                            {(job.status === "completed" ||
+                              job.status === "failed" ||
+                              job.status === "cancelled") && (
+                              <div className="flex gap-1">
+                                {job.status === "failed" && (
+                                  <button
+                                    onClick={() => handleRetry(job.id)}
+                                    className="p-1.5 hover:bg-surface rounded text-accent hover:text-white"
+                                    title="Retry"
+                                  >
+                                    <IconRefresh size={14} />
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => handleDelete(job.id)}
+                                  className="p-1.5 hover:bg-surface rounded text-text-muted hover:text-error"
+                                  title="Remove"
+                                >
+                                  <IconTrash size={14} />
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </>
                       )}
-                      {job.status === "paused" && (
-                        <button
-                          onClick={() => handleResume(job.id)}
-                          className="p-1.5 hover:bg-surface rounded text-text-muted hover:text-white"
-                          title="Resume"
-                        >
-                          <IconPlayerPlay size={14} />
-                        </button>
-                      )}
-                      {job.status === "pending" && (
-                        <button
-                          onClick={() => handleCancel(job.id)}
-                          className="p-1.5 hover:bg-surface rounded text-text-muted hover:text-error"
-                          title="Cancel"
-                        >
-                          <IconX size={14} />
-                        </button>
-                      )}
-                      {(job.status === "completed" ||
-                        job.status === "failed" ||
-                        job.status === "cancelled") && (
-                        <button
-                          onClick={() => handleDelete(job.id)}
-                          className="p-1.5 hover:bg-surface rounded text-text-muted hover:text-error"
-                          title="Remove"
-                        >
-                          <IconTrash size={14} />
-                        </button>
-                      )}
-                    </div>
-                  </motion.div>
-                ))}
+                    </motion.div>
+                  );
+                })}
               </AnimatePresence>
             )}
           </div>

@@ -21,10 +21,15 @@ class JobPriority(int, Enum):
 class DownloadJob(BaseModel):
     id: str
     url: str
+    title: Optional[str] = None
+    artist: Optional[str] = None
+    cover_art: Optional[str] = None
     status: JobStatus = JobStatus.PENDING
     priority: JobPriority = JobPriority.NORMAL
     progress: float = 0.0
     message: str = ""
+    speed: Optional[str] = None
+    eta: Optional[str] = None
     result: Optional[Dict[str, str]] = None
     error: Optional[str] = None
     created_at: datetime

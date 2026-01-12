@@ -15,7 +15,7 @@ from src.infrastructure.logging.logger_config import setup_logger
 logger = setup_logger(__name__)
 
 class DownloadUseCase:
-    async def create_job(self, url: str, format_override: Optional[str] = None) -> DownloadJob:
+    async def create_job(self, url: str, format_override: Optional[str] = None, metadata: Optional[Dict] = None) -> DownloadJob:
         from src.application.tasks import download_source_task
         
         job_id = str(uuid.uuid4())
@@ -27,7 +27,10 @@ class DownloadUseCase:
             "status": "pending",
             "format": format_override or "flac",
             "progress": 0.0,
-            "message": "Queued"
+            "message": "Queued",
+            "title": metadata.get("title") if metadata else None,
+            "artist": metadata.get("artist") if metadata else None,
+            "cover_art": metadata.get("cover_art") if metadata else None,
         }
         Storage.save_job(job_id, job_data)
         Storage.increment_quota("download")
@@ -67,9 +70,14 @@ class DownloadUseCase:
         return DownloadJob(
             id=data.get("id"),
             url=data.get("url"),
+            title=data.get("title"),
+            artist=data.get("artist"),
+            cover_art=data.get("cover_art"),
             status=status_map.get(data.get("status"), JobStatus.PENDING),
             progress=data.get("progress", 0.0),
             message=data.get("message", ""),
+            speed=data.get("speed"),
+            eta=data.get("eta"),
             created_at=data.get("created_at"), # String ISO
             updated_at=data.get("updated_at"),
             error=data.get("error_message")
@@ -93,11 +101,15 @@ class DownloadUseCase:
         job = Storage.get_job(job_id)
         if job and job.get("status") == "paused":
             Storage.update_job_status(job_id, "pending", message="Resuming...")
-            # Ideally retry task if it was killed? 
-            # Or assume worker logic handles it. 
-            # If we killed the task in pause, we MUST re-dispatch it.
-            # SpotDL doesn't "pause" natively in process. We terminated it.
-            # So we must re-create the task.
+            from src.application.tasks import download_source_task
+            url = job.get("url")
+            fmt = job.get("format", "flac")
+            download_source_task.apply_async(args=[url, fmt, job_id], task_id=job_id)
+
+    def retry_job(self, job_id: str):
+        job = Storage.get_job(job_id)
+        if job and job.get("status") == "failed":
+            Storage.update_job_status(job_id, "pending", message="Retrying...", error_message=None)
             from src.application.tasks import download_source_task
             url = job.get("url")
             fmt = job.get("format", "flac")

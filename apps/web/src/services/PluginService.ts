@@ -152,14 +152,14 @@ export const PluginService = {
     return response.json();
   },
 
-  async startDownload(url: string, format: string = "flac"): Promise<{ id: string, job_id?: string }> {
+  async startDownload(url: string, format: string = "flac", metadata?: { title?: string, artist?: string, cover_art?: string }): Promise<{ id: string, job_id?: string }> {
     const server = getServerConfig();
     if (!server) throw new Error("No server configured");
 
     const response = await fetch(`${server.serverUrl}/api/v1/preserve`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url, format }),
+      body: JSON.stringify({ url, format, ...metadata }),
     });
     if (!response.ok) {
         let msg = "Failed to start preservation";
@@ -219,6 +219,12 @@ export const PluginService = {
     const server = getServerConfig();
     if (!server) throw new Error("No server configured");
     await fetch(`${server.serverUrl}/api/v1/preserve/downloads/${jobId}/resume`, { method: "POST" });
+  },
+
+  async retryDownload(jobId: string): Promise<void> {
+    const server = getServerConfig();
+    if (!server) throw new Error("No server configured");
+    await fetch(`${server.serverUrl}/api/v1/preserve/downloads/${jobId}/retry`, { method: "POST" });
   },
 
   async deleteDownload(jobId: string): Promise<void> {

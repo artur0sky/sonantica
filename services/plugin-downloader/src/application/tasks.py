@@ -44,84 +44,170 @@ async def _process_download(task, url: str, output_format: str, output_dir: str,
     task.update_state(state="PROCESSING", meta={"progress": 0.05, "message": "Initializing recapture..."})
 
     try:
+        # Ensure directory permissions
+        import os
+        output_dir.mkdir(parents=True, exist_ok=True)
+        try: os.chmod(str(output_dir), 0o777)
+        except: pass
+
         process = await asyncio.create_subprocess_exec(
             *args,
+            "--overwrite", "skip",
             stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
+            stderr=asyncio.subprocess.STDOUT
         )
         
         progress_val = 0.05
         
-        while True:
-            # Check for cancellation or pause via Storage
+        async def read_output():
+            nonlocal progress_val
+            while True:
+                line = await process.stdout.readline()
+                if not line:
+                    break
+                
+                line_str = line.decode().strip()
+                if line_str:
+                    logger.info(f"[spotdl] {line_str}")
+                    
+                    # Detect rate limits
+                    if "rate/request limit" in line_str.lower():
+                        logger.error("Spotify rate limit hit. Try again later or configure Client ID/Secret.")
+                        Storage.update_job_status(job_id, "failed", error="Rate limit hit (Spotify)")
+                        process.terminate()
+                        break
+
+                    if "ffmpeg" in line_str.lower() and "not found" in line_str.lower():
+                        logger.error("FFmpeg not found in system.")
+                        Storage.update_job_status(job_id, "failed", error="FFmpeg missing on worker")
+                        process.terminate()
+                        break
+
+                    # Rich parsing
+                    import re
+                    
+                    # Progress
+                    p_match = re.search(r"(\d+)%", line_str)
+                    if p_match:
+                        progress_val = float(p_match.group(1)) / 100.0
+                    
+                    # Track count detection (e.g. 1/12)
+                    t_match = re.search(r"(\d+)/(\d+)", line_str)
+                    track_info = f"Track {t_match.group(1)} of {t_match.group(2)}" if t_match else None
+
+                    # Speed (e.g. 1.2 MB/s)
+                    s_match = re.search(r"(\d+\.?\d*\s*[kMG]B/s)", line_str)
+                    speed_val = s_match.group(1) if s_match else None
+                    
+                    # ETA (handles both "ETA: 00:05" and "...<00:05")
+                    e_match = re.search(r"(?:ETA:\s*|<)(\d+:\d+)", line_str)
+                    eta_val = e_match.group(1) if e_match else None
+
+                    # Stage/Phase detection
+                    phase = "Preserving..."
+                    if "Downloading" in line_str: phase = "Downloading..."
+                    elif "Converting" in line_str: phase = "Converting/Recoding..."
+                    elif "Embedding" in line_str: phase = "Embedding Metadata..."
+                    elif "Syncing" in line_str: phase = "Syncing Signal..."
+                    
+                    if track_info:
+                        phase = f"{track_info} - {phase}"
+
+                    if job_id:
+                        update_data = {
+                            "progress": round(progress_val * 100),
+                            "message": phase
+                        }
+                        if speed_val: update_data["speed"] = speed_val
+                        if eta_val: update_data["eta"] = eta_val
+                        
+                        # Only update if something changed
+                        job = Storage.get_job(job_id)
+                        if job:
+                            has_changed = (
+                                update_data["progress"] > job.get("progress", 0) or 
+                                update_data["message"] != job.get("message") or
+                                update_data.get("speed") != job.get("speed") or
+                                update_data.get("eta") != job.get("eta")
+                            )
+                            if has_changed:
+                                Storage.update_job_status(job_id, "processing", **update_data)
+
+        # Run output reader in background
+        output_task = asyncio.create_task(read_output())
+        
+        while process.returncode is None:
+            # Check for cancellation or pause
             if job_id:
                 job = Storage.get_job(job_id)
-                if job:
-                    if job.get("status") == "cancelled":
-                        process.terminate()
-                        logger.info("Task cancelled by user.")
-                        return {"status": "cancelled", "message": "Cancelled by user"}
-                    if job.get("status") == "paused":
-                        process.terminate()
-                        return {"status": "paused", "message": "Paused"}
+                if job and job.get("status") in ["cancelled", "paused"]:
+                    process.terminate()
+                    break
 
-            # Read stdout
-            try:
-                line = await asyncio.wait_for(process.stdout.readline(), timeout=0.1)
-                if line:
-                    line_str = line.decode().strip()
-                    # Parsing logic...
-            except asyncio.TimeoutError:
-                pass
+            # Simulate slow progress if spotdl is slow at reporting
+            if progress_val < 0.95:
+                progress_val += 0.0005 # Slowest simulation
                 
-            if process.returncode is not None:
-                break
-                
-            if process.stdout.at_eof() and process.stderr.at_eof():
-                break
-            
-            if progress_val < 0.9:
-                progress_val += 0.005 
-                
-            # Update Celery & Storage
-            if job_id and int(progress_val * 100) % 5 == 0:
-                Storage.update_job_status(job_id, "processing", progress=round(progress_val * 100))
+            if job_id:
+                current_percent = round(progress_val * 100)
+                job = Storage.get_job(job_id)
+                if job and current_percent > job.get("progress", 0):
+                    Storage.update_job_status(job_id, "processing", progress=current_percent)
 
-            task.update_state(state="PROCESSING", meta={"progress": round(progress_val * 100), "message": "Preserving..."})
-            await asyncio.sleep(0.1)
+            task.update_state(state="PROCESSING", meta={"progress": round(progress_val * 100)})
+            await asyncio.sleep(0.5)
 
-        stdout, stderr = await process.communicate()
+        await output_task
+        await process.wait()
 
         if process.returncode != 0:
-            error_msg = stderr.decode()
-            logger.error(f"Download failed: {error_msg}")
+            error_msg = f"spotdl failed with code {process.returncode}"
+            if process.returncode == -15 or process.returncode == 15:
+                logger.warning("spotdl process terminated externally (likely rate limit)")
+                return {"status": "failed", "error": "Preservation interrupted (Rate Limit or other)"}
+
+            logger.error(error_msg)
             if job_id:
                 Storage.update_job_status(job_id, "failed", error=error_msg)
-            return {
-                "status": "failed", 
-                "progress": round(progress_val * 100),
-                "error": error_msg
-            }
+            return {"status": "failed", "error": error_msg}
+
+        # Double check if any files were actually created
+        has_files = False
+        try:
+            for ext in ['mp3', 'flac', 'opus', 'm4a', 'wav']:
+                if list(output_dir.glob(f"**/*.{ext}")):
+                    has_files = True
+                    break
+        except: pass
+
+        if not has_files:
+            error_msg = "No files found after download (likely rate limit or track not found)"
+            logger.error(error_msg)
+            if job_id:
+                Storage.update_job_status(job_id, "failed", error="Track not found or provider error")
+            return {"status": "failed", "error": "Track not found or provider error"}
 
         # Success
         if job_id:
-            Storage.update_job_status(job_id, "completed", progress=100.0, message="Completed")
+            Storage.update_job_status(job_id, "completed", progress=100.0, message="Completed", speed=None, eta=None)
 
         # Trigger Analysis on Core
-        if "stream-core" in settings.core_internal_url: # basic check
+        try:
              import httpx
              async with httpx.AsyncClient() as client:
-                try:
-                    scan_payload = {"path": str(output_dir)} 
-                    await client.post(f"{settings.core_internal_url}/api/library/scan", json=scan_payload, timeout=5.0)
-                    logger.info("Library scan triggered")
-                except Exception as e:
-                    logger.error(f"Library scan trigger failed: {e}")
+                scan_payload = {"path": str(output_dir)} 
+                resp = await client.post(f"{settings.core_internal_url}/api/scan/start", json=scan_payload, timeout=5.0)
+                if resp.status_code == 202:
+                    logger.info("Core library scan triggered successfully")
+                else:
+                    logger.warning(f"Core scan trigger returned {resp.status_code}: {resp.text}")
+        except Exception as e:
+            logger.error(f"Failed to trigger core library scan: {e}")
 
         return {
             "status": "completed",
             "progress": 100,
-            "message": "Harmonic preservation complete."
+            "message": "Harmonic preservation completed successfully."
         }
 
     except Exception as e:

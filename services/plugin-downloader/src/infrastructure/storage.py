@@ -65,13 +65,18 @@ class Storage:
         return None
 
     @staticmethod
-    def update_job_status(job_id: str, status: str, message: str = None, progress: float = None, error: str = None):
+    def update_job_status(job_id: str, status: str, message: str = None, progress: float = None, error: str = None, **kwargs):
         job = Storage.get_job(job_id)
         if job:
             job["status"] = status
-            if message: job["message"] = message
+            if message is not None: job["message"] = message
             if progress is not None: job["progress"] = progress
-            if error: job["error_message"] = error
+            if error is not None: job["error_message"] = error
+            
+            # Add any extra metrics (speed, eta, etc)
+            for k, v in kwargs.items():
+                job[k] = v
+                
             Storage.save_job(job_id, job)
 
     @staticmethod
