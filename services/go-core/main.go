@@ -71,6 +71,7 @@ func main() {
 	ctx := context.Background()
 	if cfg.DemucsURL != "" {
 		demucsFallback := &domain.Manifest{
+			ID:          "demucs",
 			Name:        "Demucs Separation",
 			Capability:  domain.CapabilityStemSeparation,
 			Description: "AI Stem Separation (Offline Fallback)",
@@ -82,6 +83,7 @@ func main() {
 	}
 	if cfg.BrainURL != "" {
 		brainFallback := &domain.Manifest{
+			ID:          "brain",
 			Name:        "Sonántica Brain",
 			Capability:  domain.CapabilityRecommendations,
 			Description: "AI Similarity & Recommendations (Offline Fallback)",
@@ -93,6 +95,7 @@ func main() {
 	}
 	if cfg.KnowledgeURL != "" {
 		knowledgeFallback := &domain.Manifest{
+			ID:          "knowledge",
 			Name:        "Knowledge Engine",
 			Capability:  domain.CapabilityKnowledge,
 			Description: "Metadata Enrichment (Offline Fallback)",
@@ -100,6 +103,18 @@ func main() {
 		}
 		if err := pluginManager.EnsurePluginRegistered(ctx, cfg.KnowledgeURL, knowledgeFallback); err != nil {
 			slog.Error("Failed to register Knowledge plugin", "error", err)
+		}
+	}
+	if cfg.DownloaderURL != "" {
+		downloaderFallback := &domain.Manifest{
+			ID:          "sonantica-downloader",
+			Name:        "The Workshop",
+			Capability:  domain.CapabilityDownload,
+			Description: "High-Fidelity Preservation Plugin",
+			Version:     "0.2.0",
+		}
+		if err := pluginManager.EnsurePluginRegistered(ctx, cfg.DownloaderURL, downloaderFallback); err != nil {
+			slog.Error("Failed to register Downloader plugin", "error", err)
 		}
 	}
 
@@ -147,6 +162,10 @@ func main() {
 	// Plugin Management Routes
 	pluginsHandler := api.NewPluginsHandler(pluginManager)
 	pluginsHandler.RegisterRoutes(r)
+
+	// Preserve / Downloader Routes
+	preserveHandler := api.NewPreserveHandler(pluginManager, cfg.InternalAPISecret)
+	preserveHandler.RegisterRoutes(r)
 
 	r.Route("/api/library", func(r chi.Router) {
 		r.Get("/tracks", api.GetTracks)
