@@ -81,10 +81,10 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
         )}
         {navItems.map((item) => (
           <Link key={item.path} href={item.path}>
-            <a
+            <div
               title={isCollapsed ? item.label : undefined}
               className={cn(
-                "flex items-center gap-3 px-3 py-2 rounded-xl transition-all group",
+                "flex items-center gap-3 px-3 py-2 rounded-xl transition-all group cursor-pointer",
                 isCollapsed && "justify-center",
                 location === item.path
                   ? "bg-accent/10 text-accent font-semibold"
@@ -103,7 +103,7 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
               {!isCollapsed && location === item.path && (
                 <div className="ml-auto w-1.5 h-1.5 rounded-full bg-accent" />
               )}
-            </a>
+            </div>
           </Link>
         ))}
 
@@ -135,15 +135,15 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
               Collection
             </div>
             <Link href="/playlists">
-              <a
+              <div
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2 rounded-xl text-text-muted hover:text-text hover:bg-surface-elevated transition-all",
+                  "flex items-center gap-3 px-3 py-2 rounded-xl text-text-muted hover:text-text hover:bg-surface-elevated transition-all cursor-pointer",
                   location === "/playlists" && "bg-surface-elevated text-text"
                 )}
               >
                 <IconPlaylist size={20} stroke={1.5} />
                 <span className="text-sm">Manage Playlists</span>
-              </a>
+              </div>
             </Link>
             {otherPlaylists.slice(0, 8).map((playlist) => (
               <PlaylistNavItem
