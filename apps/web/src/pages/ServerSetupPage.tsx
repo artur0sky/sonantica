@@ -59,9 +59,19 @@ export function ServerSetupPage() {
     }
   };
 
+  const handleSkip = () => {
+    // Save a dummy/demo configuration so ServerGuard allows access
+    // saveServerConfig({
+    //   name: "Local Demo",
+    //   serverUrl: "http://localhost:8090", // Default expected port
+    //   apiKey: undefined,
+    // });
+    setLocation("/library");
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-black p-4">
-      <div className="max-w-md w-full">
+    <div className="min-h-screen flex items-center justify-center bg-bg bg-gradient-to-br from-surface-elevated via-bg to-bg p-6">
+      <div className="w-full max-w-[440px] animate-in fade-in zoom-in-95 duration-700">
         {/* Logo/Title */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-white mb-2">Sonántica</h1>
@@ -162,6 +172,16 @@ export function ServerSetupPage() {
               )}
             </button>
           </form>
+
+          {/* Skip Option */}
+          <div className="mt-4">
+            <button
+              onClick={handleSkip}
+              className="w-full px-6 py-3 bg-transparent hover:bg-white/5 text-text-muted hover:text-white text-xs font-bold uppercase tracking-[0.2em] rounded-lg transition-all duration-300 border border-transparent hover:border-border"
+            >
+              Skip for now
+            </button>
+          </div>
 
           {/* Help Text */}
           <div className="mt-6 pt-6 border-t border-gray-700">
