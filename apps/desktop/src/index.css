@@ -1,9 +1,18 @@
 /**
  * Sonántica Desktop - Tailwind CSS Configuration
+ * 
+ * Synced with Web App to ensure visual consistency.
+ * Tailwind v4 optimized.
  */
 
 @import "tailwindcss";
-@source "../../../packages/ui";
+
+/* 
+ * Telling Tailwind where to look for classes.
+ * Relative to this CSS file (src/index.css)
+ */
+@source "./**/*.{ts,tsx}";
+@source "../../../packages/ui/src/**/*.{ts,tsx}";
 
 @theme {
   /* ===== Responsive Breakpoints ===== */
@@ -13,7 +22,7 @@
   --breakpoint-xl: 1280px;
   --breakpoint-2xl: 1536px;
 
-  /* ===== Color Palette - Neutral and calm ===== */
+  /* ===== Color Palette ===== */
   --color-bg: #000000;
   --color-surface: #000000;
   --color-surface-elevated: #0a0a0a;
@@ -26,69 +35,59 @@
   --color-error: #ef4444;
   --color-warning: #f59e0b;
 
-  /* ===== Fluid Spacing Scale ===== */
-  --spacing-xs: clamp(0.25rem, 0.5vw, 0.5rem);
-  --spacing-sm: clamp(0.5rem, 1vw, 1rem);
-  --spacing-md: clamp(1rem, 1.5vw, 1.5rem);
-  --spacing-lg: clamp(1.5rem, 2vw, 2rem);
-  --spacing-xl: clamp(2rem, 3vw, 3rem);
-  --spacing-2xl: clamp(3rem, 4vw, 4rem);
+  /* Spacing */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
 
-  /* ===== Responsive Typography ===== */
-  --font-sans: "Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
-    "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
-    sans-serif;
-  --font-mono: "JetBrains Mono", "Fira Code", "Courier New", "Consolas",
-    "Monaco", monospace;
-
-  /* Fluid font sizes */
-  --font-size-xs: clamp(0.75rem, 0.8vw, 0.875rem);
-  --font-size-sm: clamp(0.875rem, 0.9vw, 1rem);
-  --font-size-base: clamp(1rem, 1vw, 1.125rem);
-  --font-size-lg: clamp(1.125rem, 1.2vw, 1.25rem);
-  --font-size-xl: clamp(1.25rem, 1.5vw, 1.5rem);
-  --font-size-2xl: clamp(1.5rem, 2vw, 2rem);
-  --font-size-3xl: clamp(1.875rem, 2.5vw, 2.5rem);
-  --font-size-4xl: clamp(2.25rem, 3vw, 3rem);
-
-  /* ===== Border Radius ===== */
+  /* Typography */
+  --font-sans: "Lexend", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif;
+  
+  /* Radii */
   --radius-sm: 0.25rem;
   --radius-md: 0.5rem;
   --radius-lg: 0.75rem;
   --radius-xl: 1rem;
-  --radius-2xl: 1.5rem;
-
-  /* ===== Transitions ===== */
-  --transition-instant: 50ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-fast: 100ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-base: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-slow: 200ms cubic-bezier(0.4, 0, 0.2, 1);
-
-  /* ===== Shadows ===== */
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
-  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1);
 }
 
 /* Base Styles */
-* {
-  @apply border-border;
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-family: var(--font-sans);
+    overflow: hidden;
+  }
 }
 
-body {
-  @apply bg-bg text-text antialiased;
-  font-family: var(--font-sans);
+/* Custom Utilities */
+@layer utilities {
+  .gpu-accelerated {
+    transform: translateZ(0);
+    will-change: transform;
+    backface-visibility: hidden;
+  }
+  
+  .is-resizing,
+  .is-resizing * {
+    user-select: none !important;
+    cursor: col-resize !important;
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
 }
 
-/* GPU acceleration for smooth desktop animations */
-.gpu-accelerated {
-  transform: translateZ(0);
-  will-change: transform;
-  backface-visibility: hidden;
-}
-
-/* Scrollbar Styling matching the brand */
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
