@@ -31,12 +31,16 @@ interface SettingsState {
   
   // Analytics
   analyticsDashboardRefreshRate: number; // in ms
+
+  // Desktop (Tauri)
+  desktopCloseAction: 'ask' | 'minimize' | 'close';
   
   // Actions
-  toggle: (key: keyof Omit<SettingsState, 'toggle' | 'setTheme' | 'setNumber' | 'setDownloadQuality' | 'setAnimationSpeed'>) => void;
+  toggle: (key: keyof Omit<SettingsState, 'toggle' | 'setTheme' | 'setNumber' | 'setDownloadQuality' | 'setAnimationSpeed' | 'setDesktopCloseAction'>) => void;
   setNumber: (key: 'playbackBufferSize' | 'scanFileSizeLimit' | 'coverArtSizeLimit' | 'crossfadeDuration' | 'fadeOutDuration' | 'analyticsDashboardRefreshRate', value: number) => void;
   setDownloadQuality: (quality: 'original' | 'high' | 'normal' | 'low') => void;
   setAnimationSpeed: (speed: 'slow' | 'normal' | 'fast') => void;
+  setDesktopCloseAction: (action: 'ask' | 'minimize' | 'close') => void;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -68,11 +72,14 @@ export const useSettingsStore = create<SettingsState>()(
       offlineMode: false,
       hideUnavailableOffline: false,
       downloadQuality: 'original',
+
+      desktopCloseAction: 'ask',
       
       toggle: (key) => set((state) => ({ [key]: !state[key as keyof SettingsState] })),
       setNumber: (key, value) => set({ [key]: value }),
       setDownloadQuality: (quality) => set({ downloadQuality: quality }),
       setAnimationSpeed: (speed) => set({ animationSpeed: speed }),
+      setDesktopCloseAction: (action) => set({ desktopCloseAction: action }),
     }),
     {
       name: 'sonantica:settings',
