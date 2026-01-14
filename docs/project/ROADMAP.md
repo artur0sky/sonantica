@@ -316,6 +316,7 @@ Must:
 | Feature | Status | Priority | Notes |
 | :--- | :---: | :---: | :--- |
 | Packaged PWA | 📋 | 🟡 | Store deployment |
+| Tauri Desktop App | 🚧 | 🔴 | Initialized with React + Vite |
 | Media keys | 📋 | 🟡 | Hardware integration |
 | Basic OS integration | 📋 | 🟡 | Windows features |
 
