@@ -23,9 +23,19 @@ export function RecommendationCard({
 }: RecommendationCardProps) {
   // --- TRACK VARIANT ---
   if (type === "track") {
+    // Get cover art with proper fallback chain
+    const coverArt =
+      item.coverArt ||
+      item.metadata?.coverArt ||
+      useLibraryStore.getState().tracks.find((t: any) => t.id === item.id)
+        ?.coverArt;
+
     return (
       <div className={cn("relative group", className)}>
-        <TrackItem track={item} onClick={onClick || (() => {})} />
+        <TrackItem
+          track={{ ...item, coverArt }}
+          onClick={onClick || (() => {})}
+        />
         {/* Reason badge */}
         {reasons.length > 0 && (
           <div className="absolute top-1 right-2 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
