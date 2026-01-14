@@ -13,6 +13,7 @@
 export * from './types';
 export * from './constants';
 export * from './utils/index';
+export { isSmartTV } from './utils/common';
 export * from './hooks/index';
 
 // Additional utilities
