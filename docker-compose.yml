@@ -107,7 +107,7 @@ services:
       - MEDIA_PATH=/media
       - ANALYTICS_ENABLED=${ANALYTICS_ENABLED:-true}
       - ANALYTICS_RETENTION_DAYS=${ANALYTICS_RETENTION_DAYS:-90}
-      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost,http://localhost:3000,http://localhost:5173,capacitor://localhost,http://192.168.100.6:3000,http://192.168.100.6:5173,http://192.168.100.6}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost,http://localhost:3000,http://localhost:1420,http://localhost:5173,capacitor://localhost,http://192.168.100.6:3000,http://192.168.100.6:5173,http://192.168.100.6}
       - DEMUCS_URL=${DEMUCS_URL:-http://sonantica-plugin-demucs:8080}
       - BRAIN_URL=${BRAIN_URL:-http://sonantica-plugin-brain:8080}
       - KNOWLEDGE_URL=${KNOWLEDGE_URL:-http://sonantica-plugin-knowledge:8080}
