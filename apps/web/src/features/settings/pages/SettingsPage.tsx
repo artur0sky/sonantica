@@ -17,10 +17,17 @@ import { OfflineSettings } from "../components/OfflineSettings";
 import { AnalyticsSettings } from "../components/AnalyticsSettings";
 import { PluginsSettings } from "../components/PluginsSettings";
 import { ServersSection } from "../../library/components/ServersSection";
-import { IconChartBar, IconPlugConnected } from "@tabler/icons-react";
+import {
+  IconChartBar,
+  IconPlugConnected,
+  IconDeviceDesktop,
+} from "@tabler/icons-react";
+import { DesktopSettings } from "../components/DesktopSettings";
 
 export function SettingsPage() {
   const [activeTab, setActiveTab] = useState("general"); // Default to General/Interface
+  const isTauri =
+    typeof window !== "undefined" && !!(window as any).__TAURI_INTERNALS__;
 
   const tabs: Tab[] = [
     {
@@ -58,6 +65,15 @@ export function SettingsPage() {
       label: "Servers",
       icon: IconServer,
     },
+    ...(isTauri
+      ? [
+          {
+            id: "desktop",
+            label: "Desktop",
+            icon: IconDeviceDesktop,
+          },
+        ]
+      : []),
     {
       id: "info",
       label: "About",
@@ -97,6 +113,7 @@ export function SettingsPage() {
         {activeTab === "offline" && <OfflineSettings />}
         {activeTab === "analytics" && <AnalyticsSettings />}
         {activeTab === "plugins" && <PluginsSettings />}
+        {activeTab === "desktop" && <DesktopSettings />}
 
         {activeTab === "servers" && (
           <div className="bg-surface-elevated border border-border rounded-xl p-4 sm:p-6 animate-in fade-in duration-500">

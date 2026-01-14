@@ -52,7 +52,7 @@ export function LibraryPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {librarySections.map((section) => (
           <Link key={section.path} href={section.path}>
-            <a className="block group">
+            <div className="block group cursor-pointer">
               <div className="h-full p-6 rounded-2xl bg-surface border border-border/50 transition-all duration-300 group-hover:bg-surface-elevated group-hover:border-accent/30 group-hover:shadow-xl group-hover:shadow-accent/5">
                 <div className="flex flex-col gap-4">
                   <div
@@ -70,7 +70,7 @@ export function LibraryPage() {
                   </div>
                 </div>
               </div>
-            </a>
+            </div>
           </Link>
         ))}
       </div>
@@ -82,20 +82,20 @@ export function LibraryPage() {
           </h2>
           <div className="grid grid-cols-2 gap-4">
             <Link href="/library/favorites">
-              <a className="flex items-center gap-3 p-4 rounded-2xl bg-surface border border-border/40 hover:bg-surface-elevated transition-all group">
+              <div className="flex items-center gap-3 p-4 rounded-2xl bg-surface border border-border/40 hover:bg-surface-elevated transition-all group cursor-pointer">
                 <div className="p-2 rounded-lg bg-red-500/10 text-red-500 group-hover:scale-110 transition-transform">
                   <IconHeart size={18} fill="currentColor" />
                 </div>
                 <span className="font-semibold text-sm">Favorites</span>
-              </a>
+              </div>
             </Link>
             <Link href="/analytics">
-              <a className="flex items-center gap-3 p-4 rounded-2xl bg-surface border border-border/40 hover:bg-surface-elevated transition-all group">
+              <div className="flex items-center gap-3 p-4 rounded-2xl bg-surface border border-border/40 hover:bg-surface-elevated transition-all group cursor-pointer">
                 <div className="p-2 rounded-lg bg-accent/10 text-accent group-hover:scale-110 transition-transform">
                   <IconHistory size={18} />
                 </div>
                 <span className="font-semibold text-sm">Recently Played</span>
-              </a>
+              </div>
             </Link>
           </div>
         </section>

@@ -65,3 +65,19 @@ export function generateStableId(input: string): string {
   // Convert to positive hex string and add prefix for clarity
   return `id-${Math.abs(hash).toString(16)}`;
 }
+/**
+ * Detects if the current device is a Smart TV based on User Agent
+ */
+export function isSmartTV(): boolean {
+  if (typeof window === 'undefined' || !window.navigator) return false;
+  
+  const ua = window.navigator.userAgent.toLowerCase();
+  const tvKeywords = [
+    'smarttv', 'smart-tv', 'googletv', 'appletv', 'hbbtv', 'netcast', 'viera', 
+    'roku', 'tizen', 'webos', 'playstation', 'xbox', 'nintendo', 'aftb', 'afts', // firestick
+    'crkey', // chromecast
+    'android tv', 'mibox', 'shield'
+  ];
+  
+  return tvKeywords.some(keyword => ua.includes(keyword));
+}
