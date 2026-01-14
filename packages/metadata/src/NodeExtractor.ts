@@ -43,20 +43,17 @@ export async function extractMetadataFromFile(
     
     // Read only the required chunk instead of the whole file
     const fileHandle = await fs.open(filePath, 'r');
-    let buffer: Buffer;
+    let buffer: Uint8Array;
     
     try {
-      buffer = Buffer.alloc(bytesToRead);
+      buffer = new Uint8Array(bytesToRead);
       await fileHandle.read(buffer, 0, bytesToRead, 0);
     } finally {
       await fileHandle.close();
     }
     
-    // Convert Node.js Buffer to ArrayBuffer
-    const arrayBuffer = buffer.buffer.slice(
-      buffer.byteOffset,
-      buffer.byteOffset + buffer.byteLength
-    );
+    // Use the TypedArray's buffer directly
+    const arrayBuffer = buffer.buffer;
     
     const view = new DataView(arrayBuffer);
 
