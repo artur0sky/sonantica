@@ -24,3 +24,6 @@ export type { ContextMenuItem } from './components/ContextMenu';
 // Stores
 export { useUIStore } from './stores/uiStore';
 export type { UIState } from './stores/uiStore';
+
+// Hooks
+export * from './hooks/useSpatialNavigation';

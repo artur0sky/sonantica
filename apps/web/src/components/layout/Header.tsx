@@ -67,10 +67,9 @@ export function Header() {
         {/* Left: Logo (Toggles Sidebar) */}
         <div className="flex items-center flex-shrink-0">
           <Link href="/">
-            <a
+            <div
               className="flex items-center gap-2 group cursor-pointer px-2 py-1 rounded-lg hover:bg-surface-elevated transition-all active:scale-95"
-              onClick={(e) => {
-                e.preventDefault();
+              onClick={() => {
                 toggleLeftSidebar();
               }}
             >
@@ -84,7 +83,7 @@ export function Header() {
               <span className="text-lg sm:text-xl font-bold tracking-tight group-hover:text-accent transition-colors hidden sm:inline">
                 Sonántica
               </span>
-            </a>
+            </div>
           </Link>
         </div>
 

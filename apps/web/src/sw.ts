@@ -149,20 +149,22 @@ registerRoute(
 );
 
 // Fallback to index.html for SPA navigation
+// Note: In development, index.html might not be precached, so we wrap this
 const fileExtensionRegexp = new RegExp('/[^/?]+\\.[^/]+$');
 registerRoute(
   ({ request, url }) => {
-    // If it's a navigation request and not a file
-    if (request.mode !== 'navigate') {
-      return false;
-    } 
-    if (url.pathname.startsWith('/_')) {
-      return false;
-    }
-    if (url.pathname.match(fileExtensionRegexp)) {
-      return false;
-    }
+    if (request.mode !== 'navigate') return false; 
+    if (url.pathname.startsWith('/_')) return false;
+    if (url.pathname.match(fileExtensionRegexp)) return false;
     return true;
   },
-  createHandlerBoundToURL('index.html')
+  async (params) => {
+    try {
+      const handler = createHandlerBoundToURL('index.html');
+      return await handler(params);
+    } catch (e) {
+      // If index.html is not precached (development mode), just fetch from network
+      return await fetch(params.request);
+    }
+  }
 );

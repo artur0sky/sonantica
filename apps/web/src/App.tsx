@@ -106,11 +106,60 @@ import {
   useAnimationStyles,
   useAnimationSettings,
 } from "./hooks/useAnimationSettings";
+import { DesktopCloseModal } from "./components/DesktopCloseModal";
+import { useState } from "react";
+import { useSpatialNavigation } from "@sonantica/ui";
 
 function App() {
+  const [isCloseModalOpen, setIsCloseModalOpen] = useState(false);
+
+  // Enable spatial navigation for Smart TVs
+  useSpatialNavigation();
+
   // Initialize browser compatibility features (polyfills, detection, etc.)
   useEffect(() => {
     initBrowserCompatibility();
+
+    // Tauri-specific: disable context menu in production
+    const isTauri = !!(window as any).__TAURI_INTERNALS__;
+    if (isTauri && import.meta.env.PROD) {
+      document.addEventListener("contextmenu", (e) => e.preventDefault());
+    }
+  }, []);
+
+  // Desktop Close Listener
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+
+    async function setupCloseListener() {
+      const isTauri =
+        typeof window !== "undefined" && !!(window as any).__TAURI_INTERNALS__;
+      if (!isTauri) return;
+
+      try {
+        const { listen } = await import("@tauri-apps/api/event");
+        const { invoke } = await import("@tauri-apps/api/core");
+
+        unlisten = await listen("close-requested", async () => {
+          const action = useSettingsStore.getState().desktopCloseAction;
+
+          if (action === "minimize") {
+            await invoke("hide_window");
+          } else if (action === "close") {
+            await invoke("exit_app");
+          } else {
+            setIsCloseModalOpen(true);
+          }
+        });
+      } catch (err) {
+        console.error("Failed to setup desktop close listener:", err);
+      }
+    }
+
+    setupCloseListener();
+    return () => {
+      if (unlisten) unlisten();
+    };
   }, []);
 
   useVersionManager(); // Checks version and wipes data if needed
@@ -194,6 +243,12 @@ function App() {
 
           {/* Analytics Tracker (Isolated for performance) */}
           <AnalyticsTracker />
+
+          {/* Desktop Close Confirmation */}
+          <DesktopCloseModal
+            isOpen={isCloseModalOpen}
+            onClose={() => setIsCloseModalOpen(false)}
+          />
         </MotionConfig>
       </div>
     </ErrorBoundary>
