@@ -111,6 +111,12 @@ function App() {
   // Initialize browser compatibility features (polyfills, detection, etc.)
   useEffect(() => {
     initBrowserCompatibility();
+
+    // Tauri-specific: disable context menu in production
+    const isTauri = !!(window as any).__TAURI_INTERNALS__;
+    if (isTauri && import.meta.env.PROD) {
+      document.addEventListener("contextmenu", (e) => e.preventDefault());
+    }
   }, []);
 
   useVersionManager(); // Checks version and wipes data if needed
