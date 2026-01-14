@@ -166,3 +166,7 @@ import type {
 ---
 
 **Built with ❤️ following Sonántica's philosophy of intentional minimalism and technical excellence.**
+
+---
+
+Made with ❤ and **Opera**.
