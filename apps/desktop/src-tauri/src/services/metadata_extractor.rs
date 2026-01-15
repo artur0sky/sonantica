@@ -1,5 +1,9 @@
-use lofty::{read_from_path, Accessor, AudioFile, ItemKey, TaggedFileExt};
+use lofty::file::{AudioFile, TaggedFileExt};
+use lofty::tag::{Accessor, ItemKey, Tag};
+use lofty::properties::FileProperties;
+use lofty::read_from_path;
 use std::path::Path;
+use std::borrow::Cow;
 use crate::models::AudioMetadata;
 
 /// Metadata extractor service - responsible for reading audio file metadata
@@ -25,39 +29,40 @@ impl MetadataExtractor {
         }
 
         // Extract audio properties
-        if let Some(properties) = tagged_file.properties() {
-            self.extract_properties(properties, &mut metadata);
-        }
+        let properties = tagged_file.properties();
+        self.extract_properties(properties, &mut metadata);
 
         Ok(metadata)
     }
 
-    fn extract_tags(&self, tag: &lofty::Tag, metadata: &mut AudioMetadata) {
-        metadata.title = tag.title().map(|s| s.to_string());
-        metadata.artist = tag.artist().map(|s| s.to_string());
-        metadata.album = tag.album().map(|s| s.to_string());
-        metadata.album_artist = tag.get_string(&ItemKey::AlbumArtist).map(|s| s.to_string());
+    fn extract_tags(&self, tag: &Tag, metadata: &mut AudioMetadata) {
+        metadata.title = tag.title().map(|s: Cow<str>| s.to_string());
+        metadata.artist = tag.artist().map(|s: Cow<str>| s.to_string());
+        metadata.album = tag.album().map(|s: Cow<str>| s.to_string());
+        metadata.album_artist = tag.get_string(&ItemKey::AlbumArtist).map(|s: &str| s.to_string());
         metadata.year = tag.year();
-        metadata.genre = tag.genre().map(|s| s.to_string());
+        metadata.genre = tag.genre().map(|s: Cow<str>| s.to_string());
         metadata.track_number = tag.track();
     }
 
-    fn extract_cover_art(&self, tag: &lofty::Tag, metadata: &mut AudioMetadata) {
-        if let Some(pictures) = tag.pictures() {
-            if let Some(picture) = pictures.first() {
-                let base64_image = base64::Engine::encode(
-                    &base64::engine::general_purpose::STANDARD,
-                    picture.data(),
-                );
-                let mime_type = picture.mime_type()
-                    .map(|m| m.as_str())
-                    .unwrap_or("image/jpeg");
-                metadata.cover_art = Some(format!("data:{};base64,{}", mime_type, base64_image));
-            }
+    fn extract_cover_art(&self, tag: &Tag, metadata: &mut AudioMetadata) {
+        let pictures = tag.pictures();
+        if let Some(picture) = pictures.first() {
+            let data: &[u8] = picture.data();
+            let base64_image = base64::Engine::encode(
+                &base64::engine::general_purpose::STANDARD,
+                data,
+            );
+            // Get MIME type as string
+            let mime_str = picture.mime_type()
+                .map(|m| m.as_str())
+                .unwrap_or("image/jpeg");
+            
+            metadata.cover_art = Some(format!("data:{};base64,{}", mime_str, base64_image));
         }
     }
 
-    fn extract_properties(&self, properties: &lofty::properties::FileProperties, metadata: &mut AudioMetadata) {
+    fn extract_properties(&self, properties: &FileProperties, metadata: &mut AudioMetadata) {
         metadata.duration = Some(properties.duration().as_secs_f64());
         metadata.bitrate = properties.audio_bitrate();
         metadata.sample_rate = properties.sample_rate();
