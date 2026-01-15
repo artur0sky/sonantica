@@ -315,51 +315,47 @@ export function useMultiServerLibrary() {
         playlists: taggedPlaylists.length
       });
 
-      // Replace data for this server (no pagination, we have everything)
-      setState(prev => {
-        // Prepare new state
-        let newTracks = prev.tracks;
-        let newArtists = prev.artists;
-        let newAlbums = prev.albums;
-        let newPlaylists = prev.playlists;
+      // Update Store (Sync source of truth)
+      // We read from the store directly to ensure we have the latest state before merging
+      const currentStore = useLibraryStore.getState();
+      
+      let newTracks = currentStore.tracks;
+      let newArtists = currentStore.artists;
+      let newAlbums = currentStore.albums;
+      let newPlaylists = currentStore.playlists;
 
-        if (shouldFetchTracks) {
-            const otherTracks = prev.tracks.filter(t => t.serverId !== serverId);
-            newTracks = [...otherTracks, ...taggedTracks];
-        }
+      if (shouldFetchTracks) {
+          const otherTracks = currentStore.tracks.filter(t => t.serverId !== serverId);
+          newTracks = [...otherTracks, ...taggedTracks];
+      }
 
-        if (shouldFetchArtists) {
-            const otherArtists = prev.artists.filter(a => (a as any).serverId !== serverId);
-            newArtists = [...otherArtists, ...taggedArtists];
-        }
-        
-        if (shouldFetchAlbums) {
-            const otherAlbums = prev.albums.filter(a => (a as any).serverId !== serverId);
-            newAlbums = [...otherAlbums, ...taggedAlbums];
-        }
+      if (shouldFetchArtists) {
+          const otherArtists = currentStore.artists.filter(a => (a as any).serverId !== serverId);
+          newArtists = [...otherArtists, ...taggedArtists];
+      }
+      
+      if (shouldFetchAlbums) {
+          const otherAlbums = currentStore.albums.filter(a => (a as any).serverId !== serverId);
+          newAlbums = [...otherAlbums, ...taggedAlbums];
+      }
 
-        if (shouldFetchPlaylists) {
-            const otherPlaylists = prev.playlists.filter(p => (p as any).serverId !== serverId);
-            newPlaylists = [...otherPlaylists, ...taggedPlaylists];
-        }
+      if (shouldFetchPlaylists) {
+          const otherPlaylists = currentStore.playlists.filter(p => (p as any).serverId !== serverId);
+          newPlaylists = [...otherPlaylists, ...taggedPlaylists];
+      }
 
-        // Sync with library store
-        // We only update the store with the things we changed
-        if (shouldFetchTracks) setTracks(newTracks);
-        if (shouldFetchArtists) setArtists(newArtists);
-        if (shouldFetchAlbums) setAlbums(newAlbums);
-        if (shouldFetchPlaylists) setPlaylists(newPlaylists);
+      // Update the store - this will trigger the useEffect to update local state
+      if (shouldFetchTracks) setTracks(newTracks);
+      if (shouldFetchArtists) setArtists(newArtists);
+      if (shouldFetchAlbums) setAlbums(newAlbums);
+      if (shouldFetchPlaylists) setPlaylists(newPlaylists);
 
-        return {
-          ...prev,
-          tracks: newTracks,
-          artists: newArtists,
-          albums: newAlbums,
-          playlists: newPlaylists,
-          scanningServers: new Set([...prev.scanningServers].filter(id => id !== serverId)),
-          error: null
-        };
-      });
+      // Update loading state locally
+      setState(prev => ({
+        ...prev,
+        scanningServers: new Set([...prev.scanningServers].filter(id => id !== serverId)),
+        error: null
+      }));
 
     } catch (error) {
       console.error(`Failed to scan ${server.name}:`, error);
@@ -564,25 +560,19 @@ export function useMultiServerLibrary() {
       } else {
           // Disabled: Remove its tracks
           console.log(`🚫 Server ${serverId} disabled. Removing tracks...`);
-          setState(prev => {
-              const newTracks = prev.tracks.filter(t => t.serverId !== serverId);
-              const newArtists = prev.artists.filter(a => (a as any).serverId !== serverId);
-              const newAlbums = prev.albums.filter(a => (a as any).serverId !== serverId);
-              const newPlaylists = prev.playlists.filter(p => (p as any).serverId !== serverId);
-              
-              setTracks(newTracks);
-              setArtists(newArtists);
-              setAlbums(newAlbums);
-              setPlaylists(newPlaylists);
-              
-              return {
-                  ...prev,
-                  tracks: newTracks,
-                  artists: newArtists,
-                  albums: newAlbums,
-                  playlists: newPlaylists
-              };
-          });
+          
+          const currentStore = useLibraryStore.getState();
+          
+          const newTracks = currentStore.tracks.filter(t => t.serverId !== serverId);
+          const newArtists = currentStore.artists.filter(a => (a as any).serverId !== serverId);
+          const newAlbums = currentStore.albums.filter(a => (a as any).serverId !== serverId);
+          const newPlaylists = currentStore.playlists.filter(p => (p as any).serverId !== serverId);
+          
+          setTracks(newTracks);
+          setArtists(newArtists);
+          setAlbums(newAlbums);
+          setPlaylists(newPlaylists);
+          // Local state update handled by useEffect syncing with store
       }
   }, [scanServer, setTracks, setArtists, setAlbums, setPlaylists]);
 
