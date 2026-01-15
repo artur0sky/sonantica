@@ -105,7 +105,8 @@ export function trackToMediaSource(track: any): any {
     console.log(`🎵 Local file URL: ${url}`);
   } else if (track.serverId && track.filePath) {
     // Remote server track - build streaming URL
-    url = buildStreamingUrl(track.serverId, track.filePath, track.id);
+    const idForStream = track.originalId || track.id;
+    url = buildStreamingUrl(track.serverId, track.filePath, idForStream);
   } else {
     console.error('❌ Track missing required fields for playback:', track);
     url = '';

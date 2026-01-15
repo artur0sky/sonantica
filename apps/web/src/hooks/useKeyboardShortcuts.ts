@@ -54,14 +54,11 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions = {}) {
       // Don't trigger shortcuts when typing in input fields
       const target = e.target as HTMLElement;
       if (
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
         target.isContentEditable
       ) {
-        // Exception: Allow Space in search to focus/blur
-        if (e.code !== 'Space') {
-          return;
-        }
+        return;
       }
 
       const audio = player.getAudioElement();

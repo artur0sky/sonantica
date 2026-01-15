@@ -21,7 +21,11 @@ import logo from "../../assets/logo.png";
 import { cn } from "@sonantica/shared";
 
 export function Header() {
-  const { toggleLeftSidebar, handleSearchResultSelect } = useHeaderLogic();
+  const {
+    toggleLeftSidebar,
+    handleSearchResultSelect,
+    handleSearchResultAction,
+  } = useHeaderLogic();
   const [, setLocation] = useLocation();
   const contextMenu = useContextMenu("user-menu");
   const isPlayerExpanded = useUIStore((s) => s.isPlayerExpanded);
@@ -57,7 +61,7 @@ export function Header() {
       <header
         className={cn(
           "flex items-center px-3 sm:px-4 md:px-6 gap-2 sm:gap-4 select-none transition-all duration-500 ease-in-out",
-          "border-b border-border bg-surface z-30 flex-none overflow-hidden",
+          "border-b border-border bg-surface z-30 flex-none",
           isCapacitor() && "pt-[env(safe-area-inset-top)]",
           isPlayerExpanded
             ? "h-0 opacity-0 -translate-y-full pointer-events-none border-none"
@@ -89,7 +93,10 @@ export function Header() {
 
         {/* Center: Global Search */}
         <div className="flex-1 max-w-sm sm:max-w-md md:max-w-lg lg:max-w-2xl mx-auto min-w-0">
-          <GlobalSearchBar onResultSelect={handleSearchResultSelect} />
+          <GlobalSearchBar
+            onResultSelect={handleSearchResultSelect}
+            onResultAction={handleSearchResultAction}
+          />
         </div>
 
         {/* Right: User Button with Menu */}

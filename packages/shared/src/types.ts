@@ -32,6 +32,9 @@ export interface MediaSource {
   
   /** Optional metadata */
   metadata?: MediaMetadata;
+
+  /** Internal unique ID for queue instances (avoids React key collisions) */
+  queueId?: string;
 }
 
 /**

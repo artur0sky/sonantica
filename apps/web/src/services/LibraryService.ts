@@ -212,6 +212,7 @@ export function createLibraryAdapter(): ILibraryAdapter | null {
   }
   
   return new RemoteLibraryAdapter({
+    serverName: server.name,
     serverUrl: server.serverUrl,
     apiKey: server.apiKey,
   });
@@ -229,6 +230,7 @@ export function createLibraryAdapterForServer(serverId: string): ILibraryAdapter
   }
   
   return new RemoteLibraryAdapter({
+    serverName: server.name,
     serverUrl: server.serverUrl,
     apiKey: server.apiKey,
   });

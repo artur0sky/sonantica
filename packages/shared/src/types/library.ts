@@ -56,6 +56,12 @@ export interface Track {
   
   /** Server name (for display) */
   serverName?: string;
+
+  /** Source type (local or remote) */
+  source?: 'local' | 'remote';
+
+  /** Original ID from the source (before namespacing) */
+  originalId?: string;
   
   /** Track title */
   title: string;

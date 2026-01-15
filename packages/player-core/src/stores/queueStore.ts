@@ -33,8 +33,8 @@ export interface QueueState {
   clearQueue: () => void;
   
   // Navigation
-  next: () => MediaSource | null;
-  previous: () => MediaSource | null;
+  next: (force?: boolean) => MediaSource | null;
+  previous: (force?: boolean) => MediaSource | null;
   jumpTo: (index: number) => void;
   
   // Shuffle
@@ -107,9 +107,15 @@ export const useQueueStore = create<QueueState>((set, get) => ({
   _hasRestored: false,
 
   setQueue: (tracks: MediaSource[], startIndex = 0) => {
+    // Ensure unique IDs for queue items
+    const tracksWithUniqueIds = tracks.map(track => ({
+      ...track,
+      queueId: track.queueId || Math.random().toString(36).substring(7)
+    }));
+
     set({
-      queue: tracks,
-      originalQueue: tracks,
+      queue: tracksWithUniqueIds,
+      originalQueue: tracksWithUniqueIds,
       currentIndex: startIndex,
       isShuffled: false,
       _hasRestored: true, // New interaction overrides restoration
@@ -119,7 +125,11 @@ export const useQueueStore = create<QueueState>((set, get) => ({
   },
 
   addToQueue: (tracks: MediaSource | MediaSource[]) => {
-    const tracksArray = Array.isArray(tracks) ? tracks : [tracks];
+    const tracksArray = (Array.isArray(tracks) ? tracks : [tracks]).map(track => ({
+      ...track,
+      queueId: Math.random().toString(36).substring(7)
+    }));
+    
     set((state) => ({
       queue: [...state.queue, ...tracksArray],
       originalQueue: [...state.originalQueue, ...tracksArray],
@@ -128,7 +138,11 @@ export const useQueueStore = create<QueueState>((set, get) => ({
   },
 
   playNext: (tracks: MediaSource | MediaSource[]) => {
-    const tracksArray = Array.isArray(tracks) ? tracks : [tracks];
+    const tracksArray = (Array.isArray(tracks) ? tracks : [tracks]).map(track => ({
+      ...track,
+      queueId: Math.random().toString(36).substring(7)
+    }));
+
     set((state) => {
       const insertIndex = Math.max(0, state.currentIndex + 1);
       
@@ -141,7 +155,8 @@ export const useQueueStore = create<QueueState>((set, get) => ({
       // Also insert into original queue to maintain consistency when unshuffling
       const newOriginalQueue = [...state.originalQueue];
       // Find where we are in original queue
-      const currentInOriginal = state.originalQueue.findIndex(t => t.id === state.queue[state.currentIndex]?.id);
+      const currentTrack = state.queue[state.currentIndex];
+      const currentInOriginal = state.originalQueue.findIndex(t => t.queueId === currentTrack?.queueId);
       const originalInsertIndex = currentInOriginal >= 0 ? currentInOriginal + 1 : state.originalQueue.length;
       
       newOriginalQueue.splice(originalInsertIndex, 0, ...tracksArray);

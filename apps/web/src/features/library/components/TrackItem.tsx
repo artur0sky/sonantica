@@ -230,6 +230,10 @@ export function TrackItem({
         isSelectionMode={isInSelectionMode}
         isSelected={selected}
         statusIcons={statusIcons}
+        source={track.source}
+        sourceName={
+          track.serverName || (track.source === "local" ? "LOCAL" : "SERVER")
+        }
         onClick={() => {
           if (isInSelectionMode) {
             toggleSelection(track.id);
