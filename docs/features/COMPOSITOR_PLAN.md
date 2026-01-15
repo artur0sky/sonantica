@@ -1,23 +1,25 @@
-# Sonántica Compositor — Implementation Plan
-## Professional Audio Engine: Advanced Routing & Recording
+# Sonántica Compositor & Orquestador — Plugin-Based Implementation Plan
+## Modular Audio Engine: DAW + Routing as Optional Plugins
 
 > **Philosophy**: "Respect the intention of the sound and the freedom of the listener."  
-> This plan extends Sonántica from a multimedia player to a **lightweight audio compositor** with professional routing and recording capabilities.
+> This plan extends Sonántica from a multimedia player to a **modular audio workstation** through optional, interoperable plugins.
 
 ---
 
 ## 📋 Executive Summary
 
 ### Vision
-Transform the Tauri desktop app from a web-wrapped player into a **hybrid audio workstation** that combines:
-- **Professional routing**: Multi-device output, virtual cables, loopback capture
-- **High-fidelity recording**: Bit-perfect, low-latency, multi-track capture
-- **Sonántica's soul**: Minimalist UI, technical transparency, user autonomy
+Transform Sonántica into a **multivalent multimedia player** (like Eevee's evolutions) where users choose their capabilities:
+- **Base Player**: Pure music playback (always active)
+- **Compositor Plugin**: DAW features (audio editing, mixing, effects) — *optional*
+- **Orquestador Plugin**: Multi-channel routing and management — *optional*
+- **Plugin Interoperability**: Plugins work together through a unified audio graph
 
 ### Technical Strategy
 - **Current Core** (`player-core`): Remains for standard playback (web, mobile)
-- **New Studio Core** (`studio-core`): Rust-based audio engine for desktop-exclusive features
-- **Architecture**: Clean separation following SOLID principles, zero impact on existing platforms
+- **Audio Graph System**: Unified processing graph where plugins are nodes
+- **Plugin Types**: Desktop (native Rust) and Server (microservices like Demucs)
+- **Architecture**: Clean separation, SOLID principles, zero impact on base player
 
 ---
 
