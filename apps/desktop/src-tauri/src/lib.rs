@@ -2,6 +2,7 @@
 // Clean architecture with separated concerns following SOLID principles
 
 mod commands;
+mod logging;
 mod models;
 mod services;
 
@@ -11,10 +12,17 @@ use tauri::{
     Emitter, Manager, WindowEvent,
 };
 
-use commands::{exit_app, hide_window, select_folder, scan_directory, extract_metadata};
+use commands::{
+    exit_app, hide_window, select_folder, scan_directory, extract_metadata,
+    get_audio_devices, get_default_input_device, get_default_output_device,
+};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Initialize structured logging (consistent with Python services)
+    logging::init_logging();
+    tracing::info!("Starting Sonántica Desktop");
+    
     tauri::Builder::default()
         // Initialize plugins
         .plugin(tauri_plugin_opener::init())
@@ -30,7 +38,10 @@ pub fn run() {
             hide_window,
             select_folder,
             scan_directory,
-            extract_metadata
+            extract_metadata,
+            get_audio_devices,
+            get_default_input_device,
+            get_default_output_device,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
