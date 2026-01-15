@@ -280,5 +280,55 @@ export function useMediaPlayback() {
     }
   }, []);
 
-  return { startService, stopService };
+  const updateMetadata = useCallback(async (meta: { title: string; artist: string; album: string; coverArt?: string }) => {
+    if (Capacitor.getPlatform() !== 'android') return;
+    try {
+      const { registerPlugin } = await import('@capacitor/core');
+      const MediaPlayback = registerPlugin<any>('MediaPlayback');
+      await MediaPlayback.updateMetadata(meta);
+    } catch (error) {
+       console.error('Failed to update native metadata:', error);
+    }
+  }, []);
+
+  const updatePlaybackState = useCallback(async (state: 'playing' | 'paused' | 'none') => {
+    if (Capacitor.getPlatform() !== 'android') return;
+    try {
+      const { registerPlugin } = await import('@capacitor/core');
+      const MediaPlayback = registerPlugin<any>('MediaPlayback');
+      await MediaPlayback.updatePlaybackState({ state });
+    } catch (error) {
+       console.error('Failed to update native playback state:', error);
+    }
+  }, []);
+
+  const registerActionListeners = useCallback(async (handlers: { 
+      onPlay?: () => void; 
+      onPause?: () => void; 
+      onNext?: () => void; 
+      onPrev?: () => void; 
+  }) => {
+    if (Capacitor.getPlatform() !== 'android') return () => {};
+    try {
+      const { registerPlugin } = await import('@capacitor/core');
+      const MediaPlayback = registerPlugin<any>('MediaPlayback');
+      
+      const l1 = await MediaPlayback.addListener('onPlay', () => handlers.onPlay?.());
+      const l2 = await MediaPlayback.addListener('onPause', () => handlers.onPause?.());
+      const l3 = await MediaPlayback.addListener('onNext', () => handlers.onNext?.());
+      const l4 = await MediaPlayback.addListener('onPrev', () => handlers.onPrev?.());
+      
+      return () => {
+          l1.remove();
+          l2.remove();
+          l3.remove();
+          l4.remove();
+      };
+    } catch (error) {
+       console.error('Failed to register listeners:', error);
+       return () => {};
+    }
+  }, []);
+
+  return { startService, stopService, updateMetadata, updatePlaybackState, registerActionListeners };
 }
