@@ -95,9 +95,25 @@ export function trackToMediaSource(track: any): any {
     }
   }
 
+  // Determine the URL to use
+  let url: string;
+  
+  // Check if this is a local file (from Tauri desktop app)
+  if (track.source === 'local' && track.filePath) {
+    // Local files already have Tauri asset URL in filePath
+    url = track.filePath;
+    console.log(`🎵 Local file URL: ${url}`);
+  } else if (track.serverId && track.filePath) {
+    // Remote server track - build streaming URL
+    url = buildStreamingUrl(track.serverId, track.filePath, track.id);
+  } else {
+    console.error('❌ Track missing required fields for playback:', track);
+    url = '';
+  }
+
   return {
     id: track.id,
-    url: buildStreamingUrl(track.serverId!, track.filePath!, track.id),
+    url,
     metadata: {
       title: track.title || track.metadata?.title,
       artist: track.artist || track.metadata?.artist,
