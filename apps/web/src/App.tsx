@@ -110,15 +110,15 @@ const PageLoader = () => (
 );
 
 import { ErrorBoundary } from "./components/ErrorBoundary";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useSpatialNavigation } from "@sonantica/ui";
 import { initBrowserCompatibility } from "./utils/browser";
 import {
   useAnimationStyles,
   useAnimationSettings,
 } from "./hooks/useAnimationSettings";
 import { DesktopCloseModal } from "./components/DesktopCloseModal";
-import { useState } from "react";
-import { useSpatialNavigation } from "@sonantica/ui";
+import { useFullscreen } from "./hooks/useFullscreen";
 import { useNavigationProtection } from "./hooks/useNavigationProtection";
 
 function App() {
@@ -127,12 +127,26 @@ function App() {
   // Enable spatial navigation for Smart TVs
   useSpatialNavigation();
 
+  // Handle Fullscreen (F11/Esc) in Tauri
+  useFullscreen();
+
   // Protect audio playback during navigation (Tauri fix)
   useNavigationProtection();
 
   // Initialize browser compatibility features (polyfills, detection, etc.)
   useEffect(() => {
     initBrowserCompatibility();
+
+    // Migration: Clear legacy library storage from localStorage to free up space
+    // as we moved to IndexedDB in @sonantica/media-library
+    try {
+      if (localStorage.getItem("sonantica-library-storage")) {
+        console.log("🧹 Clearing legacy library storage from localStorage");
+        localStorage.removeItem("sonantica-library-storage");
+      }
+    } catch (e) {
+      console.warn("Failed to clear legacy library storage", e);
+    }
 
     // Tauri-specific: disable context menu in production
     const isTauri = !!(window as any).__TAURI_INTERNALS__;

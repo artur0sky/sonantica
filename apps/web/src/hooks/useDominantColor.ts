@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 
-export function useDominantColor(url?: string) {
-  const [color, setColor] = useState<string>('#1a1a1a'); // Default surface color
+export function useDominantColor(url?: string, fallbackColor?: string) {
+  const [color, setColor] = useState<string>(fallbackColor || '#1a1a1a'); // Default surface color
   const [contrastColor, setContrastColor] = useState<string>('#ffffff');
 
   useEffect(() => {
     if (!url) {
-      setColor('#1a1a1a');
+      setColor(fallbackColor || '#1a1a1a');
       setContrastColor('#ffffff');
       return;
     }
@@ -37,16 +37,16 @@ export function useDominantColor(url?: string) {
       } catch (e) {
         console.warn('Failed to extract dominant color:', e);
         // Fallback to default if extraction fails (e.g. tainted canvas)
-        setColor('#1a1a1a'); 
+        setColor(fallbackColor || '#1a1a1a'); 
         setContrastColor('#ffffff');
       }
     };
     img.onerror = (e) => {
       console.warn('Failed to load image for color extraction:', e);
-      setColor('#1a1a1a');
+      setColor(fallbackColor || '#1a1a1a');
       setContrastColor('#ffffff');
     };
-  }, [url]);
+  }, [url, fallbackColor]);
 
   return { color, contrastColor };
 }

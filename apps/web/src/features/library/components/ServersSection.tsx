@@ -407,7 +407,12 @@ export function ServersSection() {
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <h4 className="font-medium text-text-primary truncate">
+                      <h4 className="font-medium text-text-primary truncate flex items-center gap-2">
+                        <div
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: server.color || "#888" }}
+                          title="Server Color"
+                        />
                         {server.name}
                       </h4>
                       {isActive && (

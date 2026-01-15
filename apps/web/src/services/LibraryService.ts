@@ -17,6 +17,7 @@ export interface ServerConfig {
   serverUrl: string;
   apiKey?: string;
   lastConnected?: number;
+  color?: string;
 }
 
 export interface ServersConfig {
@@ -25,6 +26,23 @@ export interface ServersConfig {
 }
 
 const STORAGE_KEY = 'sonantica:servers-config';
+
+// Helper to generate random consistent colors
+const getRandomColor = () => {
+    const colors = [
+        '#ef4444', // Red
+        '#f97316', // Orange
+        '#f59e0b', // Amber
+        '#84cc16', // Lime
+        '#22c55e', // Green
+        '#06b6d4', // Cyan
+        '#3b82f6', // Blue
+        '#6366f1', // Indigo
+        '#a855f7', // Purple
+        '#ec4899', // Pink
+    ];
+    return colors[Math.floor(Math.random() * colors.length)];
+}
 
 /**
  * Get all servers configuration from localStorage
@@ -115,7 +133,8 @@ export function saveServerConfig(server: Omit<ServerConfig, 'id' | 'lastConnecte
   const newServer: ServerConfig = {
     ...server,
     id,
-    lastConnected: Date.now()
+    lastConnected: Date.now(),
+    color: server.color || getRandomColor(),
   };
   
   if (existingIndex !== -1) {

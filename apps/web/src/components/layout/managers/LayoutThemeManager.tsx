@@ -39,7 +39,8 @@ export function LayoutThemeManager({
 
   // Extract dominant color from cover art
   const { color: dominantColor, contrastColor } = useDominantColor(
-    fullTrack?.coverArt
+    fullTrack?.coverArt,
+    (fullTrack as any)?.serverColor // Pass server custom color as fallback
   );
 
   // Calculate muted color variant
@@ -78,7 +79,8 @@ export function useLayoutTheme() {
   );
 
   const { color: dominantColor, contrastColor } = useDominantColor(
-    fullTrack?.coverArt
+    fullTrack?.coverArt,
+    (fullTrack as any)?.serverColor
   );
 
   const mutedColor =

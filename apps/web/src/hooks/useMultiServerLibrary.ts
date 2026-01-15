@@ -282,6 +282,7 @@ export function useMultiServerLibrary() {
         ...track,
         serverId: server.id,
         serverName: server.name,
+        serverColor: server.color,
         coverArt: normalizeArt(track.coverArt)
       }));
 

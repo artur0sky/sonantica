@@ -28,13 +28,14 @@
     "author": "Sonántica Team",
     "license": "Apache-2.0",
     "dependencies": {
-        "@sonantica/shared": "workspace:*",
         "@sonantica/metadata": "workspace:*",
+        "@sonantica/shared": "workspace:*",
+        "idb-keyval": "^6.2.2",
         "zustand": "5.0.9"
     },
     "devDependencies": {
+        "rimraf": "6.1.2",
         "tsup": "8.5.1",
-        "typescript": "5.9.3",
-        "rimraf": "6.1.2"
+        "typescript": "5.9.3"
     }
 }

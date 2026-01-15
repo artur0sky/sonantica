@@ -11,6 +11,9 @@ import {
   IconHammer,
   IconMicrophone,
   IconAdjustmentsHorizontal,
+  IconDisc,
+  IconUsers,
+  IconGridDots,
 } from "@tabler/icons-react";
 
 import { cn, isTauri } from "@sonantica/shared";
@@ -29,11 +32,27 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { path: "/library", label: "Library", Icon: IconMusic },
   { path: "/recommendations", label: "Discovery", Icon: IconSparkles },
   { path: "/dsp", label: "DSP Engine", Icon: IconWaveSquare },
   { path: "/analytics", label: "Analytics", Icon: IconChartBar },
   { path: "/workshop", label: "Workshop", Icon: IconHammer },
+];
+
+interface LibraryItem {
+  path: string;
+  label: string;
+  Icon: React.ComponentType<{
+    size?: number;
+    className?: string;
+    stroke?: number;
+  }>;
+}
+
+const libraryItems: LibraryItem[] = [
+  { path: "/library", label: "Tracks", Icon: IconMusic },
+  { path: "/playlists", label: "Playlists", Icon: IconPlaylist },
+  { path: "/albums", label: "Albums", Icon: IconDisc },
+  { path: "/artists", label: "Artists", Icon: IconUsers },
 ];
 
 const studioItems: NavItem[] = [
@@ -144,6 +163,43 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
           </Link>
         ))}
 
+        {/* Library Section */}
+        <div className="pt-6 space-y-1">
+          {!isCollapsed && (
+            <div className="text-[10px] font-bold text-text-muted uppercase tracking-widest px-3 mb-2 opacity-50 flex items-center gap-2">
+              <IconGridDots size={12} />
+              Library
+            </div>
+          )}
+          {libraryItems.map((item) => (
+            <Link key={item.path} href={item.path}>
+              <div
+                title={isCollapsed ? item.label : undefined}
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2 rounded-xl transition-all group cursor-pointer",
+                  isCollapsed && "justify-center",
+                  location === item.path
+                    ? "bg-accent/10 text-accent font-semibold"
+                    : "text-text-muted hover:text-text hover:bg-surface-elevated"
+                )}
+              >
+                <item.Icon
+                  size={20}
+                  stroke={1.5}
+                  className={cn(
+                    "transition-transform group-hover:scale-110 flex-shrink-0",
+                    location === item.path ? "text-accent" : "text-text-muted"
+                  )}
+                />
+                {!isCollapsed && <span className="text-sm">{item.label}</span>}
+                {!isCollapsed && location === item.path && (
+                  <div className="ml-auto w-1.5 h-1.5 rounded-full bg-accent" />
+                )}
+              </div>
+            </Link>
+          ))}
+        </div>
+
         {/* Studio Section (Tauri Only) */}
         {isTauriActual && (enableCompositor || enableOrquestador) && (
           <div className="pt-6 space-y-1">
@@ -216,23 +272,12 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
           </div>
         )}
 
-        {/* Library / Collection */}
+        {/* Playlists Collection */}
         {!isCollapsed && (
           <div className="pt-6 space-y-1">
             <div className="text-[10px] font-bold text-text-muted uppercase tracking-widest px-3 mb-2 opacity-50">
-              Collection
+              Your Playlists
             </div>
-            <Link href="/playlists">
-              <div
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2 rounded-xl text-text-muted hover:text-text hover:bg-surface-elevated transition-all cursor-pointer",
-                  location === "/playlists" && "bg-surface-elevated text-text"
-                )}
-              >
-                <IconPlaylist size={20} stroke={1.5} />
-                <span className="text-sm">Manage Playlists</span>
-              </div>
-            </Link>
             {otherPlaylists.slice(0, 8).map((playlist) => (
               <PlaylistNavItem
                 key={playlist.id}
