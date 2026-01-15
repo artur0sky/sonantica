@@ -35,6 +35,13 @@ interface SettingsState {
   // Desktop (Tauri)
   desktopCloseAction: 'ask' | 'minimize' | 'close';
   
+  // Desktop Plugins
+  enableCompositor: boolean;
+  enableOrquestador: boolean;
+  enableServerPluginsOnDesktop: boolean;
+  devForceStudio: boolean;
+
+  
   // Actions
   toggle: (key: keyof Omit<SettingsState, 'toggle' | 'setTheme' | 'setNumber' | 'setDownloadQuality' | 'setAnimationSpeed' | 'setDesktopCloseAction'>) => void;
   setNumber: (key: 'playbackBufferSize' | 'scanFileSizeLimit' | 'coverArtSizeLimit' | 'crossfadeDuration' | 'fadeOutDuration' | 'analyticsDashboardRefreshRate', value: number) => void;
@@ -42,6 +49,7 @@ interface SettingsState {
   setAnimationSpeed: (speed: 'slow' | 'normal' | 'fast') => void;
   setDesktopCloseAction: (action: 'ask' | 'minimize' | 'close') => void;
 }
+
 
 export const useSettingsStore = create<SettingsState>()(
   persist(
@@ -75,7 +83,14 @@ export const useSettingsStore = create<SettingsState>()(
 
       desktopCloseAction: 'ask',
       
+      enableCompositor: false,
+      enableOrquestador: false,
+      enableServerPluginsOnDesktop: false,
+      devForceStudio: false,
+
+      
       toggle: (key) => set((state) => ({ [key]: !state[key as keyof SettingsState] })),
+
       setNumber: (key, value) => set({ [key]: value }),
       setDownloadQuality: (quality) => set({ downloadQuality: quality }),
       setAnimationSpeed: (speed) => set({ animationSpeed: speed }),

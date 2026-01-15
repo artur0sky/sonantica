@@ -92,6 +92,16 @@ const WorkshopPage = lazy(() =>
     default: m.WorkshopPage,
   }))
 );
+const CompositorWorkspace = lazy(() =>
+  import("./features/studio/pages/CompositorWorkspace").then((m) => ({
+    default: m.CompositorWorkspace,
+  }))
+);
+const OrquestadorWorkspace = lazy(() =>
+  import("./features/studio/pages/OrquestadorWorkspace").then((m) => ({
+    default: m.OrquestadorWorkspace,
+  }))
+);
 
 const PageLoader = () => (
   <div className="flex items-center justify-center min-h-[50vh] text-text-muted">
@@ -100,15 +110,16 @@ const PageLoader = () => (
 );
 
 import { ErrorBoundary } from "./components/ErrorBoundary";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useSpatialNavigation } from "@sonantica/ui";
 import { initBrowserCompatibility } from "./utils/browser";
 import {
   useAnimationStyles,
   useAnimationSettings,
 } from "./hooks/useAnimationSettings";
 import { DesktopCloseModal } from "./components/DesktopCloseModal";
-import { useState } from "react";
-import { useSpatialNavigation } from "@sonantica/ui";
+import { useFullscreen } from "./hooks/useFullscreen";
+import { useNavigationProtection } from "./hooks/useNavigationProtection";
 
 function App() {
   const [isCloseModalOpen, setIsCloseModalOpen] = useState(false);
@@ -116,9 +127,26 @@ function App() {
   // Enable spatial navigation for Smart TVs
   useSpatialNavigation();
 
+  // Handle Fullscreen (F11/Esc) in Tauri
+  useFullscreen();
+
+  // Protect audio playback during navigation (Tauri fix)
+  useNavigationProtection();
+
   // Initialize browser compatibility features (polyfills, detection, etc.)
   useEffect(() => {
     initBrowserCompatibility();
+
+    // Migration: Clear legacy library storage from localStorage to free up space
+    // as we moved to IndexedDB in @sonantica/media-library
+    try {
+      if (localStorage.getItem("sonantica-library-storage")) {
+        console.log("🧹 Clearing legacy library storage from localStorage");
+        localStorage.removeItem("sonantica-library-storage");
+      }
+    } catch (e) {
+      console.warn("Failed to clear legacy library storage", e);
+    }
 
     // Tauri-specific: disable context menu in production
     const isTauri = !!(window as any).__TAURI_INTERNALS__;
@@ -166,6 +194,10 @@ function App() {
   useDSPIntegration();
   useAutoScan();
   useAnalyticsIntegration();
+
+  const devForceStudio = useSettingsStore((s) => s.devForceStudio);
+  const isTauriEnv =
+    typeof window !== "undefined" && !!(window as any).__TAURI_INTERNALS__;
 
   const animationsEnabled = useSettingsStore((s) => s.animations);
   const animationStyles = useAnimationStyles();
@@ -221,6 +253,20 @@ function App() {
                       />
                       {/* Workshop (Downloader) */}
                       <Route path="/workshop" component={WorkshopPage} />
+
+                      {/* Studio (Desktop only) */}
+                      {(isTauriEnv || devForceStudio) && (
+                        <>
+                          <Route
+                            path="/compositor"
+                            component={CompositorWorkspace}
+                          />
+                          <Route
+                            path="/orquestador"
+                            component={OrquestadorWorkspace}
+                          />
+                        </>
+                      )}
 
                       {/* 404 */}
                       <Route>

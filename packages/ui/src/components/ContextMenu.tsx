@@ -29,7 +29,7 @@ export function ContextMenu({
   const menuRef = useRef<HTMLDivElement>(null);
   const [adjustedPosition, setAdjustedPosition] = useState(position);
 
-  // Adjust position to keep menu in viewport
+  // Adjust position to keep menu in viewport with smart positioning
   useEffect(() => {
     if (isOpen && menuRef.current) {
       const menu = menuRef.current;
@@ -41,19 +41,36 @@ export function ContextMenu({
 
       let { x, y } = position;
 
-      // Adjust horizontal position
-      if (x + rect.width > viewport.width) {
-        x = viewport.width - rect.width - 10;
+      // Add offset to avoid cursor overlap (better UX)
+      const offset = 4;
+
+      // Smart horizontal positioning: prefer right, flip to left if needed
+      if (x + rect.width + offset > viewport.width) {
+        // Not enough space on right, try left
+        x = x - rect.width - offset;
+        // If still off-screen, clamp to viewport
+        if (x < 10) {
+          x = viewport.width - rect.width - 10;
+        }
+      } else {
+        x = x + offset;
       }
 
-      // Adjust vertical position
-      if (y + rect.height > viewport.height) {
-        y = viewport.height - rect.height - 10;
+      // Smart vertical positioning: prefer bottom, flip to top if needed
+      if (y + rect.height + offset > viewport.height) {
+        // Not enough space below, try above
+        y = y - rect.height - offset;
+        // If still off-screen, clamp to viewport
+        if (y < 10) {
+          y = viewport.height - rect.height - 10;
+        }
+      } else {
+        y = y + offset;
       }
 
-      // Safety: don't go off left/top
-      x = Math.max(10, x);
-      y = Math.max(10, y);
+      // Safety: ensure menu stays within viewport bounds
+      x = Math.max(10, Math.min(x, viewport.width - rect.width - 10));
+      y = Math.max(10, Math.min(y, viewport.height - rect.height - 10));
 
       setAdjustedPosition({ x, y });
     }

@@ -31,7 +31,7 @@ type EventListener = (event: PlayerEvent) => void;
 /**
  * Security constants
  */
-const ALLOWED_PROTOCOLS = ['http:', 'https:', 'blob:'];
+const ALLOWED_PROTOCOLS = ['http:', 'https:', 'blob:', 'asset:'];
 const MAX_URL_LENGTH = 2048;
 const LOAD_TIMEOUT_MS = 30000; // 30 seconds
 const MAX_LISTENERS_PER_EVENT = 100;
@@ -129,6 +129,7 @@ export class PlayerEngine implements IPlayerEngine {
   private currentLoadController: AbortController | null = null;
   private bufferManager: BufferManager;
   private highFreqLoopId: number | null = null;
+  private navigationLock: boolean = false; // Prevents cleanup during navigation
 
   constructor(bufferConfig: Partial<BufferConfig> = {}) {
     try {
@@ -544,6 +545,23 @@ export class PlayerEngine implements IPlayerEngine {
       return null;
     }
     return this.audio;
+  }
+
+  /**
+   * Lock navigation to prevent audio interruptions
+   * Call this before route changes to prevent pause/cleanup
+   */
+  lockNavigation(): void {
+    this.navigationLock = true;
+    console.log('🔒 Navigation locked - audio will continue playing');
+  }
+
+  /**
+   * Unlock navigation after route change is complete
+   */
+  unlockNavigation(): void {
+    this.navigationLock = false;
+    console.log('🔓 Navigation unlocked');
   }
 
   /**

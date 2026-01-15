@@ -29,6 +29,13 @@ import { useSelectionStore } from "../../../stores/selectionStore";
 import { StemSeparationModal } from "../../ai/components/StemSeparationModal";
 import { useAICapabilities } from "../../../hooks/useAICapabilities";
 import { PluginService } from "../../../services/PluginService";
+import { useLocation } from "wouter";
+import {
+  IconDeviceDesktop,
+  IconCloud,
+  IconUser,
+  IconDisc,
+} from "@tabler/icons-react";
 
 interface TrackItemProps {
   track: any;
@@ -37,6 +44,12 @@ interface TrackItemProps {
   onRemove?: () => void;
   compact?: boolean;
 }
+
+// Check if we're running in Tauri - type-safe detection
+const isTauri =
+  typeof window !== "undefined" &&
+  ((window as any).__TAURI__ !== undefined ||
+    (window as any).__TAURI_INTERNALS__ !== undefined);
 
 export function TrackItem({
   track,
@@ -48,6 +61,7 @@ export function TrackItem({
   const { currentTrack, state } = usePlayerStore();
   const { addToQueue, playNext } = useQueueStore();
   const { downloadTrack, removeTrack } = useOfflineManager();
+  const [_, setLocation] = useLocation();
 
   const isActive = currentTrack?.id === track.id;
   const isPlaying = isActive && state === PlaybackState.PLAYING;
@@ -133,24 +147,60 @@ export function TrackItem({
       divider: true,
       onClick: () => {},
     },
-    !isOfflineAvailable
-      ? {
-          id: "download-offline",
-          label: isDownloading
-            ? "Downloading..."
-            : isQueued
-            ? "Queued"
-            : "Download for Offline",
-          icon: <IconCloudDownload size={18} stroke={1.5} />,
-          onClick: () => downloadTrack(track),
-          disabled: isDownloading || isQueued,
+    {
+      id: "go-to-artist",
+      label: "Go to Artist",
+      icon: <IconUser size={18} stroke={1.5} />,
+      onClick: () => {
+        // Assuming we can navigate to artist by ID or name
+        if (track.artistId) {
+          setLocation(`/artist/${track.artistId}`);
+        } else if (typeof track.artist === "string") {
+          // Fallback if no ID available (search or heuristic)
+          // For now just redirecting to artists list if no specific ID
+          // Ideally we should have a search page redirection or better linking
+          setLocation(`/artists?search=${encodeURIComponent(track.artist)}`);
         }
-      : {
-          id: "remove-offline",
-          label: "Remove from Offline",
-          icon: <IconCircleCheckFilled size={18} stroke={1.5} />,
-          onClick: () => removeTrack(track.id),
-        },
+      },
+    },
+    {
+      id: "go-to-album",
+      label: "Go to Album",
+      icon: <IconDisc size={18} stroke={1.5} />,
+      onClick: () => {
+        if (track.albumId) {
+          setLocation(`/album/${track.albumId}`);
+        }
+      },
+    },
+    {
+      id: "divider-nav",
+      label: "",
+      divider: true,
+      onClick: () => {},
+    },
+    ...(!isTauri
+      ? [
+          !isOfflineAvailable
+            ? {
+                id: "download-offline",
+                label: isDownloading
+                  ? "Downloading..."
+                  : isQueued
+                  ? "Queued"
+                  : "Download for Offline",
+                icon: <IconCloudDownload size={18} stroke={1.5} />,
+                onClick: () => downloadTrack(track),
+                disabled: isDownloading || isQueued,
+              }
+            : {
+                id: "remove-offline",
+                label: "Remove from Offline",
+                icon: <IconCircleCheckFilled size={18} stroke={1.5} />,
+                onClick: () => removeTrack(track.id),
+              },
+        ]
+      : []),
     {
       id: "divider-2",
       label: "",
@@ -219,7 +269,32 @@ export function TrackItem({
         isPlaying={isPlaying}
         isSelectionMode={isInSelectionMode}
         isSelected={selected}
-        statusIcons={statusIcons}
+        statusIcons={
+          <div className="flex items-center gap-1 mr-2">
+            {track.source === "local" ? (
+              <div
+                title={track.folderPath || "Local Library"}
+                className={!track.serverColor ? "text-blue-400" : undefined}
+                style={
+                  track.serverColor ? { color: track.serverColor } : undefined
+                }
+              >
+                <IconDeviceDesktop size={14} />
+              </div>
+            ) : (
+              <div
+                title={track.serverName || "Remote Server"}
+                className="text-accent"
+                style={
+                  track.serverColor ? { color: track.serverColor } : undefined
+                }
+              >
+                <IconCloud size={14} />
+              </div>
+            )}
+            {statusIcons}
+          </div>
+        }
         onClick={() => {
           if (isInSelectionMode) {
             toggleSelection(track.id);

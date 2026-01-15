@@ -1,69 +1,101 @@
 import { useSettingsStore } from "../../../stores/settingsStore";
-import { IconLayoutNavbar, IconPackage } from "@tabler/icons-react";
+import {
+  IconLayoutNavbar,
+  IconDeviceDesktop,
+  IconWindow,
+  IconTerminal,
+} from "@tabler/icons-react";
+import { SettingSection, SettingRow, Select, Switch } from "@sonantica/ui";
+import { isTauri } from "@sonantica/shared";
 
 export function DesktopSettings() {
   const { desktopCloseAction, setDesktopCloseAction } = useSettingsStore();
+  const isDesktop = isTauri();
 
-  return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      {/* Desktop Integration */}
-      <section className="space-y-4">
-        <div className="flex items-center gap-2 text-text-muted mb-6">
-          <IconPackage size={20} stroke={1.5} />
-          <h2 className="text-sm font-semibold uppercase tracking-wider">
-            Desktop Integration
-          </h2>
-        </div>
-
-        <div className="bg-surface-elevated border border-border rounded-xl overflow-hidden divide-y divide-border">
-          <div className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <h3 className="font-medium">Close Behavior</h3>
-              <p className="text-sm text-text-muted">
-                What should happen when you click the close button?
-              </p>
-            </div>
-            <select
-              value={desktopCloseAction}
-              onChange={(e) => setDesktopCloseAction(e.target.value as any)}
-              className="bg-bg border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
-            >
-              <option value="ask">Always ask</option>
-              <option value="minimize">Minimize to System Tray</option>
-              <option value="close">Close application</option>
-            </select>
-          </div>
-
-          <div className="p-4 sm:p-6 flex items-center justify-between gap-4 opacity-50 cursor-not-allowed">
-            <div className="space-y-1">
-              <h3 className="font-medium">Launch at Startup</h3>
-              <p className="text-sm text-text-muted">
-                Start Sonántica automatically when you log in.
-              </p>
-            </div>
-            <div className="h-6 w-10 bg-surface border-2 border-border rounded-full relative">
-              <div className="absolute left-1 top-1 h-3 w-3 bg-text-muted rounded-full" />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Tray Settings */}
-      <section className="space-y-4">
-        <div className="flex items-center gap-2 text-text-muted mb-6">
-          <IconLayoutNavbar size={20} stroke={1.5} />
-          <h2 className="text-sm font-semibold uppercase tracking-wider">
-            System Tray
-          </h2>
-        </div>
-
-        <div className="bg-surface-elevated border border-border rounded-xl p-6 text-center">
-          <p className="text-sm text-text-muted">
-            The system tray icon is always active to allow quick access to the
-            player.
+  if (!isDesktop) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-text-muted text-center space-y-4">
+        <IconDeviceDesktop size={48} className="opacity-20" />
+        <div className="space-y-1">
+          <h3 className="font-medium">OS Integration Unavailable</h3>
+          <p className="text-sm max-w-xs mx-auto">
+            These settings are only available when running Sonántica as a native
+            desktop application.
           </p>
         </div>
-      </section>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-10 animate-in fade-in duration-500">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-border pb-6">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight mb-1">
+            Desktop Integration
+          </h2>
+          <p className="text-text-muted">
+            Configure how Sonántica interacts with the Operating System.
+          </p>
+        </div>
+      </div>
+
+      {/* 1. Window Management */}
+      <SettingSection
+        title="Window Behavior"
+        description="Global settings for the application window."
+        icon={IconWindow}
+      >
+        <SettingRow
+          label="Close Action"
+          description="Define what happens when the window is closed."
+        >
+          <div className="w-full sm:w-56">
+            <Select
+              value={desktopCloseAction}
+              onChange={(e) => setDesktopCloseAction(e.target.value as any)}
+              options={[
+                { value: "ask", label: "Always Ask" },
+                { value: "minimize", label: "Minimize to Tray" },
+                { value: "close", label: "Quit Application" },
+              ]}
+            />
+          </div>
+        </SettingRow>
+
+        <SettingRow
+          label="Launch at Startup"
+          description="Start Sonántica automatically when logging into the system."
+        >
+          <div className="opacity-40 cursor-not-allowed">
+            <Switch checked={false} onChange={() => {}} disabled />
+            <p className="text-[10px] text-text-muted mt-1 uppercase tracking-widest">
+              Coming Soon
+            </p>
+          </div>
+        </SettingRow>
+      </SettingSection>
+
+      {/* 2. System Tray */}
+      <SettingSection
+        title="Background Execution"
+        description="Configuration for the system notification area."
+        icon={IconLayoutNavbar}
+      >
+        <SettingRow
+          label="Persistent System Tray"
+          description="Keep Sonántica alive in the background for fast access."
+        >
+          <Switch checked={true} onChange={() => {}} disabled />
+        </SettingRow>
+
+        <div className="p-4 bg-surface rounded-xl border border-border text-xs text-text-muted leading-relaxed">
+          <IconTerminal size={14} className="inline mr-2 mb-0.5" />
+          Note: System Tray is critical for native Media Session integration and
+          background playback on some OS.
+        </div>
+      </SettingSection>
     </div>
   );
 }

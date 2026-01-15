@@ -64,7 +64,7 @@ export function useQueueLogic() {
     }
     
     return enriched;
-  }, [getRemainingTracks, libraryTracks, offlineMode, hideUnavailableOffline, offlineItems]);
+  }, [getRemainingTracks, fullQueue, currentIndex, libraryTracks, offlineMode, hideUnavailableOffline, offlineItems]);
 
   // Infinite Scroll State
   const [displayedCount, setDisplayedCount] = useState(50);

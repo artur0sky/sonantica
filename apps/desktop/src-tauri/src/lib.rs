@@ -1,71 +1,101 @@
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
+// Sonantica Desktop - Tauri Backend
+// Clean architecture with separated concerns following SOLID principles
+
+mod commands;
+mod logging;
+mod models;
+mod services;
+
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{TrayIconBuilder, TrayIconEvent},
     Emitter, Manager, WindowEvent,
 };
 
-#[tauri::command]
-fn exit_app(app_handle: tauri::AppHandle) {
-    app_handle.exit(0);
-}
-
-#[tauri::command]
-fn hide_window(window: tauri::WebviewWindow) {
-    let _ = window.hide();
-}
+use commands::{
+    exit_app, hide_window, select_folder, scan_directory, extract_metadata,
+    get_audio_devices, get_default_input_device, get_default_output_device,
+};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Initialize structured logging (consistent with Python services)
+    logging::init_logging();
+    tracing::info!("Starting Sonántica Desktop");
+    
     tauri::Builder::default()
+        // Initialize plugins
         .plugin(tauri_plugin_opener::init())
-        .setup(|app| {
-            let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
-            let show_i = MenuItem::with_id(app, "show", "Show Sonántica", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&show_i, &quit_i])?;
-
-            let _tray = TrayIconBuilder::new()
-                .icon(app.default_window_icon().unwrap().clone())
-                .menu(&menu)
-                .show_menu_on_left_click(false)
-                .on_menu_event(|app, event| match event.id.as_ref() {
-                    "quit" => {
-                        app.exit(0);
-                    }
-                    "show" => {
-                        if let Some(window) = app.get_webview_window("main") {
-                            let _ = window.show();
-                            let _ = window.set_focus();
-                        }
-                    }
-                    _ => {}
-                })
-                .on_tray_icon_event(|tray, event| {
-                    if let TrayIconEvent::Click {
-                        button: tauri::tray::MouseButton::Left,
-                        ..
-                    } = event
-                    {
-                        let app = tray.app_handle();
-                        if let Some(window) = app.get_webview_window("main") {
-                            let _ = window.show();
-                            let _ = window.set_focus();
-                        }
-                    }
-                })
-                .build(app)?;
-
-            Ok(())
-        })
-        .on_window_event(|window, event| {
-            if let WindowEvent::CloseRequested { api, .. } = event {
-                // We emit an event to the frontend
-                let _ = window.emit("close-requested", ());
-                // We prevent the window from closing by default
-                api.prevent_close();
-            }
-        })
-        .invoke_handler(tauri::generate_handler![exit_app, hide_window])
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
+        // Setup system tray and window behavior
+        .setup(setup_app)
+        // Handle window events
+        .on_window_event(handle_window_event)
+        // Register commands
+        .invoke_handler(tauri::generate_handler![
+            exit_app,
+            hide_window,
+            select_folder,
+            scan_directory,
+            extract_metadata,
+            get_audio_devices,
+            get_default_input_device,
+            get_default_output_device,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+/// Setup application with system tray
+fn setup_app(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+    let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+    let show_i = MenuItem::with_id(app, "show", "Show Sonántica", true, None::<&str>)?;
+    let menu = Menu::with_items(app, &[&show_i, &quit_i])?;
+
+    TrayIconBuilder::new()
+        .icon(app.default_window_icon().unwrap().clone())
+        .menu(&menu)
+        .show_menu_on_left_click(false)
+        .on_menu_event(handle_tray_menu_event)
+        .on_tray_icon_event(handle_tray_icon_event)
+        .build(app)?;
+
+    Ok(())
+}
+
+/// Handle system tray menu events
+fn handle_tray_menu_event(app: &tauri::AppHandle, event: tauri::menu::MenuEvent) {
+    match event.id.as_ref() {
+        "quit" => app.exit(0),
+        "show" => show_main_window(app),
+        _ => {}
+    }
+}
+
+/// Handle system tray icon events (clicks)
+fn handle_tray_icon_event(tray: &tauri::tray::TrayIcon, event: tauri::tray::TrayIconEvent) {
+    if let TrayIconEvent::Click {
+        button: tauri::tray::MouseButton::Left,
+        ..
+    } = event
+    {
+        show_main_window(tray.app_handle());
+    }
+}
+
+/// Handle window events
+fn handle_window_event(window: &tauri::Window, event: &WindowEvent) {
+    if let WindowEvent::CloseRequested { api, .. } = event {
+        let _ = window.emit("close-requested", ());
+        api.prevent_close();
+    }
+}
+
+/// Show and focus main window
+fn show_main_window(app: &tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.show();
+        let _ = window.set_focus();
+    }
 }

@@ -16,6 +16,8 @@ export interface SwitchProps {
   disabled?: boolean;
   /** Optional label for accessibility */
   label?: string;
+  /** Color variant */
+  variant?: "accent" | "emerald" | "warning" | "error";
   /** Optional CSS class */
   className?: string;
 }
@@ -37,12 +39,20 @@ export function Switch({
   onChange,
   disabled = false,
   label,
+  variant = "accent",
   className = "",
 }: SwitchProps) {
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (!disabled) {
       onChange(e.target.checked);
     }
+  };
+
+  const variantClasses = {
+    accent: "peer-checked:bg-accent",
+    emerald: "peer-checked:bg-emerald-500",
+    warning: "peer-checked:bg-amber-500",
+    error: "peer-checked:bg-red-500",
   };
 
   return (
@@ -60,7 +70,9 @@ export function Switch({
         aria-label={label}
       />
       {/* Background track */}
-      <div className="w-11 h-6 bg-surface-elevated peer-checked:bg-accent rounded-full transition-colors" />
+      <div
+        className={`w-11 h-6 bg-surface-elevated ${variantClasses[variant]} rounded-full transition-colors`}
+      />
       {/* Toggle indicator */}
       <div className="absolute top-0.5 left-0.5 bg-white w-5 h-5 rounded-full shadow transition-transform peer-checked:translate-x-5" />
     </label>

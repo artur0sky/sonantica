@@ -12,6 +12,7 @@
  */
 
 import { useState, useEffect } from "react";
+import { useLibraryStore } from "@sonantica/media-library";
 
 import {
   getServersConfig,
@@ -19,6 +20,7 @@ import {
   removeServerConfig,
   testServerConnectionById,
   saveServerConfig,
+  updateServerConfig,
 } from "../../../services/LibraryService";
 import { useMultiServerLibrary } from "../../../hooks/useMultiServerLibrary";
 import { useSettingsStore } from "../../../stores/settingsStore";
@@ -31,10 +33,12 @@ import {
   IconPlayerPlay,
   IconBolt,
   IconClock,
+  IconEdit,
 } from "@tabler/icons-react";
 import { Button, Switch, ActionIconButton, Input } from "@sonantica/ui";
 
 export function ServersSection() {
+  const { toggleServer } = useMultiServerLibrary();
   const [config, setConfig] = useState(getServersConfig());
   const [testing, setTesting] = useState<string | null>(null);
 
@@ -44,6 +48,16 @@ export function ServersSection() {
   const [newServerApiKey, setNewServerApiKey] = useState("");
   const [isConnecting, setIsConnecting] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
+
+  // Edit Server State
+  const [editingServerId, setEditingServerId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({
+    serverUrl: "",
+    apiKey: "",
+    color: "#888888",
+  });
+  const [editError, setEditError] = useState<string | null>(null);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   const { autoScan, parallelScanning, toggle } = useSettingsStore();
 
@@ -160,6 +174,76 @@ export function ServersSection() {
       setAddError(err instanceof Error ? err.message : "Failed to add server");
     } finally {
       setIsConnecting(false);
+    }
+  };
+
+  const handleStartEdit = (server: any) => {
+    setEditingServerId(server.id);
+    setEditForm({
+      serverUrl: server.serverUrl,
+      apiKey: server.apiKey || "",
+      color: server.color || "#888888",
+    });
+    setEditError(null);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingServerId(null);
+    setEditError(null);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingServerId) return;
+
+    setEditError(null);
+    setIsSavingEdit(true);
+
+    try {
+      updateServerConfig(editingServerId, {
+        serverUrl: editForm.serverUrl,
+        apiKey: editForm.apiKey || undefined,
+        color: editForm.color,
+      });
+
+      // Update state
+      setConfig(getServersConfig());
+      setEditingServerId(null);
+    } catch (err) {
+      setEditError(
+        err instanceof Error ? err.message : "Failed to update server"
+      );
+    } finally {
+      setIsSavingEdit(false);
+    }
+
+    // Imperatively update tracks in the store to reflect color change immediately
+    try {
+      const store = useLibraryStore.getState();
+      const server = config.servers.find((s) => s.id === editingServerId);
+
+      // We use the ID or URL to match.
+      // In scanServer, track.serverKey is set to serverUrl (sanitized).
+      // If only color changed, URL/ID is same.
+      // If URL changed, we might need a full rescan anyway, but let's handle color update.
+
+      // Optimization: Check if color actually changed
+      if (editForm.color && editForm.color !== server?.color) {
+        const updatedTracks = store.tracks.map((t) => {
+          // Use serverId for robust matching
+          if ((t as any).serverId === editingServerId) {
+            return { ...t, serverColor: editForm.color };
+          }
+          return t;
+        });
+
+        // Only update if changes were made
+        if (updatedTracks !== store.tracks) {
+          store.setTracks(updatedTracks);
+        }
+      }
+    } catch (e) {
+      console.error("Failed to update track colors in store", e);
     }
   };
 
@@ -407,7 +491,12 @@ export function ServersSection() {
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <h4 className="font-medium text-text-primary truncate">
+                      <h4 className="font-medium text-text-primary truncate flex items-center gap-2">
+                        <div
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: server.color || "#888" }}
+                          title="Server Color"
+                        />
                         {server.name}
                       </h4>
                       {isActive && (
@@ -422,9 +511,42 @@ export function ServersSection() {
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-text-muted mb-1 truncate">
-                      {server.serverUrl}
-                    </p>
+
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="text-sm text-text-muted truncate flex-1">
+                        {server.serverUrl}
+                      </p>
+
+                      {/* Enable/Disable Toggle */}
+                      <div
+                        className="flex items-center gap-2"
+                        title={
+                          server.enabled !== false
+                            ? "Server Enabled"
+                            : "Server Disabled"
+                        }
+                      >
+                        <Switch
+                          checked={server.enabled !== false}
+                          onChange={(checked) => {
+                            toggleServer(server.id, checked);
+                            // Refresh local config state immediately strictly for UI feedback
+                            // The actual library update happens in useMultiServerLibrary
+                            setConfig((prev) => ({
+                              ...prev,
+                              servers: prev.servers.map((s) =>
+                                s.id === server.id
+                                  ? { ...s, enabled: checked }
+                                  : s
+                              ),
+                            }));
+                          }}
+                        />
+                        <span className="text-xs text-text-muted">
+                          {server.enabled !== false ? "On" : "Off"}
+                        </span>
+                      </div>
+                    </div>
                     {serverTracks.length > 0 && (
                       <p className="text-xs text-green-500">
                         {serverTracks.length} tracks loaded
@@ -439,6 +561,11 @@ export function ServersSection() {
                   </div>
 
                   <div className="flex items-center gap-2 flex-shrink-0">
+                    <ActionIconButton
+                      icon={IconEdit}
+                      onClick={() => handleStartEdit(server)}
+                      title="Edit server"
+                    />
                     <Button
                       onClick={() => handleScanServer(server.id)}
                       disabled={isServerScanning}
@@ -470,6 +597,97 @@ export function ServersSection() {
                     />
                   </div>
                 </div>
+
+                {editingServerId === server.id && (
+                  <div className="mt-4 pt-4 border-t border-border">
+                    <h4 className="font-medium text-text-primary mb-4">
+                      Edit Server
+                    </h4>
+                    <form onSubmit={handleEditSubmit} className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-text-muted mb-1">
+                            Server URL
+                          </label>
+                          <Input
+                            value={editForm.serverUrl}
+                            onChange={(e) =>
+                              setEditForm({
+                                ...editForm,
+                                serverUrl: e.target.value,
+                              })
+                            }
+                            placeholder="http://localhost:8090"
+                            disabled={isSavingEdit}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-text-muted mb-1">
+                            API Key (Optional)
+                          </label>
+                          <Input
+                            type="password"
+                            value={editForm.apiKey}
+                            onChange={(e) =>
+                              setEditForm({
+                                ...editForm,
+                                apiKey: e.target.value,
+                              })
+                            }
+                            placeholder="Secret key"
+                            disabled={isSavingEdit}
+                          />
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="block text-sm font-medium text-text-muted mb-1">
+                            Color
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="color"
+                              value={editForm.color}
+                              onChange={(e) =>
+                                setEditForm({
+                                  ...editForm,
+                                  color: e.target.value,
+                                })
+                              }
+                              className="w-12 h-10 p-1 cursor-pointer"
+                              disabled={isSavingEdit}
+                            />
+                            <span className="text-sm text-text-muted">
+                              {editForm.color}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {editError && (
+                        <p className="text-sm text-red-400 bg-red-400/10 p-2 rounded">
+                          {editError}
+                        </p>
+                      )}
+
+                      <div className="flex justify-end gap-3 pt-2">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={handleCancelEdit}
+                          disabled={isSavingEdit}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          type="submit"
+                          variant="primary"
+                          disabled={isSavingEdit}
+                        >
+                          {isSavingEdit ? "Saving..." : "Save Changes"}
+                        </Button>
+                      </div>
+                    </form>
+                  </div>
+                )}
               </div>
             );
           })}

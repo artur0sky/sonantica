@@ -32,6 +32,9 @@ export interface MediaSource {
   
   /** Optional metadata */
   metadata?: MediaMetadata;
+
+  /** Internal unique ID for queue instances (avoids React key collisions) */
+  queueId?: string;
 }
 
 /**
@@ -111,3 +114,7 @@ export * from './types/player-config';
 
 // Library Domain (Tracks, Artists, Albums)
 export * from './types/library';
+
+// Plugins
+export * from './types/plugins';
+

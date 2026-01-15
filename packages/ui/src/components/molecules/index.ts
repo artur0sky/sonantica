@@ -3,7 +3,7 @@
  */
 
 export { TrackRating } from './TrackRating';
-export { SearchBar } from './SearchBar';
+export * from './SearchBar';
 export { MetadataPanel } from './MetadataPanel';
 export { TrackCard } from './TrackCard';
 export { WaveformScrubber } from './WaveformScrubber';

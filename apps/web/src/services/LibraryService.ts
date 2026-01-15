@@ -8,7 +8,7 @@
  * Philosophy: "User Autonomy" - Self-hosted, user-controlled
  */
 
-import { RemoteLibraryAdapter, type ILibraryAdapter } from '@sonantica/media-library';
+import { RemoteLibraryAdapter, LocalLibraryAdapter, type ILibraryAdapter } from '@sonantica/media-library';
 import { generateStableId } from '@sonantica/shared';
 
 export interface ServerConfig {
@@ -17,6 +17,8 @@ export interface ServerConfig {
   serverUrl: string;
   apiKey?: string;
   lastConnected?: number;
+  color?: string;
+  enabled?: boolean;
 }
 
 export interface ServersConfig {
@@ -25,6 +27,23 @@ export interface ServersConfig {
 }
 
 const STORAGE_KEY = 'sonantica:servers-config';
+
+// Helper to generate random consistent colors
+const getRandomColor = () => {
+    const colors = [
+        '#ef4444', // Red
+        '#f97316', // Orange
+        '#f59e0b', // Amber
+        '#84cc16', // Lime
+        '#22c55e', // Green
+        '#06b6d4', // Cyan
+        '#3b82f6', // Blue
+        '#6366f1', // Indigo
+        '#a855f7', // Purple
+        '#ec4899', // Pink
+    ];
+    return colors[Math.floor(Math.random() * colors.length)];
+}
 
 /**
  * Get all servers configuration from localStorage
@@ -115,7 +134,9 @@ export function saveServerConfig(server: Omit<ServerConfig, 'id' | 'lastConnecte
   const newServer: ServerConfig = {
     ...server,
     id,
-    lastConnected: Date.now()
+    lastConnected: Date.now(),
+    color: server.color || getRandomColor(),
+    enabled: true,
   };
   
   if (existingIndex !== -1) {
@@ -202,10 +223,17 @@ export function createLibraryAdapter(): ILibraryAdapter | null {
   const server = getServerConfig();
   
   if (!server) {
+    // Tauri specific: If no server is configured but we are in Tauri, 
+    // provide a local adapter to handle playlists locally.
+    const isTauri = !!(window as any).__TAURI_INTERNALS__;
+    if (isTauri) {
+        return new LocalLibraryAdapter();
+    }
     return null;
   }
   
   return new RemoteLibraryAdapter({
+    serverName: server.name,
     serverUrl: server.serverUrl,
     apiKey: server.apiKey,
   });
@@ -223,6 +251,7 @@ export function createLibraryAdapterForServer(serverId: string): ILibraryAdapter
   }
   
   return new RemoteLibraryAdapter({
+    serverName: server.name,
     serverUrl: server.serverUrl,
     apiKey: server.apiKey,
   });
@@ -232,6 +261,8 @@ export function createLibraryAdapterForServer(serverId: string): ILibraryAdapter
  * Check if any server is configured
  */
 export function isServerConfigured(): boolean {
+  const isTauri = typeof window !== "undefined" && !!(window as any).__TAURI_INTERNALS__;
+  if (isTauri) return true; // Tauri can run offline/local
   return getServerConfig() !== null;
 }
 

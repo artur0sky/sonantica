@@ -163,7 +163,7 @@ export const RightSidebar: React.FC<RightSidebarProps> = ({
               <div className="flex-1 overflow-y-auto space-y-1">
                 {displayQueue.map((track: any, index: number) => (
                   <div
-                    key={track.id}
+                    key={track.queueId || track.id}
                     className="animate-in fade-in slide-in-from-right-2 duration-200"
                     style={{ animationDelay: `${index * 30}ms` }}
                   >

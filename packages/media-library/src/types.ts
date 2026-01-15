@@ -34,6 +34,8 @@ export interface Track extends SharedTrack {
     albumArtist?: string;
     duration?: number;
   };
+  serverColor?: string;
+  folderPath?: string;
 }
 
 /**

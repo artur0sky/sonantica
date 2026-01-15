@@ -6,7 +6,7 @@
  * Refactored to remove Framer Motion and use CSS animations.
  */
 
-import { useMemo, useEffect, useRef } from "react";
+import { useMemo, useEffect, useRef, useState } from "react";
 import { usePlayerStore } from "@sonantica/player-core";
 import {
   useUIStore,
@@ -19,6 +19,7 @@ import { Header } from "./Header";
 import { LeftSidebar } from "./LeftSidebar";
 import { IconPlaylistAdd } from "@tabler/icons-react";
 import { DownloadButton } from "../DownloadButton";
+import { AddToPlaylistModal } from "../AddToPlaylistModal";
 
 import { useWaveformLoader } from "../../features/player/hooks/useWaveformLoader";
 import { PlaybackPersistence } from "../../features/player/components/PlaybackPersistence";
@@ -38,6 +39,8 @@ interface MainLayoutProps {
 }
 
 export function MainLayout({ children }: MainLayoutProps) {
+  const [showAddToPlaylistModal, setShowAddToPlaylistModal] = useState(false);
+
   useWaveformLoader();
   useMediaSession();
   useKeyboardShortcuts();
@@ -189,9 +192,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                         <button
                           className="p-1.5 text-text-muted hover:text-text rounded-full transition-all duration-200 flex items-center gap-2 hover:scale-110 active:scale-90"
                           title="Add to Playlist"
-                          onClick={() =>
-                            alert("Add to Playlist: " + fullTrack.title)
-                          }
+                          onClick={() => setShowAddToPlaylistModal(true)}
                         >
                           <IconPlaylistAdd size={22} />
                           <span className="text-sm font-medium">
@@ -203,7 +204,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                   )
                 }
                 onLongPressArt={() => {
-                  if (fullTrack) alert("Add to Playlist: " + fullTrack.title);
+                  if (fullTrack) setShowAddToPlaylistModal(true);
                 }}
               />
             </div>
@@ -284,6 +285,7 @@ export function MainLayout({ children }: MainLayoutProps) {
                   <button
                     className="p-1 text-text-muted hover:text-text rounded-lg transition-all hover:scale-110 active:scale-90"
                     title="Add to Playlist"
+                    onClick={() => setShowAddToPlaylistModal(true)}
                   >
                     <IconPlaylistAdd size={18} />
                   </button>
@@ -292,6 +294,16 @@ export function MainLayout({ children }: MainLayoutProps) {
             }
           />
         </div>
+      )}
+
+      {/* Add to Playlist Modal */}
+      {currentTrack && (
+        <AddToPlaylistModal
+          isOpen={showAddToPlaylistModal}
+          onClose={() => setShowAddToPlaylistModal(false)}
+          trackId={currentTrack.id}
+          trackTitle={currentTrack.metadata?.title || "Unknown Track"}
+        />
       )}
     </LayoutThemeManager>
   );

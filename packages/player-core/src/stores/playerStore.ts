@@ -159,7 +159,10 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
     next: async () => {
       const { onNext } = get();
       if (onNext) {
-        const nextTrack = onNext();
+        // Pass force=true if it's the queueStore.next
+        const queueStore = (await import('./queueStore')).useQueueStore.getState();
+        const nextTrack = (onNext === queueStore.next) ? (queueStore.next as any)(true) : onNext();
+        
         if (nextTrack) {
           await get().loadTrack(nextTrack);
           await get().play();
@@ -175,7 +178,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => {
         get().seek(0);
       } else if (onPrevious) {
         // Otherwise, go to previous track
-        const prevTrack = onPrevious();
+        const queueStore = (await import('./queueStore')).useQueueStore.getState();
+        const prevTrack = (onPrevious === queueStore.previous) ? (queueStore.previous as any)(true) : onPrevious();
+        
         if (prevTrack) {
           await get().loadTrack(prevTrack);
           await get().play();

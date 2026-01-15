@@ -14,16 +14,19 @@ import type { Playlist, PlaylistType } from '../types';
 export interface RemoteLibraryConfig {
   serverUrl: string;
   apiKey?: string;
+  serverName?: string;
 }
 
 export class RemoteLibraryAdapter implements ILibraryAdapter {
   private serverUrl: string;
   private apiKey?: string;
+  private serverName?: string;
   private eventSource?: EventSource;
 
   constructor(config: RemoteLibraryConfig) {
     this.serverUrl = config.serverUrl.replace(/\/$/, ''); // Remove trailing slash
     this.apiKey = config.apiKey;
+    this.serverName = config.serverName;
   }
 
   /**
@@ -41,9 +44,27 @@ export class RemoteLibraryAdapter implements ILibraryAdapter {
       coverArt = `${this.serverUrl}/api/cover/${album.id}`;
     }
 
+    const serverPrefix = btoa(this.serverUrl).substring(0, 8).replace(/[/+=]/g, '');
+
     return {
       ...album,
-      coverArt
+      id: `remote-${serverPrefix}-${album.id}`,
+      coverArt,
+      source: 'remote',
+      serverName: this.serverName
+    };
+  }
+
+  /**
+   * Normalize Artist: namespace ID
+   */
+  private normalizeArtist(artist: any): Artist {
+    const serverPrefix = btoa(this.serverUrl).substring(0, 8).replace(/[/+=]/g, '');
+    return {
+      ...artist,
+      id: `remote-${serverPrefix}-${artist.id}`,
+      source: 'remote',
+      serverName: this.serverName
     };
   }
 
@@ -66,11 +87,17 @@ export class RemoteLibraryAdapter implements ILibraryAdapter {
     // Use serverUrl as serverId (it's unique per server)
     // This allows buildStreamingUrl to find the correct server
     const serverId = this.serverUrl;
+    const serverPrefix = btoa(serverId).substring(0, 8).replace(/[/+=]/g, '');
 
     return {
       ...track,
+      id: `remote-${serverPrefix}-${track.id}`,
+      originalId: track.id, // Keep original for API calls
+      albumId: track.albumId ? `remote-${serverPrefix}-${track.albumId}` : undefined,
       coverArt,
       serverId, // Add serverId for streaming
+      source: 'remote',
+      serverName: this.serverName
     };
   }
 
@@ -137,7 +164,7 @@ export class RemoteLibraryAdapter implements ILibraryAdapter {
     const queryString = params.toString() ? `?${params.toString()}` : '';
     const response = await this.fetch(`/api/library/artists${queryString}`);
     const data = await response.json();
-    return data.artists;
+    return (data.artists || []).map((a: any) => this.normalizeArtist(a));
   }
 
   /**

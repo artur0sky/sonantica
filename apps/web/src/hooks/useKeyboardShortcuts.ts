@@ -40,8 +40,8 @@ const DEFAULT_OPTIONS: Required<KeyboardShortcutsOptions> = {
 export function useKeyboardShortcuts(options: KeyboardShortcutsOptions = {}) {
   const opts = { ...DEFAULT_OPTIONS, ...options };
 
-  const { state, play, pause, seek, setVolume, toggleMute, volume } = usePlayerStore();
-  const { next, previous, toggleShuffle, toggleRepeat } = useQueueStore();
+  const { state, play, pause, seek, setVolume, toggleMute, volume, next, previous } = usePlayerStore();
+  const { toggleShuffle, toggleRepeat } = useQueueStore();
   const { toggleLyrics, toggleQueue } = useUIStore();
   const player = usePlayerStore((s) => s.player);
 
@@ -54,14 +54,11 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions = {}) {
       // Don't trigger shortcuts when typing in input fields
       const target = e.target as HTMLElement;
       if (
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
         target.isContentEditable
       ) {
-        // Exception: Allow Space in search to focus/blur
-        if (e.code !== 'Space') {
-          return;
-        }
+        return;
       }
 
       const audio = player.getAudioElement();
