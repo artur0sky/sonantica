@@ -92,6 +92,16 @@ const WorkshopPage = lazy(() =>
     default: m.WorkshopPage,
   }))
 );
+const CompositorWorkspace = lazy(() =>
+  import("./features/studio/pages/CompositorWorkspace").then((m) => ({
+    default: m.CompositorWorkspace,
+  }))
+);
+const OrquestadorWorkspace = lazy(() =>
+  import("./features/studio/pages/OrquestadorWorkspace").then((m) => ({
+    default: m.OrquestadorWorkspace,
+  }))
+);
 
 const PageLoader = () => (
   <div className="flex items-center justify-center min-h-[50vh] text-text-muted">
@@ -225,6 +235,16 @@ function App() {
                       />
                       {/* Workshop (Downloader) */}
                       <Route path="/workshop" component={WorkshopPage} />
+
+                      {/* Studio (Desktop only) */}
+                      <Route
+                        path="/compositor"
+                        component={CompositorWorkspace}
+                      />
+                      <Route
+                        path="/orquestador"
+                        component={OrquestadorWorkspace}
+                      />
 
                       {/* 404 */}
                       <Route>

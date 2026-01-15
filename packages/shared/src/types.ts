@@ -111,3 +111,7 @@ export * from './types/player-config';
 
 // Library Domain (Tracks, Artists, Albums)
 export * from './types/library';
+
+// Plugins
+export * from './types/plugins';
+

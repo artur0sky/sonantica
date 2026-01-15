@@ -8,7 +8,7 @@
  * Philosophy: "User Autonomy" - Self-hosted, user-controlled
  */
 
-import { RemoteLibraryAdapter, type ILibraryAdapter } from '@sonantica/media-library';
+import { RemoteLibraryAdapter, LocalLibraryAdapter, type ILibraryAdapter } from '@sonantica/media-library';
 import { generateStableId } from '@sonantica/shared';
 
 export interface ServerConfig {
@@ -202,6 +202,12 @@ export function createLibraryAdapter(): ILibraryAdapter | null {
   const server = getServerConfig();
   
   if (!server) {
+    // Tauri specific: If no server is configured but we are in Tauri, 
+    // provide a local adapter to handle playlists locally.
+    const isTauri = !!(window as any).__TAURI_INTERNALS__;
+    if (isTauri) {
+        return new LocalLibraryAdapter();
+    }
     return null;
   }
   

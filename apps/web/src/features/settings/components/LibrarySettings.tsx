@@ -8,9 +8,39 @@ import {
 } from "@sonantica/ui";
 import { useMultiServerLibrary } from "../../../hooks/useMultiServerLibrary";
 import { useSettingsStore } from "../../../stores/settingsStore";
+import {
+  useLocalLibrary,
+  type LocalFolder,
+} from "../../../hooks/useLocalLibrary";
+import {
+  IconFolder,
+  IconServer,
+  IconRefresh,
+  IconTrash,
+  IconBooks,
+  IconClock,
+  IconMusic,
+  IconFolderPlus,
+} from "@tabler/icons-react";
+import { ServersSection } from "../../library/components/ServersSection";
+import { isTauri } from "@sonantica/shared";
 
 export function LibrarySettings() {
-  const { clearLibrary, triggerRescanAll } = useMultiServerLibrary();
+  const isDesktop = isTauri();
+  const {
+    clearLibrary: clearServerLibrary,
+    triggerRescanAll: rescanServers,
+    isScanning: isServerScanning,
+  } = useMultiServerLibrary();
+  const {
+    folders,
+    isScanning: isLocalScanning,
+    addFolder,
+    removeFolder,
+    scanAllFolders,
+    isTauriAvailable,
+  } = useLocalLibrary();
+
   const {
     autoScan,
     watchFolders,
@@ -23,15 +53,30 @@ export function LibrarySettings() {
 
   const [isClearing, setIsClearing] = useState(false);
 
-  const handleClear = async () => {
+  const isScanning = isServerScanning || isLocalScanning;
+
+  const handleGlobalScan = async () => {
+    // Scan servers
+    rescanServers();
+    // Scan local if tauri
+    if (isTauriAvailable) {
+      scanAllFolders();
+    }
+  };
+
+  const handleClearEverything = async () => {
     if (
       confirm(
-        "Are you sure you want to clear the library database? This will remove all indexed tracks and require a full rescan."
+        "Are you sure you want to clear the entire library? This will remove all indexed tracks from local folders and remote servers."
       )
     ) {
       setIsClearing(true);
       try {
-        await clearLibrary();
+        await clearServerLibrary();
+        // Local library is usually persisted in localStorage within useLocalLibrary,
+        // but it doesn't have a 'clear' for the track database separate from servers
+        // because they often share the same store/cache in some implementations.
+        // For now, reload to be safe as it's a heavy operation.
         window.location.reload();
       } catch (e) {
         console.error("Failed to clear library", e);
@@ -55,31 +100,119 @@ export function LibrarySettings() {
   ];
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 delay-100">
+    <div className="space-y-12 animate-in fade-in duration-500">
+      {/* 1. Global Sources Management */}
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-border pb-6">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight mb-1">
+              Library Sources
+            </h2>
+            <p className="text-text-muted">
+              Manage where your music comes from.
+            </p>
+          </div>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Button
+              variant="primary"
+              onClick={handleGlobalScan}
+              disabled={isScanning}
+              className="flex-1 sm:flex-none"
+            >
+              <IconRefresh
+                size={18}
+                className={`mr-2 ${isScanning ? "animate-spin" : ""}`}
+              />
+              Scan All
+            </Button>
+          </div>
+        </div>
+
+        {/* Local Folders (Only Desktop) */}
+        {isTauriAvailable && (
+          <SettingSection
+            title="Local Folders"
+            description="High-fidelity music stored on this computer."
+            icon={IconFolder}
+          >
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Added Directories</span>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={addFolder}
+                  className="h-8"
+                >
+                  <IconFolderPlus size={16} className="mr-2" />
+                  Add Folder
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 gap-2">
+                {folders.length > 0 ? (
+                  folders.map((f: LocalFolder) => (
+                    <div
+                      key={f.path}
+                      className="flex items-center justify-between p-3 bg-surface rounded-xl border border-border group"
+                    >
+                      <div className="flex items-center gap-3 truncate">
+                        <IconMusic size={18} className="text-text-muted" />
+                        <div className="truncate">
+                          <p className="text-sm font-medium truncate">
+                            {f.path}
+                          </p>
+                          <p className="text-[10px] text-text-muted uppercase tracking-wider">
+                            {f.trackCount} Tracks Found
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => removeFolder(f.path)}
+                        className="p-2 text-text-muted hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <IconTrash size={16} />
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-6 border border-dashed border-border rounded-xl text-xs text-text-muted italic">
+                    No local folders configured.
+                  </div>
+                )}
+              </div>
+            </div>
+          </SettingSection>
+        )}
+
+        {/* Remote Servers */}
+        <SettingSection
+          title="Sonántica Servers"
+          description="Cloud or NAS instances for shared listening."
+          icon={IconServer}
+        >
+          <div className="bg-surface/30 rounded-xl p-1">
+            <ServersSection />
+          </div>
+        </SettingSection>
+      </div>
+
+      {/* 2. Scanning & Behavior */}
       <SettingSection
-        title="Scanning"
-        description="Configure how Sonántica indexes your music."
+        title="Indexation Policy"
+        description="Configuration for the search and metadata engines."
+        icon={IconClock}
       >
         <SettingRow
           label="Auto-Scan on Startup"
-          description="Check for new files every time the app launches."
+          description="Index new files automatically when launching Sonántica."
         >
           <Switch checked={autoScan} onChange={() => toggle("autoScan")} />
         </SettingRow>
 
         <SettingRow
-          label="Watch Folders"
-          description="Monitor folders for changes in real-time."
-        >
-          <Switch
-            checked={watchFolders}
-            onChange={() => toggle("watchFolders")}
-          />
-        </SettingRow>
-
-        <SettingRow
           label="Parallel Scanning"
-          description="Scan multiple folders simultaneously. Faster, but uses more CPU."
+          description="Load multiple sources at once. Improved speed on SSDs."
         >
           <Switch
             checked={parallelScanning}
@@ -88,10 +221,10 @@ export function LibrarySettings() {
         </SettingRow>
 
         <SettingRow
-          label="Max Scan File Size"
-          description="Skip files larger than this size. Selecting Unlimited may cause freezes on huge files."
+          label="File Size Limit"
+          description="Standard: 100MB. Skip larger items to prevent buffering lags."
         >
-          <div className="w-full sm:w-56">
+          <div className="w-full sm:w-48">
             <Select
               options={fileSizeOptions}
               value={scanFileSizeLimit.toString()}
@@ -99,24 +232,14 @@ export function LibrarySettings() {
                 setNumber("scanFileSizeLimit", parseInt(e.target.value))
               }
             />
-            {scanFileSizeLimit === 0 && (
-              <p className="text-xs text-yellow-500 mt-1">
-                ⚠️ Performance may be impacted.
-              </p>
-            )}
           </div>
         </SettingRow>
-      </SettingSection>
 
-      <SettingSection
-        title="Metadata"
-        description="Configuration for tag reading and internet fetching."
-      >
         <SettingRow
-          label="Cover Art Max Size"
-          description="Limit the size of extracted embedded artwork."
+          label="Visual Cache"
+          description="Configure maximum resolution for embedded album covers."
         >
-          <div className="w-full sm:w-56">
+          <div className="w-full sm:w-48">
             <Select
               options={coverArtOptions}
               value={coverArtSizeLimit.toString()}
@@ -128,41 +251,24 @@ export function LibrarySettings() {
         </SettingRow>
       </SettingSection>
 
-      <SettingSection title="Maintenance">
+      {/* 3. Maintenance */}
+      <SettingSection
+        title="Maintenance"
+        description="Database hygiene and purge tools."
+        icon={IconBooks}
+      >
         <SettingRow
-          label="Rescan Library"
-          description="Force a full rescan of all configured servers with current settings."
-        >
-          <Button
-            variant="secondary"
-            size="sm"
-            className="w-full sm:w-auto"
-            onClick={() => {
-              if (
-                confirm(
-                  "Start a full rescan of all servers? This will respect the new size limits."
-                )
-              ) {
-                triggerRescanAll();
-              }
-            }}
-          >
-            Rescan All
-          </Button>
-        </SettingRow>
-
-        <SettingRow
-          label="Clear Library Cache"
-          description="Remove all indexed data and rescan from scratch."
+          label="Purge Library Database"
+          description="Remove all indexed data and resets the cache. Files are NOT deleted."
         >
           <Button
             variant="danger"
             size="sm"
-            className="w-full sm:w-auto text-red-400 hover:text-red-300 border-red-900/50 hover:bg-red-900/20"
-            onClick={handleClear}
+            onClick={handleClearEverything}
             disabled={isClearing}
+            className="w-full sm:w-auto text-red-400 border-red-900/40 hover:bg-red-900/10"
           >
-            {isClearing ? "Clearing..." : "Clear Database"}
+            {isClearing ? "Purging..." : "Wipe Database"}
           </Button>
         </SettingRow>
       </SettingSection>

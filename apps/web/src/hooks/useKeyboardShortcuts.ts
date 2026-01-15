@@ -40,8 +40,8 @@ const DEFAULT_OPTIONS: Required<KeyboardShortcutsOptions> = {
 export function useKeyboardShortcuts(options: KeyboardShortcutsOptions = {}) {
   const opts = { ...DEFAULT_OPTIONS, ...options };
 
-  const { state, play, pause, seek, setVolume, toggleMute, volume } = usePlayerStore();
-  const { next, previous, toggleShuffle, toggleRepeat } = useQueueStore();
+  const { state, play, pause, seek, setVolume, toggleMute, volume, next, previous } = usePlayerStore();
+  const { toggleShuffle, toggleRepeat } = useQueueStore();
   const { toggleLyrics, toggleQueue } = useUIStore();
   const player = usePlayerStore((s) => s.player);
 

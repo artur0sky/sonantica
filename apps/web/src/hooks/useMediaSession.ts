@@ -15,8 +15,8 @@ import { Capacitor } from '@capacitor/core';
 import { usePermissions, useMediaPlayback } from '@sonantica/mobile';
 
 export function useMediaSession() {
-  const { currentTrack, state, play, pause, stop, seek } = usePlayerStore();
-  const { next, previous, toggleShuffle, toggleRepeat } = useQueueStore();
+  const { currentTrack, state, play, pause, stop, seek, next, previous } = usePlayerStore();
+  const { toggleShuffle, toggleRepeat } = useQueueStore();
   const player = usePlayerStore((s) => s.player);
   
   const isNative = Capacitor.isNativePlatform();
