@@ -2,13 +2,24 @@ import { useEffect, useState } from "react";
 import { PluginService, type Plugin } from "../../../services/PluginService";
 import { PluginCard } from "./PluginCard";
 import { PluginConfigModal } from "./PluginConfigModal";
-import { IconPlugConnected, IconPlus } from "@tabler/icons-react";
+import {
+  IconPlugConnected,
+  IconPlus,
+  IconAlertTriangle,
+} from "@tabler/icons-react";
 import { Button } from "@sonantica/ui";
+import { isTauri } from "@sonantica/shared";
+import { useSettingsStore } from "../../../stores/settingsStore";
 
 export function PluginsSettings() {
   const [plugins, setPlugins] = useState<Plugin[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPlugin, setSelectedPlugin] = useState<Plugin | null>(null);
+
+  const serverPluginsOnDesktop = useSettingsStore(
+    (s) => s.enableServerPluginsOnDesktop
+  );
+  const isDesktop = isTauri();
 
   const fetchPlugins = async () => {
     try {
@@ -78,6 +89,23 @@ export function PluginsSettings() {
           Find Plugins
         </Button>
       </div>
+
+      {isDesktop && !serverPluginsOnDesktop && (
+        <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 flex gap-4 animate-in slide-in-from-top-2 duration-300">
+          <IconAlertTriangle className="text-amber-500 shrink-0" size={24} />
+          <div className="space-y-1">
+            <h3 className="text-sm font-bold text-amber-500 italic uppercase tracking-wider">
+              Server Plugins Inactive
+            </h3>
+            <p className="text-xs text-text-muted leading-relaxed">
+              Remote AI plugins (Demucs, Brain, Knowledge) are disabled by
+              default in Desktop mode to prioritize local performance. You can
+              enable them in the <strong>Desktop</strong> tab if you have a
+              Sonántica Server configured.
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="bg-surface-elevated border border-border rounded-xl p-4 sm:p-6 space-y-4 min-h-[200px]">
         {loading ? (

@@ -11,7 +11,9 @@
 
 // Core exports
 export * from './types';
+export type { AudioDevice, IFileEntry, IFileProvider } from './types/plugins';
 export * from './constants';
+
 export * from './utils/index';
 export { isSmartTV } from './utils/common';
 export * from './hooks/index';

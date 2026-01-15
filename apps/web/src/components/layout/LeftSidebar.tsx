@@ -9,10 +9,14 @@ import {
   IconPin,
   IconPinnedOff,
   IconHammer,
+  IconMicrophone,
+  IconAdjustmentsHorizontal,
 } from "@tabler/icons-react";
-import { cn } from "@sonantica/shared";
+
+import { cn, isTauri } from "@sonantica/shared";
 import type { Playlist } from "@sonantica/media-library";
 import { useLeftSidebarLogic } from "../../hooks/useLeftSidebarLogic";
+import { useSettingsStore } from "../../stores/settingsStore";
 
 interface NavItem {
   path: string;
@@ -32,6 +36,15 @@ const navItems: NavItem[] = [
   { path: "/workshop", label: "Workshop", Icon: IconHammer },
 ];
 
+const studioItems: NavItem[] = [
+  { path: "/compositor", label: "Compositor", Icon: IconMicrophone },
+  {
+    path: "/orquestador",
+    label: "Orquestador",
+    Icon: IconAdjustmentsHorizontal,
+  },
+];
+
 interface LeftSidebarProps {
   isCollapsed?: boolean;
 }
@@ -42,6 +55,30 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
   const [location] = useLocation();
   const { playlists, pinnedPlaylistIds, togglePin, isPlaylistActive } =
     useLeftSidebarLogic();
+
+  const enableCompositor = useSettingsStore((s) => s.enableCompositor);
+  const enableOrquestador = useSettingsStore((s) => s.enableOrquestador);
+  const devForceStudio = useSettingsStore((s) => s.devForceStudio);
+
+  React.useEffect(() => {
+    const isTauriEnv =
+      typeof window !== "undefined" &&
+      ((window as any).__TAURI__ !== undefined ||
+        (window as any).__TAURI_INTERNALS__ !== undefined);
+    console.log("[Sonántica Studio]", {
+      isTauriEnv,
+      isTauriUtil: isTauri(),
+      enableCompositor,
+      enableOrquestador,
+      devForceStudio,
+    });
+  }, [enableCompositor, enableOrquestador, devForceStudio]);
+
+  const isTauriActual =
+    isTauri() ||
+    (typeof window !== "undefined" &&
+      (window as any).__TAURI_INTERNALS__ !== undefined) ||
+    devForceStudio;
 
   const pinnedPlaylists = playlists.filter((p: Playlist) =>
     pinnedPlaylistIds.includes(p.id)
@@ -106,6 +143,57 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
             </div>
           </Link>
         ))}
+
+        {/* Studio Section (Tauri Only) */}
+        {isTauriActual && (enableCompositor || enableOrquestador) && (
+          <div className="pt-6 space-y-1">
+            {!isCollapsed && (
+              <div className="text-[10px] font-bold text-text-muted uppercase tracking-widest px-3 mb-2 opacity-50">
+                Studio
+              </div>
+            )}
+            {studioItems.map((item) => {
+              const isEnabled =
+                item.path === "/compositor"
+                  ? enableCompositor
+                  : enableOrquestador;
+
+              if (!isEnabled) return null;
+
+              return (
+                <Link key={item.path} href={item.path}>
+                  <div
+                    title={isCollapsed ? item.label : undefined}
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2 rounded-xl transition-all group cursor-pointer",
+                      isCollapsed && "justify-center",
+                      location === item.path
+                        ? "bg-accent/10 text-accent font-semibold"
+                        : "text-text-muted hover:text-text hover:bg-surface-elevated"
+                    )}
+                  >
+                    <item.Icon
+                      size={20}
+                      stroke={1.5}
+                      className={cn(
+                        "transition-transform group-hover:scale-110 flex-shrink-0",
+                        location === item.path
+                          ? "text-accent"
+                          : "text-text-muted"
+                      )}
+                    />
+                    {!isCollapsed && (
+                      <span className="text-sm">{item.label}</span>
+                    )}
+                    {!isCollapsed && location === item.path && (
+                      <div className="ml-auto w-1.5 h-1.5 rounded-full bg-accent" />
+                    )}
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
 
         {/* Pinned Playlists */}
         {pinnedPlaylists.length > 0 && (

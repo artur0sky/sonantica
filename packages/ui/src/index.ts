@@ -16,6 +16,10 @@ export { PromptDialog } from './components/molecules/PromptDialog';
 export type { PromptDialogProps } from './components/molecules/PromptDialog';
 
 export * from "./components/organisms";
+export { FileExplorer } from './components/FileExplorer';
+
+// Exporting File types for convenience (imported from shared)
+export type { IFileEntry, IFileProvider } from '@sonantica/shared';
 
 // Context Menu
 export { ContextMenu, useContextMenu } from './components/ContextMenu';

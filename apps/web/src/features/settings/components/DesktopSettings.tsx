@@ -8,6 +8,7 @@ import {
   IconRefresh,
   IconMusic,
 } from "@tabler/icons-react";
+import { cn } from "@sonantica/shared";
 import {
   useLocalLibrary,
   type LocalFolder,
@@ -178,10 +179,144 @@ export function DesktopSettings() {
         </section>
       )}
 
-      {/* Desktop Integration */}
+      {/* Studio & Desktop Plugins */}
       <section className="space-y-4">
         <div className="flex items-center gap-2 text-text-muted mb-6">
           <IconPackage size={20} stroke={1.5} />
+          <h2 className="text-sm font-semibold uppercase tracking-wider">
+            Studio & Desktop Plugins
+          </h2>
+        </div>
+
+        <div className="bg-surface-elevated border border-border rounded-xl divide-y divide-border">
+          <div className="p-4 sm:p-6 flex items-center justify-between gap-4">
+            <div className="space-y-1">
+              <h3 className="font-medium">Enable Compositor</h3>
+              <p className="text-sm text-text-muted">
+                Professional audio recording and waveform editing tool.
+              </p>
+            </div>
+            <button
+              onClick={() =>
+                useSettingsStore.getState().toggle("enableCompositor")
+              }
+              className={cn(
+                "h-6 w-11 rounded-full transition-colors relative",
+                useSettingsStore((s) => s.enableCompositor)
+                  ? "bg-accent"
+                  : "bg-surface-elevated border-2 border-border"
+              )}
+            >
+              <div
+                className={cn(
+                  "absolute top-1 h-3.5 w-3.5 bg-white rounded-full transition-all",
+                  useSettingsStore((s) => s.enableCompositor)
+                    ? "right-1"
+                    : "left-1"
+                )}
+              />
+            </button>
+          </div>
+
+          <div className="p-4 sm:p-6 flex items-center justify-between gap-4">
+            <div className="space-y-1">
+              <h3 className="font-medium">Enable Orquestador</h3>
+              <p className="text-sm text-text-muted">
+                Advanced audio routing and virtual mixer (VoiceMeeter style).
+              </p>
+            </div>
+            <button
+              onClick={() =>
+                useSettingsStore.getState().toggle("enableOrquestador")
+              }
+              className={cn(
+                "h-6 w-11 rounded-full transition-colors relative",
+                useSettingsStore((s) => s.enableOrquestador)
+                  ? "bg-accent"
+                  : "bg-surface-elevated border-2 border-border"
+              )}
+            >
+              <div
+                className={cn(
+                  "absolute top-1 h-3.5 w-3.5 bg-white rounded-full transition-all",
+                  useSettingsStore((s) => s.enableOrquestador)
+                    ? "right-1"
+                    : "left-1"
+                )}
+              />
+            </button>
+          </div>
+
+          <div className="p-4 sm:p-6 flex items-center justify-between gap-4">
+            <div className="space-y-1">
+              <h3 className="font-medium">Server Plugins on Desktop</h3>
+              <p className="text-sm text-text-muted">
+                Enable remote server plugins while in Desktop mode. Disabled by
+                default for better performance.
+              </p>
+            </div>
+            <button
+              onClick={() =>
+                useSettingsStore
+                  .getState()
+                  .toggle("enableServerPluginsOnDesktop")
+              }
+              className={cn(
+                "h-6 w-11 rounded-full transition-colors relative",
+                useSettingsStore((s) => s.enableServerPluginsOnDesktop)
+                  ? "bg-emerald-500"
+                  : "bg-surface-elevated border-2 border-border"
+              )}
+            >
+              <div
+                className={cn(
+                  "absolute top-1 h-3.5 w-3.5 bg-white rounded-full transition-all",
+                  useSettingsStore((s) => s.enableServerPluginsOnDesktop)
+                    ? "right-1"
+                    : "left-1"
+                )}
+              />
+            </button>
+          </div>
+
+          <div className="p-4 sm:p-6 flex items-center justify-between gap-4 bg-accent/5 border-t border-accent/20">
+            <div className="space-y-1">
+              <h3 className="font-medium text-accent flex items-center gap-2">
+                Developer: Force Studio Visibility
+              </h3>
+              <p className="text-xs text-text-muted">
+                Display Studio navigation even outside Tauri (Web/Mobile).
+                Useful for UI development.
+              </p>
+            </div>
+            <button
+              onClick={() =>
+                useSettingsStore.getState().toggle("devForceStudio")
+              }
+              className={cn(
+                "h-6 w-11 rounded-full transition-colors relative",
+                useSettingsStore((s) => s.devForceStudio)
+                  ? "bg-accent/50"
+                  : "bg-surface-elevated border-2 border-border"
+              )}
+            >
+              <div
+                className={cn(
+                  "absolute top-1 h-3.5 w-3.5 bg-white rounded-full transition-all",
+                  useSettingsStore((s) => s.devForceStudio)
+                    ? "right-1"
+                    : "left-1"
+                )}
+              />
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Desktop Integration */}
+      <section className="space-y-4">
+        <div className="flex items-center gap-2 text-text-muted mb-6">
+          <IconLayoutNavbar size={20} stroke={1.5} />
           <h2 className="text-sm font-semibold uppercase tracking-wider">
             Desktop Integration
           </h2>
