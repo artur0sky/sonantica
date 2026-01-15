@@ -6,8 +6,12 @@ import {
   IconPlugConnected,
   IconPlus,
   IconAlertTriangle,
+  IconDeviceDesktop,
+  IconMicrophone,
+  IconAdjustmentsHorizontal,
+  IconCpu,
 } from "@tabler/icons-react";
-import { Button } from "@sonantica/ui";
+import { Button, SettingSection, SettingRow, Switch } from "@sonantica/ui";
 import { isTauri } from "@sonantica/shared";
 import { useSettingsStore } from "../../../stores/settingsStore";
 
@@ -16,9 +20,14 @@ export function PluginsSettings() {
   const [loading, setLoading] = useState(true);
   const [selectedPlugin, setSelectedPlugin] = useState<Plugin | null>(null);
 
-  const serverPluginsOnDesktop = useSettingsStore(
-    (s) => s.enableServerPluginsOnDesktop
-  );
+  const {
+    enableServerPluginsOnDesktop,
+    enableCompositor,
+    enableOrquestador,
+    devForceStudio,
+    toggle,
+  } = useSettingsStore();
+
   const isDesktop = isTauri();
 
   const fetchPlugins = async () => {
@@ -37,7 +46,7 @@ export function PluginsSettings() {
     fetchPlugins();
   }, []);
 
-  const handleToggle = async (
+  const handleTogglePlugin = async (
     id: string,
     enabled: boolean,
     scope?: string,
@@ -45,7 +54,6 @@ export function PluginsSettings() {
   ) => {
     try {
       await PluginService.togglePlugin(id, enabled, scope, trackIds);
-      // Optimistic update or refetch
       setPlugins((prev) =>
         prev.map((p) => (p.id === id ? { ...p, isEnabled: enabled } : p))
       );
@@ -67,72 +75,152 @@ export function PluginsSettings() {
     }
   };
 
-  const handleInstallClick = () => {
-    window.open("https://github.com/artur0sky/sonantica-plugins", "_blank");
-  };
-
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="space-y-10 animate-in fade-in duration-500">
+      {/* Header Strategy */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-border pb-6">
         <div>
-          <h2 className="text-xl font-semibold mb-1 flex items-center gap-2">
-            <IconPlugConnected className="text-accent" />
-            AI Plugins & Extensions
+          <h2 className="text-2xl font-bold tracking-tight mb-1">
+            Workshop & Extensions
           </h2>
-          <p className="text-sm text-text-muted">
-            Enhance Sonántica with AI features like stem separation and
-            recommendations.
+          <p className="text-text-muted">
+            Manage intelligent services and sound engineering tools.
           </p>
         </div>
-        <Button variant="secondary" onClick={handleInstallClick}>
+        <Button
+          variant="secondary"
+          onClick={() =>
+            window.open(
+              "https://github.com/artur0sky/sonantica-plugins",
+              "_blank"
+            )
+          }
+        >
           <IconPlus size={18} className="mr-2" />
-          Find Plugins
+          Get Plugins
         </Button>
       </div>
 
-      {isDesktop && !serverPluginsOnDesktop && (
-        <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 flex gap-4 animate-in slide-in-from-top-2 duration-300">
-          <IconAlertTriangle className="text-amber-500 shrink-0" size={24} />
-          <div className="space-y-1">
-            <h3 className="text-sm font-bold text-amber-500 italic uppercase tracking-wider">
-              Server Plugins Inactive
-            </h3>
-            <p className="text-xs text-text-muted leading-relaxed">
-              Remote AI plugins (Demucs, Brain, Knowledge) are disabled by
-              default in Desktop mode to prioritize local performance. You can
-              enable them in the <strong>Desktop</strong> tab if you have a
-              Sonántica Server configured.
-            </p>
-          </div>
-        </div>
-      )}
-
-      <div className="bg-surface-elevated border border-border rounded-xl p-4 sm:p-6 space-y-4 min-h-[200px]">
-        {loading ? (
-          <div className="flex items-center justify-center py-20 text-text-muted">
-            Loading plugins...
-          </div>
-        ) : plugins.length === 0 ? (
-          <div className="text-center py-12 text-text-muted">
-            <IconPlugConnected size={48} className="mx-auto mb-4 opacity-50" />
-            <p>No plugins installed.</p>
-            <p className="text-xs mt-2">
-              Check Docker Compose to add AI services.
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-4">
-            {plugins.map((plugin) => (
-              <PluginCard
-                key={plugin.id}
-                plugin={plugin}
-                onToggle={handleToggle}
-                onConfigure={setSelectedPlugin}
-              />
-            ))}
+      {/* 1. Intelligent Services (Server-side) */}
+      <SettingSection
+        title="Intelligent Services"
+        description="Remote AI capabilities provided by your Sonántica Server."
+        icon={IconCpu}
+      >
+        {isDesktop && !enableServerPluginsOnDesktop && (
+          <div className="mb-4 bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 flex gap-4">
+            <IconAlertTriangle className="text-amber-500 shrink-0" size={24} />
+            <div className="space-y-1">
+              <h3 className="text-sm font-bold text-amber-500 uppercase tracking-wider">
+                Server Plugins Hovering
+              </h3>
+              <p className="text-xs text-text-muted leading-relaxed">
+                Plugins are inactive to prioritize local desktop performance.
+                Enable <strong>Server Plugins on Desktop</strong> below to use
+                them.
+              </p>
+            </div>
           </div>
         )}
-      </div>
+
+        <div className="space-y-3">
+          {isDesktop && !enableServerPluginsOnDesktop ? (
+            <div className="py-12 flex flex-col items-center justify-center text-center space-y-3 bg-surface/20 rounded-xl border border-border border-dashed">
+              <IconCpu size={40} className="text-text-muted opacity-20" />
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-text-muted">
+                  Server Bridge Inactive
+                </p>
+                <p className="text-xs text-text-muted/60 max-w-xs mx-auto">
+                  Remote AI plugins are hidden to save resources and improve
+                  native performance.
+                </p>
+              </div>
+            </div>
+          ) : loading ? (
+            <div className="py-10 text-center text-text-muted text-sm italic">
+              Synchronizing with server...
+            </div>
+          ) : plugins.length === 0 ? (
+            <div className="py-10 text-center text-text-muted text-sm border border-dashed border-border rounded-xl">
+              No server-side plugins registered.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4">
+              {plugins.map((plugin) => (
+                <PluginCard
+                  key={plugin.id}
+                  plugin={plugin}
+                  onToggle={handleTogglePlugin}
+                  onConfigure={setSelectedPlugin}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </SettingSection>
+
+      {/* 2. Studio Features (Desktop-side) */}
+      {(isDesktop || devForceStudio) && (
+        <SettingSection
+          title="Studio Engineering"
+          description="High-performance local tools for sound creation and routing."
+          icon={IconDeviceDesktop}
+        >
+          <SettingRow
+            label="Compositor"
+            description="Waveform editing and multi-track recording engine."
+            icon={IconMicrophone}
+          >
+            <Switch
+              checked={enableCompositor}
+              onChange={() => toggle("enableCompositor")}
+            />
+          </SettingRow>
+
+          <SettingRow
+            label="Orquestador"
+            description="Advanced virtual mixer and audio routing (VoiceMeeter logic)."
+            icon={IconAdjustmentsHorizontal}
+          >
+            <Switch
+              checked={enableOrquestador}
+              onChange={() => toggle("enableOrquestador")}
+            />
+          </SettingRow>
+        </SettingSection>
+      )}
+
+      {/* 3. Advanced Configuration & Bridge */}
+      <SettingSection
+        title="Plugin Infrastructure"
+        description="Global settings for the plugin ecosystem."
+        icon={IconPlugConnected}
+      >
+        {isDesktop && (
+          <SettingRow
+            label="Server Plugins on Desktop"
+            description="Allow remote AI processing (Demucs, Brain) while running natively."
+          >
+            <Switch
+              checked={enableServerPluginsOnDesktop}
+              onChange={() => toggle("enableServerPluginsOnDesktop")}
+              variant="emerald"
+            />
+          </SettingRow>
+        )}
+
+        <SettingRow
+          label="Force Studio Visibility"
+          description="Display Desktop-only tools on Web environment (Development)."
+        >
+          <Switch
+            checked={devForceStudio}
+            onChange={() => toggle("devForceStudio")}
+            variant="warning"
+          />
+        </SettingRow>
+      </SettingSection>
 
       {selectedPlugin && (
         <PluginConfigModal
