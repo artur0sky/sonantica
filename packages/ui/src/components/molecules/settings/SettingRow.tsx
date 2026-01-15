@@ -5,6 +5,7 @@ interface SettingRowProps {
   label: string;
   description?: string;
   children: React.ReactNode;
+  icon?: React.ElementType;
   className?: string;
 }
 
@@ -12,6 +13,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
   label,
   description,
   children,
+  icon: Icon,
   className,
 }) => {
   return (
@@ -21,15 +23,22 @@ export const SettingRow: React.FC<SettingRowProps> = ({
         className
       )}
     >
-      <div className="space-y-1 sm:max-w-[70%]">
-        <label className="text-sm font-medium text-text-primary leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-          {label}
-        </label>
-        {description && (
-          <p className="text-sm text-text-muted leading-relaxed">
-            {description}
-          </p>
+      <div className="flex items-start gap-3 sm:max-w-[70%]">
+        {Icon && (
+          <div className="mt-0.5 p-1.5 rounded-lg bg-surface/50 border border-border/20">
+            <Icon size={16} className="text-text-muted shrink-0" />
+          </div>
         )}
+        <div className="space-y-1">
+          <label className="text-sm font-medium text-text-primary leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+            {label}
+          </label>
+          {description && (
+            <p className="text-sm text-text-muted leading-relaxed">
+              {description}
+            </p>
+          )}
+        </div>
       </div>
       <div className="flex items-center sm:justify-end shrink-0">
         {children}

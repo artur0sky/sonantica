@@ -181,6 +181,10 @@ function App() {
   useAutoScan();
   useAnalyticsIntegration();
 
+  const devForceStudio = useSettingsStore((s) => s.devForceStudio);
+  const isTauriEnv =
+    typeof window !== "undefined" && !!(window as any).__TAURI_INTERNALS__;
+
   const animationsEnabled = useSettingsStore((s) => s.animations);
   const animationStyles = useAnimationStyles();
   const { className: animationClassName } = useAnimationSettings();
@@ -237,14 +241,18 @@ function App() {
                       <Route path="/workshop" component={WorkshopPage} />
 
                       {/* Studio (Desktop only) */}
-                      <Route
-                        path="/compositor"
-                        component={CompositorWorkspace}
-                      />
-                      <Route
-                        path="/orquestador"
-                        component={OrquestadorWorkspace}
-                      />
+                      {(isTauriEnv || devForceStudio) && (
+                        <>
+                          <Route
+                            path="/compositor"
+                            component={CompositorWorkspace}
+                          />
+                          <Route
+                            path="/orquestador"
+                            component={OrquestadorWorkspace}
+                          />
+                        </>
+                      )}
 
                       {/* 404 */}
                       <Route>

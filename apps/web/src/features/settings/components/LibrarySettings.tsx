@@ -23,10 +23,8 @@ import {
   IconFolderPlus,
 } from "@tabler/icons-react";
 import { ServersSection } from "../../library/components/ServersSection";
-import { isTauri } from "@sonantica/shared";
 
 export function LibrarySettings() {
-  const isDesktop = isTauri();
   const {
     clearLibrary: clearServerLibrary,
     triggerRescanAll: rescanServers,
@@ -43,7 +41,6 @@ export function LibrarySettings() {
 
   const {
     autoScan,
-    watchFolders,
     parallelScanning,
     scanFileSizeLimit,
     coverArtSizeLimit,

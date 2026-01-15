@@ -20,9 +20,11 @@ import { AnalyticsSettings } from "../components/AnalyticsSettings";
 import { PluginsSettings } from "../components/PluginsSettings";
 import { DesktopSettings } from "../components/DesktopSettings";
 import { isTauri } from "@sonantica/shared";
+import { useSettingsStore } from "../../../stores/settingsStore";
 
 export function SettingsPage() {
   const [activeTab, setActiveTab] = useState("general"); // Default to General/Interface
+  const devForceStudio = useSettingsStore((s) => s.devForceStudio);
   const isTauriEnv = isTauri();
 
   const tabs: Tab[] = [
@@ -56,7 +58,7 @@ export function SettingsPage() {
       label: "Offline",
       icon: IconCloudDownload,
     },
-    ...(isTauriEnv
+    ...(isTauriEnv || devForceStudio
       ? [
           {
             id: "desktop",
@@ -65,6 +67,7 @@ export function SettingsPage() {
           },
         ]
       : []),
+
     {
       id: "info",
       label: "About",
