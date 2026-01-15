@@ -8,6 +8,8 @@ import {
   IconChevronRight,
   IconDotsVertical,
   IconPlus,
+  IconCloud,
+  IconDeviceDesktop,
 } from "@tabler/icons-react";
 import { cn } from "../../utils";
 import { useLibraryStore } from "@sonantica/media-library";
@@ -26,6 +28,7 @@ export interface SearchResult {
   score?: number;
   source?: "local" | "remote";
   sourceName?: string;
+  serverColor?: string;
 }
 
 interface CategorizedResults {
@@ -124,6 +127,7 @@ export function SearchBar({
           source: track.source,
           sourceName:
             track.serverName || (track.source === "local" ? "LOCAL" : "SERVER"),
+          serverColor: (track as any).serverColor,
         });
       }
     });
@@ -430,8 +434,27 @@ export function SearchBar({
                 <TrackItem
                   title={result.title}
                   artist={result.subtitle}
-                  source={result.source}
-                  sourceName={result.sourceName}
+                  statusIcons={
+                    <div className="flex items-center gap-1 mr-2">
+                      {result.source === "local" ? (
+                        <div title="Local Library" className="text-blue-400">
+                          <IconDeviceDesktop size={14} />
+                        </div>
+                      ) : result.source === "remote" ? (
+                        <div
+                          title={result.sourceName || "Remote Server"}
+                          className="text-accent"
+                          style={
+                            result.serverColor
+                              ? { color: result.serverColor }
+                              : undefined
+                          }
+                        >
+                          <IconCloud size={14} />
+                        </div>
+                      ) : null}
+                    </div>
+                  }
                   onClick={() => handleResultClick(result)}
                   image={
                     result.coverArt ? (

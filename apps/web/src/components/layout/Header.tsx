@@ -5,7 +5,7 @@
  * Refactored to use CSS transitions instead of Framer Motion.
  */
 
-import { Link, useLocation } from "wouter";
+import { useLocation } from "wouter";
 import { IconSettings, IconLogout } from "@tabler/icons-react";
 import {
   SearchBar as GlobalSearchBar,
@@ -70,25 +70,23 @@ export function Header() {
       >
         {/* Left: Logo (Toggles Sidebar) */}
         <div className="flex items-center flex-shrink-0">
-          <Link href="/">
-            <div
-              className="flex items-center gap-2 group cursor-pointer px-2 py-1 rounded-lg hover:bg-surface-elevated transition-all active:scale-95"
-              onClick={() => {
-                toggleLeftSidebar();
-              }}
-            >
-              <div className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center flex-shrink-0 transition-transform duration-700 group-hover:rotate-[360deg]">
-                <img
-                  src={logo}
-                  alt="Sonántica Logo"
-                  className="w-full h-full object-contain"
-                />
-              </div>
-              <span className="text-lg sm:text-xl font-bold tracking-tight group-hover:text-accent transition-colors hidden sm:inline">
-                Sonántica
-              </span>
+          <div
+            className="flex items-center gap-2 group cursor-pointer px-2 py-1 rounded-lg hover:bg-surface-elevated transition-all active:scale-95"
+            onClick={() => {
+              toggleLeftSidebar();
+            }}
+          >
+            <div className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center flex-shrink-0 transition-transform duration-700 group-hover:rotate-[360deg]">
+              <img
+                src={logo}
+                alt="Sonántica Logo"
+                className="w-full h-full object-contain"
+              />
             </div>
-          </Link>
+            <span className="text-lg sm:text-xl font-bold tracking-tight group-hover:text-accent transition-colors hidden sm:inline">
+              Sonántica
+            </span>
+          </div>
         </div>
 
         {/* Center: Global Search */}

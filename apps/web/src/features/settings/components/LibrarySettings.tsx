@@ -19,8 +19,9 @@ import {
   IconTrash,
   IconBooks,
   IconClock,
-  IconMusic,
   IconFolderPlus,
+  IconCheck,
+  IconX,
 } from "@tabler/icons-react";
 import { ServersSection } from "../../library/components/ServersSection";
 
@@ -36,6 +37,8 @@ export function LibrarySettings() {
     addFolder,
     removeFolder,
     scanAllFolders,
+    updateFolderColor,
+    toggleFolder,
     isTauriAvailable,
   } = useLocalLibrary();
 
@@ -49,6 +52,10 @@ export function LibrarySettings() {
   } = useSettingsStore();
 
   const [isClearing, setIsClearing] = useState(false);
+
+  // Folder editing
+  const [editingFolder, setEditingFolder] = useState<string | null>(null);
+  const [editingColor, setEditingColor] = useState("#3b82f6");
 
   const isScanning = isServerScanning || isLocalScanning;
 
@@ -154,22 +161,93 @@ export function LibrarySettings() {
                       className="flex items-center justify-between p-3 bg-surface rounded-xl border border-border group"
                     >
                       <div className="flex items-center gap-3 truncate">
-                        <IconMusic size={18} className="text-text-muted" />
-                        <div className="truncate">
-                          <p className="text-sm font-medium truncate">
-                            {f.path}
-                          </p>
+                        <div
+                          className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                          style={{
+                            backgroundColor: (f.color || "#3b82f6") + "20",
+                            color: f.color || "#3b82f6",
+                          }}
+                        >
+                          <IconFolder size={18} />
+                        </div>
+                        <div className="min-w-0 flex-1 flex flex-col justify-center mr-2">
+                          <div className="flex items-center gap-3 mb-0.5">
+                            <p
+                              className="text-sm font-medium truncate"
+                              title={f.path}
+                            >
+                              {f.path}
+                            </p>
+                            {/* Enable/Disable Toggle */}
+                            <div
+                              className="flex items-center gap-2 flex-shrink-0"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Switch
+                                checked={f.enabled !== false}
+                                onChange={(checked) =>
+                                  toggleFolder(f.path, checked)
+                                }
+                              />
+                            </div>
+                          </div>
                           <p className="text-[10px] text-text-muted uppercase tracking-wider">
-                            {f.trackCount} Tracks Found
+                            {f.enabled !== false
+                              ? `${f.trackCount} Tracks Found`
+                              : "Disabled"}
                           </p>
                         </div>
                       </div>
-                      <button
-                        onClick={() => removeFolder(f.path)}
-                        className="p-2 text-text-muted hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <IconTrash size={16} />
-                      </button>
+
+                      <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                        {editingFolder === f.path ? (
+                          <div className="flex items-center gap-2 mr-2 bg-surface-elevated p-1 rounded-lg border border-border">
+                            <input
+                              type="color"
+                              value={editingColor}
+                              onChange={(e) => setEditingColor(e.target.value)}
+                              className="w-6 h-6 p-0 border-0 rounded cursor-pointer"
+                            />
+                            <button
+                              onClick={() => {
+                                updateFolderColor(f.path, editingColor);
+                                setEditingFolder(null);
+                              }}
+                              className="text-green-500 hover:text-green-400"
+                            >
+                              <IconCheck size={16} />
+                            </button>
+                            <button
+                              onClick={() => setEditingFolder(null)}
+                              className="text-red-400 hover:text-red-300"
+                            >
+                              <IconX size={16} />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              setEditingFolder(f.path);
+                              setEditingColor(f.color || "#3b82f6");
+                            }}
+                            className="p-2 text-text-muted hover:text-accent"
+                            title="Edit Color"
+                          >
+                            <div
+                              className="w-3 h-3 rounded-full border border-white/20"
+                              style={{ backgroundColor: f.color || "#3b82f6" }}
+                            />
+                          </button>
+                        )}
+
+                        <button
+                          onClick={() => removeFolder(f.path)}
+                          className="p-2 text-text-muted hover:text-red-400"
+                          title="Remove Folder"
+                        >
+                          <IconTrash size={16} />
+                        </button>
+                      </div>
                     </div>
                   ))
                 ) : (

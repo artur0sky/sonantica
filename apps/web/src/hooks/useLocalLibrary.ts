@@ -19,6 +19,8 @@ export interface LocalFolder {
   path: string;
   lastScanned?: Date;
   trackCount: number;
+  color?: string;
+  enabled?: boolean;
 }
 
 // Check if we're running in Tauri - type-safe detection
@@ -141,6 +143,7 @@ export function useLocalLibrary() {
     const newFolder: LocalFolder = {
       path: folderPath,
       trackCount: 0,
+      color: "#3b82f6", // Default blue for local folders
     };
 
     setFolders(prev => [...prev, newFolder]);
@@ -179,6 +182,33 @@ export function useLocalLibrary() {
   }, []);
 
   /**
+   * Update folder color
+   */
+  const updateFolderColor = useCallback((path: string, color: string) => {
+    setFolders(prev => prev.map(f => 
+      f.path === path ? { ...f, color } : f
+    ));
+    
+    // Also update all existing tracks from this folder in the library
+    import('@sonantica/media-library').then(({ useLibraryStore }) => {
+       const store = useLibraryStore.getState();
+       const updatedTracks = store.tracks.map(t => {
+         if ((t as any).folderPath === path) {
+           return { ...t, serverColor: color };
+         }
+         return t;
+       });
+       
+       if (updatedTracks !== store.tracks) {
+         store.setTracks(updatedTracks);
+       }
+    });
+
+  }, []);
+
+
+
+  /**
    * Scan a specific folder
    */
   const scanFolder = useCallback(async (folderPath: string) => {
@@ -186,7 +216,7 @@ export function useLocalLibrary() {
       setError('This feature is only available in the desktop app');
       return [];
     }
-
+    
     setIsScanning(true);
     setError(null);
     setScanProgress(null);
@@ -295,6 +325,7 @@ export function useLocalLibrary() {
               duration,
               filePath: assetUrl,
               source: 'local' as const,
+              serverColor: folders.find(f => f.path === folderPath)?.color || "#3b82f6",
               addedAt: new Date(),
               year,
               genre,
@@ -426,14 +457,39 @@ export function useLocalLibrary() {
     } finally {
       setIsScanning(false);
     }
-  }, []);
+  }, [folders]);
+
+  /**
+   * Toggle folder enabled state
+   */
+  const toggleFolder = useCallback(async (path: string, enabled: boolean) => {
+    // Update local state
+    setFolders(prev => prev.map(f => 
+      f.path === path ? { ...f, enabled } : f
+    ));
+    
+    if (enabled) {
+      await scanFolder(path);
+    } else {
+      // Disabled: Remove tracks from store
+      import('@sonantica/media-library').then(({ useLibraryStore }) => {
+          const store = useLibraryStore.getState();
+          const newTracks = store.tracks.filter(t => (t as any).folderPath !== path);
+          if (newTracks.length !== store.tracks.length) {
+             store.setTracks(newTracks);
+          }
+      });
+    }
+  }, [scanFolder]);
 
   /**
    * Scan all folders
    */
   const scanAllFolders = useCallback(async () => {
     for (const folder of folders) {
-      await scanFolder(folder.path);
+      if (folder.enabled !== false) {
+          await scanFolder(folder.path);
+      }
     }
   }, [folders, scanFolder]);
 
@@ -446,6 +502,8 @@ export function useLocalLibrary() {
     removeFolder,
     scanFolder,
     scanAllFolders,
+    updateFolderColor,
+    toggleFolder,
     isTauriAvailable: isTauri,
   };
 }

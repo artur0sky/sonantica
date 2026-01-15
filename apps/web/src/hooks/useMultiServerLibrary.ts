@@ -200,6 +200,11 @@ export function useMultiServerLibrary() {
       return;
     }
 
+    if (server.enabled === false) {
+       console.log(`Skipping scan for disabled server: ${server.name}`);
+       return;
+    }
+
     setState(prev => ({
       ...prev,
       scanningServers: new Set([...prev.scanningServers, serverId])
@@ -493,9 +498,11 @@ export function useMultiServerLibrary() {
 
     setState(prev => ({ ...prev, loading: true, error: null }));
 
-    // Scan all servers in parallel
+    // Scan all ENABLED servers in parallel
+    const enabledServers = config.servers.filter(s => s.enabled !== false);
+    
     await Promise.all(
-      config.servers.map(server => scanServer(server.id, false))
+      enabledServers.map(server => scanServer(server.id, false))
     );
 
     setState(prev => ({ ...prev, loading: false }));
@@ -541,6 +548,44 @@ export function useMultiServerLibrary() {
     return state.tracks.filter(t => t.serverId === serverId);
   }, [state.tracks]);
 
+  /**
+   * Toggle server enabled state
+   */
+  const toggleServer = useCallback(async (serverId: string, enabled: boolean) => {
+      // 1. Update config in localStorage
+      const { updateServerConfig } = await import('../services/LibraryService');
+      updateServerConfig(serverId, { enabled });
+
+      // 2. Reflect changes in library
+      if (enabled) {
+          // Enabled: Scan it
+          console.log(`✅ Server ${serverId} enabled. Scanning...`);
+          await scanServer(serverId);
+      } else {
+          // Disabled: Remove its tracks
+          console.log(`🚫 Server ${serverId} disabled. Removing tracks...`);
+          setState(prev => {
+              const newTracks = prev.tracks.filter(t => t.serverId !== serverId);
+              const newArtists = prev.artists.filter(a => (a as any).serverId !== serverId);
+              const newAlbums = prev.albums.filter(a => (a as any).serverId !== serverId);
+              const newPlaylists = prev.playlists.filter(p => (p as any).serverId !== serverId);
+              
+              setTracks(newTracks);
+              setArtists(newArtists);
+              setAlbums(newAlbums);
+              setPlaylists(newPlaylists);
+              
+              return {
+                  ...prev,
+                  tracks: newTracks,
+                  artists: newArtists,
+                  albums: newAlbums,
+                  playlists: newPlaylists
+              };
+          });
+      }
+  }, [scanServer, setTracks, setArtists, setAlbums, setPlaylists]);
+
   return {
     ...state,
     scanServer,
@@ -551,6 +596,7 @@ export function useMultiServerLibrary() {
     getTracksByServer,
     isScanning: state.loading || state.scanningServers.size > 0,
     startPolling,
-    stopPolling
+    stopPolling,
+    toggleServer
   };
 }

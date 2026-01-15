@@ -272,7 +272,13 @@ export function TrackItem({
         statusIcons={
           <div className="flex items-center gap-1 mr-2">
             {track.source === "local" ? (
-              <div title="Local Library" className="text-blue-400">
+              <div
+                title={track.folderPath || "Local Library"}
+                className={!track.serverColor ? "text-blue-400" : undefined}
+                style={
+                  track.serverColor ? { color: track.serverColor } : undefined
+                }
+              >
                 <IconDeviceDesktop size={14} />
               </div>
             ) : (

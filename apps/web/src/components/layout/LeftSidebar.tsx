@@ -113,21 +113,6 @@ export const LeftSidebar: React.FC<LeftSidebarProps> = ({
         isCollapsed ? "w-full" : "w-full" // Width is controlled by parent aside in MainLayout
       )}
     >
-      {/* Brand */}
-      <div className={cn("p-6", isCollapsed && "flex justify-center px-0")}>
-        <h2 className="text-xl font-bold text-accent tracking-tight flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center text-white flex-shrink-0">
-            S
-          </div>
-          {!isCollapsed && <span>Sonántica</span>}
-        </h2>
-        {!isCollapsed && (
-          <p className="text-[10px] text-text-muted mt-1 uppercase tracking-widest opacity-50">
-            Audio Interpreter
-          </p>
-        )}
-      </div>
-
       {/* Primary Navigation */}
       <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-1 custom-scrollbar">
         {!isCollapsed && (

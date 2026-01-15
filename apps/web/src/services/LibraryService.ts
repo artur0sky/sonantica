@@ -18,6 +18,7 @@ export interface ServerConfig {
   apiKey?: string;
   lastConnected?: number;
   color?: string;
+  enabled?: boolean;
 }
 
 export interface ServersConfig {
@@ -135,6 +136,7 @@ export function saveServerConfig(server: Omit<ServerConfig, 'id' | 'lastConnecte
     id,
     lastConnected: Date.now(),
     color: server.color || getRandomColor(),
+    enabled: true,
   };
   
   if (existingIndex !== -1) {
@@ -259,6 +261,8 @@ export function createLibraryAdapterForServer(serverId: string): ILibraryAdapter
  * Check if any server is configured
  */
 export function isServerConfigured(): boolean {
+  const isTauri = typeof window !== "undefined" && !!(window as any).__TAURI_INTERNALS__;
+  if (isTauri) return true; // Tauri can run offline/local
   return getServerConfig() !== null;
 }
 
