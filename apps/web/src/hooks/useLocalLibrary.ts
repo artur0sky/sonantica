@@ -30,6 +30,7 @@ export function useLocalLibrary() {
   const [isScanning, setIsScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState<ScanProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [foldersLoaded, setFoldersLoaded] = useState(false);
 
   // Load saved folders from localStorage
   useEffect(() => {
@@ -45,12 +46,36 @@ export function useLocalLibrary() {
         console.error('Failed to load saved folders:', e);
       }
     }
+    setFoldersLoaded(true);
   }, []);
 
   // Save folders to localStorage whenever they change
   useEffect(() => {
-    localStorage.setItem('sonantica_local_folders', JSON.stringify(folders));
-  }, [folders]);
+    if (foldersLoaded) {
+      localStorage.setItem('sonantica_local_folders', JSON.stringify(folders));
+    }
+  }, [folders, foldersLoaded]);
+
+  // Auto-rescan saved folders on startup (only if they have tracks)
+  useEffect(() => {
+    if (!isTauri || !foldersLoaded || folders.length === 0) return;
+    
+    const rescanSavedFolders = async () => {
+      // Only rescan folders that were previously scanned
+      const foldersToRescan = folders.filter(f => f.trackCount > 0 && f.lastScanned);
+      
+      if (foldersToRescan.length > 0) {
+        console.log(`🔄 Re-scanning ${foldersToRescan.length} saved folders...`);
+        for (const folder of foldersToRescan) {
+          await scanFolder(folder.path);
+        }
+      }
+    };
+
+    // Delay to avoid blocking initial render
+    const timer = setTimeout(rescanSavedFolders, 1000);
+    return () => clearTimeout(timer);
+  }, [foldersLoaded]); // Only run when folders are loaded
 
   // Listen to scan progress events (only in Tauri)
   useEffect(() => {
