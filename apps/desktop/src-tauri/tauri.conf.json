@@ -20,13 +20,17 @@
       }
     ],
     "security": {
-      "csp": null,
+      "csp": "default-src 'self'; img-src 'self' data: https: asset: http://asset.localhost; media-src 'self' asset: http://asset.localhost; style-src 'self' 'unsafe-inline'; script-src 'self' 'wasm-unsafe-eval'",
       "assetProtocol": {
         "enable": true,
-        "scope": [
-          "**"
-        ]
-      }
+        "scope": {
+          "allow": [
+            "**"
+          ],
+          "deny": []
+        }
+      },
+      "dangerousDisableAssetCspModification": false
     }
   },
   "bundle": {
@@ -42,9 +46,7 @@
   },
   "plugins": {
     "fs": {
-      "scope": [
-        "**"
-      ]
+      "requireLiteralLeadingDot": false
     }
   }
 }
