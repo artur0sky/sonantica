@@ -22,92 +22,10 @@ importers:
         version: 7.4.0
 
   apps/desktop:
-    dependencies:
-      '@sonantica/analytics':
-        specifier: workspace:*
-        version: link:../../packages/analytics
-      '@sonantica/audio-analyzer':
-        specifier: workspace:*
-        version: link:../../packages/audio-analyzer
-      '@sonantica/dsp':
-        specifier: workspace:*
-        version: link:../../packages/dsp
-      '@sonantica/lyrics':
-        specifier: workspace:*
-        version: link:../../packages/lyrics
-      '@sonantica/media-library':
-        specifier: workspace:*
-        version: link:../../packages/media-library
-      '@sonantica/metadata':
-        specifier: workspace:*
-        version: link:../../packages/metadata
-      '@sonantica/offline-manager':
-        specifier: workspace:*
-        version: link:../../packages/offline-manager
-      '@sonantica/player-core':
-        specifier: workspace:*
-        version: link:../../packages/player-core
-      '@sonantica/recommendations':
-        specifier: workspace:*
-        version: link:../../packages/recommendations
-      '@sonantica/shared':
-        specifier: workspace:*
-        version: link:../../packages/shared
-      '@sonantica/ui':
-        specifier: workspace:*
-        version: link:../../packages/ui
-      '@tauri-apps/api':
-        specifier: 2.2.0
-        version: 2.2.0
-      '@tauri-apps/plugin-opener':
-        specifier: 2.2.0
-        version: 2.2.0
-      framer-motion:
-        specifier: 12.23.26
-        version: 12.23.26(react-dom@19.2.3)(react@19.2.3)
-      react:
-        specifier: 19.2.3
-        version: 19.2.3
-      react-dom:
-        specifier: 19.2.3
-        version: 19.2.3(react@19.2.3)
-      wouter:
-        specifier: 3.5.0
-        version: 3.5.0(react@19.2.3)
-      zustand:
-        specifier: 5.0.9
-        version: 5.0.9(@types/react@19.2.3)(react@19.2.3)
     devDependencies:
-      '@tailwindcss/vite':
-        specifier: 4.1.18
-        version: 4.1.18(vite@7.3.0)
       '@tauri-apps/cli':
         specifier: 2.2.0
         version: 2.2.0
-      '@types/node':
-        specifier: 24.10.1
-        version: 24.10.1
-      '@types/react':
-        specifier: 19.2.3
-        version: 19.2.3
-      '@types/react-dom':
-        specifier: 19.2.3
-        version: 19.2.3(@types/react@19.2.3)
-      '@vitejs/plugin-react':
-        specifier: 5.1.1
-        version: 5.1.1(vite@7.3.0)
-      autoprefixer:
-        specifier: 10.4.20
-        version: 10.4.20(postcss@8.5.6)
-      tailwindcss:
-        specifier: 4.1.18
-        version: 4.1.18
-      typescript:
-        specifier: 5.9.3
-        version: 5.9.3
-      vite:
-        specifier: 7.3.0
-        version: 7.3.0(@types/node@24.10.1)
 
   apps/mobile:
     dependencies:
@@ -196,9 +114,18 @@ importers:
       '@tauri-apps/api':
         specifier: 2.2.0
         version: 2.2.0
+      '@tauri-apps/plugin-dialog':
+        specifier: ^2.6.0
+        version: 2.6.0
+      '@tauri-apps/plugin-fs':
+        specifier: ^2.4.5
+        version: 2.4.5
       '@tauri-apps/plugin-opener':
         specifier: 2.2.0
         version: 2.2.0
+      '@tauri-apps/plugin-shell':
+        specifier: ^2.3.4
+        version: 2.3.4
       framer-motion:
         specifier: 12.23.26
         version: 12.23.26(react-dom@19.2.3)(react@19.2.3)
@@ -3372,6 +3299,10 @@ packages:
     resolution: {integrity: sha512-R8epOeZl1eJEl603aUMIGb4RXlhPjpgxbGVEaqY+0G5JG9vzV/clNlzTeqc+NLYXVqXcn8mb4c5b9pJIUDEyAg==}
     dev: false
 
+  /@tauri-apps/api@2.9.1:
+    resolution: {integrity: sha512-IGlhP6EivjXHepbBic618GOmiWe4URJiIeZFlB7x3czM0yDHHYviH1Xvoiv4FefdkQtn6v7TuwWCRfOGdnVUGw==}
+    dev: false
+
   /@tauri-apps/cli-darwin-arm64@2.2.0:
     resolution: {integrity: sha512-Paxq9JUj1uxV/CDr8hNnr88GcjXLmmX1yBcclQldeUoAoSgsXN1eLLS4e0CHXIzYATmcsSbcl6Zgquo4wW4e9w==}
     engines: {node: '>= 10'}
@@ -3479,10 +3410,28 @@ packages:
       '@tauri-apps/cli-win32-x64-msvc': 2.2.0
     dev: true
 
+  /@tauri-apps/plugin-dialog@2.6.0:
+    resolution: {integrity: sha512-q4Uq3eY87TdcYzXACiYSPhmpBA76shgmQswGkSVio4C82Sz2W4iehe9TnKYwbq7weHiL88Yw19XZm7v28+Micg==}
+    dependencies:
+      '@tauri-apps/api': 2.9.1
+    dev: false
+
+  /@tauri-apps/plugin-fs@2.4.5:
+    resolution: {integrity: sha512-dVxWWGE6VrOxC7/jlhyE+ON/Cc2REJlM35R3PJX3UvFw2XwYhLGQVAIyrehenDdKjotipjYEVc4YjOl3qq90fA==}
+    dependencies:
+      '@tauri-apps/api': 2.9.1
+    dev: false
+
   /@tauri-apps/plugin-opener@2.2.0:
     resolution: {integrity: sha512-FSOjVsIKlRWPjjcnHgrjdxJlOFfPTkw5GtfutCyJSDyHJ/M3NULd8dkGewkWwozDFwiAJj1hqaj2R3K12uXWIw==}
     dependencies:
       '@tauri-apps/api': 2.2.0
+    dev: false
+
+  /@tauri-apps/plugin-shell@2.3.4:
+    resolution: {integrity: sha512-ktsRWf8wHLD17aZEyqE8c5x98eNAuTizR1FSX475zQ4TxaiJnhwksLygQz+AGwckJL5bfEP13nWrlTNQJUpKpA==}
+    dependencies:
+      '@tauri-apps/api': 2.9.1
     dev: false
 
   /@types/babel__core@7.20.5:
