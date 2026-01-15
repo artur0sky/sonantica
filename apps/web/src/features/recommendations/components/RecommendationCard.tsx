@@ -23,10 +23,12 @@ export function RecommendationCard({
 }: RecommendationCardProps) {
   // --- TRACK VARIANT ---
   if (type === "track") {
+    // Use TrackItem directly for full functionality (context menu, add to playlist, etc.)
+    // The track should already be enriched with coverArt from useSmartRecommendations
     return (
       <div className={cn("relative group", className)}>
         <TrackItem track={item} onClick={onClick || (() => {})} />
-        {/* Reason badge */}
+        {/* Reason badge - shown on hover */}
         {reasons.length > 0 && (
           <div className="absolute top-1 right-2 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
             <span className="text-[9px] bg-surface-elevated/90 backdrop-blur px-1.5 py-0.5 rounded border border-border/50 text-text-muted">

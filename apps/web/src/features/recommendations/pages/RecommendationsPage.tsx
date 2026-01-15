@@ -15,8 +15,10 @@ import { useQueueStore } from "@sonantica/player-core";
 import { type SimilarityWeights } from "@sonantica/recommendations";
 import { playFromContext } from "../../../utils/playContext";
 import { trackToMediaSource } from "../../../utils/streamingUrl";
+import { useDocumentTitle } from "../../../hooks/useDocumentTitle";
 
 export function RecommendationsPage() {
+  useDocumentTitle("Smart Recommendations");
   const [activeTab, setActiveTab] = useState<"tracks" | "albums" | "artists">(
     "tracks"
   );

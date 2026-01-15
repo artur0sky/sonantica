@@ -75,6 +75,16 @@ export interface IPlayerEngine {
   getAudioElement(): HTMLAudioElement | null;
 
   /**
+   * Lock navigation to prevent audio interruptions during route changes
+   */
+  lockNavigation(): void;
+
+  /**
+   * Unlock navigation after route change is complete
+   */
+  unlockNavigation(): void;
+
+  /**
    * Cleanup and release resources
    */
   dispose(): void;

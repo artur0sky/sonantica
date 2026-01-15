@@ -168,9 +168,13 @@ export function RecommendationsSidebar() {
     >
       <div
         className={cn(
-          "flex flex-col h-full overflow-y-auto px-1 pb-20 transition-opacity duration-200",
+          "flex flex-col h-full overflow-y-auto overflow-x-hidden px-1 pb-20 transition-opacity duration-200",
           isLoading ? "opacity-50 pointer-events-none" : "opacity-100"
         )}
+        style={{
+          scrollbarWidth: "thin",
+          scrollbarColor: "rgba(255,255,255,0.2) transparent",
+        }}
       >
         <div className="mb-4 px-1">
           <p className="text-xs text-text-muted italic opacity-70">
