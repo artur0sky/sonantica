@@ -63,6 +63,9 @@ interface LibraryState {
   getArtistById: (id: string) => Artist | undefined;
   getTrackById: (id: string) => Track | undefined;
   getPlaylistById: (id: string) => Playlist | undefined;
+  
+  // Utilities
+  enrichTrackWithCoverArt: (track: Track) => Track;
 }
 
 const calculateStats = (tracks: Track[], artists: Artist[], albums: Album[]): LibraryStats => {
@@ -344,5 +347,26 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
 
   getPlaylistById: (id: string) => {
     return get().playlists.find(p => p.id === id);
+  },
+
+  // Utilities
+  enrichTrackWithCoverArt: (track: Track) => {
+    if (track.coverArt) return track; // Already has art
+    
+    const { albums } = get();
+    
+    // Strategy 1: Match by albumId
+    let album = track.albumId ? albums.find(a => a.id === track.albumId) : null;
+    
+    // Strategy 2: Match by name and artist
+    if (!album) {
+      album = albums.find(a => a.title === track.album && a.artist === track.artist);
+    }
+    
+    if (album && album.coverArt) {
+      return { ...track, coverArt: album.coverArt };
+    }
+    
+    return track;
   },
 }));

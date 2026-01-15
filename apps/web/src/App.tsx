@@ -108,9 +108,17 @@ import {
 } from "./hooks/useAnimationSettings";
 import { DesktopCloseModal } from "./components/DesktopCloseModal";
 import { useState } from "react";
+import { useSpatialNavigation } from "@sonantica/ui";
+import { useNavigationProtection } from "./hooks/useNavigationProtection";
 
 function App() {
   const [isCloseModalOpen, setIsCloseModalOpen] = useState(false);
+
+  // Enable spatial navigation for Smart TVs
+  useSpatialNavigation();
+
+  // Protect audio playback during navigation (Tauri fix)
+  useNavigationProtection();
 
   // Initialize browser compatibility features (polyfills, detection, etc.)
   useEffect(() => {

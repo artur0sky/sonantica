@@ -34,6 +34,7 @@ export function useSmartRecommendations({ diversity = 0.2, weights }: SmartRecom
   const tracks = useLibraryStore((s) => s.tracks);
   const albums = useLibraryStore((s) => s.albums);
   const artists = useLibraryStore((s) => s.artists);
+  const enrichTrackWithCoverArt = useLibraryStore((s) => s.enrichTrackWithCoverArt);
 
   // Memoize weights string to prevent infinite loops if object reference changes
   const weightsJson = JSON.stringify(weights);
@@ -68,10 +69,20 @@ export function useSmartRecommendations({ diversity = 0.2, weights }: SmartRecom
         );
 
         if (isMounted) {
-            setResults(smartResults);
+            // Enrich tracks with cover art from library store cache
+            const enrichedTracks = smartResults.tracks.map((rec: Recommendation<Track>) => ({
+              ...rec,
+              item: enrichTrackWithCoverArt(rec.item)
+            }));
+
+            setResults({
+              tracks: enrichedTracks,
+              albums: smartResults.albums,
+              artists: smartResults.artists
+            });
             
             // Check if we got AI results by looking at reasons
-            const hasAI = smartResults.tracks.some((t: Recommendation<Track>) => t.reasons.some((r: any) => r.type === 'ai'));
+            const hasAI = enrichedTracks.some((t: Recommendation<Track>) => t.reasons.some((r: any) => r.type === 'ai'));
             setIsAI(hasAI);
         }
       } catch (err) {
@@ -86,7 +97,7 @@ export function useSmartRecommendations({ diversity = 0.2, weights }: SmartRecom
     fetchSmart();
 
     return () => { isMounted = false; };
-  }, [currentMediaSource, tracks, albums, artists, diversity, weightsJson]); // Use stringified weights
+  }, [currentMediaSource, tracks, albums, artists, diversity, weightsJson, enrichTrackWithCoverArt]); // Use stringified weights
 
   return {
     trackRecommendations: results.tracks,

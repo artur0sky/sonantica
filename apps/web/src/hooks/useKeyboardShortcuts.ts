@@ -85,6 +85,15 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions = {}) {
         'KeyL',
         'KeyQ',
         'KeyF',
+        // Media Keys
+        'MediaPlayPause',
+        'MediaPlay',
+        'MediaPause',
+        'MediaStop',
+        'MediaTrackNext',
+        'MediaTrackPrevious',
+        'MediaRewind',
+        'MediaFastForward',
       ];
 
       if (handled.includes(e.code)) {
@@ -93,30 +102,47 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions = {}) {
 
       switch (e.code) {
         case 'Space':
+        case 'MediaPlayPause':
           // Play/Pause
           if (state === PlaybackState.PLAYING) {
             pause();
           } else if (state === PlaybackState.PAUSED || state === PlaybackState.STOPPED) {
             await play();
           }
-          console.log('⌨️ Keyboard: Space (Play/Pause)');
+          console.log(`⌨️ Keyboard: ${e.code} (Play/Pause)`);
+          break;
+
+        case 'MediaPlay':
+          if (state !== PlaybackState.PLAYING) {
+            await play();
+            console.log('⌨️ Keyboard: MediaPlay');
+          }
+          break;
+
+        case 'MediaPause':
+          if (state === PlaybackState.PLAYING) {
+            pause();
+            console.log('⌨️ Keyboard: MediaPause');
+          }
           break;
 
         case 'ArrowLeft':
+        case 'MediaRewind':
           // Seek backward
           if (audio) {
             const newTime = Math.max(0, audio.currentTime - opts.seekStep);
             seek(newTime);
-            console.log(`⌨️ Keyboard: ← (Seek to ${newTime.toFixed(1)}s)`);
+            console.log(`⌨️ Keyboard: ${e.code} (Seek to ${newTime.toFixed(1)}s)`);
           }
           break;
 
         case 'ArrowRight':
+        case 'MediaFastForward':
           // Seek forward
           if (audio) {
             const newTime = Math.min(audio.duration || 0, audio.currentTime + opts.seekStep);
             seek(newTime);
-            console.log(`⌨️ Keyboard: → (Seek to ${newTime.toFixed(1)}s)`);
+            console.log(`⌨️ Keyboard: ${e.code} (Seek to ${newTime.toFixed(1)}s)`);
           }
           break;
 
@@ -145,15 +171,17 @@ export function useKeyboardShortcuts(options: KeyboardShortcutsOptions = {}) {
           break;
 
         case 'KeyN':
+        case 'MediaTrackNext':
           // Next track
           next();
-          console.log('⌨️ Keyboard: N (Next)');
+          console.log(`⌨️ Keyboard: ${e.code} (Next)`);
           break;
 
         case 'KeyP':
+        case 'MediaTrackPrevious':
           // Previous track
           previous();
-          console.log('⌨️ Keyboard: P (Previous)');
+          console.log(`⌨️ Keyboard: ${e.code} (Previous)`);
           break;
 
         case 'KeyS':
