@@ -70,12 +70,15 @@ export function Header() {
     };
 
     // Defer to avoid immediate trigger
+    // Also listen to touchstart for Capacitor/mobile support
     if (contextMenu.isOpen) {
       window.addEventListener("click", handleClickOutside);
+      window.addEventListener("touchstart", handleClickOutside);
     }
 
     return () => {
       window.removeEventListener("click", handleClickOutside);
+      window.removeEventListener("touchstart", handleClickOutside);
     };
   }, [contextMenu.isOpen, contextMenu.close]);
 
