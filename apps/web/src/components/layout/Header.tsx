@@ -6,6 +6,7 @@
  */
 
 import { useLocation } from "wouter";
+import { useEffect } from "react";
 import { IconSettings, IconLogout } from "@tabler/icons-react";
 import {
   SearchBar as GlobalSearchBar,
@@ -36,7 +37,10 @@ export function Header() {
       id: "settings",
       label: "Settings",
       icon: <IconSettings size={18} stroke={1.5} />,
-      onClick: () => setLocation("/settings"),
+      onClick: () => {
+        contextMenu.close();
+        setLocation("/settings");
+      },
     },
     {
       id: "divider-1",
@@ -49,12 +53,31 @@ export function Header() {
       label: "Logout",
       icon: <IconLogout size={18} stroke={1.5} />,
       onClick: () => {
+        contextMenu.close();
         // TODO: Implement logout
         console.log("Logout");
       },
       variant: "danger",
     },
   ];
+
+  // Close context menu on global click (failsafe)
+  useEffect(() => {
+    const handleClickOutside = () => {
+      if (contextMenu.isOpen) {
+        contextMenu.close();
+      }
+    };
+
+    // Defer to avoid immediate trigger
+    if (contextMenu.isOpen) {
+      window.addEventListener("click", handleClickOutside);
+    }
+
+    return () => {
+      window.removeEventListener("click", handleClickOutside);
+    };
+  }, [contextMenu.isOpen, contextMenu.close]);
 
   return (
     <>
