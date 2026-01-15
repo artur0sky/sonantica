@@ -208,7 +208,16 @@ export function RecommendationsSidebar() {
                   type="track"
                   item={rec.item}
                   reasons={rec.reasons}
-                  onClick={() => playNext(trackToMediaSource(rec.item))}
+                  onClick={async () => {
+                    const mediaSource = trackToMediaSource(rec.item);
+                    playNext(mediaSource);
+                    // Use the store directly to start playback
+                    const playerStore = (
+                      await import("@sonantica/player-core")
+                    ).usePlayerStore.getState();
+                    await playerStore.loadTrack(mediaSource);
+                    await playerStore.play();
+                  }}
                 />
               </div>
             ))}

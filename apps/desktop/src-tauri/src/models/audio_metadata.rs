@@ -13,6 +13,7 @@ pub struct AudioMetadata {
     pub cover_art: Option<String>,
     pub bitrate: Option<u32>,
     pub sample_rate: Option<u32>,
+    pub lyrics: Option<String>,
 }
 
 impl Default for AudioMetadata {
@@ -29,6 +30,7 @@ impl Default for AudioMetadata {
             cover_art: None,
             bitrate: None,
             sample_rate: None,
+            lyrics: None,
         }
     }
 }

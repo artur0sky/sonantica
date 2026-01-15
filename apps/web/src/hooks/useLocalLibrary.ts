@@ -152,8 +152,30 @@ export function useLocalLibrary() {
   /**
    * Remove a folder from the library
    */
-  const removeFolder = useCallback((path: string) => {
+  const removeFolder = useCallback(async (path: string) => {
     setFolders(prev => prev.filter(f => f.path !== path));
+
+    // Cleanup tracks from library store
+    const { useLibraryStore } = await import('@sonantica/media-library');
+    const store = useLibraryStore.getState();
+    
+    // Filter out tracks from this folder
+    const remainingTracks = store.tracks.filter(t => (t as any).folderPath !== path);
+    
+    if (remainingTracks.length !== store.tracks.length) {
+      // Something was removed, now cleanup artists and albums
+      const trackArtistNames = new Set(remainingTracks.map(t => typeof t.artist === 'string' ? t.artist : t.artist[0]));
+      const trackAlbumIds = new Set(remainingTracks.map(t => t.albumId));
+      
+      const remainingArtists = store.artists.filter(a => trackArtistNames.has(a.name));
+      const remainingAlbums = store.albums.filter(a => trackAlbumIds.has(a.id));
+      
+      store.setTracks(remainingTracks);
+      store.setArtists(remainingArtists);
+      store.setAlbums(remainingAlbums);
+      
+      console.log(`🧹 Cleaned up library: removed tracks from ${path}`);
+    }
   }, []);
 
   /**
@@ -187,8 +209,9 @@ export function useLocalLibrary() {
 
       // Process files and add to library
       if (audioFiles.length > 0) {
-        // Dynamically import library utilities
+        // Dynamically import library utilities and heavy parsers
         const { useLibraryStore } = await import('@sonantica/media-library');
+        const { LRCParser } = await import('@sonantica/lyrics');
         
         const tracks = [];
         const artists = new Map();
@@ -215,6 +238,7 @@ export function useLocalLibrary() {
               cover_art?: string;
               bitrate?: number;
               sample_rate?: number;
+              lyrics?: string;
             }>('extract_metadata', { filePath });
             
             // Fallback to filename if metadata is missing
@@ -235,8 +259,32 @@ export function useLocalLibrary() {
             const duration = metadata.duration || 0;
             const coverArt = metadata.cover_art;
             
-            const trackId = `local-${Date.now()}-${i}`;
+            // Create a deterministic ID based on file path to avoid duplicates
+            // Use the full normalized path to ensure uniqueness
+            // replace(/[/+=]/g, '') ensures it can be used safely in URLs and as keys
+            const normalizedPath = filePath.toLowerCase().replace(/\\/g, '/');
+            const pathHash = btoa(encodeURIComponent(normalizedPath)).replace(/[/+=]/g, '');
+            const trackId = `local-${pathHash}`;
             
+            // Process lyrics if present
+            let lyricsData = undefined;
+            if (metadata.lyrics) {
+               const isLRC = LRCParser.isLRC(metadata.lyrics);
+               if (isLRC) {
+                 lyricsData = {
+                   synced: LRCParser.parse(metadata.lyrics),
+                   isSynchronized: true,
+                   source: 'embedded' as const
+                 };
+               } else {
+                 lyricsData = {
+                   text: metadata.lyrics,
+                   isSynchronized: false,
+                   source: 'embedded' as const
+                 };
+               }
+            }
+
             // Create comprehensive track object with real metadata
             const track = {
               id: trackId,
@@ -251,6 +299,7 @@ export function useLocalLibrary() {
               year,
               genre,
               trackNumber,
+              folderPath: folderPath,
               coverArt, // Embedded cover art from file
               // Comprehensive metadata object for UI components
               metadata: {
@@ -265,6 +314,7 @@ export function useLocalLibrary() {
                 coverArt,
                 bitrate: metadata.bitrate,
                 sampleRate: metadata.sample_rate,
+                lyrics: lyricsData,
               }
             };
 
@@ -318,46 +368,54 @@ export function useLocalLibrary() {
           }
         }
 
-        // Add to library store
+        // Add to library store with deduplication
         const libraryStore = useLibraryStore.getState();
         
-        // Append tracks (deduplication handled by store)
-        if (tracks.length > 0) {
-          libraryStore.setTracks([...libraryStore.tracks, ...tracks]);
+        // Deduplicate tracks
+        const existingTrackIds = new Set(libraryStore.tracks.map(t => t.id));
+        const newTracks = tracks.filter(t => !existingTrackIds.has(t.id));
+        
+        if (newTracks.length > 0) {
+          libraryStore.setTracks([...libraryStore.tracks, ...newTracks]);
         }
         
-        // Append artists
-        const artistArray = Array.from(artists.values());
-        if (artistArray.length > 0) {
-          libraryStore.setArtists([...libraryStore.artists, ...artistArray]);
+        // Deduplicate artists
+        const existingArtistIds = new Set(libraryStore.artists.map(a => a.id));
+        const newArtists = Array.from(artists.values()).filter(a => !existingArtistIds.has(a.id));
+        
+        if (newArtists.length > 0) {
+          libraryStore.setArtists([...libraryStore.artists, ...newArtists]);
         }
 
-        // Append albums (real albums from metadata)
+        // Merge albums
         const albumArray = Array.from(albums.values());
         if (albumArray.length > 0) {
-          const existingAlbums = libraryStore.albums;
-          const mergedAlbums = [...existingAlbums];
+          const existingAlbums = [...libraryStore.albums];
+          let albumsChanged = false;
           
-          // Merge or add albums
           for (const newAlbum of albumArray) {
-            const existingIndex = mergedAlbums.findIndex(a => a.id === newAlbum.id);
+            const existingIndex = existingAlbums.findIndex(a => a.id === newAlbum.id);
             if (existingIndex >= 0) {
-              // Update existing album
-              mergedAlbums[existingIndex] = {
-                ...mergedAlbums[existingIndex],
-                trackCount: (mergedAlbums[existingIndex].trackCount || 0) + newAlbum.trackCount,
-                coverArt: mergedAlbums[existingIndex].coverArt || newAlbum.coverArt,
-              };
+              // Update existing album if needed
+              if (!existingAlbums[existingIndex].coverArt && newAlbum.coverArt) {
+                existingAlbums[existingIndex] = {
+                  ...existingAlbums[existingIndex],
+                  coverArt: newAlbum.coverArt
+                };
+                albumsChanged = true;
+              }
             } else {
-              // Add new album
-              mergedAlbums.push(newAlbum);
+              existingAlbums.push(newAlbum);
+              albumsChanged = true;
             }
           }
           
-          libraryStore.setAlbums(mergedAlbums);
+          if (albumsChanged) {
+            libraryStore.setAlbums(existingAlbums);
+          }
         }
 
-        console.log(`✅ Added ${tracks.length} tracks, ${artistArray.length} artists, ${albumArray.length} albums to library`);
+        console.log(`✅ Processed ${tracks.length} files. Added ${newTracks.length} new tracks to library.`);
       }
 
       return audioFiles;

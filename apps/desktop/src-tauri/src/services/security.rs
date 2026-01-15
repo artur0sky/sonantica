@@ -57,11 +57,13 @@ impl SecurityValidator {
 
     /// Validate path doesn't contain traversal attempts
     pub fn validate_path_safety(path: &Path) -> Result<(), String> {
-        let path_str = path.to_str().ok_or("Invalid path encoding")?;
+        let _path_str = path.to_str().ok_or("Invalid path encoding")?;
         
-        // Check for path traversal patterns
-        if path_str.contains("..") {
-            return Err("Path traversal detected".to_string());
+        // Check for path traversal components
+        for component in path.components() {
+            if let std::path::Component::ParentDir = component {
+                return Err("Path traversal detected".to_string());
+            }
         }
 
         // Ensure path is absolute (safer)

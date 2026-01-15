@@ -31,7 +31,7 @@ type EventListener = (event: PlayerEvent) => void;
 /**
  * Security constants
  */
-const ALLOWED_PROTOCOLS = ['http:', 'https:', 'blob:'];
+const ALLOWED_PROTOCOLS = ['http:', 'https:', 'blob:', 'asset:'];
 const MAX_URL_LENGTH = 2048;
 const LOAD_TIMEOUT_MS = 30000; // 30 seconds
 const MAX_LISTENERS_PER_EVENT = 100;

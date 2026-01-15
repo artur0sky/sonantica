@@ -38,6 +38,12 @@ interface TrackItemProps {
   compact?: boolean;
 }
 
+// Check if we're running in Tauri - type-safe detection
+const isTauri =
+  typeof window !== "undefined" &&
+  ((window as any).__TAURI__ !== undefined ||
+    (window as any).__TAURI_INTERNALS__ !== undefined);
+
 export function TrackItem({
   track,
   onClick,
@@ -133,24 +139,28 @@ export function TrackItem({
       divider: true,
       onClick: () => {},
     },
-    !isOfflineAvailable
-      ? {
-          id: "download-offline",
-          label: isDownloading
-            ? "Downloading..."
-            : isQueued
-            ? "Queued"
-            : "Download for Offline",
-          icon: <IconCloudDownload size={18} stroke={1.5} />,
-          onClick: () => downloadTrack(track),
-          disabled: isDownloading || isQueued,
-        }
-      : {
-          id: "remove-offline",
-          label: "Remove from Offline",
-          icon: <IconCircleCheckFilled size={18} stroke={1.5} />,
-          onClick: () => removeTrack(track.id),
-        },
+    ...(!isTauri
+      ? [
+          !isOfflineAvailable
+            ? {
+                id: "download-offline",
+                label: isDownloading
+                  ? "Downloading..."
+                  : isQueued
+                  ? "Queued"
+                  : "Download for Offline",
+                icon: <IconCloudDownload size={18} stroke={1.5} />,
+                onClick: () => downloadTrack(track),
+                disabled: isDownloading || isQueued,
+              }
+            : {
+                id: "remove-offline",
+                label: "Remove from Offline",
+                icon: <IconCircleCheckFilled size={18} stroke={1.5} />,
+                onClick: () => removeTrack(track.id),
+              },
+        ]
+      : []),
     {
       id: "divider-2",
       label: "",

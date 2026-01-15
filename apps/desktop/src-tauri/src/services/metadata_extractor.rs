@@ -60,6 +60,9 @@ impl MetadataExtractor {
             .map(|s: Cow<str>| SecurityValidator::sanitize_metadata(&s));
         
         metadata.track_number = tag.track();
+        
+        metadata.lyrics = tag.get_string(&ItemKey::Lyrics)
+            .map(|s: &str| SecurityValidator::sanitize_metadata(s));
     }
 
     fn extract_cover_art(&self, tag: &Tag, metadata: &mut AudioMetadata) -> Result<(), String> {

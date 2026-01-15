@@ -130,17 +130,24 @@ export const useQueueStore = create<QueueState>((set, get) => ({
   playNext: (tracks: MediaSource | MediaSource[]) => {
     const tracksArray = Array.isArray(tracks) ? tracks : [tracks];
     set((state) => {
-      const insertIndex = state.currentIndex + 1;
+      const insertIndex = Math.max(0, state.currentIndex + 1);
+      
       const newQueue = [
         ...state.queue.slice(0, insertIndex),
         ...tracksArray,
         ...state.queue.slice(insertIndex),
       ];
-      const newOriginalQueue = [
-        ...state.originalQueue.slice(0, insertIndex),
-        ...tracksArray,
-        ...state.originalQueue.slice(insertIndex),
-      ];
+      
+      // Also insert into original queue to maintain consistency when unshuffling
+      const newOriginalQueue = [...state.originalQueue];
+      // Find where we are in original queue
+      const currentInOriginal = state.originalQueue.findIndex(t => t.id === state.queue[state.currentIndex]?.id);
+      const originalInsertIndex = currentInOriginal >= 0 ? currentInOriginal + 1 : state.originalQueue.length;
+      
+      newOriginalQueue.splice(originalInsertIndex, 0, ...tracksArray);
+      
+      console.log(`⏭️ [QueueStore] Playing ${tracksArray.length} track(s) next`);
+      
       return {
         queue: newQueue,
         originalQueue: newOriginalQueue,
@@ -175,11 +182,12 @@ export const useQueueStore = create<QueueState>((set, get) => ({
     (get() as any)._save();
   },
 
-  next: () => {
+  next: (force = false) => {
     const state = get();
     
-    // Repeat one: return current track
-    if (state.repeatMode === 'one') {
+    // Repeat one: return current track UNLESS forced by button
+    if (state.repeatMode === 'one' && !force) {
+      console.log('🔁 [QueueStore] Repeat mode ONE: staying on track');
       return state.queue[state.currentIndex] || null;
     }
     
@@ -197,13 +205,14 @@ export const useQueueStore = create<QueueState>((set, get) => ({
       const newIndex = 0;
       set({ currentIndex: newIndex });
       (get() as any)._save();
+      console.log('🔁 [QueueStore] Loop: returning to start');
       return state.queue[0];
     }
     
     return null;
   },
 
-  previous: () => {
+  previous: (force = false) => {
     const state = get();
     if (state.currentIndex > 0) {
       const newIndex = state.currentIndex - 1;
@@ -211,6 +220,15 @@ export const useQueueStore = create<QueueState>((set, get) => ({
       (get() as any)._save();
       return state.queue[newIndex];
     }
+    
+    // Repeat all: loop to end
+    if (state.repeatMode === 'all' && state.queue.length > 0) {
+        const newIndex = state.queue.length - 1;
+        set({ currentIndex: newIndex });
+        (get() as any)._save();
+        return state.queue[newIndex];
+    }
+    
     return null;
   },
 
@@ -230,8 +248,10 @@ export const useQueueStore = create<QueueState>((set, get) => ({
       const currentTrack = state.queue[state.currentIndex];
       const newIndex = state.originalQueue.findIndex(t => t.id === currentTrack?.id);
       
+      console.log('🔀 [QueueStore] Unshuffling queue');
+      
       set({
-        queue: state.originalQueue,
+        queue: [...state.originalQueue],
         currentIndex: newIndex >= 0 ? newIndex : 0,
         isShuffled: false,
       });
@@ -241,10 +261,12 @@ export const useQueueStore = create<QueueState>((set, get) => ({
       const otherTracks = state.queue.filter((_, i) => i !== state.currentIndex);
       const shuffledOthers = shuffleArray(otherTracks);
       
+      console.log(`🔀 [QueueStore] Shuffling ${otherTracks.length} tracks`);
+      
       // Put current track first, then shuffled tracks
       const newQueue = currentTrack 
         ? [currentTrack, ...shuffledOthers]
-        : shuffleArray(state.queue);
+        : shuffleArray([...state.queue]);
       
       set({
         queue: newQueue,
