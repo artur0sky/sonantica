@@ -167,8 +167,9 @@ export function useLocalLibrary() {
         
         const tracks = [];
         const artists = new Map();
+        const albums = new Map();
 
-        // Process each file
+        // Process each file with real metadata extraction
         for (let i = 0; i < audioFiles.length; i++) {
           const filePath = audioFiles[i];
           
@@ -176,63 +177,111 @@ export function useLocalLibrary() {
             // Convert file path to Tauri asset URL
             const assetUrl = convertFileSrc(filePath);
             
-            // Extract metadata (simplified - in production we'd use MetadataFactory)
-            // For now, we'll create basic track objects
-            const fileName = filePath.split(/[\\/]/).pop() || 'Unknown';
-            const trackId = `local-${Date.now()}-${i}`;
+            // Extract real metadata from file using Tauri command
+            const metadata = await invoke<{
+              title?: string;
+              artist?: string;
+              album?: string;
+              album_artist?: string;
+              year?: number;
+              genre?: string;
+              track_number?: number;
+              duration?: number;
+              cover_art?: string;
+              bitrate?: number;
+              sample_rate?: number;
+            }>('extract_metadata', { filePath });
             
-            // Parse basic info from filename (artist - title.ext format)
+            // Fallback to filename if metadata is missing
+            const fileName = filePath.split(/[\\/]/).pop() || 'Unknown';
             const nameWithoutExt = fileName.replace(/\.[^/.]+$/, '');
             const parts = nameWithoutExt.split(' - ');
-            const artist = parts.length > 1 ? parts[0].trim() : 'Unknown Artist';
-            const title = parts.length > 1 ? parts[1].trim() : nameWithoutExt;
-            const album = 'Local Files';
+            const fallbackArtist = parts.length > 1 ? parts[0].trim() : 'Unknown Artist';
+            const fallbackTitle = parts.length > 1 ? parts[1].trim() : nameWithoutExt;
             
-            // Create comprehensive track object with all metadata fields
+            // Use metadata or fallback
+            const title = metadata.title || fallbackTitle;
+            const artist = metadata.artist || fallbackArtist;
+            const album = metadata.album || 'Unknown Album';
+            const albumArtist = metadata.album_artist || artist;
+            const year = metadata.year || new Date().getFullYear();
+            const genre = metadata.genre || 'Unknown';
+            const trackNumber = metadata.track_number || (i + 1);
+            const duration = metadata.duration || 0;
+            const coverArt = metadata.cover_art;
+            
+            const trackId = `local-${Date.now()}-${i}`;
+            
+            // Create comprehensive track object with real metadata
             const track = {
               id: trackId,
               title,
               artist,
               album,
-              albumId: 'local-files-album',
-              duration: 0,
-              filePath: assetUrl, // Use Tauri asset URL
+              albumId: `${artist.toLowerCase().replace(/\s+/g, '-')}-${album.toLowerCase().replace(/\s+/g, '-')}`,
+              duration,
+              filePath: assetUrl,
               source: 'local' as const,
               addedAt: new Date(),
-              year: new Date().getFullYear(),
-              genre: 'Unknown',
-              trackNumber: i + 1,
+              year,
+              genre,
+              trackNumber,
+              coverArt, // Embedded cover art from file
               // Comprehensive metadata object for UI components
               metadata: {
                 title,
                 artist,
                 album,
-                albumArtist: artist,
-                year: new Date().getFullYear(),
-                genre: 'Unknown',
-                trackNumber: i + 1,
-                duration: 0,
-                // Cover art will be enriched by library store if available
-                coverArt: undefined,
+                albumArtist,
+                year,
+                genre,
+                trackNumber,
+                duration,
+                coverArt,
+                bitrate: metadata.bitrate,
+                sampleRate: metadata.sample_rate,
               }
             };
 
             tracks.push(track);
 
             // Collect artists
-            if (!artists.has(artist)) {
-              artists.set(artist, {
+            const artistKey = artist.toLowerCase();
+            if (!artists.has(artistKey)) {
+              artists.set(artistKey, {
                 id: `artist-${artist.toLowerCase().replace(/\s+/g, '-')}`,
                 name: artist,
                 trackCount: 0,
                 albumCount: 0,
               });
             }
-            const artistObj = artists.get(artist)!;
+            const artistObj = artists.get(artistKey)!;
             artistObj.trackCount++;
 
+            // Collect albums (organize by real album names)
+            const albumKey = `${artist}-${album}`;
+            if (!albums.has(albumKey)) {
+              albums.set(albumKey, {
+                id: `${artist.toLowerCase().replace(/\s+/g, '-')}-${album.toLowerCase().replace(/\s+/g, '-')}`,
+                title: album,
+                artist: albumArtist,
+                trackCount: 0,
+                year,
+                addedAt: new Date(),
+                coverArt, // Use first track's cover art
+              });
+              // Increment album count for artist
+              artistObj.albumCount++;
+            }
+            const albumObj = albums.get(albumKey)!;
+            albumObj.trackCount++;
+            // Update cover art if current track has one and album doesn't
+            if (coverArt && !albumObj.coverArt) {
+              albumObj.coverArt = coverArt;
+            }
+
             // Update progress
-            if ((i + 1) % 10 === 0) {
+            if ((i + 1) % 5 === 0 || i === audioFiles.length - 1) {
               setScanProgress({
                 current: i + 1,
                 total: audioFiles.length,
@@ -258,31 +307,32 @@ export function useLocalLibrary() {
           libraryStore.setArtists([...libraryStore.artists, ...artistArray]);
         }
 
-        // Create/update "Local Files" album
-        const existingAlbums = libraryStore.albums;
-        const localFilesAlbum = existingAlbums.find(a => a.id === 'local-files-album');
-        
-        if (!localFilesAlbum) {
-          const newAlbum = {
-            id: 'local-files-album',
-            title: 'Local Files',
-            artist: 'Various Artists',
-            trackCount: tracks.length,
-            year: new Date().getFullYear(),
-            addedAt: new Date(),
-          };
-          libraryStore.setAlbums([...existingAlbums, newAlbum]);
-        } else {
-          // Update track count
-          const updatedAlbums = existingAlbums.map(a => 
-            a.id === 'local-files-album' 
-              ? { ...a, trackCount: (a.trackCount || 0) + tracks.length }
-              : a
-          );
-          libraryStore.setAlbums(updatedAlbums);
+        // Append albums (real albums from metadata)
+        const albumArray = Array.from(albums.values());
+        if (albumArray.length > 0) {
+          const existingAlbums = libraryStore.albums;
+          const mergedAlbums = [...existingAlbums];
+          
+          // Merge or add albums
+          for (const newAlbum of albumArray) {
+            const existingIndex = mergedAlbums.findIndex(a => a.id === newAlbum.id);
+            if (existingIndex >= 0) {
+              // Update existing album
+              mergedAlbums[existingIndex] = {
+                ...mergedAlbums[existingIndex],
+                trackCount: (mergedAlbums[existingIndex].trackCount || 0) + newAlbum.trackCount,
+                coverArt: mergedAlbums[existingIndex].coverArt || newAlbum.coverArt,
+              };
+            } else {
+              // Add new album
+              mergedAlbums.push(newAlbum);
+            }
+          }
+          
+          libraryStore.setAlbums(mergedAlbums);
         }
 
-        console.log(`✅ Added ${tracks.length} tracks to library`);
+        console.log(`✅ Added ${tracks.length} tracks, ${artistArray.length} artists, ${albumArray.length} albums to library`);
       }
 
       return audioFiles;
