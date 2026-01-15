@@ -227,25 +227,17 @@ export function ServersSection() {
       // If only color changed, URL/ID is same.
       // If URL changed, we might need a full rescan anyway, but let's handle color update.
 
+      // Optimization: Check if color actually changed
       if (editForm.color && editForm.color !== server?.color) {
-        // Create a map of updated tracks
         const updatedTracks = store.tracks.map((t) => {
-          // Check if track belongs to this server
-          // The most reliable way is if we had serverId on track, but we have serverKey (from URL).
-          // If the URL didn't change, we can match.
-          // If the URL changed, the tracks are technically invalid/orphaned until rescan.
-
-          // Assuming we are just changing color for now or URL matches
-          const trackAny = t as any;
-          if (
-            trackAny.serverKey ===
-            server?.serverUrl.replace(/[^a-z0-9]/gi, "_").toLowerCase()
-          ) {
+          // Use serverId for robust matching
+          if ((t as any).serverId === editingServerId) {
             return { ...t, serverColor: editForm.color };
           }
           return t;
         });
 
+        // Only update if changes were made
         if (updatedTracks !== store.tracks) {
           store.setTracks(updatedTracks);
         }
