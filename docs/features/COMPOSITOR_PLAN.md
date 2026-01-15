@@ -1,5 +1,5 @@
 # Sonántica Compositor — Implementation Plan
-## Professional Audio Engine: Voicemeeter + Audacity Capabilities
+## Professional Audio Engine: Advanced Routing & Recording
 
 > **Philosophy**: "Respect the intention of the sound and the freedom of the listener."  
 > This plan extends Sonántica from a multimedia player to a **lightweight audio compositor** with professional routing and recording capabilities.
@@ -10,8 +10,8 @@
 
 ### Vision
 Transform the Tauri desktop app from a web-wrapped player into a **hybrid audio workstation** that combines:
-- **Voicemeeter-style routing**: Multi-device output, virtual cables, loopback capture
-- **Audacity-style recording**: Bit-perfect, low-latency, multi-track capture
+- **Professional routing**: Multi-device output, virtual cables, loopback capture
+- **High-fidelity recording**: Bit-perfect, low-latency, multi-track capture
 - **Sonántica's soul**: Minimalist UI, technical transparency, user autonomy
 
 ### Technical Strategy
