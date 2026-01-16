@@ -29,6 +29,8 @@ export interface PlayerButtonProps {
   variant?: "ghost" | "elevated" | "accent";
   /** Whether the button is disabled */
   disabled?: boolean;
+  /** Whether the button is in a loading state */
+  isLoading?: boolean;
   /** Layout ID for Framer Motion transitions */
   layoutId?: string;
   /** Right click handler */
@@ -55,6 +57,7 @@ export function PlayerButton({
   className,
   variant = "ghost",
   disabled = false,
+  isLoading = false,
   layoutId,
   onContextMenu,
   onPointerDown,
@@ -96,9 +99,10 @@ export function PlayerButton({
           : {}
       }
       className={cn(
-        "relative flex items-center justify-center rounded-full transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed group",
+        "relative flex items-center justify-center rounded-full transition-all duration-200 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed group",
         variants[variant],
         isActive && !disabled ? activeColor : "",
+        isLoading && "opacity-50 cursor-wait",
         className
       )}
       title={title}
@@ -108,7 +112,8 @@ export function PlayerButton({
         stroke={1.5}
         className={cn(
           "transition-transform duration-200",
-          isActive ? "scale-110" : "scale-100"
+          isActive ? "scale-110" : "scale-100",
+          isLoading && "animate-pulse"
         )}
       />
 

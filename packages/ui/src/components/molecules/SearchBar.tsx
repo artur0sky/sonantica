@@ -46,12 +46,21 @@ export interface GlobalSearchBarProps {
     action: "playNext" | "addToQueue"
   ) => void;
   className?: string;
+  // Optional data overrides
+  tracks?: Track[];
+  artists?: Artist[];
+  albums?: Album[];
+  playlists?: Playlist[];
 }
 
 export function SearchBar({
   onResultSelect,
   onResultAction,
   className,
+  tracks: propsTracks,
+  artists: propsArtists,
+  albums: propsAlbums,
+  playlists: propsPlaylists,
 }: GlobalSearchBarProps) {
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
@@ -70,7 +79,17 @@ export function SearchBar({
 
   const resultContextMenu = useContextMenu("search-result-menu");
 
-  const { tracks, albums, artists, playlists } = useLibraryStore();
+  const {
+    tracks: storeTracks,
+    albums: storeAlbums,
+    artists: storeArtists,
+    playlists: storePlaylists,
+  } = useLibraryStore();
+
+  const tracks = propsTracks || storeTracks;
+  const albums = propsAlbums || storeAlbums;
+  const artists = propsArtists || storeArtists;
+  const playlists = propsPlaylists || storePlaylists;
 
   // Unified list of all results for keyboard navigation
   const flatResults = useMemo(() => {
@@ -434,6 +453,14 @@ export function SearchBar({
                 <TrackItem
                   title={result.title}
                   artist={result.subtitle}
+                  sources={(result.data as any).sources?.map((s: any) => ({
+                    id: s.id,
+                    source: s.source,
+                    name:
+                      s.serverName ||
+                      (s.source === "local" ? "Local" : "Remote"),
+                    color: s.serverColor,
+                  }))}
                   statusIcons={
                     <div className="flex items-center gap-1 mr-2">
                       {result.source === "local" ? (

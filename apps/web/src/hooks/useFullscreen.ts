@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useUIStore } from '@sonantica/ui';
 
 // Check for Tauri
 const isTauri =
@@ -11,6 +12,7 @@ export function useFullscreen() {
     if (!isTauri) return;
 
     const handleKeyDown = async (e: KeyboardEvent) => {
+      // F11: Toggle fullscreen
       if (e.key === 'F11') {
         e.preventDefault();
         try {
@@ -21,14 +23,25 @@ export function useFullscreen() {
         } catch (err) {
           console.error('Failed to toggle fullscreen:', err);
         }
-      } else if (e.key === 'Escape') {
-         try {
+      } 
+      // ESC: Exit fullscreen OR close expanded player (priority to expanded player)
+      else if (e.key === 'Escape') {
+        const isPlayerExpanded = useUIStore.getState().isPlayerExpanded;
+        
+        // If expanded player is open, close it (handled by ExpandedPlayer component)
+        if (isPlayerExpanded) {
+          // Let the ExpandedPlayer component handle this
+          return;
+        }
+        
+        // Otherwise, exit fullscreen if active
+        try {
           const { getCurrentWindow } = await import('@tauri-apps/api/window');
           const win = getCurrentWindow();
           const isFullscreen = await win.isFullscreen();
           if (isFullscreen) {
-             e.preventDefault();
-             await win.setFullscreen(false);
+            e.preventDefault();
+            await win.setFullscreen(false);
           }
         } catch (err) {
           // Ignore

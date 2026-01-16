@@ -12,6 +12,11 @@ interface SettingsState {
   scanFileSizeLimit: number; // in bytes, 0 = unlimited
   coverArtSizeLimit: number; // in bytes, 0 = unlimited
   
+  // Library - Merging
+  mergeTracks: boolean;
+  sourcePriority: string[]; // ['local', 'serverId1', ...]
+  defaultDownloadServerId: string | null;
+  
   // Interface - Animations
   animations: boolean; // Master toggle
   animationSpeed: 'slow' | 'normal' | 'fast'; // Animation speed preset
@@ -43,11 +48,13 @@ interface SettingsState {
 
   
   // Actions
-  toggle: (key: keyof Omit<SettingsState, 'toggle' | 'setTheme' | 'setNumber' | 'setDownloadQuality' | 'setAnimationSpeed' | 'setDesktopCloseAction'>) => void;
+  toggle: (key: keyof Omit<SettingsState, 'toggle' | 'setTheme' | 'setNumber' | 'setDownloadQuality' | 'setAnimationSpeed' | 'setDesktopCloseAction' | 'setSourcePriority' | 'setDefaultDownloadServerId'>) => void;
   setNumber: (key: 'playbackBufferSize' | 'scanFileSizeLimit' | 'coverArtSizeLimit' | 'crossfadeDuration' | 'fadeOutDuration' | 'analyticsDashboardRefreshRate', value: number) => void;
   setDownloadQuality: (quality: 'original' | 'high' | 'normal' | 'low') => void;
   setAnimationSpeed: (speed: 'slow' | 'normal' | 'fast') => void;
   setDesktopCloseAction: (action: 'ask' | 'minimize' | 'close') => void;
+  setSourcePriority: (priority: string[]) => void;
+  setDefaultDownloadServerId: (serverId: string | null) => void;
 }
 
 
@@ -88,13 +95,18 @@ export const useSettingsStore = create<SettingsState>()(
       enableServerPluginsOnDesktop: false,
       devForceStudio: false,
 
-      
+      mergeTracks: true, // Enabled by default as requested
+      sourcePriority: ['local'], // Local has priority by default
+      defaultDownloadServerId: null,
+
       toggle: (key) => set((state) => ({ [key]: !state[key as keyof SettingsState] })),
 
       setNumber: (key, value) => set({ [key]: value }),
       setDownloadQuality: (quality) => set({ downloadQuality: quality }),
       setAnimationSpeed: (speed) => set({ animationSpeed: speed }),
       setDesktopCloseAction: (action) => set({ desktopCloseAction: action }),
+      setSourcePriority: (priority) => set({ sourcePriority: priority }),
+      setDefaultDownloadServerId: (serverId) => set({ defaultDownloadServerId: serverId }),
     }),
     {
       name: 'sonantica:settings',

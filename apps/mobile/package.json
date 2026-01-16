@@ -11,7 +11,7 @@
     },
     "scripts": {
         "dev": "pnpm --filter @sonantica/web dev",
-        "build": "pnpm --filter @sonantica/web build && pnpm cap:sync && pnpm build:apk",
+        "build": "pnpm --filter @sonantica/web build && pnpm cap:sync",
         "cap:init": "cap init",
         "cap:sync": "cap sync",
         "cap:open:android": "cap open android",

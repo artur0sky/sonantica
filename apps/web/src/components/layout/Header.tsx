@@ -6,6 +6,7 @@
  */
 
 import { useLocation } from "wouter";
+import { useEffect } from "react";
 import { IconSettings, IconLogout } from "@tabler/icons-react";
 import {
   SearchBar as GlobalSearchBar,
@@ -19,8 +20,10 @@ import {
 import { useHeaderLogic } from "../../hooks/useHeaderLogic";
 import logo from "../../assets/logo.png";
 import { cn } from "@sonantica/shared";
+import { useVirtualTracks } from "../../hooks/useVirtualTracks";
 
 export function Header() {
+  const virtualTracks = useVirtualTracks();
   const {
     toggleLeftSidebar,
     handleSearchResultSelect,
@@ -36,7 +39,10 @@ export function Header() {
       id: "settings",
       label: "Settings",
       icon: <IconSettings size={18} stroke={1.5} />,
-      onClick: () => setLocation("/settings"),
+      onClick: () => {
+        contextMenu.close();
+        setLocation("/settings");
+      },
     },
     {
       id: "divider-1",
@@ -49,6 +55,7 @@ export function Header() {
       label: "Logout",
       icon: <IconLogout size={18} stroke={1.5} />,
       onClick: () => {
+        contextMenu.close();
         // TODO: Implement logout
         console.log("Logout");
       },
@@ -56,16 +63,37 @@ export function Header() {
     },
   ];
 
+  // Close context menu on global click (failsafe)
+  useEffect(() => {
+    const handleClickOutside = () => {
+      if (contextMenu.isOpen) {
+        contextMenu.close();
+      }
+    };
+
+    // Defer to avoid immediate trigger
+    // Also listen to touchstart for Capacitor/mobile support
+    if (contextMenu.isOpen) {
+      window.addEventListener("click", handleClickOutside);
+      window.addEventListener("touchstart", handleClickOutside);
+    }
+
+    return () => {
+      window.removeEventListener("click", handleClickOutside);
+      window.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, [contextMenu.isOpen, contextMenu.close]);
+
   return (
     <>
       <header
         className={cn(
-          "flex items-center px-3 sm:px-4 md:px-6 gap-2 sm:gap-4 select-none transition-all duration-500 ease-in-out",
+          "flex items-center px-4 sm:px-4 md:px-6 gap-2 sm:gap-4 select-none transition-all duration-500 ease-in-out",
           "border-b border-border bg-surface z-30 flex-none",
           isCapacitor() && "pt-[env(safe-area-inset-top)]",
           isPlayerExpanded
             ? "h-0 opacity-0 -translate-y-full pointer-events-none border-none"
-            : "h-14 sm:h-16 opacity-100 translate-y-0"
+            : "h-16 opacity-100 translate-y-0"
         )}
       >
         {/* Left: Logo (Toggles Sidebar) */}
@@ -94,6 +122,7 @@ export function Header() {
           <GlobalSearchBar
             onResultSelect={handleSearchResultSelect}
             onResultAction={handleSearchResultAction}
+            tracks={virtualTracks}
           />
         </div>
 

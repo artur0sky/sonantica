@@ -45,6 +45,11 @@ export function DownloadButton({
     }
   };
 
+  // Sonántica: Local tracks don't need to be downloaded
+  if (track?.source === "local") {
+    return null;
+  }
+
   return (
     <DownloadButtonAtom
       status={status}

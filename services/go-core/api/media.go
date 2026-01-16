@@ -11,6 +11,7 @@ import (
 	"sonantica-core/database"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -32,6 +33,12 @@ func StreamTrack(w http.ResponseWriter, r *http.Request) {
 	trackID := chi.URLParam(r, "id")
 	if trackID == "" {
 		http.Error(w, "Track ID is required", http.StatusBadRequest)
+		return
+	}
+
+	if _, err := uuid.Parse(trackID); err != nil {
+		slog.Warn("Invalid UUID format for track_id", "track_id", trackID)
+		http.Error(w, "Invalid Track ID format", http.StatusBadRequest)
 		return
 	}
 
@@ -107,6 +114,12 @@ func GetAlbumCover(w http.ResponseWriter, r *http.Request) {
 
 	if albumID == "" {
 		http.Error(w, "Album ID is required", http.StatusBadRequest)
+		return
+	}
+
+	if _, err := uuid.Parse(albumID); err != nil {
+		slog.Warn("Invalid UUID format for album_id", "album_id", albumID)
+		http.Error(w, "Invalid Album ID format", http.StatusBadRequest)
 		return
 	}
 

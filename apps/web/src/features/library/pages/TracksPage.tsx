@@ -20,6 +20,7 @@ import { useSortable, useAlphabetNav, OfflineStatus } from "@sonantica/shared";
 import { TrackItem } from "../components/TrackItem";
 import { useOfflineStore } from "@sonantica/offline-manager";
 import { useSettingsStore } from "../../../stores/settingsStore";
+import { useFilteredVirtualTracks } from "../../../hooks/useVirtualTracks";
 import {
   IconMusic,
   IconSearch,
@@ -36,13 +37,14 @@ import { useSelectionStore } from "../../../stores/selectionStore";
 import { SelectionActionBar } from "../../../components/SelectionActionBar";
 
 export function TracksPage() {
-  const { stats, searchQuery, getFilteredTracks } = useLibraryStore();
+  const { stats, searchQuery } = useLibraryStore();
+  const getVirtualTracks = useFilteredVirtualTracks();
   const isCramped = useUIStore((state) => state.isCramped);
   const { offlineMode, hideUnavailableOffline } = useSettingsStore();
   const offlineItems = useOfflineStore((state) => state.items);
 
   const filteredTracks = useMemo(() => {
-    let tracks = getFilteredTracks();
+    let tracks = getVirtualTracks;
 
     // Apply offline filtering if needed
     if (offlineMode && hideUnavailableOffline) {
@@ -53,7 +55,7 @@ export function TracksPage() {
     }
 
     return tracks;
-  }, [getFilteredTracks, offlineMode, hideUnavailableOffline, offlineItems]);
+  }, [getVirtualTracks, offlineMode, hideUnavailableOffline, offlineItems]);
 
   const {
     sortField,

@@ -81,3 +81,18 @@ export function isSmartTV(): boolean {
   
   return tvKeywords.some(keyword => ua.includes(keyword));
 }
+
+/**
+ * Extracts the original ID from a namespaced ID (e.g., remote-PREFIX-ID -> ID)
+ */
+export function extractOriginalId(id?: string): string | undefined {
+  if (!id) return undefined;
+  if (id.startsWith('remote-')) {
+    const firstDash = id.indexOf('-');
+    const secondDash = id.indexOf('-', firstDash + 1);
+    if (secondDash !== -1) {
+      return id.substring(secondDash + 1);
+    }
+  }
+  return id;
+}

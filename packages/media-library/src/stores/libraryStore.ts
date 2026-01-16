@@ -31,6 +31,7 @@ interface LibraryState {
   stats: LibraryStats;
   loading: boolean;
   error: string | null;
+  _hasHydrated: boolean;
   
   // Filters
   searchQuery: string;
@@ -50,6 +51,7 @@ interface LibraryState {
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   clearLibrary: () => void;
+  _setHydrated: (hydrated: boolean) => void;
   
   // Filters
   setSearchQuery: (query: string) => void;
@@ -73,17 +75,37 @@ interface LibraryState {
   appendTracks: (newTracks: Track[]) => void;
   appendArtists: (newArtists: Artist[]) => void;
   appendAlbums: (newAlbums: Album[]) => void;
+  
+  // Update multiple parts of the library at once
+  updateLibraryBatch: (updates: {
+    tracks?: Track[];
+    artists?: Artist[];
+    albums?: Album[];
+    playlists?: Playlist[];
+  }) => void;
 }
 
 const calculateStats = (tracks: Track[], artists: Artist[], albums: Album[]): LibraryStats => {
-  const genres = new Set(tracks.map(t => t.genre).filter(Boolean));
+  console.log('📊 Calculating library stats for', tracks?.length, 'tracks');
+  const genres = new Set<string>();
+  
+  if (Array.isArray(tracks)) {
+    tracks.forEach(t => {
+      if (!t || !t.genre) return;
+      if (Array.isArray(t.genre)) {
+        t.genre.forEach(g => { if (g && typeof g === 'string') genres.add(g); });
+      } else if (typeof t.genre === 'string') {
+        genres.add(t.genre);
+      }
+    });
+  }
   
   return {
-    totalTracks: tracks.length,
-    totalArtists: artists.length,
-    totalAlbums: albums.length,
+    totalTracks: Array.isArray(tracks) ? tracks.length : 0,
+    totalArtists: Array.isArray(artists) ? artists.length : 0,
+    totalAlbums: Array.isArray(albums) ? albums.length : 0,
     totalGenres: genres.size,
-    totalSize: 0, // TODO: Calculate from track file sizes
+    totalSize: 0, 
   };
 };
 
@@ -105,6 +127,7 @@ export const useLibraryStore = create<LibraryState>()(
       },
       loading: false,
       error: null,
+      _hasHydrated: false,
       searchQuery: '',
       selectedArtist: null,
       selectedAlbum: null,
@@ -112,23 +135,30 @@ export const useLibraryStore = create<LibraryState>()(
       // Actions
       loadFromServers: (tracks: Track[], artists: Artist[], albums: Album[]) => {
         // Enrich tracks with cover art from albums
-        const enrichTracks = (tracksToEnrich: Track[]) => tracksToEnrich.map(track => {
-          if (track.coverArt) return track; // Already has art
+        const enrichTracks = (tracksToEnrich: Track[]) => {
+          // Pre-calculate maps for fast lookup
+          const albumMapById = new Map<string, Album>();
+          const albumMapByName = new Map<string, Album>();
           
-          // Try to find album
-          // Strategy 1: Match by albumId
-          let album = track.albumId ? albums.find(a => a.id === track.albumId) : null;
+          albums.forEach(a => {
+            if (a.id) albumMapById.set(a.id, a);
+            if (a.title && a.artist) albumMapByName.set(`${a.title}|${a.artist}`, a);
+          });
           
-          // Strategy 2: Match by name and artist
-          if (!album) {
-            album = albums.find(a => a.title === track.album && a.artist === track.artist);
-          }
-          
-          if (album && album.coverArt) {
-            return { ...track, coverArt: album.coverArt };
-          }
-          return track;
-        });
+          return tracksToEnrich.map(track => {
+            if (track.coverArt) return track; 
+            
+            let album = track.albumId ? albumMapById.get(track.albumId) : null;
+            if (!album && track.album && track.artist) {
+              album = albumMapByName.get(`${track.album}|${track.artist}`);
+            }
+            
+            if (album && album.coverArt) {
+              return { ...track, coverArt: album.coverArt };
+            }
+            return track;
+          });
+        };
 
         const enrichedTracks = enrichTracks(tracks);
         // Note: We don't merge here, loadFromServers replaces state by design.
@@ -155,18 +185,28 @@ export const useLibraryStore = create<LibraryState>()(
 
       appendTracks: (newTracks: Track[]) => {
         const { tracks: currentTracks, artists, albums } = get();
+        
         // Enrich new tracks
-        const enrichTracks = (tracksToEnrich: Track[]) => tracksToEnrich.map(track => {
-          if (track.coverArt) return track; 
-          let album = track.albumId ? albums.find(a => a.id === track.albumId) : null;
-          if (!album) {
-            album = albums.find(a => a.title === track.album && a.artist === track.artist);
-          }
-          if (album && album.coverArt) {
-            return { ...track, coverArt: album.coverArt };
-          }
-          return track;
-        });
+        const enrichTracks = (tracksToEnrich: Track[]) => {
+          const albumMapById = new Map<string, Album>();
+          const albumMapByName = new Map<string, Album>();
+          albums.forEach(a => {
+            if (a.id) albumMapById.set(a.id, a);
+            if (a.title && a.artist) albumMapByName.set(`${a.title}|${a.artist}`, a);
+          });
+          
+          return tracksToEnrich.map(track => {
+            if (track.coverArt) return track; 
+            let album = track.albumId ? albumMapById.get(track.albumId) : null;
+            if (!album && track.album && track.artist) {
+              album = albumMapByName.get(`${track.album}|${track.artist}`);
+            }
+            if (album && album.coverArt) {
+              return { ...track, coverArt: album.coverArt };
+            }
+            return track;
+          });
+        };
 
         const enrichedNewTracks = enrichTracks(newTracks);
         
@@ -219,6 +259,30 @@ export const useLibraryStore = create<LibraryState>()(
         set({ albums: updatedAlbums, stats });
       },
 
+      updateLibraryBatch: (updates) => {
+        const { tracks, artists, albums, playlists } = get();
+        const nextTracks = updates.tracks ?? tracks;
+        const nextArtists = updates.artists ?? artists;
+        const nextAlbums = updates.albums ?? albums;
+        const nextPlaylists = updates.playlists ?? playlists;
+        
+        console.log('🔄 updateLibraryBatch called:', {
+           tracks: updates.tracks?.length,
+           artists: updates.artists?.length,
+           albums: updates.albums?.length
+        });
+        
+        const stats = calculateStats(nextTracks, nextArtists, nextAlbums);
+        
+        set({
+          tracks: nextTracks,
+          artists: nextArtists,
+          albums: nextAlbums,
+          playlists: nextPlaylists,
+          stats
+        });
+      },
+
       setPlaylists: (playlists) => set({ playlists }),
 
       addPlaylist: (playlist) => set((state) => ({ playlists: [playlist, ...state.playlists] })),
@@ -262,6 +326,8 @@ export const useLibraryStore = create<LibraryState>()(
         });
         console.log('🗑️ Library cleared');
       },
+      
+      _setHydrated: (hydrated) => set({ _hasHydrated: hydrated }),
 
       // Filters
       setSearchQuery: (query: string) => {
@@ -391,8 +457,9 @@ export const useLibraryStore = create<LibraryState>()(
         stats: state.stats
       }),
       onRehydrateStorage: () => (state) => {
-        console.log('Hydration finished', state ? 'success' : 'failed');
+        console.log('📚 Library hydration finished', state ? 'success' : 'failed');
         if (state) {
+            state._setHydrated(true);
             state.setLoading(false);
         }
       }

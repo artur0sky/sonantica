@@ -30,12 +30,7 @@ import { StemSeparationModal } from "../../ai/components/StemSeparationModal";
 import { useAICapabilities } from "../../../hooks/useAICapabilities";
 import { PluginService } from "../../../services/PluginService";
 import { useLocation } from "wouter";
-import {
-  IconDeviceDesktop,
-  IconCloud,
-  IconUser,
-  IconDisc,
-} from "@tabler/icons-react";
+import { IconUser, IconDisc } from "@tabler/icons-react";
 
 interface TrackItemProps {
   track: any;
@@ -44,12 +39,6 @@ interface TrackItemProps {
   onRemove?: () => void;
   compact?: boolean;
 }
-
-// Check if we're running in Tauri - type-safe detection
-const isTauri =
-  typeof window !== "undefined" &&
-  ((window as any).__TAURI__ !== undefined ||
-    (window as any).__TAURI_INTERNALS__ !== undefined);
 
 export function TrackItem({
   track,
@@ -179,7 +168,7 @@ export function TrackItem({
       divider: true,
       onClick: () => {},
     },
-    ...(!isTauri
+    ...(track.source !== "local"
       ? [
           !isOfflineAvailable
             ? {
@@ -217,6 +206,13 @@ export function TrackItem({
     },
   ];
 
+  const hasLocal =
+    track.source === "local" ||
+    track.sources?.some((s: any) => s.source === "local");
+  const hasRemote =
+    track.sources?.some((s: any) => s.source === "remote") ||
+    track.source === "remote";
+
   const statusIcons = (
     <>
       {isOfflineAvailable && (
@@ -245,6 +241,30 @@ export function TrackItem({
     </>
   );
 
+  const statusIconsDisplay = (
+    <>
+      {statusIcons}
+
+      {/* Quick Download Button if remote available but not local/offline */}
+      {!hasLocal &&
+        !isOfflineAvailable &&
+        !isDownloading &&
+        !isQueued &&
+        hasRemote && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              downloadTrack(track);
+            }}
+            className="ml-1 p-0.5 rounded-full hover:bg-accent/20 text-accent transition-colors"
+            title="Download to Local"
+          >
+            <IconCloudDownload size={14} />
+          </button>
+        )}
+    </>
+  );
+
   return (
     <>
       <TrackItemUI
@@ -269,32 +289,15 @@ export function TrackItem({
         isPlaying={isPlaying}
         isSelectionMode={isInSelectionMode}
         isSelected={selected}
-        statusIcons={
-          <div className="flex items-center gap-1 mr-2">
-            {track.source === "local" ? (
-              <div
-                title={track.folderPath || "Local Library"}
-                className={!track.serverColor ? "text-blue-400" : undefined}
-                style={
-                  track.serverColor ? { color: track.serverColor } : undefined
-                }
-              >
-                <IconDeviceDesktop size={14} />
-              </div>
-            ) : (
-              <div
-                title={track.serverName || "Remote Server"}
-                className="text-accent"
-                style={
-                  track.serverColor ? { color: track.serverColor } : undefined
-                }
-              >
-                <IconCloud size={14} />
-              </div>
-            )}
-            {statusIcons}
-          </div>
-        }
+        sources={track.sources?.map((s: any) => ({
+          id: s.id,
+          source: s.source,
+          name: s.serverName || (s.source === "local" ? "Local" : "Remote"),
+          color: s.serverColor,
+          format: s.format,
+        }))}
+        format={track.format}
+        statusIcons={statusIconsDisplay}
         onClick={() => {
           if (isInSelectionMode) {
             toggleSelection(track.id);

@@ -20,7 +20,7 @@ export function useMediaSession() {
   const player = usePlayerStore((s) => s.player);
   
   const isNative = Capacitor.isNativePlatform();
-  const { startService, stopService } = useMediaPlayback();
+  const { startService, stopService, updateMetadata, updatePlaybackState, registerActionListeners } = useMediaPlayback();
 
   // Request notification permission on mobile when playing starts
   const { requestNotificationPermission } = usePermissions();
@@ -36,6 +36,22 @@ export function useMediaSession() {
             // Force refresh of media session controls after permission is granted
             mediaSessionService.updateMetadata(currentTrack);
             mediaSessionService.updatePlaybackState('playing');
+
+            // Force native update
+            if (currentTrack?.metadata) {
+              const meta = currentTrack.metadata;
+              const artistStr = Array.isArray(meta.artist) 
+                ? meta.artist.join(', ') 
+                : (meta.artist || 'Unknown Artist');
+
+              await updateMetadata({
+                title: meta.title || 'Unknown Title',
+                artist: artistStr,
+                album: meta.album || '',
+                coverArt: meta.coverArt
+              });
+              await updatePlaybackState('playing');
+            }
         }
       } else if (isNative && state === PlaybackState.STOPPED) {
         // Stop service if explicitly stopped
@@ -43,12 +59,26 @@ export function useMediaSession() {
       }
     };
     checkPerms();
-  }, [isNative, state, requestNotificationPermission, currentTrack, startService, stopService]);
+  }, [isNative, state, requestNotificationPermission, currentTrack, startService, stopService, updateMetadata, updatePlaybackState]);
 
   // Update metadata when track changes
   useEffect(() => {
     mediaSessionService.updateMetadata(currentTrack);
-  }, [currentTrack]);
+
+    if (isNative && currentTrack?.metadata) {
+       const meta = currentTrack.metadata;
+       const artistStr = Array.isArray(meta.artist) 
+         ? meta.artist.join(', ') 
+         : (meta.artist || 'Unknown Artist');
+
+       updateMetadata({
+          title: meta.title || 'Unknown Title',
+          artist: artistStr,
+          album: meta.album || '',
+          coverArt: meta.coverArt
+       });
+    }
+  }, [currentTrack, isNative, updateMetadata]);
 
   // Update playback state
   useEffect(() => {
@@ -69,7 +99,11 @@ export function useMediaSession() {
     }
 
     mediaSessionService.updatePlaybackState(sessionState);
-  }, [state, isNative, stopService]);
+    
+    if (isNative) {
+        updatePlaybackState(sessionState);
+    }
+  }, [state, isNative, stopService, updatePlaybackState]);
 
   // Update position state
   useEffect(() => {
@@ -96,7 +130,41 @@ export function useMediaSession() {
     };
   }, [player, currentTrack]);
 
-  // Register action handlers
+  // Register Native Action Handlers
+  useEffect(() => {
+      if (!isNative) return;
+
+      let cleanup: (() => void) | undefined;
+      
+      const register = async () => {
+          cleanup = await registerActionListeners({
+              onPlay: async () => {
+                 console.log('📱 Native: Play');
+                 await play();
+              },
+              onPause: () => {
+                 console.log('📱 Native: Pause');
+                 pause();
+              },
+              onNext: () => {
+                 console.log('📱 Native: Next');
+                 next();
+              },
+              onPrev: () => {
+                 console.log('📱 Native: Prev');
+                 previous();
+              }
+          });
+      };
+      
+      register();
+      
+      return () => {
+          if (cleanup) cleanup();
+      };
+  }, [isNative, play, pause, next, previous, registerActionListeners]);
+
+  // Register Web Action handlers
   useEffect(() => {
     mediaSessionService.setActionHandlers({
       onPlay: async () => {

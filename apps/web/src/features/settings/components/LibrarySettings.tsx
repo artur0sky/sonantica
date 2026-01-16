@@ -22,8 +22,13 @@ import {
   IconFolderPlus,
   IconCheck,
   IconX,
+  IconArrowsSort,
+  IconArrowUp,
+  IconArrowDown,
+  IconInfoCircle,
 } from "@tabler/icons-react";
 import { ServersSection } from "../../library/components/ServersSection";
+import { getServersConfig } from "../../../services/LibraryService";
 
 export function LibrarySettings() {
   const {
@@ -36,6 +41,7 @@ export function LibrarySettings() {
     isScanning: isLocalScanning,
     addFolder,
     removeFolder,
+    scanFolder,
     scanAllFolders,
     updateFolderColor,
     toggleFolder,
@@ -47,8 +53,11 @@ export function LibrarySettings() {
     parallelScanning,
     scanFileSizeLimit,
     coverArtSizeLimit,
+    mergeTracks: shouldMerge,
+    sourcePriority,
     toggle,
     setNumber,
+    setSourcePriority,
   } = useSettingsStore();
 
   const [isClearing, setIsClearing] = useState(false);
@@ -151,6 +160,23 @@ export function LibrarySettings() {
                   <IconFolderPlus size={16} className="mr-2" />
                   Add Folder
                 </Button>
+                {folders.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={scanAllFolders}
+                    disabled={isLocalScanning}
+                    className="h-8 text-text-muted hover:text-accent"
+                  >
+                    <IconRefresh
+                      size={16}
+                      className={`mr-2 ${
+                        isLocalScanning ? "animate-spin" : ""
+                      }`}
+                    />
+                    Refresh All
+                  </Button>
+                )}
               </div>
 
               <div className="grid grid-cols-1 gap-2">
@@ -241,6 +267,18 @@ export function LibrarySettings() {
                         )}
 
                         <button
+                          onClick={() => scanFolder(f.path)}
+                          disabled={isLocalScanning}
+                          className="p-2 text-text-muted hover:text-accent disabled:opacity-50"
+                          title="Refresh Folder"
+                        >
+                          <IconRefresh
+                            size={16}
+                            className={isLocalScanning ? "animate-spin" : ""}
+                          />
+                        </button>
+
+                        <button
                           onClick={() => removeFolder(f.path)}
                           className="p-2 text-text-muted hover:text-red-400"
                           title="Remove Folder"
@@ -324,6 +362,124 @@ export function LibrarySettings() {
             />
           </div>
         </SettingRow>
+      </SettingSection>
+
+      {/* 3. Merging & Priority */}
+      <SettingSection
+        title="Merging & Multi-Source"
+        description="Configure how Sonántica handles tracks found on multiple servers."
+        icon={IconArrowsSort}
+      >
+        <SettingRow
+          label="Track Merging"
+          description="Group identical tracks from different sources into a single entry with multiple quality options."
+        >
+          <Switch
+            checked={shouldMerge}
+            onChange={() => toggle("mergeTracks")}
+          />
+        </SettingRow>
+
+        {shouldMerge && (
+          <div className="space-y-4 pt-2">
+            <div className="flex items-start gap-3 p-3 bg-accent/5 border border-accent/20 rounded-xl">
+              <IconInfoCircle
+                size={20}
+                className="text-accent flex-shrink-0 mt-0.5"
+              />
+              <p className="text-xs text-text-muted leading-relaxed">
+                Reorder the sources below to define which one to use as the{" "}
+                <strong>primary source</strong> when a track is found in
+                multiple locations. The top-most source will provide the primary
+                metadata and cover art.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              {(() => {
+                const config = getServersConfig();
+                // Ensure all enabled servers + local are in the priority list
+                const allSources = [
+                  { id: "local", name: "Local Library", color: "#3b82f6" },
+                  ...config.servers
+                    .filter((s) => s.enabled !== false)
+                    .map((s) => ({
+                      id: s.id,
+                      name: s.name,
+                      color: s.color || "#a855f7",
+                    })),
+                ];
+
+                // Sort allSources based on current sourcePriority
+                const sortedSources = [...allSources].sort((a, b) => {
+                  let indexA = sourcePriority.indexOf(a.id);
+                  let indexB = sourcePriority.indexOf(b.id);
+                  if (indexA === -1) indexA = 999;
+                  if (indexB === -1) indexB = 999;
+                  return indexA - indexB;
+                });
+
+                const movePriority = (id: string, direction: "up" | "down") => {
+                  const currentOrder = sortedSources.map((s) => s.id);
+                  const index = currentOrder.indexOf(id);
+                  if (index === -1) return;
+
+                  const newIndex = direction === "up" ? index - 1 : index + 1;
+                  if (newIndex < 0 || newIndex >= currentOrder.length) return;
+
+                  const nextOrder = [...currentOrder];
+                  [nextOrder[index], nextOrder[newIndex]] = [
+                    nextOrder[newIndex],
+                    nextOrder[index],
+                  ];
+                  setSourcePriority(nextOrder);
+                };
+
+                return sortedSources.map((source, index) => (
+                  <div
+                    key={source.id}
+                    className="flex items-center justify-between p-3 bg-surface border border-border rounded-xl group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-1.5 h-6 rounded-full"
+                        style={{ backgroundColor: source.color }}
+                      />
+                      <span className="text-sm font-medium">{source.name}</span>
+                      {index === 0 && (
+                        <span
+                          className="text-[10px] px-1.5 py-0.5 bg-accent/20 text-accent rounded uppercase font-bold tracking-wider"
+                          style={{ color: "white" }}
+                        >
+                          Primary
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => movePriority(source.id, "up")}
+                        disabled={index === 0}
+                        className="p-1.5 text-text-muted hover:text-accent disabled:opacity-30"
+                        title="Move Up"
+                      >
+                        <IconArrowUp size={18} />
+                      </button>
+                      <button
+                        onClick={() => movePriority(source.id, "down")}
+                        disabled={index === sortedSources.length - 1}
+                        className="p-1.5 text-text-muted hover:text-accent disabled:opacity-30"
+                        title="Move Down"
+                      >
+                        <IconArrowDown size={18} />
+                      </button>
+                    </div>
+                  </div>
+                ));
+              })()}
+            </div>
+          </div>
+        )}
       </SettingSection>
 
       {/* 3. Maintenance */}

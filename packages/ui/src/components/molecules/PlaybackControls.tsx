@@ -7,6 +7,7 @@
  * Follows Sonántica's minimalist design - "Sound deserves respect."
  */
 
+import { useState, useRef } from "react";
 import { RepeatMode } from "@sonantica/player-core";
 import { ShuffleButton, RepeatButton, PlayButton, SkipButton } from "../atoms";
 import { cn } from "../../utils";
@@ -14,6 +15,8 @@ import { cn } from "../../utils";
 export interface PlaybackControlsProps {
   /** Whether audio is currently playing */
   isPlaying: boolean;
+  /** Whether playback is in a loading/buffering state */
+  isLoading?: boolean;
   /** Current repeat mode */
   repeatMode: RepeatMode;
   /** Whether shuffle is enabled */
@@ -42,6 +45,7 @@ export interface PlaybackControlsProps {
 
 export function PlaybackControls({
   isPlaying,
+  isLoading = false,
   repeatMode,
   isShuffled,
   onPlay,
@@ -55,6 +59,26 @@ export function PlaybackControls({
   className,
   showSecondaryControls = true,
 }: PlaybackControlsProps) {
+  const [isActionInProgress, setIsActionInProgress] = useState(false);
+  const actionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Debounce wrapper to prevent rapid clicks
+  const withDebounce = (action: () => void) => {
+    return () => {
+      if (isActionInProgress || isLoading) return;
+
+      setIsActionInProgress(true);
+      action();
+
+      if (actionTimeoutRef.current) {
+        clearTimeout(actionTimeoutRef.current);
+      }
+
+      actionTimeoutRef.current = setTimeout(() => {
+        setIsActionInProgress(false);
+      }, 300);
+    };
+  };
   // Button sizes based on variant
   const buttonSizes = {
     sm: { main: "md" as const, secondary: "sm" as const, side: "xs" as const },
@@ -93,20 +117,28 @@ export function PlaybackControls({
       {/* Previous Button */}
       <SkipButton
         direction="prev"
-        onClick={onPrevious}
+        onClick={withDebounce(onPrevious)}
         size={sizes.secondary}
+        disabled={isActionInProgress || isLoading}
       />
 
       {/* Play/Pause Button */}
       <PlayButton
         isPlaying={isPlaying}
-        onClick={isPlaying ? onPause : onPlay}
+        onClick={withDebounce(isPlaying ? onPause : onPlay)}
         size={sizes.main}
         className="shadow-accent/20"
+        isLoading={isLoading}
+        disabled={isActionInProgress}
       />
 
       {/* Next Button */}
-      <SkipButton direction="next" onClick={onNext} size={sizes.secondary} />
+      <SkipButton
+        direction="next"
+        onClick={withDebounce(onNext)}
+        size={sizes.secondary}
+        disabled={isActionInProgress || isLoading}
+      />
 
       {/* Shuffle Button */}
       {showSecondaryControls && (

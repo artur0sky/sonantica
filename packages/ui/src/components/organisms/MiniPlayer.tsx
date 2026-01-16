@@ -46,6 +46,7 @@ export function MiniPlayer({
     duration,
     play,
     pause,
+    stop,
     seek,
     next,
     previous,
@@ -63,8 +64,13 @@ export function MiniPlayer({
     toggleVisualization,
   } = useUIStore();
 
-  const { repeatMode, toggleRepeat, isShuffled, toggleShuffle } =
+  const { repeatMode, toggleRepeat, isShuffled, toggleShuffle, clearQueue } =
     useQueueStore();
+
+  const handleStop = () => {
+    stop();
+    clearQueue();
+  };
 
   // Sidebar buttons configuration
   const sidebarButtons = [
@@ -116,10 +122,11 @@ export function MiniPlayer({
   return (
     <div
       className={cn(
-        "bg-black/95 backdrop-blur-xl border-t border-white/5 animate-in slide-in-from-bottom-4 duration-300 relative",
+        "bg-black/95 backdrop-blur-xl border-t border-white/5 animate-in slide-in-from-bottom-4 duration-300 relative cursor-pointer",
         className
       )}
       style={style}
+      onClick={togglePlayerExpanded}
     >
       {/* Progress Bar with Waveform */}
       <WaveformScrubber
@@ -147,7 +154,12 @@ export function MiniPlayer({
             coverArt={currentTrack.metadata?.coverArt}
             title={currentTrack.metadata?.title || "Unknown Title"}
             artist={currentTrack.metadata?.artist || "Unknown Artist"}
-            onClick={togglePlayerExpanded}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (isPlaying) pause();
+              else play();
+            }}
+            onLongClick={handleStop}
             enableSwipeGesture
             onSwipeLeft={next}
             onSwipeRight={previous}
@@ -156,36 +168,43 @@ export function MiniPlayer({
 
           {/* Action Buttons (Download, etc.) */}
           {actionButtons && (
-            <div className="hidden sm:flex items-center gap-1 ml-2">
+            <div
+              className="hidden sm:flex items-center gap-3 ml-2"
+              onClick={(e) => e.stopPropagation()}
+            >
               {actionButtons}
             </div>
           )}
         </div>
 
         {/* Section 2: Playback Controls (Center) */}
-        <PlaybackControls
-          isPlaying={isPlaying}
-          repeatMode={repeatMode}
-          isShuffled={isShuffled}
-          onPlay={play}
-          onPause={pause}
-          onNext={next}
-          onPrevious={previous}
-          onToggleRepeat={toggleRepeat}
-          onToggleShuffle={toggleShuffle}
-          size="sm"
-          className="mx-4"
-        />
+        <div
+          className="mx-4 hidden md:flex"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <PlaybackControls
+            isPlaying={isPlaying}
+            repeatMode={repeatMode}
+            isShuffled={isShuffled}
+            onPlay={play}
+            onPause={pause}
+            onNext={next}
+            onPrevious={previous}
+            onToggleRepeat={toggleRepeat}
+            onToggleShuffle={toggleShuffle}
+            size="sm"
+          />
+        </div>
 
         {/* Section 3: Right Controls */}
-        <div className="flex-1 flex items-center justify-end gap-1 md:gap-2">
+        <div className="flex-1 flex items-center justify-end gap-3">
           {/* Time Display */}
-          <div className="text-[11px] text-text-muted tabular-nums hidden xl:block font-medium mr-4">
+          <div className="text-[11px] text-text-muted tabular-nums hidden xl:block font-medium">
             {formatTime(currentTime)} / {formatTime(duration)}
           </div>
 
           {/* Volume Control */}
-          <div className="hidden md:flex">
+          <div className="hidden md:flex" onClick={(e) => e.stopPropagation()}>
             <EnhancedVolumeControl
               volume={volume}
               onVolumeChange={setVolume}
@@ -194,12 +213,14 @@ export function MiniPlayer({
           </div>
 
           {/* Sidebar Button Carousel */}
-          <SidebarButtonCarousel
-            buttons={sidebarButtons}
-            enableSwipe
-            defaultFeaturedIndex={3} // Queue button
-            size="xs"
-          />
+          <div onClick={(e) => e.stopPropagation()}>
+            <SidebarButtonCarousel
+              buttons={sidebarButtons}
+              enableSwipe
+              defaultFeaturedIndex={3} // Queue button
+              size="xs"
+            />
+          </div>
         </div>
       </div>
     </div>
