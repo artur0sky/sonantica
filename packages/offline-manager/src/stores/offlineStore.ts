@@ -23,6 +23,7 @@ interface OfflineState {
   setItemProgress: (id: string, progress: number) => void;
   setItemError: (id: string, error?: string) => void;
   removeItem: (id: string) => void;
+  clearError: (id: string) => void;
   clearAll: () => void;
 }
 
@@ -66,6 +67,13 @@ export const useOfflineStore = create<OfflineState>()(
       })),
 
       removeItem: (id) => set((state) => {
+        const newItems = { ...state.items };
+        delete newItems[id];
+        return { items: newItems };
+      }),
+
+      clearError: (id) => set((state) => {
+        if (state.items[id]?.status !== OfflineStatus.ERROR) return state;
         const newItems = { ...state.items };
         delete newItems[id];
         return { items: newItems };

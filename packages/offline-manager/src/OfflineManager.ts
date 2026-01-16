@@ -196,6 +196,12 @@ export class OfflineManager implements IOfflineManager {
         } catch (error) {
           console.error(`❌ Failed to download track ${nextItem.id}:`, error);
           store.setItemError(nextItem.id, error instanceof Error ? error.message : 'Download failed');
+          
+          // Auto-clear error after 15 seconds so it doesn't stay permanent in the session
+          const trackId = nextItem.id;
+          setTimeout(() => {
+            useOfflineStore.getState().clearError(trackId);
+          }, 15000);
         }
       }
     } finally {
@@ -216,9 +222,26 @@ export class OfflineManager implements IOfflineManager {
    */
   async verifyIntegrity(): Promise<void> {
     const store = useOfflineStore.getState();
+    
+    // 1. Clear Errors and reset stuck Downloading items
+    Object.values(store.items).forEach(item => {
+      if (item.status === OfflineStatus.ERROR) {
+        // Errors are session-only: clear them on integrity check (startup)
+        console.log(`🧹 Clearing session error for track: ${item.id}`);
+        store.removeItem(item.id);
+      } else if (item.status === OfflineStatus.DOWNLOADING) {
+        // If it was stuck in downloading (e.g. page crash), reset to QUEUED
+        console.log(`🔄 Resetting stuck downloading track to queued: ${item.id}`);
+        store.setItemStatus(item.id, item.type, OfflineStatus.QUEUED, item.quality);
+      }
+    });
+
     const offlineItems = Object.values(store.items).filter(item => item.status === OfflineStatus.COMPLETED);
     
-    if (offlineItems.length === 0) return;
+    if (offlineItems.length === 0) {
+      this.processQueue();
+      return;
+    }
 
     console.log(`🔍 Verifying integrity of ${offlineItems.length} offline tracks...`);
     let fixedCount = 0;
@@ -228,7 +251,7 @@ export class OfflineManager implements IOfflineManager {
       
       if (!isAvailable) {
         console.warn(`⚠️ Track ${item.id} is marked as downloaded but missing/corrupt in cache. Resetting status.`);
-        store.removeItem(item.id); // Or set to NONE, but removeItem cleans it up completely
+        store.removeItem(item.id); 
         fixedCount++;
       }
     }
@@ -238,5 +261,7 @@ export class OfflineManager implements IOfflineManager {
     } else {
       console.log(`✅ Integrity check complete: All tracks valid.`);
     }
+
+    this.processQueue();
   }
 }
