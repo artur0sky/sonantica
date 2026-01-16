@@ -84,19 +84,27 @@ export function buildTrackStreamingUrl(track: { id?: string; originalId?: string
   return buildStreamingUrl(track.serverId, track.filePath, track.id, track.originalId);
 }
 
+import { useSettingsStore } from '../stores/settingsStore';
+import { getBestSource } from '@sonantica/shared';
+import { type Track } from '@sonantica/media-library';
+
 /**
  * Convert Track to MediaSource with proper metadata structure
  * This is the canonical way to convert library tracks to playable sources
  */
 export function trackToMediaSource(track: any): any {
+  // If track has multiple sources, select the best one based on priority
+  const settings = useSettingsStore.getState();
+  const bestTrack = getBestSource(track, settings.sourcePriority) as Track;
+
   // Try to get enriched cover art from library store if missing
-  let coverArt = track.coverArt || track.metadata?.coverArt;
+  let coverArt = bestTrack.coverArt || bestTrack.metadata?.coverArt;
   
   if (!coverArt) {
     try {
       // Direct access to store to avoid hook issues in utils
       const libraryTracks = useLibraryStore.getState().tracks;
-      const foundTrack = libraryTracks.find((t: any) => t.id === track.id);
+      const foundTrack = libraryTracks.find((t: any) => t.id === bestTrack.id);
       if (foundTrack) {
         coverArt = foundTrack.coverArt;
       }
@@ -109,35 +117,35 @@ export function trackToMediaSource(track: any): any {
   let url: string;
   
   // Check if this is a local file (from Tauri desktop app)
-  if (track.source === 'local' && track.filePath) {
+  if (bestTrack.source === 'local' && bestTrack.filePath) {
     // Local files already have Tauri asset URL in filePath
-    url = track.filePath;
+    url = bestTrack.filePath;
     console.log(`🎵 Local file URL: ${url}`);
-  } else if (track.serverId && track.filePath) {
+  } else if (bestTrack.serverId && bestTrack.filePath) {
     // Remote server track - build streaming URL
-    url = buildStreamingUrl(track.serverId, track.filePath, track.id, track.originalId);
+    url = buildStreamingUrl(bestTrack.serverId, bestTrack.filePath, bestTrack.id, bestTrack.originalId);
   } else {
-    console.error('❌ Track missing required fields for playback:', track);
+    console.error('❌ Track missing required fields for playback:', bestTrack);
     url = '';
   }
 
   return {
-    id: track.id,
+    id: bestTrack.id,
     url,
     metadata: {
-      title: track.title || track.metadata?.title,
-      artist: track.artist || track.metadata?.artist,
-      album: track.album || track.metadata?.album,
-      duration: track.duration || track.metadata?.duration,
+      title: bestTrack.title || bestTrack.metadata?.title,
+      artist: bestTrack.artist || bestTrack.metadata?.artist,
+      album: bestTrack.album || bestTrack.metadata?.album,
+      duration: bestTrack.duration || bestTrack.metadata?.duration,
       coverArt: coverArt,
-      year: track.year || track.metadata?.year,
-      trackNumber: track.trackNumber || track.metadata?.trackNumber,
-      genre: track.genre || track.metadata?.genre,
-      albumArtist: track.albumArtist || track.metadata?.albumArtist,
-      bitrate: track.format?.bitrate || track.metadata?.bitrate,
-      sampleRate: track.format?.sampleRate || track.metadata?.sampleRate,
-      bitsPerSample: track.format?.bitsPerSample || track.metadata?.bitsPerSample,
-      lyrics: track.lyrics || track.metadata?.lyrics,
+      year: bestTrack.year || bestTrack.metadata?.year,
+      trackNumber: bestTrack.trackNumber || bestTrack.metadata?.trackNumber,
+      genre: bestTrack.genre || bestTrack.metadata?.genre,
+      albumArtist: bestTrack.albumArtist || bestTrack.metadata?.albumArtist,
+      bitrate: bestTrack.format?.bitrate || bestTrack.metadata?.bitrate,
+      sampleRate: bestTrack.format?.sampleRate || bestTrack.metadata?.sampleRate,
+      bitsPerSample: bestTrack.format?.bitsPerSample || bestTrack.metadata?.bitsPerSample,
+      lyrics: bestTrack.lyrics || bestTrack.metadata?.lyrics,
     },
   };
 }

@@ -56,6 +56,14 @@ export interface TrackItemProps extends HTMLAttributes<HTMLDivElement> {
   /** Display name for the source (e.g. Server Name or 'Local') */
   sourceName?: string;
 
+  /** Sources available for this merged track */
+  sources?: Array<{
+    id: string;
+    source: "local" | "remote";
+    name?: string;
+    color?: string;
+  }>;
+
   /** Whether to show a divider-like border */
   divider?: boolean;
 }
@@ -93,6 +101,7 @@ export const TrackItem = React.forwardRef<HTMLDivElement, TrackItemProps>(
       actions,
       source,
       sourceName,
+      sources,
       divider = false,
       className,
       onClick,
@@ -180,21 +189,37 @@ export const TrackItem = React.forwardRef<HTMLDivElement, TrackItemProps>(
                 <span className="truncate opacity-80">{album}</span>
               </>
             )}
-            {source && (
-              <>
-                <span className="opacity-30">•</span>
-                <span
-                  className={cn(
-                    "text-[9px] px-1.5 py-0.5 rounded-sm font-bold uppercase tracking-wider",
-                    source === "local"
-                      ? "bg-blue-500/10 text-blue-400 border border-blue-500/20"
-                      : "bg-accent/10 text-accent border border-accent/20"
-                  )}
-                  title={sourceName}
-                >
-                  {source === "local" ? "LOCAL" : sourceName || "SERVER"}
-                </span>
-              </>
+            {sources && sources.length > 0 ? (
+              <div className="flex gap-1 items-center ml-1">
+                {sources.map((s) => (
+                  <div
+                    key={s.id}
+                    title={s.name}
+                    className={cn(
+                      "w-1.5 h-3 rounded-[1px] transition-all",
+                      s.source === "local" ? "bg-blue-400" : "bg-accent"
+                    )}
+                    style={s.color ? { backgroundColor: s.color } : {}}
+                  />
+                ))}
+              </div>
+            ) : (
+              source && (
+                <>
+                  <span className="opacity-30">•</span>
+                  <span
+                    className={cn(
+                      "text-[9px] px-1.5 py-0.5 rounded-sm font-bold uppercase tracking-wider",
+                      source === "local"
+                        ? "bg-blue-500/10 text-blue-400 border border-blue-500/20"
+                        : "bg-accent/10 text-accent border border-accent/20"
+                    )}
+                    title={sourceName}
+                  >
+                    {source === "local" ? "LOCAL" : sourceName || "SERVER"}
+                  </span>
+                </>
+              )
             )}
           </div>
         </div>

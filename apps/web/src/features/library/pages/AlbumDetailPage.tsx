@@ -22,6 +22,7 @@ import {
   VirtualizedList,
 } from "@sonantica/ui";
 import { useAlbumSimilarAlbums } from "@sonantica/recommendations";
+import { useVirtualTracks } from "../../../hooks/useVirtualTracks";
 import { AlbumCard } from "../components/AlbumCard";
 import { AlbumAnalyticsSection } from "../../analytics/components/AlbumAnalyticsSection";
 import { playFromContext } from "../../../utils/playContext";
@@ -30,7 +31,8 @@ import { trackToMediaSource } from "../../../utils/streamingUrl";
 export function AlbumDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
-  const { getAlbumById, tracks } = useLibraryStore();
+  const { getAlbumById } = useLibraryStore();
+  const virtualTracks = useVirtualTracks();
 
   const album = useMemo(
     () => (id ? getAlbumById(id) : null) ?? null,
@@ -41,11 +43,11 @@ export function AlbumDetailPage() {
   const albumTracks = useMemo(
     () =>
       album
-        ? tracks.filter(
+        ? virtualTracks.filter(
             (t) => t.album === album.title && t.artist === album.artist
           )
         : [],
-    [album, tracks]
+    [album, virtualTracks]
   );
 
   // Get similar albums with a balanced diversity score

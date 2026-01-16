@@ -1,16 +1,18 @@
 /**
  * VirtualizedGrid Organism
  *
- * A reusable grid component for library collections (Artists, Albums, Playlists).
- * Supports standard grid layout, empty states, and is prepared for large collections.
+ * A high-performance grid component with virtualization for large collections (e.g., Albums, Artists).
+ * Integrates @tanstack/react-virtual to only render what's visible.
  *
  * @package @sonantica/ui
  * @category Organisms
  */
 
-import { ReactNode } from "react";
+import { ReactNode, useRef, useMemo, useEffect, useState } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { EmptyState } from "../molecules/EmptyState";
 import { AlphabetNavigator } from "../atoms/AlphabetNavigator";
+import { cn } from "../../utils";
 
 export interface VirtualizedGridProps<T> {
   /** Items to display in the grid */
@@ -40,7 +42,7 @@ export interface VirtualizedGridProps<T> {
     description: string;
   };
 
-  /** Whether a filter is currently active (to show noResultsState instead of emptyState) */
+  /** Whether a filter is currently active */
   isFiltered?: boolean;
 
   /** Alphabet navigator configuration */
@@ -53,20 +55,16 @@ export interface VirtualizedGridProps<T> {
 
   /** Additional className for the grid container */
   className?: string;
+
+  /** Scrollable container ID (default: "main-content") */
+  scrollElementId?: string;
+
+  /** Estimated row height (default: 280) */
+  estimateRowHeight?: number;
 }
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      duration: 0.2,
-    },
-  },
-};
-
 /**
- * VirtualizedGrid - Standardized grid for library items
+ * VirtualizedGrid - Standardized grid for library items with real virtualization
  */
 export function VirtualizedGrid<T>({
   items,
@@ -77,44 +75,116 @@ export function VirtualizedGrid<T>({
   noResultsState,
   isFiltered = false,
   alphabetNav,
-  className = "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6",
+  className,
+  scrollElementId = "main-content",
+  estimateRowHeight = 280,
 }: VirtualizedGridProps<T>) {
+  const parentRef = useRef<HTMLDivElement>(null);
+  const [columns, setColumns] = useState(0);
+
+  // Use a ResizeObserver to detect how many columns we have
+  useEffect(() => {
+    const updateColumns = () => {
+      const width = window.innerWidth;
+      // Mirror Tailwind breakpoints
+      if (width >= 1280) setColumns(5); // xl
+      else if (width >= 1024) setColumns(4); // lg
+      else if (width >= 768) setColumns(3); // md
+      else setColumns(2); // default
+    };
+
+    updateColumns();
+    window.addEventListener("resize", updateColumns);
+    return () => window.removeEventListener("resize", updateColumns);
+  }, []);
+
+  // Compute rows
+  const rowCount = useMemo(() => {
+    if (columns === 0) return 0;
+    return Math.ceil(items.length / columns);
+  }, [items.length, columns]);
+
+  const rowVirtualizer = useVirtualizer({
+    count: rowCount,
+    getScrollElement: () =>
+      document.getElementById(scrollElementId) as HTMLDivElement,
+    estimateSize: () => estimateRowHeight,
+    overscan: 3,
+  });
+
   const showNoResults = isFiltered && items.length === 0 && noResultsState;
   const showEmpty = !isFiltered && items.length === 0;
 
+  if (showNoResults) {
+    return (
+      <EmptyState
+        variant="minimal"
+        icon={noResultsState.icon}
+        title={noResultsState.title}
+        description={noResultsState.description}
+      />
+    );
+  }
+
+  if (showEmpty) {
+    return (
+      <EmptyState
+        icon={emptyState.icon}
+        title={emptyState.title}
+        description={emptyState.description}
+        action={emptyState.action}
+      />
+    );
+  }
+
   return (
     <div className="relative">
-      <div className="animate-in fade-in duration-300">
-        {showNoResults ? (
-          <EmptyState
-            key="no-results"
-            variant="minimal"
-            icon={noResultsState.icon}
-            title={noResultsState.title}
-            description={noResultsState.description}
-          />
-        ) : showEmpty ? (
-          <EmptyState
-            key="empty"
-            icon={emptyState.icon}
-            title={emptyState.title}
-            description={emptyState.description}
-            action={emptyState.action}
-          />
-        ) : (
-          <div
-            className={`animate-in fade-in slide-in-from-bottom-2 duration-300 ${className}`}
-          >
-            {items.map((item, index) => (
-              <div key={keyExtractor(item)} id={`${idPrefix}-${index}`}>
-                {renderItem(item, index)}
+      <div
+        ref={parentRef}
+        className="animate-in fade-in duration-300 min-h-[50vh]"
+      >
+        <div
+          style={{
+            height: `${rowVirtualizer.getTotalSize()}px`,
+            width: "100%",
+            position: "relative",
+          }}
+        >
+          {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+            const startIndex = virtualRow.index * columns;
+            const rowItems = items.slice(startIndex, startIndex + columns);
+
+            return (
+              <div
+                key={virtualRow.key}
+                className={cn(
+                  "absolute top-0 left-0 w-full grid gap-6",
+                  "grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5",
+                  className
+                )}
+                style={{
+                  height: `${virtualRow.size}px`,
+                  transform: `translateY(${virtualRow.start}px)`,
+                }}
+              >
+                {rowItems.map((item, colIndex) => {
+                  const itemIndex = startIndex + colIndex;
+                  return (
+                    <div
+                      key={keyExtractor(item)}
+                      id={`${idPrefix}-${itemIndex}`}
+                    >
+                      {renderItem(item, itemIndex)}
+                    </div>
+                  );
+                })}
               </div>
-            ))}
-          </div>
-        )}
+            );
+          })}
+        </div>
       </div>
 
-      {/* Navigator */}
+      {/* Alphabet Navigator */}
       {alphabetNav?.enabled && items.length > 50 && (
         <AlphabetNavigator
           items={
@@ -122,7 +192,10 @@ export function VirtualizedGrid<T>({
               ? items.map(alphabetNav.getLetterItem)
               : (items as any)
           }
-          onLetterClick={alphabetNav.onLetterClick}
+          onLetterClick={(index) => {
+            const rowIndex = Math.floor(index / columns);
+            rowVirtualizer.scrollToIndex(rowIndex, { align: "start" });
+          }}
           forceScrollOnly={alphabetNav.forceScrollOnly}
           mode="local"
         />

@@ -20,8 +20,10 @@ import {
 import { useHeaderLogic } from "../../hooks/useHeaderLogic";
 import logo from "../../assets/logo.png";
 import { cn } from "@sonantica/shared";
+import { useVirtualTracks } from "../../hooks/useVirtualTracks";
 
 export function Header() {
+  const virtualTracks = useVirtualTracks();
   const {
     toggleLeftSidebar,
     handleSearchResultSelect,
@@ -120,6 +122,7 @@ export function Header() {
           <GlobalSearchBar
             onResultSelect={handleSearchResultSelect}
             onResultAction={handleSearchResultAction}
+            tracks={virtualTracks}
           />
         </div>
 

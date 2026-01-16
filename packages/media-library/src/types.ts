@@ -33,6 +33,10 @@ export interface Track extends SharedTrack {
     genre?: string | string[];
     albumArtist?: string;
     duration?: number;
+    bitrate?: number;
+    sampleRate?: number;
+    bitsPerSample?: number;
+    lyrics?: any;
   };
   serverColor?: string;
   folderPath?: string;

@@ -125,6 +125,12 @@ export interface Track {
 
   /** File Modification Timestamp (for incremental scanning) */
   fileModifiedAt?: number;
+
+  /** Multi-source support (for merged tracks) */
+  sources?: Track[];
+
+  /** Lyrics data */
+  lyrics?: any;
 }
 
 /**

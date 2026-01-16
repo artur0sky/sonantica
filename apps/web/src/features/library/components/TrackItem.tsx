@@ -211,6 +211,13 @@ export function TrackItem({
     },
   ];
 
+  const hasLocal =
+    track.source === "local" ||
+    track.sources?.some((s: any) => s.source === "local");
+  const hasRemote =
+    track.sources?.some((s: any) => s.source === "remote") ||
+    track.source === "remote";
+
   const statusIcons = (
     <>
       {isOfflineAvailable && (
@@ -239,6 +246,65 @@ export function TrackItem({
     </>
   );
 
+  const statusIconsDisplay = (
+    <div className="flex items-center gap-1 mr-2">
+      {track.sources && track.sources.length > 1 ? (
+        <div className="flex gap-[2px] items-center">
+          {track.sources.map((s: any) => (
+            <div
+              key={s.id}
+              title={
+                s.serverName || (s.source === "local" ? "Local" : "Remote")
+              }
+              className={cn(
+                "w-1 h-3 rounded-[0.5px]",
+                s.source === "local" ? "bg-blue-400" : "bg-accent"
+              )}
+              style={
+                s.serverColor ? { backgroundColor: s.serverColor } : undefined
+              }
+            />
+          ))}
+        </div>
+      ) : track.source === "local" ? (
+        <div
+          title={track.folderPath || "Local Library"}
+          className={!track.serverColor ? "text-blue-400" : undefined}
+          style={track.serverColor ? { color: track.serverColor } : undefined}
+        >
+          <IconDeviceDesktop size={14} />
+        </div>
+      ) : (
+        <div
+          title={track.serverName || "Remote Server"}
+          className="text-accent"
+          style={track.serverColor ? { color: track.serverColor } : undefined}
+        >
+          <IconCloud size={14} />
+        </div>
+      )}
+      {statusIcons}
+
+      {/* Quick Download Button if remote available but not local/offline */}
+      {!hasLocal &&
+        !isOfflineAvailable &&
+        !isDownloading &&
+        !isQueued &&
+        hasRemote && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              downloadTrack(track);
+            }}
+            className="ml-1 p-0.5 rounded-full hover:bg-accent/20 text-accent transition-colors"
+            title="Download to Local"
+          >
+            <IconCloudDownload size={14} />
+          </button>
+        )}
+    </div>
+  );
+
   return (
     <>
       <TrackItemUI
@@ -263,32 +329,13 @@ export function TrackItem({
         isPlaying={isPlaying}
         isSelectionMode={isInSelectionMode}
         isSelected={selected}
-        statusIcons={
-          <div className="flex items-center gap-1 mr-2">
-            {track.source === "local" ? (
-              <div
-                title={track.folderPath || "Local Library"}
-                className={!track.serverColor ? "text-blue-400" : undefined}
-                style={
-                  track.serverColor ? { color: track.serverColor } : undefined
-                }
-              >
-                <IconDeviceDesktop size={14} />
-              </div>
-            ) : (
-              <div
-                title={track.serverName || "Remote Server"}
-                className="text-accent"
-                style={
-                  track.serverColor ? { color: track.serverColor } : undefined
-                }
-              >
-                <IconCloud size={14} />
-              </div>
-            )}
-            {statusIcons}
-          </div>
-        }
+        sources={track.sources?.map((s: any) => ({
+          id: s.id,
+          source: s.source,
+          name: s.serverName || (s.source === "local" ? "Local" : "Remote"),
+          color: s.serverColor,
+        }))}
+        statusIcons={statusIconsDisplay}
         onClick={() => {
           if (isInSelectionMode) {
             toggleSelection(track.id);

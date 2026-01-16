@@ -33,7 +33,8 @@ export class RemoteLibraryAdapter implements ILibraryAdapter {
   /**
    * Normalize Album: prepend server URL to coverArt if path is relative
    */
-  private normalizeAlbum(album: any): Album {
+  private normalizeAlbum(album: any): Album | null {
+    if (!album) return null;
     let coverArt = album.coverArt;
     if (coverArt) {
       if (!coverArt.startsWith('http') && coverArt.startsWith('/')) {
@@ -46,7 +47,7 @@ export class RemoteLibraryAdapter implements ILibraryAdapter {
     }
 
     const serverPrefix = btoa(this.serverUrl).substring(0, 8).replace(/[/+=]/g, '');
-    const originalId = extractOriginalId(album.id);
+    const originalId = extractOriginalId(album.id || '');
 
     return {
       ...album,
@@ -60,9 +61,10 @@ export class RemoteLibraryAdapter implements ILibraryAdapter {
   /**
    * Normalize Artist: namespace ID
    */
-  private normalizeArtist(artist: any): Artist {
+  private normalizeArtist(artist: any): Artist | null {
+    if (!artist) return null;
     const serverPrefix = btoa(this.serverUrl).substring(0, 8).replace(/[/+=]/g, '');
-    const originalId = extractOriginalId(artist.id);
+    const originalId = extractOriginalId(artist.id || '');
     return {
       ...artist,
       id: `remote-${serverPrefix}-${originalId}`,
@@ -75,7 +77,8 @@ export class RemoteLibraryAdapter implements ILibraryAdapter {
    * Normalize Track: prepend server URL to coverArt if path is relative
    * AND add serverId for streaming
    */
-  private normalizeTrack(track: any): Track {
+  private normalizeTrack(track: any): Track | null {
+    if (!track) return null;
     let coverArt = track.coverArt;
     if (coverArt) {
       if (!coverArt.startsWith('http') && coverArt.startsWith('/')) {
@@ -91,7 +94,7 @@ export class RemoteLibraryAdapter implements ILibraryAdapter {
     // This allows buildStreamingUrl to find the correct server
     const serverId = this.serverUrl;
     const serverPrefix = btoa(serverId).substring(0, 8).replace(/[/+=]/g, '');
-    const originalId = extractOriginalId(track.id);
+    const originalId = extractOriginalId(track.id || '');
 
     return {
       ...track,
@@ -143,7 +146,8 @@ export class RemoteLibraryAdapter implements ILibraryAdapter {
     const queryString = params.toString() ? `?${params.toString()}` : '';
     const response = await this.fetch(`/api/library/tracks${queryString}`);
     const data = await response.json();
-    return (data.tracks || []).map((t: any) => this.normalizeTrack(t));
+    const tracks = (data.tracks || []).map((t: any) => this.normalizeTrack(t));
+    return tracks.filter((t: any): t is Track => t !== null);
   }
 
   /**
@@ -153,7 +157,9 @@ export class RemoteLibraryAdapter implements ILibraryAdapter {
     const originalId = extractOriginalId(id);
     const response = await this.fetch(`/api/library/tracks/${originalId}`);
     const track = await response.json();
-    return this.normalizeTrack(track);
+    const normalized = this.normalizeTrack(track);
+    if (!normalized) throw new Error('Track not found or invalid');
+    return normalized;
   }
 
   /**
@@ -169,7 +175,8 @@ export class RemoteLibraryAdapter implements ILibraryAdapter {
     const queryString = params.toString() ? `?${params.toString()}` : '';
     const response = await this.fetch(`/api/library/artists${queryString}`);
     const data = await response.json();
-    return (data.artists || []).map((a: any) => this.normalizeArtist(a));
+    const artists = (data.artists || []).map((a: any) => this.normalizeArtist(a));
+    return artists.filter((a: any): a is Artist => a !== null);
   }
 
   /**
@@ -195,7 +202,8 @@ export class RemoteLibraryAdapter implements ILibraryAdapter {
     const queryString = params.toString() ? `?${params.toString()}` : '';
     const response = await this.fetch(`/api/library/albums${queryString}`);
     const data = await response.json();
-    return (data.albums || []).map((album: any) => this.normalizeAlbum(album));
+    const albums = (data.albums || []).map((album: any) => this.normalizeAlbum(album));
+    return albums.filter((a: any): a is Album => a !== null);
   }
 
   /**
