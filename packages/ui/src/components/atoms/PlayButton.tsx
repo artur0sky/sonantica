@@ -16,6 +16,8 @@ interface PlayButtonProps {
   size?: "sm" | "md" | "lg" | "xl";
   className?: string;
   variant?: "accent" | "ghost";
+  isLoading?: boolean;
+  disabled?: boolean;
 }
 
 export function PlayButton({
@@ -24,6 +26,8 @@ export function PlayButton({
   size = "md",
   className,
   variant = "accent",
+  isLoading = false,
+  disabled = false,
 }: PlayButtonProps) {
   const sizeClasses = {
     sm: "w-9 h-9",
@@ -48,12 +52,14 @@ export function PlayButton({
   return (
     <motion.button
       onClick={onClick}
+      disabled={disabled || isLoading}
       whileHover={{ ...buttonAnimations.hover, scale: 1.05 }}
       whileTap={{ ...buttonAnimations.tap, scale: 0.95 }}
       className={cn(
-        "rounded-full flex items-center justify-center transition-all duration-200",
+        "rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed",
         variantClasses[variant],
         sizeClasses[size],
+        isLoading && "cursor-wait",
         className
       )}
       aria-label={isPlaying ? "Pause" : "Play"}
