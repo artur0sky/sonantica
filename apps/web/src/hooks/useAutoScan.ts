@@ -10,8 +10,11 @@ import { useSettingsStore } from "../stores/settingsStore";
 export function useAutoScan() {
   const { tracks, scanAllServers, triggerRescanAll } = useMultiServerLibrary();
   const autoScan = useSettingsStore((state) => state.autoScan);
+  const _hasHydrated = useLibraryStore((state) => state._hasHydrated);
 
   useEffect(() => {
+    if (!_hasHydrated) return;
+
     const config = getServersConfig();
 
     if (autoScan && config.servers.length > 0 && tracks.length === 0) {

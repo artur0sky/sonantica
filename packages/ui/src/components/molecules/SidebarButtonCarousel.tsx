@@ -156,7 +156,7 @@ export function SidebarButtonCarousel({
   }, []);
 
   return (
-    <div className={cn("flex items-center gap-1 relative min-w-0", className)}>
+    <div className={cn("flex items-center gap-3 relative min-w-0", className)}>
       <div
         className={cn(
           "flex items-center gap-3 transition-all duration-300",
@@ -214,8 +214,8 @@ export function SidebarButtonCarousel({
                 className={cn(
                   "hover:text-accent transition-colors",
                   btn.isActive ? "text-accent" : "text-text-muted",
-                  // Reset backgrounds to look like download buttons (ghost)
-                  "bg-transparent hover:bg-white/5 active:scale-95"
+                  // Reset backgrounds to look like download buttons (ghost) with no border/radius
+                  "bg-transparent hover:bg-white/5 active:scale-95 rounded-none"
                 )}
               />
             </div>

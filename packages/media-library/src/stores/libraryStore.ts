@@ -31,6 +31,7 @@ interface LibraryState {
   stats: LibraryStats;
   loading: boolean;
   error: string | null;
+  _hasHydrated: boolean;
   
   // Filters
   searchQuery: string;
@@ -50,6 +51,7 @@ interface LibraryState {
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   clearLibrary: () => void;
+  _setHydrated: (hydrated: boolean) => void;
   
   // Filters
   setSearchQuery: (query: string) => void;
@@ -105,6 +107,7 @@ export const useLibraryStore = create<LibraryState>()(
       },
       loading: false,
       error: null,
+      _hasHydrated: false,
       searchQuery: '',
       selectedArtist: null,
       selectedAlbum: null,
@@ -262,6 +265,8 @@ export const useLibraryStore = create<LibraryState>()(
         });
         console.log('🗑️ Library cleared');
       },
+      
+      _setHydrated: (hydrated) => set({ _hasHydrated: hydrated }),
 
       // Filters
       setSearchQuery: (query: string) => {
@@ -391,8 +396,9 @@ export const useLibraryStore = create<LibraryState>()(
         stats: state.stats
       }),
       onRehydrateStorage: () => (state) => {
-        console.log('Hydration finished', state ? 'success' : 'failed');
+        console.log('📚 Library hydration finished', state ? 'success' : 'failed');
         if (state) {
+            state._setHydrated(true);
             state.setLoading(false);
         }
       }

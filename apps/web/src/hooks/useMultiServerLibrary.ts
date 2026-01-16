@@ -46,7 +46,8 @@ export function useMultiServerLibrary() {
     setAlbums,
     setPlaylists,
     playlists: storePlaylists,
-    clearLibrary: storeClearLibrary
+    clearLibrary: storeClearLibrary,
+    _hasHydrated: storeHasHydrated
   } = useLibraryStore();
   
   const [state, setState] = useState<MultiServerLibraryState>({
@@ -172,10 +173,12 @@ export function useMultiServerLibrary() {
     }
   }, [setTracks, setArtists, setAlbums]);
 
-  // Load offline content on mount
+  // Load offline content when library is hydrated
   useEffect(() => {
-    loadOfflineContent();
-  }, [loadOfflineContent]);
+    if (storeHasHydrated) {
+      loadOfflineContent();
+    }
+  }, [loadOfflineContent, storeHasHydrated]);
 
   /* Pagination State */
   // const [serverOffsets, setServerOffsets] = useState<Record<string, { tracks: number, artists: number, albums: number }>>({});
@@ -325,8 +328,21 @@ export function useMultiServerLibrary() {
       let newPlaylists = currentStore.playlists;
 
       if (shouldFetchTracks) {
+          const offlineItems = useOfflineStore.getState().items;
           const otherTracks = currentStore.tracks.filter(t => t.serverId !== serverId);
-          newTracks = [...otherTracks, ...taggedTracks];
+          
+          // Get tracks for THIS server that are offline so we don't lose them if they are missing from server scan
+          const offlineTracksForServer = currentStore.tracks.filter(t => 
+            t.serverId === serverId && offlineItems[t.id]?.status === OfflineStatus.COMPLETED
+          );
+
+          // Merge: new results from server + existing offline tracks
+          const trackMap = new Map<string, Track>(taggedTracks.map(t => [t.id, t as Track]));
+          offlineTracksForServer.forEach(t => {
+            if (!trackMap.has(t.id)) trackMap.set(t.id, t);
+          });
+
+          newTracks = [...otherTracks, ...Array.from(trackMap.values())];
       }
 
       if (shouldFetchArtists) {
@@ -563,7 +579,10 @@ export function useMultiServerLibrary() {
           
           const currentStore = useLibraryStore.getState();
           
-          const newTracks = currentStore.tracks.filter(t => t.serverId !== serverId);
+          const offlineItems = useOfflineStore.getState().items;
+          const newTracks = currentStore.tracks.filter(t => 
+            t.serverId !== serverId || (offlineItems[t.id]?.status === OfflineStatus.COMPLETED)
+          );
           const newArtists = currentStore.artists.filter(a => (a as any).serverId !== serverId);
           const newAlbums = currentStore.albums.filter(a => (a as any).serverId !== serverId);
           const newPlaylists = currentStore.playlists.filter(p => (p as any).serverId !== serverId);

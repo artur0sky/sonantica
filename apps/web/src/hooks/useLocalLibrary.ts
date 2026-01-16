@@ -8,6 +8,7 @@
  */
 
 import { useState, useCallback, useEffect } from 'react';
+import { useLibraryStore } from '@sonantica/media-library';
 
 interface ScanProgress {
   current: number;
@@ -59,8 +60,10 @@ export function useLocalLibrary() {
   }, [folders, foldersLoaded]);
 
   // Auto-rescan saved folders on startup (only if they have tracks)
+  const _hasHydrated = import.meta.env.SSR ? false : useLibraryStore((s) => s._hasHydrated);
+
   useEffect(() => {
-    if (!isTauri || !foldersLoaded || folders.length === 0) return;
+    if (!isTauri || !foldersLoaded || folders.length === 0 || !_hasHydrated) return;
     
     const rescanSavedFolders = async () => {
       // Only rescan folders that were previously scanned
@@ -77,7 +80,7 @@ export function useLocalLibrary() {
     // Delay to avoid blocking initial render
     const timer = setTimeout(rescanSavedFolders, 1000);
     return () => clearTimeout(timer);
-  }, [foldersLoaded]); // Only run when folders are loaded
+  }, [foldersLoaded, _hasHydrated]); // Re-run when library is hydrated
 
   // Listen to scan progress events (only in Tauri)
   useEffect(() => {
@@ -400,53 +403,23 @@ export function useLocalLibrary() {
         }
 
         // Add to library store with deduplication
+        // Add to library store using incremental append methods
+        // Use getState().append* to ensure we use the latest state and handle deduplication correctly
         const libraryStore = useLibraryStore.getState();
         
-        // Deduplicate tracks
-        const existingTrackIds = new Set(libraryStore.tracks.map(t => t.id));
-        const newTracks = tracks.filter(t => !existingTrackIds.has(t.id));
-        
-        if (newTracks.length > 0) {
-          libraryStore.setTracks([...libraryStore.tracks, ...newTracks]);
+        if (tracks.length > 0) {
+          libraryStore.appendTracks(tracks);
         }
         
-        // Deduplicate artists
-        const existingArtistIds = new Set(libraryStore.artists.map(a => a.id));
-        const newArtists = Array.from(artists.values()).filter(a => !existingArtistIds.has(a.id));
+        if (artists.size > 0) {
+          libraryStore.appendArtists(Array.from(artists.values()));
+        }
         
-        if (newArtists.length > 0) {
-          libraryStore.setArtists([...libraryStore.artists, ...newArtists]);
+        if (albums.size > 0) {
+          libraryStore.appendAlbums(Array.from(albums.values()));
         }
 
-        // Merge albums
-        const albumArray = Array.from(albums.values());
-        if (albumArray.length > 0) {
-          const existingAlbums = [...libraryStore.albums];
-          let albumsChanged = false;
-          
-          for (const newAlbum of albumArray) {
-            const existingIndex = existingAlbums.findIndex(a => a.id === newAlbum.id);
-            if (existingIndex >= 0) {
-              // Update existing album if needed
-              if (!existingAlbums[existingIndex].coverArt && newAlbum.coverArt) {
-                existingAlbums[existingIndex] = {
-                  ...existingAlbums[existingIndex],
-                  coverArt: newAlbum.coverArt
-                };
-                albumsChanged = true;
-              }
-            } else {
-              existingAlbums.push(newAlbum);
-              albumsChanged = true;
-            }
-          }
-          
-          if (albumsChanged) {
-            libraryStore.setAlbums(existingAlbums);
-          }
-        }
-
-        console.log(`✅ Processed ${tracks.length} files. Added ${newTracks.length} new tracks to library.`);
+        console.log(`✅ Processed ${tracks.length} files from ${folderPath}. Added to library.`);
       }
 
       return audioFiles;

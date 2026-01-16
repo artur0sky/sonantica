@@ -19,8 +19,10 @@ export interface TrackInfoProps {
   title: string;
   /** Artist name(s) */
   artist: string | string[];
-  /** Click handler for expanding player */
-  onClick?: () => void;
+  /** Click handler */
+  onClick?: (e: React.MouseEvent) => void;
+  /** Long click handler (e.g. for stop) */
+  onLongClick?: () => void;
   /** Enable swipe gestures for track navigation */
   enableSwipeGesture?: boolean;
   /** Swipe left handler (next track) */
@@ -40,6 +42,7 @@ export function TrackInfo({
   title,
   artist,
   onClick,
+  onLongClick,
   enableSwipeGesture = false,
   onSwipeLeft,
   onSwipeRight,
@@ -51,6 +54,8 @@ export function TrackInfo({
   const [isDragging, setIsDragging] = useState(false);
   const startX = useRef(0);
   const currentX = useRef(0);
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+  const isLongPressActive = useRef(false);
 
   const coverSizes = {
     sm: "w-8 h-8",
@@ -66,9 +71,19 @@ export function TrackInfo({
 
   // Touch handlers for swipe gesture
   const handleTouchStart = (e: TouchEvent) => {
-    if (!enableSwipeGesture) return;
-    startX.current = e.touches[0].clientX;
-    setIsDragging(true);
+    if (enableSwipeGesture) {
+      startX.current = e.touches[0].clientX;
+      setIsDragging(true);
+    }
+
+    // Long press logic
+    isLongPressActive.current = false;
+    longPressTimer.current = setTimeout(() => {
+      if (onLongClick && !isDragging) {
+        isLongPressActive.current = true;
+        onLongClick();
+      }
+    }, 600);
   };
 
   const handleTouchMove = (e: TouchEvent) => {
@@ -79,6 +94,11 @@ export function TrackInfo({
   };
 
   const handleTouchEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+
     if (!enableSwipeGesture || !isDragging) return;
 
     const threshold = 80;
@@ -94,9 +114,19 @@ export function TrackInfo({
 
   // Mouse handlers for desktop swipe
   const handleMouseDown = (e: MouseEvent) => {
-    if (!enableSwipeGesture) return;
-    startX.current = e.clientX;
-    setIsDragging(true);
+    if (enableSwipeGesture) {
+      startX.current = e.clientX;
+      setIsDragging(true);
+    }
+
+    // Long press logic
+    isLongPressActive.current = false;
+    longPressTimer.current = setTimeout(() => {
+      if (onLongClick && !isDragging) {
+        isLongPressActive.current = true;
+        onLongClick();
+      }
+    }, 600);
   };
 
   const handleMouseMove = (e: MouseEvent) => {
@@ -106,7 +136,12 @@ export function TrackInfo({
     setDragOffset(offset);
   };
 
-  const handleMouseUp = () => {
+  const handleMouseUp = (e: MouseEvent) => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+
     if (!enableSwipeGesture || !isDragging) return;
 
     const threshold = 80;
@@ -143,7 +178,10 @@ export function TrackInfo({
     >
       {/* Cover Art */}
       <div
-        onClick={onClick}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (!isLongPressActive.current && onClick) onClick(e);
+        }}
         className={cn(
           coverSizes[coverSize],
           "flex-shrink-0 cursor-pointer active:scale-95 transition-transform relative"
@@ -167,7 +205,13 @@ export function TrackInfo({
       </div>
 
       {/* Track Info */}
-      <div className="min-w-0 flex-1 cursor-pointer" onClick={onClick}>
+      <div
+        className="min-w-0 flex-1 cursor-pointer"
+        onClick={(e) => {
+          e.stopPropagation();
+          if (!isLongPressActive.current && onClick) onClick(e);
+        }}
+      >
         <div className="font-medium text-sm leading-tight truncate text-text">
           {title || "Unknown Title"}
         </div>

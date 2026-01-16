@@ -36,6 +36,7 @@ export function LibrarySettings() {
     isScanning: isLocalScanning,
     addFolder,
     removeFolder,
+    scanFolder,
     scanAllFolders,
     updateFolderColor,
     toggleFolder,
@@ -151,6 +152,23 @@ export function LibrarySettings() {
                   <IconFolderPlus size={16} className="mr-2" />
                   Add Folder
                 </Button>
+                {folders.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={scanAllFolders}
+                    disabled={isLocalScanning}
+                    className="h-8 text-text-muted hover:text-accent"
+                  >
+                    <IconRefresh
+                      size={16}
+                      className={`mr-2 ${
+                        isLocalScanning ? "animate-spin" : ""
+                      }`}
+                    />
+                    Refresh All
+                  </Button>
+                )}
               </div>
 
               <div className="grid grid-cols-1 gap-2">
@@ -239,6 +257,18 @@ export function LibrarySettings() {
                             />
                           </button>
                         )}
+
+                        <button
+                          onClick={() => scanFolder(f.path)}
+                          disabled={isLocalScanning}
+                          className="p-2 text-text-muted hover:text-accent disabled:opacity-50"
+                          title="Refresh Folder"
+                        >
+                          <IconRefresh
+                            size={16}
+                            className={isLocalScanning ? "animate-spin" : ""}
+                          />
+                        </button>
 
                         <button
                           onClick={() => removeFolder(f.path)}
