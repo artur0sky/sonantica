@@ -6,14 +6,19 @@
 
 import { getServersConfig } from '../services/LibraryService';
 import { useOfflineStore } from '@sonantica/offline-manager';
-import { OfflineStatus } from '@sonantica/shared';
+import { OfflineStatus, extractOriginalId } from '@sonantica/shared';
 import { useLibraryStore } from '@sonantica/media-library';
 
 /**
  * Build streaming URL for a track
  * Resolves the server URL from the serverId and constructs the full streaming URL
+ * 
+ * @param serverId Server identifier or full URL
+ * @param filePath Relative path for fallback
+ * @param trackId Global unique ID (used for offline cache key)
+ * @param originalId Raw ID from server (used for remote stream endpoint)
  */
-export function buildStreamingUrl(serverId: string, filePath: string, trackId?: string): string {
+export function buildStreamingUrl(serverId: string, filePath: string, trackId?: string, originalId?: string): string {
   try {
     // Check if available offline first
     if (trackId) {
@@ -44,9 +49,14 @@ export function buildStreamingUrl(serverId: string, filePath: string, trackId?: 
       baseUrl = server.serverUrl.replace(/\/$/, '');
     }
     
-    // Use trackId for secure ID-based streaming
-    if (trackId) {
-      const streamUrl = `${baseUrl}/stream/${trackId}`;
+    
+    // Determine the ID to use for the remote stream request
+    // Favor explicit originalId, then extract from trackId if it has the remote- prefix
+    const streamId = originalId || extractOriginalId(trackId);
+    
+    // Use streamId for secure ID-based streaming
+    if (streamId) {
+      const streamUrl = `${baseUrl}/stream/${streamId}`;
       console.log(`🎵 Stream URL: ${streamUrl}`);
       return streamUrl;
     }
@@ -65,13 +75,13 @@ export function buildStreamingUrl(serverId: string, filePath: string, trackId?: 
 /**
  * Build streaming URL from a track object
  */
-export function buildTrackStreamingUrl(track: { id?: string; serverId?: string; filePath?: string }): string {
+export function buildTrackStreamingUrl(track: { id?: string; originalId?: string; serverId?: string; filePath?: string }): string {
   if (!track.serverId || !track.filePath) {
     console.error('❌ Track missing serverId or filePath:', track);
     return '';
   }
   
-  return buildStreamingUrl(track.serverId, track.filePath, track.id);
+  return buildStreamingUrl(track.serverId, track.filePath, track.id, track.originalId);
 }
 
 /**
@@ -105,8 +115,7 @@ export function trackToMediaSource(track: any): any {
     console.log(`🎵 Local file URL: ${url}`);
   } else if (track.serverId && track.filePath) {
     // Remote server track - build streaming URL
-    const idForStream = track.originalId || track.id;
-    url = buildStreamingUrl(track.serverId, track.filePath, idForStream);
+    url = buildStreamingUrl(track.serverId, track.filePath, track.id, track.originalId);
   } else {
     console.error('❌ Track missing required fields for playback:', track);
     url = '';

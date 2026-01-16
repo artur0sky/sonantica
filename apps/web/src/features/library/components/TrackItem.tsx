@@ -191,7 +191,10 @@ export function TrackItem({
                   : "Download for Offline",
                 icon: <IconCloudDownload size={18} stroke={1.5} />,
                 onClick: () => downloadTrack(track),
-                disabled: isDownloading || isQueued,
+                disabled:
+                  isDownloading ||
+                  isQueued ||
+                  (track.id && track.id.startsWith("remote-")),
               }
             : {
                 id: "remove-offline",

@@ -15,7 +15,7 @@ export type { AudioDevice, IFileEntry, IFileProvider } from './types/plugins';
 export * from './constants';
 
 export * from './utils/index';
-export { isSmartTV } from './utils/common';
+export { isSmartTV, extractOriginalId } from './utils/common';
 export * from './hooks/index';
 
 // Additional utilities

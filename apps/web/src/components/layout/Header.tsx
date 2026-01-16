@@ -86,12 +86,12 @@ export function Header() {
     <>
       <header
         className={cn(
-          "flex items-center px-3 sm:px-4 md:px-6 gap-2 sm:gap-4 select-none transition-all duration-500 ease-in-out",
+          "flex items-center px-4 sm:px-4 md:px-6 gap-2 sm:gap-4 select-none transition-all duration-500 ease-in-out",
           "border-b border-border bg-surface z-30 flex-none",
           isCapacitor() && "pt-[env(safe-area-inset-top)]",
           isPlayerExpanded
             ? "h-0 opacity-0 -translate-y-full pointer-events-none border-none"
-            : "h-14 sm:h-16 opacity-100 translate-y-0"
+            : "h-16 opacity-100 translate-y-0"
         )}
       >
         {/* Left: Logo (Toggles Sidebar) */}

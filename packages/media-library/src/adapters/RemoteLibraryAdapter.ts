@@ -8,6 +8,7 @@
  */
 
 import type { Track, Artist, Album } from '@sonantica/shared';
+import { extractOriginalId } from '@sonantica/shared';
 import type { ILibraryAdapter, LibraryStats, ScanProgress, ScanOptions } from '../contracts/ILibraryAdapter';
 import type { Playlist, PlaylistType } from '../types';
 
@@ -45,10 +46,11 @@ export class RemoteLibraryAdapter implements ILibraryAdapter {
     }
 
     const serverPrefix = btoa(this.serverUrl).substring(0, 8).replace(/[/+=]/g, '');
+    const originalId = extractOriginalId(album.id);
 
     return {
       ...album,
-      id: `remote-${serverPrefix}-${album.id}`,
+      id: `remote-${serverPrefix}-${originalId}`,
       coverArt,
       source: 'remote',
       serverName: this.serverName
@@ -60,9 +62,10 @@ export class RemoteLibraryAdapter implements ILibraryAdapter {
    */
   private normalizeArtist(artist: any): Artist {
     const serverPrefix = btoa(this.serverUrl).substring(0, 8).replace(/[/+=]/g, '');
+    const originalId = extractOriginalId(artist.id);
     return {
       ...artist,
-      id: `remote-${serverPrefix}-${artist.id}`,
+      id: `remote-${serverPrefix}-${originalId}`,
       source: 'remote',
       serverName: this.serverName
     };
@@ -88,12 +91,13 @@ export class RemoteLibraryAdapter implements ILibraryAdapter {
     // This allows buildStreamingUrl to find the correct server
     const serverId = this.serverUrl;
     const serverPrefix = btoa(serverId).substring(0, 8).replace(/[/+=]/g, '');
+    const originalId = extractOriginalId(track.id);
 
     return {
       ...track,
-      id: `remote-${serverPrefix}-${track.id}`,
-      originalId: track.id, // Keep original for API calls
-      albumId: track.albumId ? `remote-${serverPrefix}-${track.albumId}` : undefined,
+      id: `remote-${serverPrefix}-${originalId}`,
+      originalId: originalId, // Keep original for API calls
+      albumId: track.albumId ? `remote-${serverPrefix}-${extractOriginalId(track.albumId)}` : undefined,
       coverArt,
       serverId, // Add serverId for streaming
       source: 'remote',
@@ -146,7 +150,8 @@ export class RemoteLibraryAdapter implements ILibraryAdapter {
    * Get single track
    */
   async getTrack(id: string): Promise<Track> {
-    const response = await this.fetch(`/api/library/tracks/${id}`);
+    const originalId = extractOriginalId(id);
+    const response = await this.fetch(`/api/library/tracks/${originalId}`);
     const track = await response.json();
     return this.normalizeTrack(track);
   }
@@ -171,7 +176,8 @@ export class RemoteLibraryAdapter implements ILibraryAdapter {
    * Get tracks by artist
    */
   async getTracksByArtist(artistId: string): Promise<Track[]> {
-    const response = await this.fetch(`/api/library/artists/${artistId}/tracks`);
+    const originalId = extractOriginalId(artistId);
+    const response = await this.fetch(`/api/library/artists/${originalId}/tracks`);
     const data = await response.json();
     return (data.tracks || []).map((t: any) => this.normalizeTrack(t));
   }
@@ -196,7 +202,8 @@ export class RemoteLibraryAdapter implements ILibraryAdapter {
    * Get tracks by album
    */
   async getTracksByAlbum(albumId: string): Promise<Track[]> {
-    const response = await this.fetch(`/api/library/albums/${albumId}/tracks`);
+    const originalId = extractOriginalId(albumId);
+    const response = await this.fetch(`/api/library/albums/${originalId}/tracks`);
     const data = await response.json();
     return (data.tracks || []).map((t: any) => this.normalizeTrack(t));
   }
@@ -299,7 +306,9 @@ export class RemoteLibraryAdapter implements ILibraryAdapter {
   // --- Playlist Methods ---
 
   async createPlaylist(name: string, type: PlaylistType, trackIds: string[] = []): Promise<Playlist> {
-    const payload = { name, type, trackIds };
+    // Ensure we send original IDs to the server
+    const originalTrackIds = trackIds.map(id => extractOriginalId(id));
+    const payload = { name, type, trackIds: originalTrackIds };
     console.log('[RemoteLibraryAdapter] POST /api/library/playlists', payload);
     
     const response = await this.fetch('/api/library/playlists', {
@@ -321,12 +330,14 @@ export class RemoteLibraryAdapter implements ILibraryAdapter {
   }
 
   async getPlaylist(id: string): Promise<Playlist> {
-    const response = await this.fetch(`/api/library/playlists/${id}`);
+    const originalId = extractOriginalId(id);
+    const response = await this.fetch(`/api/library/playlists/${originalId}`);
     return response.json();
   }
 
   async updatePlaylist(id: string, updates: Partial<Omit<Playlist, 'id' | 'type' | 'createdAt'>>): Promise<Playlist> {
-    const response = await this.fetch(`/api/library/playlists/${id}`, {
+    const originalId = extractOriginalId(id);
+    const response = await this.fetch(`/api/library/playlists/${originalId}`, {
       method: 'PATCH',
       body: JSON.stringify(updates)
     });
@@ -334,23 +345,28 @@ export class RemoteLibraryAdapter implements ILibraryAdapter {
   }
 
   async deletePlaylist(id: string): Promise<void> {
-    await this.fetch(`/api/library/playlists/${id}`, {
+    const originalId = extractOriginalId(id);
+    await this.fetch(`/api/library/playlists/${originalId}`, {
       method: 'DELETE'
     });
   }
 
   async addTracksToPlaylist(playlistId: string, trackIds: string[]): Promise<Playlist> {
-    const response = await this.fetch(`/api/library/playlists/${playlistId}/tracks`, {
+    const originalPlaylistId = extractOriginalId(playlistId);
+    const originalTrackIds = trackIds.map(id => extractOriginalId(id));
+    const response = await this.fetch(`/api/library/playlists/${originalPlaylistId}/tracks`, {
       method: 'POST',
-      body: JSON.stringify({ trackIds })
+      body: JSON.stringify({ trackIds: originalTrackIds })
     });
     return response.json();
   }
 
   async removeTracksFromPlaylist(playlistId: string, trackIds: string[]): Promise<Playlist> {
-    const response = await this.fetch(`/api/library/playlists/${playlistId}/tracks`, {
+    const originalPlaylistId = extractOriginalId(playlistId);
+    const originalTrackIds = trackIds.map(id => extractOriginalId(id));
+    const response = await this.fetch(`/api/library/playlists/${originalPlaylistId}/tracks`, {
       method: 'DELETE',
-      body: JSON.stringify({ trackIds })
+      body: JSON.stringify({ trackIds: originalTrackIds })
     });
     return response.json();
   }

@@ -1,4 +1,5 @@
 import { getServerConfig } from './LibraryService';
+import { extractOriginalId } from '@sonantica/shared';
 
 export interface Plugin {
   id: string;
@@ -103,10 +104,18 @@ export const PluginService = {
     const server = getServerConfig();
     if (!server) throw new Error("No server configured");
 
+    // Ensure IDs are not prefixed when sent to the server
+    const processedReq = {
+      ...req,
+      track_id: extractOriginalId(req.track_id),
+      artist_id: extractOriginalId(req.artist_id),
+      context: req.context?.map(id => extractOriginalId(id)!)
+    };
+
     const response = await fetch(`${server.serverUrl}/api/v1/ai/recommendations`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(req),
+      body: JSON.stringify(processedReq),
     });
     if (!response.ok) throw new Error("Failed to fetch recommendations");
     return response.json();
@@ -116,7 +125,8 @@ export const PluginService = {
     const server = getServerConfig();
     if (!server) throw new Error("No server configured");
 
-    const response = await fetch(`${server.serverUrl}/api/v1/ai/demucs/separate/${trackId}`, {
+    const originalTrackId = extractOriginalId(trackId);
+    const response = await fetch(`${server.serverUrl}/api/v1/ai/demucs/separate/${originalTrackId}`, {
       method: "POST",
     });
     if (!response.ok) throw new Error("Failed to start stem separation");
@@ -145,7 +155,8 @@ export const PluginService = {
     const server = getServerConfig();
     if (!server) throw new Error("No server configured");
 
-    const response = await fetch(`${server.serverUrl}/api/v1/ai/analyze/${trackId}?capability=${capability}`, {
+    const originalTrackId = extractOriginalId(trackId);
+    const response = await fetch(`${server.serverUrl}/api/v1/ai/analyze/${originalTrackId}?capability=${capability}`, {
       method: "POST",
     });
     if (!response.ok) throw new Error("Failed to start AI analysis");

@@ -159,10 +159,11 @@ export function SidebarButtonCarousel({
     <div className={cn("flex items-center gap-1 relative min-w-0", className)}>
       <div
         className={cn(
-          "flex items-center gap-1 transition-all duration-300",
-          (showAll || desktop) &&
-            "bg-[var(--color-surface-elevated)] rounded-full p-1 border border-[var(--color-border)] pr-2 overflow-x-auto overflow-y-hidden scrollbar-none",
-          desktop && "max-w-full"
+          "flex items-center gap-3 transition-all duration-300",
+          showAll || desktop
+            ? "overflow-x-auto overflow-y-hidden scrollbar-none mask-linear-fade" // Added fade mask for scroll indication if needed
+            : ""
+          // Removed container styles (bg, border, rounded)
         )}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
@@ -192,28 +193,29 @@ export function SidebarButtonCarousel({
             <div
               key={btn.id}
               className={cn(
-                "transition-all duration-200 flex-shrink-0",
-                isFeatured && !showAll && !desktop && "scale-110"
+                "transition-all duration-200 flex-shrink-0"
+                // Removed scale-110 logic for simplicity and "clean" look
               )}
               style={{
-                opacity: shouldShow ? 1 : 0,
-                transform: shouldShow ? "scale(1)" : "scale(0.8)",
+                opacity: 1, // Always opaque
+                transform: "none",
               }}
             >
               <ActionIconButton
                 icon={btn.icon}
                 onClick={() => {
                   btn.action();
+                  // Close if action taken on mobile
                   if (showAll && !desktop) setShowAll(false);
                 }}
                 isActive={btn.isActive}
                 size={size}
                 title={btn.label}
                 className={cn(
-                  "transition-all",
-                  isFeatured && !showAll && !desktop
-                    ? "bg-[var(--color-surface-elevated)]"
-                    : "opacity-60 hover:opacity-100"
+                  "hover:text-accent transition-colors",
+                  btn.isActive ? "text-accent" : "text-text-muted",
+                  // Reset backgrounds to look like download buttons (ghost)
+                  "bg-transparent hover:bg-white/5 active:scale-95"
                 )}
               />
             </div>
