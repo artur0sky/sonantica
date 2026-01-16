@@ -190,7 +190,7 @@ export function TrackInfo({
         <CoverArt
           src={coverArt}
           alt="Cover"
-          className="w-full h-full"
+          className="w-full h-full rounded-sm overflow-hidden shadow-sm"
           iconSize={iconSizes[coverSize]}
         />
 

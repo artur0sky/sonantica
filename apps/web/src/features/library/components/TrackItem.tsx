@@ -30,12 +30,7 @@ import { StemSeparationModal } from "../../ai/components/StemSeparationModal";
 import { useAICapabilities } from "../../../hooks/useAICapabilities";
 import { PluginService } from "../../../services/PluginService";
 import { useLocation } from "wouter";
-import {
-  IconDeviceDesktop,
-  IconCloud,
-  IconUser,
-  IconDisc,
-} from "@tabler/icons-react";
+import { IconUser, IconDisc } from "@tabler/icons-react";
 
 interface TrackItemProps {
   track: any;
@@ -247,42 +242,7 @@ export function TrackItem({
   );
 
   const statusIconsDisplay = (
-    <div className="flex items-center gap-1 mr-2">
-      {track.sources && track.sources.length > 1 ? (
-        <div className="flex gap-[2px] items-center">
-          {track.sources.map((s: any) => (
-            <div
-              key={s.id}
-              title={
-                s.serverName || (s.source === "local" ? "Local" : "Remote")
-              }
-              className={cn(
-                "w-1 h-3 rounded-[0.5px]",
-                s.source === "local" ? "bg-blue-400" : "bg-accent"
-              )}
-              style={
-                s.serverColor ? { backgroundColor: s.serverColor } : undefined
-              }
-            />
-          ))}
-        </div>
-      ) : track.source === "local" ? (
-        <div
-          title={track.folderPath || "Local Library"}
-          className={!track.serverColor ? "text-blue-400" : undefined}
-          style={track.serverColor ? { color: track.serverColor } : undefined}
-        >
-          <IconDeviceDesktop size={14} />
-        </div>
-      ) : (
-        <div
-          title={track.serverName || "Remote Server"}
-          className="text-accent"
-          style={track.serverColor ? { color: track.serverColor } : undefined}
-        >
-          <IconCloud size={14} />
-        </div>
-      )}
+    <>
       {statusIcons}
 
       {/* Quick Download Button if remote available but not local/offline */}
@@ -302,7 +262,7 @@ export function TrackItem({
             <IconCloudDownload size={14} />
           </button>
         )}
-    </div>
+    </>
   );
 
   return (
@@ -334,7 +294,9 @@ export function TrackItem({
           source: s.source,
           name: s.serverName || (s.source === "local" ? "Local" : "Remote"),
           color: s.serverColor,
+          format: s.format,
         }))}
+        format={track.format}
         statusIcons={statusIconsDisplay}
         onClick={() => {
           if (isInSelectionMode) {

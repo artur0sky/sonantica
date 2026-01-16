@@ -13,8 +13,11 @@ import {
   IconCircleCheckFilled,
   IconPlayerPlay,
   IconPlayerPause,
+  IconCloud,
+  IconDeviceDesktop,
 } from "@tabler/icons-react";
 import { cn } from "../../utils";
+import { AudioFormat } from "@sonantica/shared";
 
 export interface TrackItemProps extends HTMLAttributes<HTMLDivElement> {
   /** Track title */
@@ -62,7 +65,11 @@ export interface TrackItemProps extends HTMLAttributes<HTMLDivElement> {
     source: "local" | "remote";
     name?: string;
     color?: string;
+    format?: AudioFormat;
   }>;
+
+  /** Format of the primary source */
+  format?: AudioFormat;
 
   /** Whether to show a divider-like border */
   divider?: boolean;
@@ -102,6 +109,7 @@ export const TrackItem = React.forwardRef<HTMLDivElement, TrackItemProps>(
       source,
       sourceName,
       sources,
+      format,
       divider = false,
       className,
       onClick,
@@ -189,36 +197,99 @@ export const TrackItem = React.forwardRef<HTMLDivElement, TrackItemProps>(
                 <span className="truncate opacity-80">{album}</span>
               </>
             )}
+            {/* Audio Quality Badges */}
+            {(() => {
+              const primaryFormat = format || sources?.[0]?.format;
+              if (!primaryFormat?.codec || primaryFormat.codec === "unknown")
+                return null;
+
+              const codec = primaryFormat.codec.toUpperCase();
+              const isLossless = primaryFormat.lossless;
+
+              // Premium Mineral/Metal Colors
+              let badgeStyle =
+                "bg-stone-500/10 text-stone-400 border-stone-500/20"; // Iron/Stone (Standard)
+
+              if (isLossless) {
+                // Platinum/Diamond (Lossless) - Ultra Premium
+                badgeStyle =
+                  "bg-sky-400/10 text-sky-200 border-sky-400/30 shadow-[0_0_8px_rgba(56,189,248,0.2)]";
+              } else if (
+                codec === "OGG" ||
+                codec === "AAC" ||
+                (primaryFormat.bitrate && primaryFormat.bitrate >= 320)
+              ) {
+                // Gold/Chrome (HQ Lossy) - High Quality
+                badgeStyle =
+                  "bg-amber-400/10 text-amber-200 border-amber-400/30";
+              }
+
+              return (
+                <span
+                  className={cn(
+                    "text-[8px] px-1.5 py-0.5 rounded-[3px] font-black tracking-[0.05em] border transition-all",
+                    badgeStyle
+                  )}
+                >
+                  {codec}
+                </span>
+              );
+            })()}
+
+            {/* Source Icons (Minimalist Stacking) */}
             {sources && sources.length > 0 ? (
-              <div className="flex gap-1 items-center ml-1">
-                {sources.map((s) => (
+              <div className="flex -space-x-1.5 items-center ml-1">
+                {sources.slice(0, 3).map((s, idx) => (
                   <div
                     key={s.id}
                     title={s.name}
-                    className={cn(
-                      "w-1.5 h-3 rounded-[1px] transition-all",
-                      s.source === "local" ? "bg-blue-400" : "bg-accent"
-                    )}
-                    style={s.color ? { backgroundColor: s.color } : {}}
-                  />
+                    className="relative group/source"
+                    style={{ zIndex: 10 - idx }}
+                  >
+                    <div
+                      className={cn(
+                        "p-0.5 rounded-full bg-surface-base border border-surface-elevated flex items-center justify-center transition-transform hover:scale-110"
+                      )}
+                    >
+                      {s.source === "local" ? (
+                        <IconDeviceDesktop
+                          size={10}
+                          className="text-blue-400"
+                          style={s.color ? { color: s.color } : {}}
+                        />
+                      ) : (
+                        <IconCloud
+                          size={10}
+                          className="text-accent"
+                          style={s.color ? { color: s.color } : {}}
+                        />
+                      )}
+                    </div>
+                  </div>
                 ))}
+                {sources.length > 3 && (
+                  <span className="text-[9px] text-text-muted/40 ml-1 font-bold">
+                    +{sources.length - 3}
+                  </span>
+                )}
               </div>
             ) : (
               source && (
-                <>
-                  <span className="opacity-30">•</span>
-                  <span
-                    className={cn(
-                      "text-[9px] px-1.5 py-0.5 rounded-sm font-bold uppercase tracking-wider",
-                      source === "local"
-                        ? "bg-blue-500/10 text-blue-400 border border-blue-500/20"
-                        : "bg-accent/10 text-accent border border-accent/20"
-                    )}
-                    title={sourceName}
-                  >
-                    {source === "local" ? "LOCAL" : sourceName || "SERVER"}
-                  </span>
-                </>
+                <div className="flex items-center ml-1">
+                  {source === "local" ? (
+                    <IconDeviceDesktop
+                      size={12}
+                      className="text-blue-400"
+                      title="Local"
+                    />
+                  ) : (
+                    <IconCloud
+                      size={12}
+                      className="text-accent"
+                      title={sourceName}
+                    />
+                  )}
+                </div>
               )
             )}
           </div>

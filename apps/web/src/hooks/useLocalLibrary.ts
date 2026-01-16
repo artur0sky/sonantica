@@ -272,10 +272,14 @@ export function useLocalLibrary() {
               bitrate?: number;
               sample_rate?: number;
               lyrics?: string;
+              format?: string; // Optional extension from backend
             }>('extract_metadata', { filePath });
             
             // Fallback to filename if metadata is missing
             const fileName = filePath.split(/[\\/]/).pop() || 'Unknown';
+            const extension = fileName.split('.').pop()?.toLowerCase();
+            const format = metadata.format || extension || 'unknown';
+            
             const nameWithoutExt = fileName.replace(/\.[^/.]+$/, '');
             const parts = nameWithoutExt.split(' - ');
             const fallbackArtist = parts.length > 1 ? parts[0].trim() : 'Unknown Artist';
@@ -349,7 +353,21 @@ export function useLocalLibrary() {
                 bitrate: metadata.bitrate,
                 sampleRate: metadata.sample_rate,
                 lyrics: lyricsData,
+                format: {
+                  codec: format,
+                  bitrate: metadata.bitrate,
+                  sampleRate: metadata.sample_rate,
+                  lossless: ['flac', 'wav', 'alac', 'aiff'].includes(format)
+                },
               }
+            };
+
+            // Also set top-level format for convenience
+            (track as any).format = {
+              codec: format,
+              bitrate: metadata.bitrate,
+              sampleRate: metadata.sample_rate,
+              lossless: ['flac', 'wav', 'alac', 'aiff'].includes(format)
             };
 
             tracks.push(track);

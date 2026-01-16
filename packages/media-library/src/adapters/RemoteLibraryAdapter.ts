@@ -104,7 +104,13 @@ export class RemoteLibraryAdapter implements ILibraryAdapter {
       coverArt,
       serverId, // Add serverId for streaming
       source: 'remote',
-      serverName: this.serverName
+      serverName: this.serverName,
+      format: track.format || {
+        codec: track.filePath?.split('.').pop()?.toLowerCase() || 'unknown',
+        bitrate: track.bitrate,
+        sampleRate: track.sampleRate,
+        lossless: ['flac', 'wav', 'alac', 'aiff'].includes(track.filePath?.split('.').pop()?.toLowerCase() || '')
+      }
     };
   }
 
