@@ -45,12 +45,6 @@ interface TrackItemProps {
   compact?: boolean;
 }
 
-// Check if we're running in Tauri - type-safe detection
-const isTauri =
-  typeof window !== "undefined" &&
-  ((window as any).__TAURI__ !== undefined ||
-    (window as any).__TAURI_INTERNALS__ !== undefined);
-
 export function TrackItem({
   track,
   onClick,
@@ -179,7 +173,7 @@ export function TrackItem({
       divider: true,
       onClick: () => {},
     },
-    ...(!isTauri
+    ...(track.source !== "local"
       ? [
           !isOfflineAvailable
             ? {
@@ -191,10 +185,7 @@ export function TrackItem({
                   : "Download for Offline",
                 icon: <IconCloudDownload size={18} stroke={1.5} />,
                 onClick: () => downloadTrack(track),
-                disabled:
-                  isDownloading ||
-                  isQueued ||
-                  (track.id && track.id.startsWith("remote-")),
+                disabled: isDownloading || isQueued,
               }
             : {
                 id: "remove-offline",
